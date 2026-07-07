@@ -36,7 +36,7 @@
       "launch": "v0",
       "blocker": true,
       "summary": "KDL layout in Ghostty: tabs per project (indx, brutal, prova, gripe), yazi file rail, claude/codex panes each in their own worktree. Zellij persistence — no tmux wrapper. The closest match to the stated experience.",
-      "done": "One week of daily use across 2+ projects with 3+ agent panes; every friction logged in ERRORS.md/PARKED.md.",
+      "done": "One week of daily use across 2+ projects with 3+ agent panes; every friction logged in ERRORS.md/PARKED.md. Known criterion going in: does a TUI editor (micro/helix) satisfy the 'VSCode-look editor, sometimes' expectation, or does that friction alone justify the Tauri build?",
       "closes": "decides R3"
     },
     {

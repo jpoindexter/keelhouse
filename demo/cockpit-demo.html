@@ -71,7 +71,13 @@
   .pane .phd .agent.claude { color: var(--claude); font-weight: 600; }
   .pane .phd .agent.codex { color: var(--codex); font-weight: 600; }
   .pane .phd .agent.editor { color: var(--ok); font-weight: 600; }
-  .pane .ebar { padding: 3px 10px; background: #131315; border-top: 1px solid var(--line); color: var(--dim); font-size: 10px; flex-shrink: 0; }
+  .pane .ebar { padding: 3px 10px; background: #131315; border-top: 1px solid var(--line); color: var(--dim); font-size: 10px; flex-shrink: 0; display: flex; justify-content: space-between; }
+  .pane .out.code { padding: 6px 0 8px; font-size: 12px; white-space: pre; }
+  .cline { display: flex; }
+  .cline .gut { width: 40px; flex-shrink: 0; text-align: right; padding-right: 12px; color: #3d3d44; user-select: none; -webkit-user-select: none; }
+  .cline:hover { background: #131317; }
+  .tk-k { color: #bb9af7; } .tk-s { color: #9ece6a; } .tk-n { color: #e0af68; }
+  .tk-t { color: #7aa2f7; } .tk-c { color: #565660; font-style: italic; } .tk-p { color: #2dd4bf; }
   .pane .out { flex: 1; padding: 2px 10px 8px; overflow-y: auto; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
   .pane .out .dim { color: var(--dim); } .pane .out .ok { color: var(--ok); }
   .pane .out .cl { color: var(--claude); font-weight: 600; } .pane .out .cx { color: var(--codex); font-weight: 600; }
@@ -93,7 +99,7 @@
 
 <div class="hint">
   <b>This is the experience, simulated.</b>
-  <kbd>1</kbd>–<kbd>4</kbd> switch project tab · <kbd>←</kbd><kbd>→</kbd> move focus · <kbd>n</kbd> new agent in a fresh worktree · <kbd>e</kbd>/<kbd>Enter</kbd> edit selected file in a pane ·<kbd>x</kbd> close pane · click anything
+  <kbd>1</kbd>–<kbd>4</kbd> switch project tab · <kbd>←</kbd><kbd>→</kbd> move focus · <b>double-click a file to open it</b> (or <kbd>Enter</kbd>/<kbd>e</kbd>) · <kbd>n</kbd> new agent in a fresh worktree · <kbd>x</kbd> close pane
 </div>
 
 <div class="window" id="win">
@@ -205,6 +211,24 @@ const PROJECTS = {
   }
 };
 
+const CODE = {
+  'panel.tsx': `import { motion } from 'motion/react'\nimport type { PanelProps } from './types'\n\nconst COLLAPSED_WIDTH = 48\nconst EXPANDED_WIDTH = 288\n\n// I5: panel collapse — width animates, content fades\nexport function Panel({ collapsed, children }: PanelProps) {\n  const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH\n  return (\n    <motion.aside animate={{ width }} transition={{ duration: 0.18 }}>\n      {children}\n    </motion.aside>\n  )\n}`,
+  'tokens.ts': `// studio design tokens — extracted from hardcoded values\nexport const studio = {\n  radius: { card: 12, chip: 6, field: 8 },\n  space: [0, 4, 8, 12, 16, 24, 32, 48],\n  type: {\n    display: 'Söhne',\n    mono: 'Berkeley Mono',\n    scale: [13, 15, 18, 24, 32, 44]\n  },\n  color: {\n    ink: '#111111',\n    paper: '#fafaf8',\n    accent: '#ff4d00'\n  }\n} as const`,
+  'oasis-run.ts': `import { spawnAgents, run } from '@/sims/oasis'\n\nconst COHORT_SIZE = 96\n\nexport async function streamScreening(screener: Screener) {\n  const cohort = await spawnAgents(COHORT_SIZE, screener.persona)\n  for await (const answer of run(screener, cohort)) {\n    yield toEvent(answer) // SSE — screening UI renders live\n  }\n}`,
+  'README.md': `# gripe\n\nReddit complaint DB for startup idea discovery.\n\n## Status\nStalled ~3 weeks — resume at ui-simplification.\n\n- [ ] collapse filter sidebar\n- [ ] merge duplicate complaint clusters`
+};
+
+function hl(raw) {
+  let s = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  if (/^\s*(\/\/|#(?!\w)|&lt;!--)/.test(s)) return `<span class="tk-c">${s}</span>`;
+  s = s.replace(/('[^']*'|"[^"]*"|`[^`]*`)/g, '<span class="tk-s">$1</span>');
+  s = s.replace(/\b(import|export|from|const|let|function|return|async|await|for|of|if|else|type|as|yield|new)\b/g, '<span class="tk-k">$1</span>');
+  s = s.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="tk-n">$1</span>');
+  s = s.replace(/(&lt;\/?)([\w.]+)/g, '$1<span class="tk-t">$2</span>');
+  s = s.replace(/^(\s*)([\w-]+)(:)/g, '$1<span class="tk-p">$2</span>$3');
+  return s;
+}
+
 let active = 'indx';
 let focusIdx = 0;
 let timers = [];
@@ -236,13 +260,16 @@ function renderRail() {
       `<div class="f ${f.sel ? 'sel' : ''}" data-fi="${i}">${f.n}${f.st ? `<span class="st ${f.st}">●</span>` : ''}</div>`).join('') +
     `<div class="sec">PREVIEW</div>
      <div class="preview"><div class="hd">${p.preview.hd}</div><code>${p.preview.body}</code></div>`;
-  document.querySelectorAll('.rail .f').forEach(el =>
+  document.querySelectorAll('.rail .f').forEach(el => {
     el.addEventListener('click', () => {
       p.files.forEach(f => f.sel = false);
       p.files[+el.dataset.fi].sel = true;
-      p.preview = { hd: p.files[+el.dataset.fi].n.trim() + ' — yazi preview', body: '(preview follows selection — in the real rail this is yazi doing it natively)' };
+      const name = p.files[+el.dataset.fi].n.trim();
+      if (CODE[name]) p.preview = { hd: name + ' — yazi preview', body: CODE[name].split('\n').slice(0, 4).join('\n') + '\n…' };
       renderRail();
-    }));
+    });
+    el.addEventListener('dblclick', () => openEditor(p.files[+el.dataset.fi].n.trim()));
+  });
 }
 
 function renderGrid() {
@@ -254,12 +281,18 @@ function renderGrid() {
   g.innerHTML = p.panes.map((pane, i) =>
     `<div class="pane ${i === focusIdx ? 'focus' : ''}" data-pi="${i}">
       <div class="phd"><span><span class="agent ${pane.agent}">${{ claude: '✳ claude', codex: '◆ codex', editor: '✎ micro' }[pane.agent]}</span> <span>— ${pane.agent === 'editor' ? pane.wt : 'wt: ' + pane.wt}</span></span><span>${pane.task}</span></div>
-      <div class="out" id="out-${active}-${i}"></div>
-      ${pane.agent === 'editor' ? '<div class="ebar">^S save · ^Q quit (closes pane) · mouse works</div>' : ''}
+      <div class="out ${pane.agent === 'editor' ? 'code' : ''}" id="out-${active}-${i}"></div>
+      ${pane.agent === 'editor' ? '<div class="ebar"><span>^S save · ^Q quit (closes pane) · mouse works</span><span>Ln 1, Col 1 · UTF-8</span></div>' : ''}
     </div>`).join('');
   document.querySelectorAll('.pane').forEach(el =>
     el.addEventListener('click', () => { focusIdx = +el.dataset.pi; paintFocus(); }));
-  p.panes.forEach((pane, i) => playScript(active, i));
+  p.panes.forEach((pane, i) => {
+    if (pane.agent === 'editor') {
+      const el = document.getElementById(`out-${active}-${i}`);
+      el.innerHTML = pane.code.split('\n').map((l, n) =>
+        `<div class="cline"><span class="gut">${n + 1}</span><span>${hl(l) || ' '}</span></div>`).join('');
+    } else playScript(active, i);
+  });
 }
 
 function paintFocus() {
@@ -298,6 +331,19 @@ function playScript(proj, i) {
   timers.push(setTimeout(step, 200 + i * 600));
 }
 
+function openEditor(name) {
+  const p = PROJECTS[active];
+  const existing = p.panes.findIndex(x => x.agent === 'editor' && x.wt === name);
+  if (existing >= 0) { focusIdx = existing; paintFocus(); return; }
+  const base = name.replace(/\/$/, '').split('/').pop();
+  p.panes.push({
+    agent: 'editor', wt: name, task: 'from rail',
+    code: CODE[base] || CODE[name] || `// ${name}\n// (demo has sample code for the highlighted files —\n//  in the real cockpit this is the actual file, of course)`
+  });
+  focusIdx = p.panes.length - 1;
+  renderGrid(); renderStatus(); paintFocus();
+}
+
 function switchTab(id) {
   timers.forEach(clearTimeout); timers = [];
   active = id; focusIdx = 0;
@@ -332,15 +378,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'e' || e.key === 'Enter') {
     e.preventDefault();
     const f = p.files.find(x => x.sel) || p.files[0];
-    const name = f.n.trim();
-    p.panes.push({ agent: 'editor', wt: name, task: 'yazi → e', script: [
-      ['dim', `# ${name} — opened from the rail in your $EDITOR`],
-      ['plain', p.preview.body],
-      ['dim', ''],
-      ['ok', 'edit here, or for big jobs: $ zed ' + name + '  (escape hatch to GUI)']
-    ]});
-    focusIdx = p.panes.length - 1;
-    renderGrid(); renderStatus(); paintFocus();
+    openEditor(f.n.trim());
   }
   if (e.key === 'x' && p.panes.length > 1) {
     p.panes.splice(focusIdx, 1);
