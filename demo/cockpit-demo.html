@@ -5,7 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>agent cli — zellij cockpit demo</title>
 <style>
-  :root, body[data-theme="vscode"] {
+  :root, body[data-theme="ghost"] {
+    /* mono ghost — near-monochrome, one dim accent. DEFAULT — Jason's pick. */
+    --bg: #0b0b0c; --pane: #0e0e10; --chrome: #18181a; --line: #262629;
+    --fg: #b8b8bc; --dim: #626268; --bright: #f2f2f4;
+    --claude: #f2f2f4; --codex: #b8b8bc; --ok: #8a8a92; --warn: #d8d8dc;
+    --focus: #f2f2f4;
+    --tk-k: #f2f2f4; --tk-s: #9a9aa0; --tk-n: #9a9aa0; --tk-t: #d0d0d4; --tk-c: #4a4a50; --tk-p: #b8b8bc;
+  }
+  body[data-theme="vscode"] {
     /* blue/orange, daltonized-friendly — mirrors your VSCode theme */
     --bg: #0a0a0c; --pane: #0d0d0f; --chrome: #1a1a1d; --line: #2a2a2e;
     --fg: #c8c8cc; --dim: #6a6a70; --bright: #e8e8ea;
@@ -20,14 +28,6 @@
     --claude: #e07a4f; --codex: #b8a58f; --ok: #c98d5a; --warn: #e0af68;
     --focus: #e07a4f;
     --tk-k: #e07a4f; --tk-s: #c9a26d; --tk-n: #c9a26d; --tk-t: #d9986f; --tk-c: #5d554c; --tk-p: #cfc7bf;
-  }
-  body[data-theme="ghost"] {
-    /* mono ghost — near-monochrome, one dim accent */
-    --bg: #0b0b0c; --pane: #0e0e10; --chrome: #18181a; --line: #262629;
-    --fg: #b8b8bc; --dim: #626268; --bright: #f2f2f4;
-    --claude: #f2f2f4; --codex: #b8b8bc; --ok: #8a8a92; --warn: #d8d8dc;
-    --focus: #f2f2f4;
-    --tk-k: #f2f2f4; --tk-s: #9a9aa0; --tk-n: #9a9aa0; --tk-t: #d0d0d4; --tk-c: #4a4a50; --tk-p: #b8b8bc;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -119,9 +119,9 @@
 <body>
 
 <div class="themes" id="themes">
-  <span class="theme-chip on" data-th="vscode">blue/orange (your vscode)</span>
-  <span class="theme-chip" data-th="warm">claude warm</span>
   <span class="theme-chip" data-th="ghost">mono ghost</span>
+  <span class="theme-chip" data-th="vscode">blue/orange (vscode)</span>
+  <span class="theme-chip" data-th="warm">claude warm</span>
   <span style="color:var(--dim);font-size:11px;align-self:center">· or press <b style="color:var(--bright)">t</b></span>
 </div>
 
@@ -386,13 +386,19 @@ function renderStatus() {
 
 function renderAll() { renderTabs(); renderRail(); renderGrid(); renderStatus(); }
 
-const THEMES = ['vscode', 'warm', 'ghost'];
-function setTheme(th) {
+const THEMES = ['ghost', 'vscode', 'warm'];
+const THEME_KEY = 'agent-cli-demo-theme';
+function setTheme(th, persist = true) {
   document.body.dataset.theme = th;
   document.querySelectorAll('.theme-chip').forEach(c => c.classList.toggle('on', c.dataset.th === th));
+  if (persist) { try { localStorage.setItem(THEME_KEY, th); } catch (_) {} }
 }
 document.querySelectorAll('.theme-chip').forEach(c =>
   c.addEventListener('click', () => setTheme(c.dataset.th)));
+
+let savedTheme = 'ghost';
+try { savedTheme = localStorage.getItem(THEME_KEY) || 'ghost'; } catch (_) {}
+setTheme(THEMES.includes(savedTheme) ? savedTheme : 'ghost', false);
 
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
