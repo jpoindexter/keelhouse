@@ -27,29 +27,43 @@
   "models": [],
   "cards": [
     {
+      "id": "R0",
+      "title": "Editor-fidelity spike",
+      "column": "now",
+      "tier": "rock",
+      "track": "trial",
+      "size": "S",
+      "launch": "v0",
+      "blocker": true,
+      "summary": "1-2h, not a week: open a real file in helix at real terminal font next to the VSCode screenshot. Tools installed (zellij/yazi/helix via brew, Ghostty already present); spike/ has the file and instructions. Resolves the riskiest unknown before either trial starts — added after the blind-spot audit found this was riding undecided inside a 7-day trial.",
+      "done": "Verdict logged in DECISIONS.md: does a TUI editor satisfy 'I expected it to look like VSCode's,' per the threshold already written there.",
+      "closes": "gates R1"
+    },
+    {
       "id": "R1",
-      "title": "Zellij cockpit spike",
+      "title": "Zellij cockpit trial",
       "column": "now",
       "tier": "rock",
       "track": "trial",
       "size": "L",
       "launch": "v0",
       "blocker": true,
-      "summary": "KDL layout in Ghostty: tabs per project (indx, brutal, prova, gripe), yazi file rail, claude/codex panes each in their own worktree. Zellij persistence — no tmux wrapper. The closest match to the stated experience.",
-      "done": "One week of daily use across 2+ projects with 3+ agent panes; every friction logged in ERRORS.md/PARKED.md. Known criterion going in: does a TUI editor (micro/helix) satisfy the 'VSCode-look editor, sometimes' expectation, or does that friction alone justify the Tauri build?",
-      "closes": "decides R3"
+      "summary": "KDL layout in Ghostty: tabs per project (indx, brutal, prova, gripe), yazi file rail, claude/codex panes each in their own worktree. Zellij persistence — no tmux wrapper. Runs only after R0 passes.",
+      "done": "One week of daily use across 2+ projects with 3+ agent panes; every friction logged in ERRORS.md same-day, not from memory.",
+      "closes": "decides R3 — threshold in DECISIONS.md"
     },
     {
       "id": "R2",
       "title": "Superconductor daily-driver trial",
-      "column": "now",
+      "column": "next",
       "tier": "rock",
       "track": "trial",
       "size": "M",
       "launch": "v0",
-      "summary": "Already installed (super.engineering). Its workspace-tabs + worktree-per-task model is exactly the ask; its chat UI instead of the claude TUI is the open question. Closed source, v0.1.0 nightly.",
-      "done": "Clear keep/kill verdict after real use: does losing the terminal CLI view actually hurt?",
-      "closes": "decides R3"
+      "blocker": true,
+      "summary": "Already installed (super.engineering). Its workspace-tabs + worktree-per-task model is exactly the ask; its chat UI instead of the claude TUI is the open question. Closed source, v0.1.0 nightly. Runs after R1 concludes, not concurrently — parallel trials would confound friction attribution with tool-switching cost.",
+      "done": "Clear keep/kill verdict after a full real week: does losing the terminal CLI view actually hurt?",
+      "closes": "decides R3 — threshold in DECISIONS.md"
     },
     {
       "id": "P1",
@@ -95,7 +109,7 @@
       "size": "XL",
       "launch": "v2",
       "gated": true,
-      "summary": "The endgame, only if both trials fail on real frictions. Seed from hashmark's Tauri scaffold + Warp design spec (color algebra, fonts, 358 icons); new core = portable-pty → xterm.js; workspace tabs + worktree-per-task model stolen from Superconductor.",
+      "summary": "The endgame, only if trials hit the named threshold in DECISIONS.md (2026-07-07 entry) — not a vibe call after the fact. Seed from hashmark's Tauri scaffold + Warp design spec (color algebra, fonts, 358 icons); new core = portable-pty → xterm.js; workspace tabs + worktree-per-task model stolen from Superconductor.",
       "done": "v0 scope written from the trials' logged frictions — not imagined features — before any code.",
       "closes": "closes the gap no OSS app fills (native-light, real PTY, thin rail)"
     },
@@ -107,7 +121,7 @@
       "track": "research",
       "size": "S",
       "launch": "v2",
-      "summary": "resources/super.engineering.app (GPUI, closed source) — settings keys already reveal the feature map: workspace tab placement, stacked shells, worktree sort, branch cleanup automation. Document what's worth stealing for R3.",
+      "summary": "Settings-key notes + screenshot (kept in resources/ — the actual binary was removed from git, see DECISIONS.md 2026-07-07: you can't mine UX patterns from a compiled binary, so committing it had no benefit). Only runs if R3 actually fires, not scheduled by default — was previously a guaranteed step regardless of trial outcome.",
       "gated": true
     }
   ],
@@ -128,8 +142,18 @@
       "track": "config",
       "size": "S",
       "launch": "v0",
-      "summary": "Private repo with rockmap vendored, this board, the Superconductor bundle in resources/, and an interactive HTML demo of the zellij cockpit experience.",
+      "summary": "Private repo with rockmap vendored, this board, and an interactive HTML demo of the zellij cockpit experience. Note: the demo shipped before any real trial hours were logged — flagged in the 2026-07-07 blind-spot audit as the project's central risk; see ERRORS.md.",
       "done": "Pushed to github.com/jpoindexter/agent-cli (private).",
+      "shipped": "2026-07-07"
+    },
+    {
+      "id": "S3",
+      "title": "Audit remediation",
+      "track": "trial",
+      "size": "M",
+      "launch": "v0",
+      "summary": "Scaffolded PRD/ROADMAP/DECISIONS/PARKED/ERRORS. Installed zellij, yazi, helix (Ghostty already present) and built the editor-fidelity spike (spike/). Sequenced R1/R2, named the R3 threshold, re-gated S2. Removed the 117MB Superconductor binary from git (kept 548K of notes/icon). Pruned an orphaned worktree in indx; flagged its branch ambiguity for Jason instead of guessing.",
+      "done": "All 16 audit findings addressed or explicitly deferred with a named owner (Jason, for the one judgment call).",
       "shipped": "2026-07-07"
     }
   ]

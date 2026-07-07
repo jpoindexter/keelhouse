@@ -63,7 +63,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>agent cli</h1>
-<p class="meta">terminal-first multi-agent cockpit — real Claude TUI front and center, thin file rail, tabs = projects &middot; 7 slices &middot; 2 shipped</p>
+<p class="meta">terminal-first multi-agent cockpit — real Claude TUI front and center, thin file rail, tabs = projects &middot; 8 slices &middot; 3 shipped</p>
 <p class="loop">Tab = project. Panes = agents, each in its own worktree. Real TUI everywhere. Ship config before code — build the Tauri app only against frictions the trials prove.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Trials</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Cockpit config</span><span><i style="border-color:#5c2e1e;background:#1a0f0a"></i>Build (endgame)</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research</span><span style="color:#f87171">🔒 launch blocker</span><span style="color:#7a8898">⊘ gated</span></div>
 <div class="filters">
@@ -75,18 +75,22 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="board" style="--cols:3">
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
+<div class="card" data-track="trial" data-id="R0" data-size="S" data-tier="rock" data-launch="v0">
+<div class="hd"><span class="sz">S</span><span class="ttl">R0 &middot; Editor-fidelity spike</span><span class="lens l-trial">Trials</span></div>
+<div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">1-2h, not a week: open a real file in helix at real terminal font next to the VSCode screenshot. Tools installed (zellij/yazi/helix via brew, Ghostty already present); spike/ has the file and instructions. Resolves the riskiest unknown before either trial starts — added after the blind-spot audit found this was riding undecided inside a 7-day trial.</p>
+<details><summary>Done criteria</summary><p class="done">Verdict logged in DECISIONS.md: does a TUI editor satisfy 'I expected it to look like VSCode's,' per the threshold already written there.</p></details><div class="closes">gates R1</div></div>
 <div class="card" data-track="trial" data-id="R1" data-size="L" data-tier="rock" data-launch="v0">
-<div class="hd"><span class="sz">L</span><span class="ttl">R1 &middot; Zellij cockpit spike</span><span class="lens l-trial">Trials</span></div>
-<div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">KDL layout in Ghostty: tabs per project (indx, brutal, prova, gripe), yazi file rail, claude/codex panes each in their own worktree. Zellij persistence — no tmux wrapper. The closest match to the stated experience.</p>
-<details><summary>Done criteria</summary><p class="done">One week of daily use across 2+ projects with 3+ agent panes; every friction logged in ERRORS.md/PARKED.md. Known criterion going in: does a TUI editor (micro/helix) satisfy the 'VSCode-look editor, sometimes' expectation, or does that friction alone justify the Tauri build?</p></details><div class="closes">decides R3</div></div>
-<div class="card" data-track="trial" data-id="R2" data-size="M" data-tier="rock" data-launch="v0">
-<div class="hd"><span class="sz">M</span><span class="ttl">R2 &middot; Superconductor daily-driver trial</span><span class="lens l-trial">Trials</span></div>
-<div class="badges"><span class="me ver">v0</span></div><p class="sum">Already installed (super.engineering). Its workspace-tabs + worktree-per-task model is exactly the ask; its chat UI instead of the claude TUI is the open question. Closed source, v0.1.0 nightly.</p>
-<details><summary>Done criteria</summary><p class="done">Clear keep/kill verdict after real use: does losing the terminal CLI view actually hurt?</p></details><div class="closes">decides R3</div></div>
+<div class="hd"><span class="sz">L</span><span class="ttl">R1 &middot; Zellij cockpit trial</span><span class="lens l-trial">Trials</span></div>
+<div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">KDL layout in Ghostty: tabs per project (indx, brutal, prova, gripe), yazi file rail, claude/codex panes each in their own worktree. Zellij persistence — no tmux wrapper. Runs only after R0 passes.</p>
+<details><summary>Done criteria</summary><p class="done">One week of daily use across 2+ projects with 3+ agent panes; every friction logged in ERRORS.md same-day, not from memory.</p></details><div class="closes">decides R3 — threshold in DECISIONS.md</div></div>
 </div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
+<div class="card" data-track="trial" data-id="R2" data-size="M" data-tier="rock" data-launch="v0">
+<div class="hd"><span class="sz">M</span><span class="ttl">R2 &middot; Superconductor daily-driver trial</span><span class="lens l-trial">Trials</span></div>
+<div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">Already installed (super.engineering). Its workspace-tabs + worktree-per-task model is exactly the ask; its chat UI instead of the claude TUI is the open question. Closed source, v0.1.0 nightly. Runs after R1 concludes, not concurrently — parallel trials would confound friction attribution with tool-switching cost.</p>
+<details><summary>Done criteria</summary><p class="done">Clear keep/kill verdict after a full real week: does losing the terminal CLI view actually hurt?</p></details><div class="closes">decides R3 — threshold in DECISIONS.md</div></div>
 <div class="card" data-track="config" data-id="P1" data-size="M" data-tier="rock" data-launch="v0">
 <div class="hd"><span class="sz">M</span><span class="ttl">P1 &middot; Ship v0 cockpit config</span><span class="lens l-config">Cockpit config</span></div>
 <div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">Winner of the trials becomes the shipped artifact: zellij KDL layout(s) + install script + README in this repo. Zero application code.</p>
@@ -103,7 +107,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
 <div class="card" data-track="build" data-id="R3" data-size="XL" data-tier="rock" data-launch="v2">
 <div class="hd"><span class="sz">XL</span><span class="ttl">R3 &middot; Tauri 2 native harness</span><span class="lens l-build">Build (endgame)</span></div>
-<div class="badges"><span class="me ver">v2</span><span class="me gate">⊘</span></div><p class="sum">The endgame, only if both trials fail on real frictions. Seed from hashmark's Tauri scaffold + Warp design spec (color algebra, fonts, 358 icons); new core = portable-pty → xterm.js; workspace tabs + worktree-per-task model stolen from Superconductor.</p>
+<div class="badges"><span class="me ver">v2</span><span class="me gate">⊘</span></div><p class="sum">The endgame, only if trials hit the named threshold in DECISIONS.md (2026-07-07 entry) — not a vibe call after the fact. Seed from hashmark's Tauri scaffold + Warp design spec (color algebra, fonts, 358 icons); new core = portable-pty → xterm.js; workspace tabs + worktree-per-task model stolen from Superconductor.</p>
 <details><summary>Done criteria</summary><p class="done">v0 scope written from the trials' logged frictions — not imagined features — before any code.</p></details><div class="closes">closes the gap no OSS app fills (native-light, real PTY, thin rail)</div></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
@@ -115,12 +119,12 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
 <div class="card" data-track="research" data-id="S2" data-size="S" data-tier="sand" data-launch="v2">
 <div class="hd"><span class="sz">S</span><span class="ttl">S2 &middot; Mine Superconductor bundle for UX patterns</span><span class="lens l-research">Research</span></div>
-<div class="badges"><span class="me ver">v2</span><span class="me gate">⊘</span></div><p class="sum">resources/super.engineering.app (GPUI, closed source) — settings keys already reveal the feature map: workspace tab placement, stacked shells, worktree sort, branch cleanup automation. Document what's worth stealing for R3.</p>
+<div class="badges"><span class="me ver">v2</span><span class="me gate">⊘</span></div><p class="sum">Settings-key notes + screenshot (kept in resources/ — the actual binary was removed from git, see DECISIONS.md 2026-07-07: you can't mine UX patterns from a compiled binary, so committing it had no benefit). Only runs if R3 actually fires, not scheduled by default — was previously a guaranteed step regardless of trial outcome.</p>
 </div>
 </div>
 </div>
 </div>
-<details class="sh-section" open><summary>✅ Shipped (2)</summary>
+<details class="sh-section" open><summary>✅ Shipped (3)</summary>
 <div class="sh-grid">
 <div class="card s-shipped" data-track="research" data-id="S0" data-size="M" data-tier="" data-launch="v0">
 <div class="hd"><span class="sz">M</span><span class="ttl">S0 &middot; Research: OSS landscape + Zed verification</span><span class="lens l-research">Research</span></div>
@@ -128,8 +132,12 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Findings drove the trial-first roadmap; rejected options documented with reasons. ✓ 2026-07-07</p></details></div>
 <div class="card s-shipped" data-track="config" data-id="S1" data-size="S" data-tier="" data-launch="v0">
 <div class="hd"><span class="sz">S</span><span class="ttl">S1 &middot; Repo + roadmap board + interactive cockpit demo</span><span class="lens l-config">Cockpit config</span></div>
-<div class="badges"><span class="me ver">v0</span></div><p class="sum">Private repo with rockmap vendored, this board, the Superconductor bundle in resources/, and an interactive HTML demo of the zellij cockpit experience.</p>
+<div class="badges"><span class="me ver">v0</span></div><p class="sum">Private repo with rockmap vendored, this board, and an interactive HTML demo of the zellij cockpit experience. Note: the demo shipped before any real trial hours were logged — flagged in the 2026-07-07 blind-spot audit as the project's central risk; see ERRORS.md.</p>
 <details><summary>Done criteria</summary><p class="done">Pushed to github.com/jpoindexter/agent-cli (private). ✓ 2026-07-07</p></details></div>
+<div class="card s-shipped" data-track="trial" data-id="S3" data-size="M" data-tier="" data-launch="v0">
+<div class="hd"><span class="sz">M</span><span class="ttl">S3 &middot; Audit remediation</span><span class="lens l-trial">Trials</span></div>
+<div class="badges"><span class="me ver">v0</span></div><p class="sum">Scaffolded PRD/ROADMAP/DECISIONS/PARKED/ERRORS. Installed zellij, yazi, helix (Ghostty already present) and built the editor-fidelity spike (spike/). Sequenced R1/R2, named the R3 threshold, re-gated S2. Removed the 117MB Superconductor binary from git (kept 548K of notes/icon). Pruned an orphaned worktree in indx; flagged its branch ambiguity for Jason instead of guessing.</p>
+<details><summary>Done criteria</summary><p class="done">All 16 audit findings addressed or explicitly deferred with a named owner (Jason, for the one judgment call). ✓ 2026-07-07</p></details></div>
 </div>
 </details>
 <script>(function(){
