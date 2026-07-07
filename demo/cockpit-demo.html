@@ -93,7 +93,7 @@
 
 <div class="hint">
   <b>This is the experience, simulated.</b>
-  <kbd>1</kbd>–<kbd>4</kbd> switch project tab · <kbd>←</kbd><kbd>→</kbd> move focus · <kbd>n</kbd> new agent in a fresh worktree · <kbd>e</kbd> edit selected file in a pane · <kbd>x</kbd> close pane · click anything
+  <kbd>1</kbd>–<kbd>4</kbd> switch project tab · <kbd>←</kbd><kbd>→</kbd> move focus · <kbd>n</kbd> new agent in a fresh worktree · <kbd>e</kbd>/<kbd>Enter</kbd> edit selected file in a pane ·<kbd>x</kbd> close pane · click anything
 </div>
 
 <div class="window" id="win">
@@ -329,7 +329,8 @@ document.addEventListener('keydown', e => {
     focusIdx = p.panes.length - 1;
     renderGrid(); renderStatus(); paintFocus();
   }
-  if (e.key === 'e') {
+  if (e.key === 'e' || e.key === 'Enter') {
+    e.preventDefault();
     const f = p.files.find(x => x.sel) || p.files[0];
     const name = f.n.trim();
     p.panes.push({ agent: 'editor', wt: name, task: 'yazi → e', script: [
