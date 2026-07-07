@@ -77,6 +77,20 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 
 **Reversible?** Yes — this is a correction to a prior DECISIONS.md entry, not a new irreversible commitment.
 
+## 2026-07-07 — Course correction: build our own app, not adopt cmux
+
+**What happened:** After the cmux config-correction, planning docs were updated to frame "cmux + config" as the v0 plan. Jason rejected this directly: "why are you pushing cmux we are trying to build our own." Correct — cmux was answering "is this app good" when the actual instruction, stated back in `demo/cockpit-demo.html`'s own caption, was to build our own thing while leveraging real open source *projects* (zellij, yazi, Ghostty's terminal engine) as components — not adopt a finished third-party app.
+
+**Choice:** Build a native app — Tauri (Rust backend, matches Jason's existing stack across indx/hashmark/brutal) + React chrome (sidebar, tabs — matches the demo's UI) + real terminal panes hosting real `claude`/`codex` processes.
+
+**Terminal engine choice, verified via spike (`spike-ghostty-vt/`):** `libghostty-vt` — Rust bindings to Ghostty's actual parsing engine (same core cmux/Mux0/Supacode use, extracted specifically for embedding) — not `xterm.js` (weaker parser, extra webview rendering layer, closer to "the vscode shit" Jason rejected). Spike proved: real pty → real `ls -la -G` → real ANSI codes → `libghostty-vt` parses correctly → cell-by-cell readback matches exactly. Runs in Tauri's Rust backend directly, no cross-language FFI hack needed.
+
+**Toolchain note:** requires Zig pinned to exactly 0.15.2 (Homebrew's default 0.16.0 breaks the build) — real but minor setup cost, documented in `spike-ghostty-vt/README.md`.
+
+**Why:** Terminal rendering fidelity is the core value proposition of this app — the engine matters more than the chrome framework. `libghostty-vt` gives real Ghostty-grade parsing without reinventing VT100/xterm emulation from scratch (a non-starter) and without settling for a weaker, heavier alternative.
+
+**Reversible?** Yes — spike only, no production code committed yet.
+
 ## 2026-07-07 — Trials run sequentially, not in parallel
 
 **Choice:** R1 (zellij) runs its full week first; R2 (Superconductor) starts only after R1 concludes.
