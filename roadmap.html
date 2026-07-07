@@ -63,8 +63,8 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>agent cli</h1>
-<p class="meta">terminal-first multi-agent cockpit — real Claude TUI front and center, thin file rail, tabs = projects &middot; 7 slices &middot; 4 shipped</p>
-<p class="loop">Tab = project. Panes = agents, each in its own worktree. Real TUI everywhere. Ship config before code — build the Tauri app only against frictions the trials prove.</p>
+<p class="meta">terminal-first multi-agent cockpit — real Claude TUI front and center, thin file rail, tabs = projects &middot; 6 slices &middot; 7 shipped</p>
+<p class="loop">cmux (native, real terminal panes, real inline VS Code) + a real cmux.json config. Fork or build fresh only if config genuinely fails — decided after trying it, not before. Zellij/Superconductor trials parked, see PARKED.md.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Trials</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Cockpit config</span><span><i style="border-color:#5c2e1e;background:#1a0f0a"></i>Build (endgame)</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research</span><span style="color:#f87171">🔒 launch blocker</span><span style="color:#7a8898">⊘ gated</span></div>
 <div class="filters">
 <label for="track-filter">Track:</label><select id="track-filter"><option value="all">All track</option><option value="trial">Trials</option><option value="config">Cockpit config</option><option value="build">Build (endgame)</option><option value="research">Research</option></select>
@@ -75,22 +75,18 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="board" style="--cols:3">
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="trial" data-id="R1" data-size="L" data-tier="rock" data-launch="v0">
-<div class="hd"><span class="sz">L</span><span class="ttl">R1 &middot; Zellij cockpit trial — IN PROGRESS</span><span class="lens l-trial">Trials</span></div>
-<div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">R0 spike passed 2026-07-07 (see DECISIONS.md) — trial started. Real KDL layout live at zellij/agent.kdl: tabs per project (indx, brutal, hashmark, prova), yazi file rail, one claude pane per tab to start (zellij's native pane-splitting handles adding more — no pre-built worktree automation yet, that's P2).</p>
-<details><summary>Done criteria</summary><p class="done">One week of daily use across 2+ projects with 3+ agent panes; every friction logged in ERRORS.md same-day, not from memory.</p></details><div class="closes">decides R3 — threshold in DECISIONS.md</div></div>
+<div class="card" data-track="config" data-id="R4" data-size="S" data-tier="rock" data-launch="v0">
+<div class="hd"><span class="sz">S</span><span class="ttl">R4 &middot; Try cmux's real appearance config — IN PROGRESS</span><span class="lens l-config">Cockpit config</span></div>
+<div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">cmux.json sidebarAppearance.*/workspaceColors.* tokens (tint, corner radius, material, blend mode, tab colors) — verified real and shipped, not a fork requirement. Applying flow-app-shell + flow-navigation guidance: check workspaceColors.indicatorStyle beyond its .leftRail default (spec wants a filled active-state, not just a stripe), sidebar width against the 240-280px/56-72px-collapsed norm.</p>
+<details><summary>Done criteria</summary><p class="done">Jason confirms it reads as 'clean and modern,' or names specifically what still doesn't.</p></details><div class="closes">decides R3 and the fork question</div></div>
 </div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="trial" data-id="R2" data-size="M" data-tier="rock" data-launch="v0">
-<div class="hd"><span class="sz">M</span><span class="ttl">R2 &middot; Superconductor daily-driver trial</span><span class="lens l-trial">Trials</span></div>
-<div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">Already installed (super.engineering). Its workspace-tabs + worktree-per-task model is exactly the ask; its chat UI instead of the claude TUI is the open question. Closed source, v0.1.0 nightly. Runs after R1 concludes, not concurrently — parallel trials would confound friction attribution with tool-switching cost.</p>
-<details><summary>Done criteria</summary><p class="done">Clear keep/kill verdict after a full real week: does losing the terminal CLI view actually hurt?</p></details><div class="closes">decides R3 — threshold in DECISIONS.md</div></div>
 <div class="card" data-track="config" data-id="P1" data-size="M" data-tier="rock" data-launch="v0">
 <div class="hd"><span class="sz">M</span><span class="ttl">P1 &middot; Ship v0 cockpit config</span><span class="lens l-config">Cockpit config</span></div>
-<div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">Winner of the trials becomes the shipped artifact: zellij KDL layout(s) + install script + README in this repo. Zero application code.</p>
-<details><summary>Done criteria</summary><p class="done">Fresh shell: one command → cockpit with 4 project tabs, agents running, surviving a restart.</p></details></div>
+<div class="badges"><span class="me ver">v0</span><span class="me lock">🔒</span></div><p class="sum">A real, versioned cmux.json in this repo, once R4 lands. cmux itself is already installed — zero application code needed unless R4 fails.</p>
+<details><summary>Done criteria</summary><p class="done">Fresh shell: cmux + this repo's cmux.json → cockpit with real project workspaces, agents running, surviving a restart.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="config" data-id="P2" data-size="S" data-tier="pebble" data-launch="v1">
@@ -103,7 +99,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
 <div class="card" data-track="build" data-id="R3" data-size="XL" data-tier="rock" data-launch="v2">
 <div class="hd"><span class="sz">XL</span><span class="ttl">R3 &middot; Tauri 2 native harness</span><span class="lens l-build">Build (endgame)</span></div>
-<div class="badges"><span class="me ver">v2</span><span class="me gate">⊘</span></div><p class="sum">The endgame, only if trials hit the named threshold in DECISIONS.md (2026-07-07 entry) — not a vibe call after the fact. Seed from hashmark's Tauri scaffold + Warp design spec (color algebra, fonts, 358 icons); new core = portable-pty → xterm.js; workspace tabs + worktree-per-task model stolen from Superconductor.</p>
+<div class="badges"><span class="me ver">v2</span><span class="me gate">⊘</span></div><p class="sum">The endgame — gated harder now: fires only if BOTH R4 (cmux's real config) AND a scoped cmux fork attempt fail, per DECISIONS.md. Weigh the fork's own named risks first (Sparkle auto-update silently overwriting local changes, multi-platform monorepo scope, Xcode/Zig/Rust toolchain fragility — docs/blind-audit-cmux-fork-decision-2026-07-07.html). Seed from hashmark's Tauri scaffold + Warp design spec (color algebra, fonts, 358 icons) if it ever fires.</p>
 <details><summary>Done criteria</summary><p class="done">v0 scope written from the trials' logged frictions — not imagined features — before any code.</p></details><div class="closes">closes the gap no OSS app fills (native-light, real PTY, thin rail)</div></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
@@ -120,12 +116,24 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </div>
 </div>
 </div>
-<details class="sh-section" open><summary>✅ Shipped (4)</summary>
+<details class="sh-section" open><summary>✅ Shipped (7)</summary>
 <div class="sh-grid">
 <div class="card s-shipped" data-track="trial" data-id="R0" data-size="S" data-tier="" data-launch="v0">
 <div class="hd"><span class="sz">S</span><span class="ttl">R0 &middot; Editor-fidelity spike</span><span class="lens l-trial">Trials</span></div>
-<div class="badges"><span class="me ver">v0</span></div><p class="sum">1-2h test: hx sample.tsx next to the VSCode screenshot. Verdict: PASS — real tree-sitter syntax highlighting, line numbers, distinct enough for real editing.</p>
-<details><summary>Done criteria</summary><p class="done">Verdict logged in DECISIONS.md. Unblocked R1 — the zellij trial started same day. ✓ 2026-07-07</p></details></div>
+<div class="badges"><span class="me ver">v0</span></div><p class="sum">1-2h test: hx sample.tsx next to the VSCode screenshot. Verdict: PASS — real tree-sitter syntax highlighting, line numbers, distinct enough for real editing. Superseded by cmux's real inline VS Code, but the verdict (TUI editors can look real) held up.</p>
+<details><summary>Done criteria</summary><p class="done">Verdict logged in DECISIONS.md. ✓ 2026-07-07</p></details></div>
+<div class="card s-shipped" data-track="trial" data-id="R1" data-size="M" data-tier="" data-launch="v0">
+<div class="hd"><span class="sz">M</span><span class="ttl">R1 &middot; Zellij cockpit trial — parked before completion</span><span class="lens l-trial">Trials</span></div>
+<div class="badges"><span class="me ver">v0</span></div><p class="sum">Real KDL config built (zellij/agent.kdl) and the spike passed, but Jason rejected the static-config interaction model directly before the week-long trial ran: 'this should work like vscode — you open, pick a folder.' Not a wasted build — config stays in the repo, cheap to revisit. See PARKED.md and DECISIONS.md.</p>
+<details><summary>Done criteria</summary><p class="done">Honestly: not completed. Parked on direct user feedback, not on trial results. ✓ 2026-07-07</p></details></div>
+<div class="card s-shipped" data-track="trial" data-id="S4" data-size="M" data-tier="" data-launch="v0">
+<div class="hd"><span class="sz">M</span><span class="ttl">S4 &middot; cmux found, verified in source, adopted</span><span class="lens l-trial">Trials</span></div>
+<div class="badges"><span class="me ver">v0</span></div><p class="sum">Superconductor and hashmark evaluated and rejected first (closed source / missing file explorer + single-agent-view). cmux (manaflow-ai, GPL-3.0, native Swift+AppKit on libghostty) verified directly in source: real NSOpenPanel folder-picker, real inline VS Code via code serve-web, real multi-agent split panes.</p>
+<details><summary>Done criteria</summary><p class="done">Logged in DECISIONS.md with full evidence trail. ✓ 2026-07-07</p></details></div>
+<div class="card s-shipped" data-track="research" data-id="S5" data-size="M" data-tier="" data-launch="v0">
+<div class="hd"><span class="sz">M</span><span class="ttl">S5 &middot; Blind-spot audit of the fork-cmux decision</span><span class="lens l-research">Research</span></div>
+<div class="badges"><span class="me ver">v0</span></div><p class="sum">16-framework audit of 'cmux is best to fork.' Found the verdict was reached on asymmetric evidence (source-verified cmux vs. web-searched alternatives). More importantly: caught and corrected a false claim — cmux's chrome IS config-themeable (sidebarAppearance.*/workspaceColors.* in cmux.json), verified firsthand against real source, not just relayed. Likely makes the fork question moot.</p>
+<details><summary>Done criteria</summary><p class="done">docs/blind-audit-cmux-fork-decision-2026-07-07.html. DECISIONS.md and ERRORS.md corrected same-day. ✓ 2026-07-07</p></details></div>
 <div class="card s-shipped" data-track="research" data-id="S0" data-size="M" data-tier="" data-launch="v0">
 <div class="hd"><span class="sz">M</span><span class="ttl">S0 &middot; Research: OSS landscape + Zed verification</span><span class="lens l-research">Research</span></div>
 <div class="badges"><span class="me ver">v0</span></div><p class="sum">July 2026 survey: every purpose-built Claude Code GUI reimplements the UI, is deprecated, closed, or Electron-heavy. Zed: no project tabs, terminals die on quit, git panel single-repo. Zellij+yazi delivers ~90% of the spec at zero build cost.</p>

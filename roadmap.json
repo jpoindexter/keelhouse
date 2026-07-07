@@ -2,7 +2,7 @@
   "$schema": "./rockmap/roadmap.schema.json",
   "title": "agent cli",
   "subtitle": "terminal-first multi-agent cockpit — real Claude TUI front and center, thin file rail, tabs = projects",
-  "loop": "Tab = project. Panes = agents, each in its own worktree. Real TUI everywhere. Ship config before code — build the Tauri app only against frictions the trials prove.",
+  "loop": "cmux (native, real terminal panes, real inline VS Code) + a real cmux.json config. Fork or build fresh only if config genuinely fails — decided after trying it, not before. Zellij/Superconductor trials parked, see PARKED.md.",
   "columns": [
     { "id": "now", "label": "Now", "color": "#4ade80" },
     { "id": "next", "label": "Next", "color": "#60a5fa" },
@@ -27,30 +27,17 @@
   "models": [],
   "cards": [
     {
-      "id": "R1",
-      "title": "Zellij cockpit trial — IN PROGRESS",
+      "id": "R4",
+      "title": "Try cmux's real appearance config — IN PROGRESS",
       "column": "now",
       "tier": "rock",
-      "track": "trial",
-      "size": "L",
+      "track": "config",
+      "size": "S",
       "launch": "v0",
       "blocker": true,
-      "summary": "R0 spike passed 2026-07-07 (see DECISIONS.md) — trial started. Real KDL layout live at zellij/agent.kdl: tabs per project (indx, brutal, hashmark, prova), yazi file rail, one claude pane per tab to start (zellij's native pane-splitting handles adding more — no pre-built worktree automation yet, that's P2).",
-      "done": "One week of daily use across 2+ projects with 3+ agent panes; every friction logged in ERRORS.md same-day, not from memory.",
-      "closes": "decides R3 — threshold in DECISIONS.md"
-    },
-    {
-      "id": "R2",
-      "title": "Superconductor daily-driver trial",
-      "column": "next",
-      "tier": "rock",
-      "track": "trial",
-      "size": "M",
-      "launch": "v0",
-      "blocker": true,
-      "summary": "Already installed (super.engineering). Its workspace-tabs + worktree-per-task model is exactly the ask; its chat UI instead of the claude TUI is the open question. Closed source, v0.1.0 nightly. Runs after R1 concludes, not concurrently — parallel trials would confound friction attribution with tool-switching cost.",
-      "done": "Clear keep/kill verdict after a full real week: does losing the terminal CLI view actually hurt?",
-      "closes": "decides R3 — threshold in DECISIONS.md"
+      "summary": "cmux.json sidebarAppearance.*/workspaceColors.* tokens (tint, corner radius, material, blend mode, tab colors) — verified real and shipped, not a fork requirement. Applying flow-app-shell + flow-navigation guidance: check workspaceColors.indicatorStyle beyond its .leftRail default (spec wants a filled active-state, not just a stripe), sidebar width against the 240-280px/56-72px-collapsed norm.",
+      "done": "Jason confirms it reads as 'clean and modern,' or names specifically what still doesn't.",
+      "closes": "decides R3 and the fork question"
     },
     {
       "id": "P1",
@@ -61,8 +48,8 @@
       "size": "M",
       "launch": "v0",
       "blocker": true,
-      "summary": "Winner of the trials becomes the shipped artifact: zellij KDL layout(s) + install script + README in this repo. Zero application code.",
-      "done": "Fresh shell: one command → cockpit with 4 project tabs, agents running, surviving a restart."
+      "summary": "A real, versioned cmux.json in this repo, once R4 lands. cmux itself is already installed — zero application code needed unless R4 fails.",
+      "done": "Fresh shell: cmux + this repo's cmux.json → cockpit with real project workspaces, agents running, surviving a restart."
     },
     {
       "id": "P2",
@@ -96,7 +83,7 @@
       "size": "XL",
       "launch": "v2",
       "gated": true,
-      "summary": "The endgame, only if trials hit the named threshold in DECISIONS.md (2026-07-07 entry) — not a vibe call after the fact. Seed from hashmark's Tauri scaffold + Warp design spec (color algebra, fonts, 358 icons); new core = portable-pty → xterm.js; workspace tabs + worktree-per-task model stolen from Superconductor.",
+      "summary": "The endgame — gated harder now: fires only if BOTH R4 (cmux's real config) AND a scoped cmux fork attempt fail, per DECISIONS.md. Weigh the fork's own named risks first (Sparkle auto-update silently overwriting local changes, multi-platform monorepo scope, Xcode/Zig/Rust toolchain fragility — docs/blind-audit-cmux-fork-decision-2026-07-07.html). Seed from hashmark's Tauri scaffold + Warp design spec (color algebra, fonts, 358 icons) if it ever fires.",
       "done": "v0 scope written from the trials' logged frictions — not imagined features — before any code.",
       "closes": "closes the gap no OSS app fills (native-light, real PTY, thin rail)"
     },
@@ -119,8 +106,38 @@
       "track": "trial",
       "size": "S",
       "launch": "v0",
-      "summary": "1-2h test: hx sample.tsx next to the VSCode screenshot. Verdict: PASS — real tree-sitter syntax highlighting, line numbers, distinct enough for real editing.",
-      "done": "Verdict logged in DECISIONS.md. Unblocked R1 — the zellij trial started same day.",
+      "summary": "1-2h test: hx sample.tsx next to the VSCode screenshot. Verdict: PASS — real tree-sitter syntax highlighting, line numbers, distinct enough for real editing. Superseded by cmux's real inline VS Code, but the verdict (TUI editors can look real) held up.",
+      "done": "Verdict logged in DECISIONS.md.",
+      "shipped": "2026-07-07"
+    },
+    {
+      "id": "R1",
+      "title": "Zellij cockpit trial — parked before completion",
+      "track": "trial",
+      "size": "M",
+      "launch": "v0",
+      "summary": "Real KDL config built (zellij/agent.kdl) and the spike passed, but Jason rejected the static-config interaction model directly before the week-long trial ran: 'this should work like vscode — you open, pick a folder.' Not a wasted build — config stays in the repo, cheap to revisit. See PARKED.md and DECISIONS.md.",
+      "done": "Honestly: not completed. Parked on direct user feedback, not on trial results.",
+      "shipped": "2026-07-07"
+    },
+    {
+      "id": "S4",
+      "title": "cmux found, verified in source, adopted",
+      "track": "trial",
+      "size": "M",
+      "launch": "v0",
+      "summary": "Superconductor and hashmark evaluated and rejected first (closed source / missing file explorer + single-agent-view). cmux (manaflow-ai, GPL-3.0, native Swift+AppKit on libghostty) verified directly in source: real NSOpenPanel folder-picker, real inline VS Code via code serve-web, real multi-agent split panes.",
+      "done": "Logged in DECISIONS.md with full evidence trail.",
+      "shipped": "2026-07-07"
+    },
+    {
+      "id": "S5",
+      "title": "Blind-spot audit of the fork-cmux decision",
+      "track": "research",
+      "size": "M",
+      "launch": "v0",
+      "summary": "16-framework audit of 'cmux is best to fork.' Found the verdict was reached on asymmetric evidence (source-verified cmux vs. web-searched alternatives). More importantly: caught and corrected a false claim — cmux's chrome IS config-themeable (sidebarAppearance.*/workspaceColors.* in cmux.json), verified firsthand against real source, not just relayed. Likely makes the fork question moot.",
+      "done": "docs/blind-audit-cmux-fork-decision-2026-07-07.html. DECISIONS.md and ERRORS.md corrected same-day.",
       "shipped": "2026-07-07"
     },
     {

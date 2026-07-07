@@ -2,6 +2,18 @@
 
 Deferred ideas. Promote, never delete.
 
+## Zellij cockpit config
+
+**Captured:** 2026-07-07
+**Why parked:** Real, working KDL config (`zellij/agent.kdl`, tabs=projects, yazi rail, agent panes) — but Jason rejected the static-config interaction model directly: "this should work like vscode — you open, pick a folder." Superseded by cmux, which does that natively.
+**Cost to revisit:** Near zero — config already exists, tools (zellij/yazi/helix) already installed.
+
+## Superconductor daily-driver trial
+
+**Captured:** 2026-07-07
+**Why parked:** Closed source (can't fork/extend), and its chat-UI-instead-of-real-terminal-view was the specific thing Jason said he didn't want. cmux's real config surface (found later) covers the "open, pick a folder" want Superconductor was evaluated for, without the closed-source ceiling.
+**Cost to revisit:** Low — `resources/superconductor-reference/` still has the settings-key notes.
+
 ## Tauri 2 native harness (R3)
 
 **Captured:** 2026-07-07

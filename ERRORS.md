@@ -31,3 +31,23 @@ Append-only failure log. Approaches that took >2 attempts, or that a 16-framewor
 **Not fixed, needs Jason:** `codex/happy-path-agent-ux` (2026-05-31 21:42) and `feature/tolaria-shell` (2026-05-31 15:50) are the same day, 6 hours apart — both ~5 weeks stale relative to today, neither obviously "the" current branch. This isn't a bug to silently fix by guessing; it's a real decision about which line of work is live. Working tree has only untracked files (`.codegraph/`, `.codex/`, some docs) — no risk of lost work either way, so switching is safe once Jason picks.
 
 **Why flagged instead of fixed:** Forcing a branch switch on someone else's active project based on a guess is exactly the kind of silent, hard-to-reverse action that should stop and ask rather than proceed.
+
+## 2026-07-07 — Asserted "cmux's chrome isn't config-themeable" without checking deep enough
+
+**What failed:** Claimed cmux's native sidebar/tab-bar chrome "isn't config-themeable and would require editing the compiled Swift/AppKit source directly." This was wrong — real, shipped appearance tokens (`sidebarAppearance.*`, `workspaceColors.*`: tint color, corner radius, material, blend mode, tab colors) exist in `cmux.json`. I'd checked `AppearanceSettings.swift` (light/dark/system mode) but not the deeper `CmuxSettings` catalog before asserting the negative.
+
+**What worked:** A `/blind` audit flagged the claim as unverified (chestertons-fence, unknown-unknowns); I re-cloned the repo and read the actual settings source myself before writing the correction — didn't just relay the subagents' flag.
+
+**Why it failed:** Asserted an absence ("isn't themeable") from a partial search, not a search that had actually ruled it out. Absence claims need the same verification bar as presence claims — "I didn't find X" is not "X doesn't exist" unless the search was actually exhaustive.
+
+**Next time:** Before claiming a feature/config surface doesn't exist, search the actual settings/config catalog structure (not just the first file that seems relevant) before asserting the negative.
+
+## 2026-07-07 — "cmux is still best" verdict reached on asymmetric evidence
+
+**What failed:** Re-confirmed cmux as the best fork target via two web searches (vs. the source-level clone-and-grep cmux itself got), converging to confidence in the same turn, right after being told the pattern of evaluating-instead-of-building was the problem. The alternatives (Mux0, Supacode) never got equivalent verification; the search queries were confirmation-shaped, never adversarial.
+
+**What worked:** The `/blind` audit's steelman+bias-blind-spot pass named the exact mechanism: pressure to resolve a rebuke quickly favors reconfirming the prior answer over genuinely re-testing it.
+
+**Why it failed:** No pre-committed symmetric-effort rule ("verify the challenger as hard as the incumbent") existed before running the comparison.
+
+**Next time:** When re-checking a standing conclusion under social pressure to resolve fast, apply the same verification depth to the challengers as the incumbent already got — or explicitly flag the asymmetry before stating a confident verdict.

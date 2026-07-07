@@ -8,12 +8,13 @@ node rockmap/build-roadmap.mjs roadmap.json roadmap.html
 
 ## v0 — Shippable to one user (Jason)
 
-Sequential, not parallel — each step gates the next.
-
 1. ~~**Editor-fidelity spike**~~ — **PASSED 2026-07-07.** See DECISIONS.md.
-2. **R1: Zellij cockpit trial — IN PROGRESS**, started 2026-07-07. `zellij/agent.kdl`, tabs=projects (indx, brutal, hashmark, prova), yazi rail, agent panes. One week of daily use. Every friction logged in ERRORS.md same-day, not from memory.
-3. **R2: Superconductor daily-driver trial** (1 week, blocker, runs *after* R1 concludes — not concurrent) — keep/kill verdict on losing the terminal CLI view for its chat UI.
-4. **P1: Ship v0 cockpit config** — winner becomes `zellij KDL layout(s) + install script + README`. (R1's config already exists at `zellij/` — P1 is confirming it after a real week, not building it from scratch.)
+2. ~~**R1: Zellij cockpit trial**~~ — **PARKED 2026-07-07**, not abandoned mid-trial for no reason: Jason rejected the static-config interaction model directly ("this should work like vscode — you open, pick a folder"). Real config kept at `zellij/`, cheap to revisit. See PARKED.md.
+3. **cmux adopted** — verified in source 2026-07-07 (native folder-picker, real terminal panes, real inline VS Code, multi-agent split panes). See DECISIONS.md.
+4. **Blind-spot audit of the fork decision** — **DONE 2026-07-07.** `docs/blind-audit-cmux-fork-decision-2026-07-07.html`. Found and corrected a false claim: cmux's chrome is config-themeable via `cmux.json`, likely making a fork unnecessary.
+5. **Try cmux's real appearance config — IN PROGRESS.** `sidebarAppearance.*`/`workspaceColors.*` tokens, applying flow-app-shell + flow-navigation guidance (indicator style, sidebar width/collapse, chrome-vs-content material). Jason to confirm it reads as "clean and modern."
+6. **Decide: config satisfies, or fork-vs-build-fresh** — blocked on step 5's verdict. If forking: weigh the named risks first (Sparkle auto-update clobber, monorepo scope, toolchain fragility — see the audit doc).
+7. **P1: Ship v0** — a real, versioned `cmux.json` config in this repo, once step 5/6 lands.
 
 ## v1 — after real use
 
@@ -21,6 +22,6 @@ Sequential, not parallel — each step gates the next.
 
 ## v2 — only if earned
 
-- R3: Tauri 2 native harness — gated. See DECISIONS.md for the exact firing threshold.
+- R3: Tauri 2 native harness — gated harder now than before: fires only if *both* cmux's config *and* a scoped cmux fork fail. See DECISIONS.md for the exact threshold.
 - P3: Zed stripped-down fallback config (documented, not built)
 - S2: Mine Superconductor bundle for UX patterns — **only if R3 actually fires**, not scheduled by default.

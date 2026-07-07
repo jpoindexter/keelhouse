@@ -6,9 +6,10 @@ Terminal-first multi-agent cockpit. Real CLI agents (claude, codex) running in r
 
 Pivoted 2026-07-07 (see `DECISIONS.md`) after finding cmux: native macOS, Swift/AppKit, built on libghostty. Verified in its own source, not docs — `⌘O` opens a real native folder picker and creates a workspace; the "Open Folder in VS Code (Inline)" panel runs `code serve-web` and opens your **actual installed VS Code** in a browser pane next to the terminal; Workspaces → Surfaces → Split panes gives real simultaneous multi-agent panes running actual CLI tools in a real pty. Closes every gap the earlier zellij/hashmark/Superconductor comparison found.
 
-- **Theme:** stock cmux look was rejected ("horrible... should be clean and modern"). `ghostty/config` — OKLCH-derived, contrast-verified mono-ghost palette (cmux inherits Ghostty's config directly for terminal rendering). `cd ghostty && cp config ~/.config/ghostty/config`.
-- **zellij work** (`zellij/agent.kdl`) is not deleted — cheap fallback if needed — but is no longer the shipped path.
-- **Superconductor** (closed source) and the **Tauri rewrite** (gated) are parked — see `PARKED.md`.
+- **Terminal-pane theme:** `ghostty/config` — OKLCH-derived, contrast-verified mono-ghost palette (cmux inherits Ghostty's config for terminal rendering). `cd ghostty && cp config ~/.config/ghostty/config`.
+- **Chrome theme — bigger finding:** stock cmux chrome was rejected ("horrible... should be clean and modern"). A [16-framework audit](docs/blind-audit-cmux-fork-decision-2026-07-07.html) caught a false claim I'd made — cmux's sidebar/tab chrome **is** config-themeable, no fork needed. Real tokens in `~/.config/cmux/cmux.json`: `sidebarAppearance.*` (tint, corner radius, material, blend mode), `workspaceColors.*` (tab colors, selection, active-indicator style). Trying this now — see `ROADMAP.md` step R4.
+- **zellij work** (`zellij/agent.kdl`) is not deleted — cheap fallback if needed — but is no longer the shipped path. See `PARKED.md`.
+- **Superconductor** (closed source) and the **Tauri rewrite** (gated harder now — needs both the config *and* a scoped fork to fail) are parked — see `PARKED.md`.
 
 Read `PRD.md`, `ROADMAP.md`, `DECISIONS.md`, `PARKED.md`, `ERRORS.md` at the start of any session on this project.
 
@@ -25,6 +26,7 @@ Read `PRD.md`, `ROADMAP.md`, `DECISIONS.md`, `PARKED.md`, `ERRORS.md` at the sta
 | `demo/cockpit-demo.html` | Early interactive mockup — superseded by the real cmux app |
 | `docs/brainstorm/` | Design-phase mockups (platform options, approaches, tab models) |
 | `docs/blind-spot-audit-2026-07-07.html` | 16-framework audit that caught the demo-replaced-the-trial drift |
+| `docs/blind-audit-cmux-fork-decision-2026-07-07.html` | 16-framework audit of the fork-cmux decision — found cmux's chrome is config-themeable |
 | `resources/superconductor-reference/` | Superconductor UX notes (settings-key feature map) + icon — signed binary removed, see `DECISIONS.md` |
 
 Rebuild the board after editing `roadmap.json`:
