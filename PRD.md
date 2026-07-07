@@ -1,6 +1,8 @@
 # PRD — agent cli
 
-**One-liner:** A terminal-first multi-agent coding cockpit — real Claude Code TUI front and center, thin file rail, tabs = projects, each tab holding N agent panes. None of the VSCode chrome.
+**One-liner:** A terminal-first multi-agent coding cockpit — real Claude Code TUI front and center, thin file rail, tabs = projects, each tab holding N agent panes, plus the real VS Code inline when actually needed.
+
+**2026-07-07 update:** Pivoted to [cmux](https://github.com/manaflow-ai/cmux) — see DECISIONS.md. cmux already satisfies this PRD's shape (verified in source): native folder-open, real terminal panes, real inline VS Code. What follows below is the original v0 framing (zellij/Superconductor trials) — superseded, kept for the record per DECISIONS.md's append-only rule.
 
 ## Problem
 

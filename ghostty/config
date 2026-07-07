@@ -1,0 +1,36 @@
+# mono-ghost theme — OKLCH-derived, contrast-verified (see agent-cli/DECISIONS.md 2026-07-07).
+# Chrome tones match the already-approved cockpit-demo.html mono-ghost palette;
+# ANSI accent colors are newly built: desaturated per dark-mode convention
+# (skill: "desaturate ~15-30%, lighten slightly"), all pairs checked >=4.5:1 on bg.
+
+font-family = JetBrains Mono
+font-size = 14
+
+background = #0b0b0c
+foreground = #b8b8bc
+cursor-color = #f2f2f4
+cursor-text = #0b0b0c
+selection-background = #262629
+selection-foreground = #f2f2f4
+minimum-contrast = 1
+
+# 0-7: normal, 8-15: bright
+palette = 0=#0b0b0c
+palette = 1=#c06a64
+palette = 2=#69a275
+palette = 3=#d5b36a
+palette = 4=#5b8abb
+palette = 5=#9c76a4
+palette = 6=#5ba09f
+palette = 7=#b8b8bc
+palette = 8=#777b7e
+palette = 9=#df7f78
+palette = 10=#7cbd89
+palette = 11=#ecc980
+palette = 12=#6da3da
+palette = 13=#b88cc1
+palette = 14=#69bbba
+palette = 15=#f2f2f4
+
+window-padding-x = 8
+window-padding-y = 8

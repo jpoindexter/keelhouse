@@ -1,15 +1,14 @@
 # agent cli
 
-Terminal-first multi-agent cockpit. The real Claude Code TUI front and center, a thin file rail, **tabs = projects**, each tab holding N agent panes (claude ×3 on one repo, codex on another) — none of the VSCode chrome.
+Terminal-first multi-agent cockpit. Real CLI agents (claude, codex) running in real terminal panes, a file rail, **tabs = projects**, each tab holding N agent panes — plus the real VS Code, inline, when you actually need it. Not a lookalike of either.
 
-## Current state — R1 trial in progress
+## Current state — running [cmux](https://github.com/manaflow-ai/cmux)
 
-A [16-framework blind-spot audit](docs/blind-spot-audit-2026-07-07.html) on 2026-07-07 found the demo had replaced the actual trial (zero zellij config existed, tools weren't installed) and that the "zellij is closest match" call had gone stale after later feedback (VSCode-editor-fidelity expectation, color rejections). Remediated same day — see `ERRORS.md` and `DECISIONS.md` for the full record.
+Pivoted 2026-07-07 (see `DECISIONS.md`) after finding cmux: native macOS, Swift/AppKit, built on libghostty. Verified in its own source, not docs — `⌘O` opens a real native folder picker and creates a workspace; the "Open Folder in VS Code (Inline)" panel runs `code serve-web` and opens your **actual installed VS Code** in a browser pane next to the terminal; Workspaces → Surfaces → Split panes gives real simultaneous multi-agent panes running actual CLI tools in a real pty. Closes every gap the earlier zellij/hashmark/Superconductor comparison found.
 
-- **Editor-fidelity spike** (`spike/`) — **PASSED** 2026-07-07. Real tree-sitter highlighting, usable for real editing.
-- **R1: Zellij cockpit trial** — **started.** `zellij/agent.kdl` is the real config: `cd zellij && ./install.sh`, then `zellij --layout agent --session agent`. One week of daily use, frictions logged in `ERRORS.md` same-day.
-- **R2: Superconductor trial** — next, after R1 concludes (not concurrent — confounds friction attribution).
-- **R3: Tauri 2 native harness** — gated. Exact firing threshold in `DECISIONS.md`, decided before the trials, not after.
+- **Theme:** stock cmux look was rejected ("horrible... should be clean and modern"). `ghostty/config` — OKLCH-derived, contrast-verified mono-ghost palette (cmux inherits Ghostty's config directly for terminal rendering). `cd ghostty && cp config ~/.config/ghostty/config`.
+- **zellij work** (`zellij/agent.kdl`) is not deleted — cheap fallback if needed — but is no longer the shipped path.
+- **Superconductor** (closed source) and the **Tauri rewrite** (gated) are parked — see `PARKED.md`.
 
 Read `PRD.md`, `ROADMAP.md`, `DECISIONS.md`, `PARKED.md`, `ERRORS.md` at the start of any session on this project.
 
@@ -19,13 +18,14 @@ Read `PRD.md`, `ROADMAP.md`, `DECISIONS.md`, `PARKED.md`, `ERRORS.md` at the sta
 |---|---|
 | `PRD.md` / `ROADMAP.md` / `DECISIONS.md` / `PARKED.md` / `ERRORS.md` | Planning docs — source of truth |
 | `roadmap.json` / `roadmap.html` | The plan as a rockmap board — open `roadmap.html` in a browser |
-| `spike/` | The editor-fidelity test — `cd spike && hx sample.tsx` (passed 2026-07-07) |
-| `zellij/agent.kdl` | **The real R1 trial config** — `cd zellij && ./install.sh`, then `zellij --layout agent --session agent` |
+| `ghostty/config` | **The theme** — contrast-verified mono-ghost palette cmux inherits for terminal rendering |
+| `spike/` | The editor-fidelity test — `cd spike && hx sample.tsx` (passed 2026-07-07; superseded by cmux's real inline VS Code, kept for reference) |
+| `zellij/agent.kdl` | Earlier trial config — not deleted, not the shipped path. See `DECISIONS.md`. |
 | `rockmap/` | Vendored [rockmap](https://github.com/jpoindexter/rockmap) (board generator) |
-| `demo/cockpit-demo.html` | Interactive demo of the target experience — press 1–4 / n / x |
+| `demo/cockpit-demo.html` | Early interactive mockup — superseded by the real cmux app |
 | `docs/brainstorm/` | Design-phase mockups (platform options, approaches, tab models) |
-| `docs/blind-spot-audit-2026-07-07.html` | The audit that caught the drift, and the action report |
-| `resources/superconductor-reference/` | Superconductor UX notes (settings-key feature map) + icon — the signed binary itself was removed, see `DECISIONS.md` |
+| `docs/blind-spot-audit-2026-07-07.html` | 16-framework audit that caught the demo-replaced-the-trial drift |
+| `resources/superconductor-reference/` | Superconductor UX notes (settings-key feature map) + icon — signed binary removed, see `DECISIONS.md` |
 
 Rebuild the board after editing `roadmap.json`:
 

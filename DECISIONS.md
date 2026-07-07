@@ -43,6 +43,30 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 
 **Reversible?** Yes.
 
+## 2026-07-07 — Course correction: zellij's static-config model rejected
+
+**What happened:** After R1 (zellij) shipped as a real KDL config with hardcoded project tabs, Jason said plainly: "this should work like VSCode — you open, pick a folder." A text config with fixed paths is a fundamentally different interaction model than an app with a folder/workspace picker — no amount of KDL polish closes that gap.
+
+**Choice:** Pause presenting zellij/KDL as the primary path. Try Superconductor's actual open/pick-folder flow now, promoted ahead of a full R2 trial week — a few minutes of hands-on use answers "is this the right interaction model" faster than either roadmap card does.
+
+**Why this isn't a surprise:** The blind-spot audit (2026-07-07) already flagged this exact risk — corrected confidence in "zellij is right" was ~55%, specifically because Jason's VSCode-editor-fidelity expectation and color pickiness both pointed toward wanting more GUI-app behavior than a TUI delivers. This is that risk landing, on the interaction model this time instead of just the editor.
+
+**Not thrown away:** `zellij/agent.kdl` stays in the repo — cheap to revisit if Superconductor's model doesn't fit either. The real cost so far is small (a few hours), which is the point of trialing cheap things first.
+
+**Reversible?** Yes.
+
+## 2026-07-07 — Pivot to cmux; theme built for it
+
+**What happened:** Jason found `cmux` (manaflow-ai, GPL-3.0, Swift/AppKit, built on libghostty) — a native macOS terminal built specifically for running AI coding agents in parallel. Verified in source (not docs): `showOpenFolderPanel()` gives a real native folder picker creating a workspace (matches "open, pick a folder"); `openDirectoryInInlineVSCode()` runs `code serve-web` and opens the **actual installed VS Code** in a browser pane split next to the terminal (matches "editor should look like VSCode's" — literally, not a lookalike); Workspaces → Surfaces → Split panes gives real simultaneous multi-agent panes running actual CLI tools via a real pty. Closes every gap the zellij/hashmark comparison found.
+
+**Choice:** cmux is now the primary path. `zellij/agent.kdl` stays in the repo (cheap, still usable if needed) but is no longer the shipped artifact.
+
+**Design:** Jason called cmux's stock look "horrible," wants clean/modern even as a terminal. Built an OKLCH-derived, contrast-verified palette (see `color-and-elevation` skill) for Ghostty (which cmux's terminal panes inherit directly) — chrome tones reused from the already-approved mono-ghost demo palette for consistency; ANSI accent colors (red/green/yellow/blue/magenta/cyan) newly built, desaturated per dark-mode convention, all pairs verified >=4.5:1 contrast against bg (not eyeballed). Font: JetBrains Mono (confirmed already installed). Config: `~/.config/ghostty/config`. cmux's own appearance mode set to Dark via `defaults write com.cmuxterm.app appearanceMode dark`.
+
+**Also registered:** `terminal-love` MCP (Jason's own server, wraps Terminal Trove — real screenshots/GIFs of TUI/CLI tools) via `claude mcp add --scope user`, for future design-reference lookups without web-search guessing.
+
+**Reversible?** Yes — theme is config-only, no app code changed. zellij work not deleted.
+
 ## 2026-07-07 — Trials run sequentially, not in parallel
 
 **Choice:** R1 (zellij) runs its full week first; R2 (Superconductor) starts only after R1 concludes.
