@@ -35,7 +35,7 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 - Search files and terminal scrollback without leaving the app.
 - Use polished, consistent Codex-quality iconography for project rail, file explorer, editor, browser, terminal, agent panes, git state, and common actions. Icons must carry labels/tooltips where meaning is not universal.
 - Match Codex-level chrome polish for the workbench shell: compact density, consistent dark surfaces, active/hover/focus states, pane headers, settings/sidebar rhythm, command palette, context menus, badges, toasts, and restrained motion. Polish is part of the app chrome, not a marketing layer.
-- Show agent activity state clearly: thinking, running command, editing files, waiting for approval/input, errored, exited, and complete. Surface concise activity/progress summaries and tool events, not hidden chain-of-thought.
+- Show agent activity state clearly like Codex: thinking, planning summary, running command, command result, reading file, edited file, created/deleted/renamed file, opened diff, waiting for approval/input, errored, exited, and complete. Surface concise activity/progress rows and tool events, not hidden chain-of-thought.
 - Keep browser/web-preview controls minimal: address/local URL, back/forward, reload, open external, and per-project remembered preview URL.
 - Keep common VS Code shortcuts and interaction patterns for the supported workflow, including command palette-style action access.
 - Provide right-click/Control-click context menus on project rail, file explorer, editor tabs, editor text, terminal panes, browser preview, diff/git surfaces, and agent panes. Context menus must mirror the same command registry as menus/shortcuts/palette where possible, show disabled states, and confirm destructive actions.
@@ -63,6 +63,10 @@ The chrome should feel Codex-level: dense, calm, readable, and intentional acros
 ## Editor and Terminal Parity
 
 The editor and terminal are the product core. The editor should feel like a real coding editor beside a dense file tree, not a text preview. The terminal should remain the trusted source-of-truth for Claude/Codex/shell sessions, not a simulated transcript. Detailed criteria live in `docs/editor-terminal-parity.md`.
+
+## Agent Activity Timeline
+
+Agent panes need Codex-style activity visibility: compact current state in pane headers, recent activity rows like `Edited a file`, aggregate rail badges, and a per-pane/session activity log. The log should show file events, command events, tool/app events, git/source-control events, approvals, errors, and completion. Hidden chain-of-thought stays out of scope; user-safe summaries, tool names, file paths, diffs, outputs, and approval states are in scope. Detailed criteria live in `docs/agent-activity-timeline.md`.
 
 ## User
 
@@ -97,6 +101,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [ ] Browser/web preview opens localhost apps, docs, auth flows, and generated pages inside the workbench.
 - [ ] Each project can run multiple named agent/shell panes, and different projects can run different agents concurrently.
 - [ ] Pane lifecycle controls and icon badges cover thinking, running, waiting, errored, exited, restart, terminate, and attention-needed states.
+- [ ] Agent activity rows show recent thinking/planning summaries, file edits, commands, tool/app actions, approvals, errors, and completion per pane/session.
 - [ ] Session restore brings back projects, file tabs, pane layout, and enough metadata to resume intentionally.
 - [ ] Resource use is measured against the equivalent VS Code workflow.
 

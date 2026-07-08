@@ -74,7 +74,8 @@ This is where the clarified product point lands: not "terminal app with optional
 - **BROWSER-PREVIEW:** lightweight browser/web preview pane for localhost apps, docs, auth flows, and generated pages.
 - **PANE-MANAGER:** multiple Claude/Codex/shell panes per project.
 - **PANE-NAMES:** pane names and task labels.
-- **AGENT-ACTIVITY:** visible thinking/running/tool/waiting/error/exited/complete state. Show activity summaries and tool events, not hidden chain-of-thought.
+- **AGENT-ACTIVITY:** visible thinking/running/tool/waiting/error/exited/complete state. Show Codex-style activity rows and tool events, not hidden chain-of-thought.
+- **AGENT-ACTIVITY-LOG:** per-pane/session event timeline for thinking summaries, file edits, commands, tool/app events, git/source-control events, approvals, errors, and completion.
 - **PROCESS-LIFECYCLE:** running/exited status, restart, kill, command/cwd visibility.
 - **SESSION-RESTORE:** restore project rail, editor tabs, rail state, pane layout.
 - **GIT-STATUS:** dirty/new/deleted markers in the file rail.
