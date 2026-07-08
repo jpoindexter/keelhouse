@@ -22,9 +22,10 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 - Keep multiple projects open in one window through a persistent left project/workspace rail, similar in spirit to Codex's sidebar, with clear active-project state.
 - Show task-scoped project sessions under each project in the left rail, similar to Codex chat rows. A session is a saved workbench context: project, editor tabs, browser URL, agent panes, pane labels/status, and transcript references. It is not an editor tab and not a custom chat thread.
 - Browse the project tree with sensible ignores, file watching, and safe handling for symlinks, large files, and binary files.
-- Open, edit, find/replace, save, and close source files with dirty-state and external-change protection.
+- Open, edit, find/replace, save, and close source files in a robust CodeMirror editor with line numbers, syntax highlighting, indentation, undo/redo, path/breadcrumb context, file tabs, dirty-state, restored scroll/selection, and external-change protection.
 - Open a lightweight browser/web preview for localhost apps, docs, auth flows, and agent-produced pages without switching context.
 - Run real Claude/Codex/shell sessions in real ptys, with correct env/PATH/auth handling.
+- Keep the terminal robust enough for daily agent work: Ghostty-backed VT fidelity, alternate-screen TUIs, ANSI/truecolor styling, resize, scrollback, selection/copy/paste, bracketed paste, common keyboard chords, fast-output responsiveness, and clear pane lifecycle state.
 - Keep terminal panes as the source-of-truth agent interface. Add a compact composer only for routing prompts/instructions to the selected agent pane or app-level actions; do not replace Claude/Codex's real terminal UI with a custom chat clone.
 - Run multiple agent panes per project, and allow different open projects to run different agents at the same time. Each pane needs a visible name/task label, status, cwd, command, restart, and kill controls.
 - Let agents hook into the app through a built-in, permissioned MCP/API surface for app-owned actions such as listing projects, reading open files, opening diffs, focusing panes, creating panes, and reporting task status.
@@ -59,6 +60,10 @@ Local Git is core because it is part of supervising agent work. GitHub and GitLa
 
 The chrome should feel Codex-level: dense, calm, readable, and intentional across the rails, editor tabs, pane headers, browser toolbar, settings shell, context menus, command palette, dialogs, toasts, and status badges. Use a real token system, one icon family, complete interaction states, and screenshot-based visual QA. Detailed criteria live in `docs/chrome-ui-polish.md`.
 
+## Editor and Terminal Parity
+
+The editor and terminal are the product core. The editor should feel like a real coding editor beside a dense file tree, not a text preview. The terminal should remain the trusted source-of-truth for Claude/Codex/shell sessions, not a simulated transcript. Detailed criteria live in `docs/editor-terminal-parity.md`.
+
 ## User
 
 Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and testable over speculative; decides aesthetics by seeing, not describing (proven: rejected two color schemes before picking one by eye). Stack fluency: Node/ESM/TS, React, Tauri 2, Rust-adjacent (indx/hashmark/brutal all Tauri). **Not** a Swift/AppKit dev — a reason building native-in-Tauri beats forking a Swift app.
@@ -77,8 +82,8 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 **Done:** one project can be used without opening VS Code for the basic loop: browse files, edit/save files, and run one real agent terminal.
 
 - [x] File rail lists the workspace with ignores and live updates.
-- [ ] Editor opens source files, supports syntax highlighting, find/replace, dirty state, save, and external-change warnings.
-- [ ] Terminal pane remains usable while browsing/editing files.
+- [ ] Editor opens source files with line numbers, syntax highlighting, find/replace, dirty state, tabs, path context, save, and external-change warnings.
+- [ ] Terminal pane remains robust and responsive while browsing/editing files.
 - [x] Recent projects and last workspace make reopening cheap.
 - [ ] Common file/editor/terminal actions are reachable through VS Code-style shortcuts, menu bar entries, and right-click/Control-click context menus.
 - [ ] Core chrome surfaces use a coherent token/icon system with hover, active, disabled, focus, loading, empty, and error states.

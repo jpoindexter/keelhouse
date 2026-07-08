@@ -248,8 +248,20 @@
       "size": "L",
       "launch": "v0_5",
       "blocker": true,
-      "summary": "Open files from the rail into a real editor pane. This is not a decorative preview; it is the VS Code editor surface Jason actually uses.",
-      "done": "Open/edit/save a .ts/.tsx/.md file with line numbers, syntax highlighting, selection, keyboard navigation, dirty indicator, and save feedback."
+      "summary": "Open files from the rail into a real editor pane. This is not a decorative preview; it is the VS Code/Codex editor surface Jason actually uses.",
+      "done": "Open/edit/save a .ts/.tsx/.md file with line numbers, syntax highlighting, selection/cursor fidelity, keyboard navigation, dirty indicator, path context, and save feedback."
+    },
+    {
+      "id": "EDITOR-PARITY-UX",
+      "title": "Robust editor parity UX",
+      "column": "next",
+      "tier": "rock",
+      "track": "files",
+      "size": "M",
+      "launch": "v0_5",
+      "blocker": true,
+      "summary": "Match the coding editor experience shown in the reference: dense file tree beside a real source editor with path context, gutter, syntax fidelity, tabs, dirty state, and active-file reveal.",
+      "done": "Editor shows path/breadcrumb context, stable line gutter, selected file highlight, active-file reveal, restored scroll/selection per file, dirty markers in tabs/tree, go-to-line, quick open/reveal hooks, and screenshot QA for HTML, TS/TSX, Markdown, Rust, JSON, and editor+file-tree split."
     },
     {
       "id": "EDITOR-FIND-REPLACE",
@@ -271,7 +283,7 @@
       "size": "S",
       "launch": "v0_5",
       "summary": "The first editor pass needs credible syntax support for the file types this repo and Jason's projects use most.",
-      "done": "TypeScript, TSX/JSX, Markdown, Rust, JSON, and TOML open with syntax highlighting and sensible indentation defaults."
+      "done": "TypeScript, TSX/JSX, JavaScript, Markdown, HTML, CSS, Rust, JSON, TOML, YAML, and shell scripts open with syntax highlighting and sensible indentation defaults."
     },
     {
       "id": "SAVE-CONFLICTS",
@@ -350,6 +362,18 @@
       "launch": "v0_5",
       "summary": "Keep VS Code muscle memory for the supported workflow: open folder, quick open/search, save, close, copy/paste, terminal focus, new pane, split/switch pane, and command palette.",
       "done": "A documented shortcut map covers the v0.5 workflow, matches VS Code defaults where applicable, appears in menu items/tooltips where relevant, and explicitly lists terminal/editor/app-chrome conflicts and exceptions."
+    },
+    {
+      "id": "TERMINAL-ROBUSTNESS",
+      "title": "Robust terminal parity",
+      "column": "next",
+      "tier": "rock",
+      "track": "core",
+      "size": "M",
+      "launch": "v0_5",
+      "blocker": true,
+      "summary": "The terminal is the trusted agent surface, so it needs daily-driver robustness beyond the initial working loop.",
+      "done": "Single-pane terminal verifies Claude/Codex TUIs, alternate screen apps, ANSI/truecolor styling, resize, scrollback, mouse selection, copy, paste, bracketed paste, common keyboard chords, command/cwd/status header, fast-output responsiveness, and screenshot/runtime QA."
     },
     {
       "id": "CONTEXT-MENUS",

@@ -50,9 +50,10 @@ This is where the clarified product point lands: not "terminal app with optional
 - ~~**FILE-RAIL:** dense project file explorer, with noisy folders ignored.~~ **DONE 2026-07-08** — backend `list_workspace_tree` uses `ignore::WalkBuilder` with gitignore/app noisy-folder filtering; frontend renders a dense React Arborist tree in the left rail, supports directory expand/collapse, and activates files into the editor surface. Verified with `npm run build`, `npm test`, `cargo test` (11 tests, including noisy-dir/gitignore coverage), `cargo build`, and real `npm run tauri dev` smoke launching Claude in the selected cwd.
 - ~~**FILE-WATCHER:** live rail updates, gitignore/app ignores, noisy-folder protection.~~ **DONE 2026-07-08** — backend owns a debounced `notify` watcher per selected workspace, filters noisy paths before emitting `workspace-tree-changed`, and frontend refreshes the existing tree source on that event. Verified with `npm run build`, `npm test`, `cargo test` (12 tests, including watcher noisy-path filtering), `cargo build`, and real `npm run tauri dev` visual smoke: creating `aaa-agent-cli-watch-smoke-dir` after launch appeared in the rail, then was removed.
 - ~~**RECENT-PROJECTS:** reopen active folders without a picker ceremony.~~ **DONE 2026-07-08** — persisted `recentFolders`, added a compact rail switcher with explicit `Switch` affordance, dedupe/cap/prune helpers, and missing-path cleanup. Verified with `npm run build`, `npm test`, real `npm run tauri dev`, seeded `agent cli` + `postures` recents, clicking `Switch`, `workspace.json` persisting `/Users/jasonpoindexter/Documents/postures`, and the rail/tree switching to the postures project.
-- **EDITOR:** CodeMirror editor that opens files from the rail, edits, and saves.
+- **EDITOR:** robust CodeMirror editor that opens files from the rail, edits, saves, and feels like a real coding surface.
+- **EDITOR-PARITY-UX:** line gutter, breadcrumbs/path context, restored scroll/selection, tabs, dirty markers, active-file reveal, and screenshot QA.
 - **EDITOR-FIND-REPLACE:** local find/replace inside files.
-- **EDITOR-LANGUAGE-MODES:** first-class TS/TSX/JSX/MD/Rust/JSON/TOML highlighting.
+- **EDITOR-LANGUAGE-MODES:** first-class TS/TSX/JSX/JS/MD/HTML/CSS/Rust/JSON/TOML/YAML/shell highlighting.
 - **SAVE-CONFLICTS:** detect external file edits before overwrite.
 - **LARGE-FILE-POLICY:** safe handling for large or binary files.
 - **FILE-OPS:** create/rename/delete/duplicate/reveal from rail.
@@ -60,6 +61,7 @@ This is where the clarified product point lands: not "terminal app with optional
 - **AGENT-PROFILES:** Claude default, plus Codex/shell profiles without hardcoding one CLI forever.
 - **AGENT-COMPOSER:** compact input that routes prompts/instructions to the selected real terminal agent or app action.
 - **SHORTCUTS:** VS Code-compatible shortcut map across terminal/editor/chrome.
+- **TERMINAL-ROBUSTNESS:** single-pane terminal fidelity for agent TUIs, alternate screen, ANSI/truecolor, scrollback, paste, selection, resize, keyboard chords, pane status, and fast output.
 - **CONTEXT-MENUS:** right-click/Control-click menus across rail, files, editor, terminal, browser, git/diff, and agent panes.
 - **CHROME-POLISH-SYSTEM:** Codex-level workbench chrome tokens, density, states, badges, menus, and visual QA.
 - **ICON-SYSTEM:** polished Codex-quality iconography, labels, tooltips, and status badges.

@@ -66,7 +66,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>agent cli</h1>
-<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 56 slices &middot; 6 shipped</p>
+<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 58 slices &middot; 6 shipped</p>
 <p class="loop">Open project folder → inspect/edit files → preview web output → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Terminal + process</span><span><i style="border-color:#5a4315;background:#171104"></i>Projects + sessions</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Files + editor</span><span><i style="border-color:#4c1d6f;background:#15091f"></i>Chrome + interaction</span><span><i style="border-color:#5f1f2d;background:#1d0b10"></i>Quality + shipping</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research &amp; spikes</span><span style="color:#f87171">🔒 launch blocker</span></div>
 <div class="filters">
@@ -130,16 +130,24 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
 <div class="card" data-track="files" data-id="EDITOR" data-size="L" data-tier="rock" data-launch="v0_5">
 <div class="hd"><span class="sz">L</span><span class="ttl">EDITOR &middot; CodeMirror file editor</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Open files from the rail into a real editor pane. This is not a decorative preview; it is the VS Code editor surface Jason actually uses.</p>
-<details><summary>Done criteria</summary><p class="done">Open/edit/save a .ts/.tsx/.md file with line numbers, syntax highlighting, selection, keyboard navigation, dirty indicator, and save feedback.</p></details></div>
+<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Open files from the rail into a real editor pane. This is not a decorative preview; it is the VS Code/Codex editor surface Jason actually uses.</p>
+<details><summary>Done criteria</summary><p class="done">Open/edit/save a .ts/.tsx/.md file with line numbers, syntax highlighting, selection/cursor fidelity, keyboard navigation, dirty indicator, path context, and save feedback.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
+<div class="card" data-track="files" data-id="EDITOR-PARITY-UX" data-size="M" data-tier="rock" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">EDITOR-PARITY-UX &middot; Robust editor parity UX</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Match the coding editor experience shown in the reference: dense file tree beside a real source editor with path context, gutter, syntax fidelity, tabs, dirty state, and active-file reveal.</p>
+<details><summary>Done criteria</summary><p class="done">Editor shows path/breadcrumb context, stable line gutter, selected file highlight, active-file reveal, restored scroll/selection per file, dirty markers in tabs/tree, go-to-line, quick open/reveal hooks, and screenshot QA for HTML, TS/TSX, Markdown, Rust, JSON, and editor+file-tree split.</p></details></div>
 <div class="card" data-track="files" data-id="SAVE-CONFLICTS" data-size="M" data-tier="rock" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">SAVE-CONFLICTS &middot; External change and save conflict handling</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Agents and terminals can edit files while the editor is open. The app must not silently overwrite external changes.</p>
 <details><summary>Done criteria</summary><p class="done">If a file changes on disk after opening, the editor warns before overwrite and offers reload/overwrite choices.</p></details></div>
+<div class="card" data-track="core" data-id="TERMINAL-ROBUSTNESS" data-size="M" data-tier="rock" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">TERMINAL-ROBUSTNESS &middot; Robust terminal parity</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The terminal is the trusted agent surface, so it needs daily-driver robustness beyond the initial working loop.</p>
+<details><summary>Done criteria</summary><p class="done">Single-pane terminal verifies Claude/Codex TUIs, alternate screen apps, ANSI/truecolor styling, resize, scrollback, mouse selection, copy, paste, bracketed paste, common keyboard chords, command/cwd/status header, fast-output responsiveness, and screenshot/runtime QA.</p></details></div>
 <div class="card" data-track="workspace" data-id="PROJECT-RAIL" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">PROJECT-RAIL &middot; Left project rail for open workspaces</span><span class="lens l-workspace">Projects + sessions</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">The core multi-project workflow: Project A, Project B, Project C live in one app instead of separate VS Code windows. Use a persistent left project/workspace rail, similar in spirit to Codex's sidebar, rather than relying only on top tabs.</p>
@@ -181,7 +189,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="card" data-track="files" data-id="EDITOR-LANGUAGE-MODES" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-LANGUAGE-MODES &middot; Editor language modes</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The first editor pass needs credible syntax support for the file types this repo and Jason's projects use most.</p>
-<details><summary>Done criteria</summary><p class="done">TypeScript, TSX/JSX, Markdown, Rust, JSON, and TOML open with syntax highlighting and sensible indentation defaults.</p></details></div>
+<details><summary>Done criteria</summary><p class="done">TypeScript, TSX/JSX, JavaScript, Markdown, HTML, CSS, Rust, JSON, TOML, YAML, and shell scripts open with syntax highlighting and sensible indentation defaults.</p></details></div>
 <div class="card" data-track="files" data-id="LARGE-FILE-POLICY" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">LARGE-FILE-POLICY &middot; Large and binary file policy</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The editor should fail safely on huge or binary files instead of freezing the app.</p>
