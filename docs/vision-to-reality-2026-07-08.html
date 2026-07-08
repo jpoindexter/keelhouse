@@ -1,0 +1,260 @@
+<title>Vision → Reality — research-backed build plan</title>
+<style>
+  :root {
+    --bg: #0c0c0e; --panel: #141417; --panel-2: #1a1a1e; --line: #26262b;
+    --ink: #eaeaef; --dim: #8d8d96; --faint: #55555c;
+    --accent: #5fb8ae; --accent-dim: #3d7a72;
+    --block: #d9614f; --watch: #d1974a; --note: #6b8fc4; --done: #6fae7a; --fix: #7cbd89; --violet: #9a86d4;
+    --mono: ui-monospace, 'SF Mono', 'Berkeley Mono', Menlo, Consolas, monospace;
+    --sans: -apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); margin: 0; font-family: var(--sans); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  body { padding: 0 24px 96px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  header { display: flex; flex-direction: column; gap: 14px; padding: 28px 0 24px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .eyebrow .sep { color: var(--faint); }
+  h1 { font-family: var(--mono); font-size: clamp(20px, 3.2vw, 27px); font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .verdict { font-size: 16.5px; color: var(--ink); max-width: 70ch; text-wrap: balance; }
+  .verdict b { color: var(--accent); font-weight: 600; }
+  .verdict code { font-family: var(--mono); font-size: 13px; background: var(--panel-2); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line); }
+
+  .callout-fix { margin-top: 6px; padding: 18px 20px; border-radius: 10px; background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--accent-dim); }
+  .callout-fix .eyebrow { color: var(--accent); margin-bottom: 8px; }
+  .callout-fix p { margin: 0; font-size: 15px; color: var(--ink); }
+  .callout-fix p + p { margin-top: 8px; color: var(--dim); font-size: 14px; }
+
+  .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .stat { font-family: var(--mono); font-size: 11px; color: var(--dim); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; background: var(--panel); }
+  .stat b { color: var(--ink); font-weight: 600; }
+
+  section { margin-top: 40px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  h2 { font-family: var(--mono); font-size: 14px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; margin: 0; }
+  .sec-sub { color: var(--dim); font-size: 14px; margin: 0 0 16px; max-width: 68ch; }
+
+  .card { display: grid; grid-template-columns: 3px 1fr; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+  .card .stripe { background: var(--stripe, var(--faint)); }
+  .card.done { --stripe: var(--done); } .card.block { --stripe: var(--block); } .card.watch { --stripe: var(--watch); } .card.note { --stripe: var(--note); } .card.violet { --stripe: var(--violet); }
+  .card-body { padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .chip { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+  .chip.done { background: color-mix(in srgb, var(--done) 18%, transparent); color: var(--done); }
+  .chip.block { background: color-mix(in srgb, var(--block) 18%, transparent); color: var(--block); }
+  .chip.watch { background: color-mix(in srgb, var(--watch) 18%, transparent); color: var(--watch); }
+  .chip.note { background: color-mix(in srgb, var(--note) 18%, transparent); color: var(--note); }
+  .chip.violet { background: color-mix(in srgb, var(--violet) 18%, transparent); color: var(--violet); }
+  .title { font-weight: 600; font-size: 15.5px; color: var(--ink); text-wrap: balance; }
+  .title code { font-family: var(--mono); font-size: 13px; background: var(--panel-2); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); color: var(--accent); }
+  .body-text { font-size: 13.5px; color: var(--dim); line-height: 1.58; }
+  .body-text b { color: var(--ink); font-weight: 600; }
+  .body-text code { font-family: var(--mono); font-size: 12px; background: var(--panel-2); padding: 1px 5px; border-radius: 3px; color: var(--ink); border: 1px solid var(--line); }
+  .kv { display: flex; gap: 8px; font-size: 12.5px; }
+  .kv .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--faint); min-width: 68px; padding-top: 2px; }
+  .kv .v { color: var(--dim); }
+  .kv.pit .k { color: var(--block); }
+  .meta-row { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--faint); margin-top: 2px; align-items: center; }
+  .meta-row b { color: var(--dim); font-weight: 600; }
+  .src { font-family: var(--mono); font-size: 11px; }
+
+  table.phase { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.phase th, table.phase td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.phase th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+  table.phase td.ph { font-family: var(--mono); font-weight: 600; color: var(--accent); white-space: nowrap; }
+  table.phase td b { color: var(--ink); font-weight: 600; }
+  table.phase code { font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--panel-2); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line); }
+  .tbl-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+
+  .residual { border: 1px dashed var(--line); border-radius: 8px; padding: 16px 18px; font-size: 14px; color: var(--dim); display: flex; flex-direction: column; gap: 9px; }
+  .residual .q { display: grid; grid-template-columns: 20px 1fr; gap: 8px; }
+  .residual .q .n { font-family: var(--mono); color: var(--watch); font-size: 12px; }
+  .residual b { color: var(--ink); font-weight: 600; }
+
+  .refuted { border: 1px solid var(--block); border-radius: 8px; padding: 16px 18px; background: color-mix(in srgb, var(--block) 7%, transparent); font-size: 14px; }
+  .refuted .eyebrow { color: var(--block); margin-bottom: 8px; }
+  .refuted b { color: var(--ink); }
+  .refuted s { color: var(--faint); }
+
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--faint); font-family: var(--mono); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  @media (max-width: 560px) { body { padding: 0 16px 72px; } .kv { flex-direction: column; gap: 2px; } }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">
+      <span>agent&nbsp;cli</span><span class="sep">/</span><span>vision → reality</span><span class="sep">·</span><span>research-backed build plan</span><span class="sep">·</span><span>2026-07-08</span>
+    </div>
+    <h1>Every hard part of the build has a proven path.</h1>
+    <p class="verdict">
+      The <b>foundation already works</b> — pty → libghostty-vt → Canvas render + real input, verified in a live window (SPIKE-2). Deep research (109 agents, 26 sources, 24/25 claims survived adversarial verification) confirms that <b>every remaining build area — editor, file rail, persistence, multi-process, packaging — has a primary-sourced, off-the-shelf answer.</b> No dead-ends between here and the full VS&nbsp;Code-replacement cockpit.
+    </p>
+    <div class="stat-row">
+      <span class="stat">Angles <b>6</b></span>
+      <span class="stat">Sources fetched <b>26</b></span>
+      <span class="stat">Claims extracted <b>119</b></span>
+      <span class="stat">Verified <b>24 ✓ / 1 ✗</b></span>
+      <span class="stat">Confidence <b>high</b></span>
+    </div>
+  </header>
+
+  <div class="callout-fix">
+    <div class="eyebrow">The product, in one line</div>
+    <p>Replace the N-VS-Code-windows workflow with one lean native app: a <b>file rail</b> + a <b>CodeMirror editor</b> + <b>real <code>claude</code>/<code>codex</code> panes</b> in real terminals — none of the IDE chrome.</p>
+    <p>This report answers "how do we build the rest," area by area, with the exact library, the tradeoff, and the pitfall that wastes days — then maps each choice onto the v0 → v3 roadmap.</p>
+  </div>
+
+  <section>
+    <div class="sec-head"><h2>The six build areas</h2></div>
+    <p class="sec-sub">Each card: the recommendation, why, the pitfall, and the primary source. Chips mark status — <b>proven</b> (already working), <b>ready</b> (drop-in), <b>nuance</b> (read the caveat).</p>
+
+    <!-- 1. Terminal render -->
+    <div class="card note">
+      <div class="stripe"></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="title">1 · Terminal render — <code>Canvas now, WebGL if IPC-bound later</code></span>
+          <span class="chip note">nuance</span>
+        </div>
+        <div class="body-text">
+          xterm.js's own benchmarks show a <b>WebGL cell-grid renderer is 3–10× faster than Canvas 2D</b> (300×80 on macOS: 15.3ms → 3.7ms/frame), because it batches every cell into one <code>Float32Array</code> uploaded to a GPU shader instead of per-character CPU draws.
+        </div>
+        <div class="kv"><span class="k">but here</span><span class="v">That benchmark is for xterm.js, where <b>JS does the VT parsing</b>. In this app parsing is already done in Rust (libghostty-vt) and only the cell grid crosses to the webview — so the real bottleneck is <b>IPC volume</b>, not draw calls. Canvas 2D already passed the render test. WebGL is the <b>scaling fallback</b> if fast-output stutters, not a day-one rewrite.</span></div>
+        <div class="kv pit"><span class="k">pitfall</span><span class="v">Don't cargo-cult "WebGL is faster." First fix IPC: ship <b>dirty-region deltas</b>, not full-grid snapshots (Ghostty's own render thread does exactly this — damage-tracks cells, rebuilds only what changed).</span></div>
+        <div class="meta-row"><span class="src">src</span> <a href="https://github.com/xtermjs/xterm.js/pull/1790">xtermjs/xterm.js#1790</a> · <a href="https://deepwiki.com/ghostty-org/ghostty/5-rendering-system">Ghostty rendering</a></div>
+      </div>
+    </div>
+
+    <!-- 2. Editor -->
+    <div class="card done">
+      <div class="stripe"></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="title">2 · Editor — <code>@uiw/react-codemirror</code> (CodeMirror 6)</span>
+          <span class="chip done">ready</span>
+        </div>
+        <div class="body-text">
+          Embed CM6 through the maintained <b><code>@uiw/react-codemirror</code> v4.25.x</b> binding (deps pinned to CM6 6.x) — it supplies the React lifecycle glue so you don't hand-roll the imperative↔declarative bridge. Add languages via the <code>extensions</code> prop (<code>@codemirror/lang-javascript</code>, <code>lang-rust</code>, <code>lang-python</code>); <code>StreamLanguage</code> + <code>legacy-modes</code> as fallback.
+        </div>
+        <div class="kv"><span class="k">vs monaco</span><span class="v">CM6 core ~<b>300KB</b> vs Monaco ~<b>5–10MB</b> (17–33× larger). Monaco <b>doesn't support webview apps</b>; CM6 does (ships in Safari/Chrome/Brackets). For a lightweight desktop editor CM6 is the clear pick — matches the locked stack.</span></div>
+        <div class="kv pit"><span class="k">pitfall</span><span class="v">Raw CM6 has <b>no React integration</b> — using it directly forces a manual <code>useCodeMirror</code> bridge. Use the <code>@uiw</code> wrapper, don't reinvent it.</span></div>
+        <div class="meta-row"><span class="src">src</span> <a href="https://uiwjs.github.io/react-codemirror/">uiwjs/react-codemirror</a> · <a href="https://www.pkgpulse.com/guides/monaco-editor-vs-codemirror-6-vs-sandpack-in-browser-2026">size comparison</a></div>
+      </div>
+    </div>
+
+    <!-- 3. File rail -->
+    <div class="card done">
+      <div class="stripe"></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="title">3 · File rail — <code>ignore</code> + <code>notify</code> + React Arborist</span>
+          <span class="chip done">ready</span>
+        </div>
+        <div class="body-text">
+          Three drop-ins from the ripgrep ecosystem + one React lib cover the whole rail:
+        </div>
+        <div class="kv"><span class="k">walk</span><span class="v"><code>ignore::WalkBuilder</code> — respects <code>.gitignore</code>, <code>.ignore</code>, <code>.git/info/exclude</code> and global gitignore <b>by default</b>. Gitignore-aware filtering for free.</span></div>
+        <div class="kv"><span class="k">watch</span><span class="v"><code>notify</code> (FSEvents on macOS; used by rust-analyzer/cargo-watch) <b>+</b> <code>notify-debouncer-mini</code> — debouncing is NOT in notify core; the debouncer emits one event per timeframe per file.</span></div>
+        <div class="kv"><span class="k">render</span><span class="v"><b>React Arborist 3.12.0</b> — virtualized tree explicitly targeting a VS Code sidebar; ships inline rename, keyboard nav, ARIA, filtering, drag-sort.</span></div>
+        <div class="kv pit"><span class="k">pitfall</span><span class="v">Watching a repo <b>without</b> the debouncer = FSEvents event storms on every <code>npm install</code> / build. Wire the debouncer from day one.</span></div>
+        <div class="meta-row"><span class="src">src</span> <a href="https://docs.rs/ignore/latest/ignore/struct.WalkBuilder.html">ignore</a> · <a href="https://github.com/notify-rs/notify">notify</a> · <a href="https://github.com/brimdata/react-arborist">react-arborist</a></div>
+      </div>
+    </div>
+
+    <!-- 4. Persistence -->
+    <div class="card done">
+      <div class="stripe"></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="title">4 · Persistence — <code>Store</code> plugin now, <code>SQL</code> plugin later</span>
+          <span class="chip done">ready</span>
+        </div>
+        <div class="body-text">
+          <b>Tauri Store plugin</b> (persistent KV → JSON file, autosaves 100ms after change) covers v0/v0.5 workspace state: last folder, editor tabs, pane layout. Move to the <b>SQL plugin</b> (SQLite via <code>--features sqlite</code>, transactional migrations) only when state turns relational (project × pane × process history in v1).
+        </div>
+        <div class="kv"><span class="k">rule</span><span class="v">Store for simple serializable state; SQL when you need queries/relations. Don't reach for SQLite before the data is actually relational — matches hashmark's proven pattern.</span></div>
+        <div class="kv pit"><span class="k">pitfall</span><span class="v">Store's autosave is debounced — a <b>hard crash</b> can lose the last &lt;100ms. Fine for layout; call <code>save()</code> explicitly after meaningful edits if it ever matters.</span></div>
+        <div class="meta-row"><span class="src">src</span> <a href="https://v2.tauri.app/plugin/store/">Store plugin</a> · <a href="https://v2.tauri.app/plugin/sql/">SQL plugin</a></div>
+      </div>
+    </div>
+
+    <!-- 5. Multi-process -->
+    <div class="card done">
+      <div class="stripe"></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="title">5 · Multi-agent processes — <code>portable-pty</code> (already in use)</span>
+          <span class="chip done">proven</span>
+        </div>
+        <div class="body-text">
+          The pty layer SPIKE-2 already uses scales to many panes: <code>native_pty_system()</code> → <code>openpty()</code> → <code>slave.spawn_command()</code>; <code>try_clone_reader()</code> / <code>take_writer()</code> drive a per-pane loop; <code>Child</code> / <code>ChildKiller</code> / <code>ExitStatus</code> + <code>MasterPty::resize()</code> handle lifecycle. WezTerm runs the same crate this way per pane.
+        </div>
+        <div class="kv"><span class="k">pattern</span><span class="v">SPIKE-2's <b>two-thread-per-pty</b> design (blocking reader thread → channel → terminal thread owning the <code>!Send</code> engine) is exactly WezTerm's <code>LocalPane</code> shape. Already correct — reuse it per pane.</span></div>
+        <div class="kv pit"><span class="k">open</span><span class="v">Memory/CPU ceiling at 4–8+ concurrent agents, idle-suspension, and zombie reaping are <b>not yet verified</b> — measure at v1 (see open questions).</span></div>
+        <div class="meta-row"><span class="src">src</span> <a href="https://docs.rs/portable-pty">portable-pty</a> · <a href="https://deepwiki.com/wezterm/wezterm/4.5-pty-and-process-management">WezTerm pty mgmt</a></div>
+      </div>
+    </div>
+
+    <!-- 6. Packaging -->
+    <div class="card done">
+      <div class="stripe"></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="title">6 · Packaging — <code>ad-hoc sign for local; notarize only to share</code></span>
+          <span class="chip done">ready</span>
+        </div>
+        <div class="body-text">
+          For your own machine, <b>ad-hoc signing is enough</b> (on Apple Silicon you whitelist it once in Privacy &amp; Security). Only distributing to others needs a <b>Developer ID cert + notarization</b> ($99/yr Apple account). Tauri's CLI builds <code>.app</code> / <code>.dmg</code> directly.
+        </div>
+        <div class="kv pit"><span class="k">pitfall</span><span class="v">Adding a <code>externalBin</code> <b>sidecar breaks notarization</b> in Tauri 2.x (invalid-signature error). If you ever bundle a helper binary, budget time for the signing dance — or avoid sidecars.</span></div>
+        <div class="meta-row"><span class="src">src</span> <a href="https://v2.tauri.app/distribute/sign/macos/">Tauri macOS signing</a> · <a href="https://github.com/tauri-apps/tauri/issues/11992">sidecar notarize bug</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Choices mapped onto the roadmap</h2></div>
+    <p class="sec-sub">The research locks a concrete library to each phase you've already sequenced. Nothing here changes the phase order — it fills in the "with what."</p>
+    <div class="tbl-scroll">
+    <table class="phase">
+      <thead><tr><th>Phase</th><th>What ships</th><th>Locked choice</th></tr></thead>
+      <tbody>
+        <tr><td class="ph">v0</td><td><b>One project, one agent pane</b> — folder picker, launch <code>claude</code> in cwd, reopen last folder</td><td><code>portable-pty</code> (have it) + <b>Store plugin</b> for last-folder</td></tr>
+        <tr><td class="ph">v0.5</td><td><b>The VS Code shell</b> — rail + editor + editor tabs + agent profiles</td><td><code>ignore</code>+<code>notify</code>+<b>React Arborist</b> (rail); <b><code>@uiw/react-codemirror</code></b> (editor)</td></tr>
+        <tr><td class="ph">v1</td><td><b>Multi-project cockpit</b> — project tabs, multiple panes, process lifecycle, session restore, git status</td><td><b>SQL plugin</b> (relational state); <code>Child</code>/<code>ChildKiller</code>/<code>ExitStatus</code> lifecycle; measure the <b>process ceiling</b> here</td></tr>
+        <tr><td class="ph">v1</td><td>Terminal under load (many panes, fast output)</td><td><b>Dirty-region IPC deltas</b>; WebGL renderer only if measured IPC-bound</td></tr>
+        <tr><td class="ph">v2</td><td>Worktrees · ripgrep search · command palette</td><td><code>ignore</code> walker reused for search; git2/CLI for worktrees</td></tr>
+        <tr><td class="ph">v3</td><td>Theme · macOS <code>.app</code> packaging</td><td>Tauri CLI bundle; <b>ad-hoc sign</b> (local) — avoid <code>externalBin</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>One phantom constraint — killed</h2></div>
+    <div class="refuted">
+      <div class="eyebrow">Refuted 0–3</div>
+      <p><s>"Safari/WKWebView lacks WebGL2, so a GPU terminal renderer won't work in a Tauri macOS webview."</s> <b>False.</b> WebGL2 works in WebKit. If Canvas ever becomes the bottleneck, the GPU path is genuinely available — <b>don't design around a constraint that doesn't exist.</b></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>What research did NOT settle</h2></div>
+    <p class="sec-sub">Honest gaps — these need measurement in the build, not another search. Named so they don't masquerade as covered.</p>
+    <div class="residual">
+      <div class="q"><span class="n">Q1</span><span>The exact <b>IPC pattern</b> for high-frequency pty output — batched binary frames vs channel vs shared memory — and the WKWebView bridge's throughput ceiling during a TUI full-repaint. <b>Resolve by measuring v0/v1 fast-output.</b></span></div>
+      <div class="q"><span class="n">Q2</span><span>Whether CM6 truly beats Monaco for <b>&gt;1MB files</b> here (bundle size favors CM6; large-file behavior unproven for this app).</span></div>
+      <div class="q"><span class="n">Q3</span><span>Real <b>memory/CPU ceilings</b> and backpressure/idle-suspension patterns at 4–8+ concurrent agent ptys; whether portable-pty needs extra zombie-reaping on macOS. <b>Measure at v1.</b></span></div>
+      <div class="q"><span class="n">Q4</span><span>How much of the xterm.js WebGL win <b>transfers</b> given VT parsing is already in Rust and only the grid ships to the webview (the bottleneck likely moves from draw to IPC).</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>deep-research · 6 angles · 26 sources · 24/25 verified · 109 agents</span>
+    <span>agent cli · 2026-07-08</span>
+  </footer>
+
+</div>

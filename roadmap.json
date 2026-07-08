@@ -1,122 +1,479 @@
 {
   "$schema": "./rockmap/roadmap.schema.json",
   "title": "agent cli",
-  "subtitle": "native macOS cockpit — real agents in real terminal panes, built on Ghostty's engine, none of the IDE chrome",
-  "loop": "Open app → pick folder → real claude/codex in a real terminal pane (libghostty-vt) → tabs=projects, panes=agents, file rail, inline editor. Build our own, leveraging open-source components. libghostty-vt verified. v0 = ONE live pane.",
+  "subtitle": "lean VS Code replacement for Jason's real workflow — files + editor + real CLI agents, without IDE bloat",
+  "loop": "Open project folder → inspect/edit files → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Build our own, using Ghostty/Tauri/CodeMirror as components.",
   "columns": [
-    { "id": "now", "label": "Now", "color": "#4ade80" },
-    { "id": "next", "label": "Next", "color": "#60a5fa" },
-    { "id": "later", "label": "Later", "color": "#c084fc" }
+    {
+      "id": "done",
+      "label": "Done",
+      "color": "#94a3b8"
+    },
+    {
+      "id": "now",
+      "label": "Now",
+      "color": "#4ade80"
+    },
+    {
+      "id": "next",
+      "label": "Next",
+      "color": "#60a5fa"
+    },
+    {
+      "id": "later",
+      "label": "Later",
+      "color": "#c084fc"
+    }
   ],
   "tiers": [
-    { "id": "rock", "label": "Rocks · foundational & risky", "color": "#f59e0b" },
-    { "id": "pebble", "label": "Pebbles · features", "color": "#60a5fa" },
-    { "id": "sand", "label": "Sand · glue & polish", "color": "#4ade80" }
+    {
+      "id": "rock",
+      "label": "Rocks · foundational & risky",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "pebble",
+      "label": "Pebbles · features",
+      "color": "#60a5fa"
+    },
+    {
+      "id": "sand",
+      "label": "Sand · glue & polish",
+      "color": "#4ade80"
+    }
   ],
   "tracks": [
-    { "id": "core", "label": "Core (terminal + shell)", "color": "#2dd4bf", "border": "#164a44", "bg": "#06140f" },
-    { "id": "ui", "label": "UI (rail, editor, chrome)", "color": "#60a5fa", "border": "#1e3a5c", "bg": "#0a1320" },
-    { "id": "research", "label": "Research & spikes", "color": "#7a8898", "border": "#2a323e", "bg": "#10141b" }
+    {
+      "id": "core",
+      "label": "Terminal + process",
+      "color": "#2dd4bf",
+      "border": "#164a44",
+      "bg": "#06140f"
+    },
+    {
+      "id": "workspace",
+      "label": "Projects + sessions",
+      "color": "#f8c14a",
+      "border": "#5a4315",
+      "bg": "#171104"
+    },
+    {
+      "id": "files",
+      "label": "Files + editor",
+      "color": "#60a5fa",
+      "border": "#1e3a5c",
+      "bg": "#0a1320"
+    },
+    {
+      "id": "ui",
+      "label": "Chrome + interaction",
+      "color": "#c084fc",
+      "border": "#4c1d6f",
+      "bg": "#15091f"
+    },
+    {
+      "id": "quality",
+      "label": "Quality + shipping",
+      "color": "#fb7185",
+      "border": "#5f1f2d",
+      "bg": "#1d0b10"
+    },
+    {
+      "id": "research",
+      "label": "Research & spikes",
+      "color": "#7a8898",
+      "border": "#2a323e",
+      "bg": "#10141b"
+    }
   ],
   "launches": [
-    { "id": "v0", "label": "v0 — one live pane" },
-    { "id": "v1", "label": "v1 — tabs + panes" },
-    { "id": "v2", "label": "v2 — rail + editor" },
-    { "id": "v3", "label": "v3 — worktrees + polish" }
+    {
+      "id": "v0",
+      "label": "v0 — one live pane"
+    },
+    {
+      "id": "v0_5",
+      "label": "v0.5 — VS Code shell replacement"
+    },
+    {
+      "id": "v1",
+      "label": "v1 — multi-project + multi-agent"
+    },
+    {
+      "id": "v2",
+      "label": "v2 — worktrees + resilience"
+    },
+    {
+      "id": "v3",
+      "label": "v3 — polish + distribution"
+    }
   ],
   "models": [],
   "cards": [
     {
-      "id": "SPIKE2",
-      "title": "Render + input loop — the rock",
-      "column": "now",
+      "id": "APPROOT",
+      "title": "Promote app into real root/package",
+      "column": "done",
       "tier": "rock",
-      "track": "core",
-      "size": "L",
+      "track": "quality",
+      "size": "M",
       "launch": "v0",
       "blocker": true,
-      "summary": "Extend the parsing spike (which is proven): pty → libghostty-vt → CANVAS PAINT + KEYBOARD ROUNDTRIP in a real window. Proves the three things parsing didn't — rendering to pixels, input encoding back to the pty, and fullscreen-TUI correctness (claude's own alt-screen UI) at terminal speed. Do this BEFORE scaffolding the app.",
-      "done": "Type in a canvas-rendered pane running a real shell; output appears; arrow keys + ctrl-c work; claude's TUI renders correctly; no visible lag on fast output.",
-      "closes": "de-risks the entire app"
+      "summary": "Turn the proven spike into the actual app package: stable naming, app identifier, scripts, dev/build paths, and repo layout. Stop treating the working terminal loop as a side experiment.",
+      "done": "Verified 2026-07-08: app builds/runs from app/; npm package, Rust crate, and Tauri product identifier are renamed; README/ROADMAP point to app/; runtime smoke launched target/debug/agent-cli and spawned claude in the selected cwd."
     },
     {
-      "id": "SCAFFOLD",
-      "title": "Tauri 2 app scaffold",
-      "column": "next",
+      "id": "OPEN-FOLDER",
+      "title": "Native open-folder workspace",
+      "column": "done",
+      "tier": "rock",
+      "track": "workspace",
+      "size": "M",
+      "launch": "v0",
+      "blocker": true,
+      "summary": "Native folder picker creates the current workspace, matching the actual VS Code workflow: open app, pick Project A, terminal starts in Project A.",
+      "done": "Verified 2026-07-08: first launch opens a native dialog; selected folder becomes the app workspace; terminal cwd matches it; Cmd+O switches folders."
+    },
+    {
+      "id": "AGENT-LAUNCH",
+      "title": "Launch real Claude in selected folder",
+      "column": "done",
       "tier": "rock",
       "track": "core",
       "size": "M",
       "launch": "v0",
       "blocker": true,
-      "summary": "Tauri 2 + React/TS/Vite frontend + Rust backend. Native window, IPC channel wired backend↔frontend. Empty but real — the container the SPIKE-2 pipeline drops into.",
-      "done": "Native window opens; a message round-trips backend↔frontend over IPC; builds clean with the pinned Zig toolchain."
+      "summary": "Replace the current hardcoded login shell with a real agent process launched in the selected workspace. Start with Claude as the v0 default because it is the primary observed workflow.",
+      "done": "Verified 2026-07-08: after folder selection/relaunch, one pane launches `claude` in that cwd from a persisted launch profile; Claude's TUI renders in the canvas."
     },
     {
-      "id": "CORE",
-      "title": "One agent pane (v0 done)",
-      "column": "next",
-      "tier": "rock",
-      "track": "core",
-      "size": "M",
-      "launch": "v0",
-      "blocker": true,
-      "summary": "Native folder picker → spawn claude in that cwd → one interactive terminal pane using the SPIKE-2 pipeline. Persist the last folder, reopen on relaunch. This IS v0.",
-      "done": "Open app → pick folder → run claude → type and see output, feels like a real terminal. Relaunch reopens the folder."
-    },
-    {
-      "id": "TABS",
-      "title": "Tabs = projects",
-      "column": "later",
-      "tier": "rock",
-      "track": "ui",
-      "size": "M",
-      "launch": "v1",
-      "summary": "Add/switch project folders as tabs, multiple projects in one window. Native folder-open per tab.",
-      "done": "Open 3 project folders as tabs; switch between them; each keeps its own state."
-    },
-    {
-      "id": "PANES",
-      "title": "Multiple panes per tab",
-      "column": "later",
-      "tier": "rock",
-      "track": "core",
-      "size": "L",
-      "launch": "v1",
-      "summary": "Grid of terminal panes per tab, each its own pty/agent. Pane focus, new pane (n), close pane (x). Watch memory/CPU with N concurrent agents (see ARCHITECTURE.md).",
-      "done": "3 agent panes visible at once in one tab, each interactive; n adds, x closes, focus moves."
-    },
-    {
-      "id": "THEME",
-      "title": "mono-ghost theme + session persistence",
-      "column": "later",
+      "id": "LAST-WORKSPACE",
+      "title": "Persist and reopen last workspace",
+      "column": "done",
       "tier": "pebble",
-      "track": "ui",
+      "track": "workspace",
       "size": "S",
-      "launch": "v1",
-      "summary": "Apply the already-approved mono-ghost palette (ghostty/config has the values). Persist tabs + panes across restarts.",
-      "done": "App looks like the approved demo; relaunch restores tabs and panes."
+      "launch": "v0",
+      "blocker": true,
+      "summary": "Quit/relaunch should not make the user pick the same project again. Store the last workspace path in a small local persistence layer.",
+      "done": "Verified 2026-07-08 for the current shell-pane default: relaunch reopens the last folder and starts the pane there. Recheck after AGENT-LAUNCH changes the default command."
     },
     {
-      "id": "RAIL",
-      "title": "File rail + preview",
-      "column": "later",
+      "id": "TERMINAL-HARDEN",
+      "title": "Terminal component hardening pass",
+      "column": "done",
+      "tier": "rock",
+      "track": "core",
+      "size": "M",
+      "launch": "v0",
+      "summary": "Close the remaining gaps between 'spike works' and 'can daily-drive one agent': resize behavior, scrollback basics, keyboard audit, copy/selection edge cases, and fast-output smoke tests.",
+      "done": "Verified 2026-07-08: Ghostty viewport scrollback renders, Shift+PageUp/PageDown and wheel scrolling work, resize clamps dimensions, 300-line fast output stays usable, and copy-selection still works."
+    },
+    {
+      "id": "PROCESS-ENV",
+      "title": "Agent launch env and auth checks",
+      "column": "done",
+      "tier": "rock",
+      "track": "core",
+      "size": "M",
+      "launch": "v0",
+      "blocker": true,
+      "summary": "Claude/Codex must launch with the same PATH/auth expectations as a normal terminal. Detect missing binaries, auth failures, and bad cwd before dumping the user into a dead pane.",
+      "done": "Verified 2026-07-08: workspace cwd and command are preflighted before pane replacement; missing command renders a visible error with no child process; process exit emits a banner for runtime/auth-style failures; Claude still launches as a direct child in the selected cwd."
+    },
+    {
+      "id": "DATA-STORAGE",
+      "title": "Local state storage and reset",
+      "column": "done",
       "tier": "pebble",
+      "track": "workspace",
+      "size": "S",
+      "launch": "v0",
+      "summary": "Define where workspace/session state lives and how to reset it when the app gets confused.",
+      "done": "Verified 2026-07-08: docs/local-state.md documents the Tauri Store path, workspace.json schema, reversible reset command, and default launchProfile repair path."
+    },
+    {
+      "id": "APP-SHELL",
+      "title": "Lean app shell: rail/editor/terminal layout",
+      "column": "next",
+      "tier": "rock",
       "track": "ui",
       "size": "M",
-      "launch": "v2",
-      "summary": "Yazi-style file tree with inline preview, per the demo's left rail. Git status indicators.",
-      "done": "Rail shows the project tree; selecting a file previews it; dirty files marked."
+      "launch": "v0_5",
+      "blocker": true,
+      "summary": "Build the shape that replaces VS Code for this workflow: left file rail, main editor area, bottom/right terminal pane area. No marketing page, no extra IDE chrome.",
+      "done": "One project opens into a stable three-part shell; terminal remains usable while files are browsed/edited; layout survives window resize."
+    },
+    {
+      "id": "FILE-RAIL",
+      "title": "File explorer rail",
+      "column": "next",
+      "tier": "rock",
+      "track": "files",
+      "size": "M",
+      "launch": "v0_5",
+      "blocker": true,
+      "summary": "The VS Code feature Jason actually uses: a project tree on the left. Keep it dense, fast, and boring.",
+      "done": "Rail lists workspace files/folders, expands/collapses directories, ignores noisy folders like node_modules/target by default, and opens files into the editor."
+    },
+    {
+      "id": "FILE-WATCHER",
+      "title": "File watcher and ignore rules",
+      "column": "next",
+      "tier": "rock",
+      "track": "files",
+      "size": "M",
+      "launch": "v0_5",
+      "blocker": true,
+      "summary": "The rail must reflect real project changes without drowning in node_modules, target, build output, or ignored files.",
+      "done": "File changes from agents or external tools update the rail; gitignore and app ignore rules are respected; large/noisy folders do not freeze the UI."
+    },
+    {
+      "id": "RECENT-PROJECTS",
+      "title": "Recent projects switcher",
+      "column": "next",
+      "tier": "pebble",
+      "track": "workspace",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "Opening the same active projects repeatedly should be cheap, not a folder-picker ceremony every time.",
+      "done": "The app lists recent project folders, reopens one quickly, and prunes missing paths without blocking startup."
     },
     {
       "id": "EDITOR",
-      "title": "Inline editor pane (CodeMirror)",
-      "column": "later",
+      "title": "CodeMirror file editor",
+      "column": "next",
       "tier": "rock",
-      "track": "ui",
+      "track": "files",
       "size": "L",
-      "launch": "v2",
-      "summary": "Double-click a file in the rail → CodeMirror 6 editor pane, inline in the grid, real syntax highlighting. This is the 'looks like VSCode's editor' requirement — built directly, not via code serve-web.",
-      "done": "Double-click a .tsx file → it opens in an editor pane with line numbers + syntax highlighting, editable, save works."
+      "launch": "v0_5",
+      "blocker": true,
+      "summary": "Open files from the rail into a real editor pane. This is not a decorative preview; it is the VS Code editor surface Jason actually uses.",
+      "done": "Open/edit/save a .ts/.tsx/.md file with line numbers, syntax highlighting, selection, keyboard navigation, dirty indicator, and save feedback."
+    },
+    {
+      "id": "EDITOR-FIND-REPLACE",
+      "title": "Editor find and replace",
+      "column": "next",
+      "tier": "pebble",
+      "track": "files",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "Basic file editing needs local find/replace; otherwise the editor is too thin to replace the VS Code surface Jason actually uses.",
+      "done": "Find, next/previous result, replace one, and replace all work in the active editor without breaking terminal focus shortcuts."
+    },
+    {
+      "id": "EDITOR-LANGUAGE-MODES",
+      "title": "Editor language modes",
+      "column": "next",
+      "tier": "pebble",
+      "track": "files",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "The first editor pass needs credible syntax support for the file types this repo and Jason's projects use most.",
+      "done": "TypeScript, TSX/JSX, Markdown, Rust, JSON, and TOML open with syntax highlighting and sensible indentation defaults."
+    },
+    {
+      "id": "SAVE-CONFLICTS",
+      "title": "External change and save conflict handling",
+      "column": "next",
+      "tier": "rock",
+      "track": "files",
+      "size": "M",
+      "launch": "v0_5",
+      "blocker": true,
+      "summary": "Agents and terminals can edit files while the editor is open. The app must not silently overwrite external changes.",
+      "done": "If a file changes on disk after opening, the editor warns before overwrite and offers reload/overwrite choices."
+    },
+    {
+      "id": "LARGE-FILE-POLICY",
+      "title": "Large and binary file policy",
+      "column": "next",
+      "tier": "pebble",
+      "track": "files",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "The editor should fail safely on huge or binary files instead of freezing the app.",
+      "done": "Large text files show a warning before full load; binary files show an explicit unsupported/preview state and never open as corrupt text."
+    },
+    {
+      "id": "FILE-OPS",
+      "title": "Basic file operations",
+      "column": "next",
+      "tier": "pebble",
+      "track": "files",
+      "size": "M",
+      "launch": "v0_5",
+      "summary": "Replacing the VS Code shell requires basic rail operations, not only open-file.",
+      "done": "Create file, create folder, rename, delete, duplicate, and reveal in Finder work from the rail with confirmation for destructive operations."
+    },
+    {
+      "id": "EDITOR-TABS",
+      "title": "Open files and dirty-state tabs",
+      "column": "next",
+      "tier": "pebble",
+      "track": "files",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "Let the user bounce between a few files without losing place. This is the minimum editor workflow, not a full IDE tab system.",
+      "done": "Multiple open files appear as tabs; dirty files are marked; close prompts only when unsaved changes would be lost."
+    },
+    {
+      "id": "AGENT-PROFILES",
+      "title": "Agent command profiles",
+      "column": "next",
+      "tier": "pebble",
+      "track": "core",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "Make Claude the default but stop hardcoding one command forever. Add simple profiles for Claude, Codex, and shell so the pane can launch the desired CLI.",
+      "done": "New pane can choose Claude, Codex, or shell; command path/args are visible in config; missing commands fail with a useful message."
+    },
+    {
+      "id": "SHORTCUTS",
+      "title": "Shortcut map for core workflow",
+      "column": "next",
+      "tier": "pebble",
+      "track": "ui",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "The app needs predictable keyboard access for open folder, file search, save, copy/paste, new pane, switch pane, and terminal focus.",
+      "done": "A documented shortcut map covers the v0.5 workflow and avoids conflicts between terminal, editor, and app chrome."
+    },
+    {
+      "id": "ACCESSIBILITY-BASICS",
+      "title": "Keyboard and focus accessibility baseline",
+      "column": "next",
+      "tier": "pebble",
+      "track": "ui",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "A dense tool still needs visible focus, keyboard reachability, and labelled controls so it can be used without pointer precision.",
+      "done": "Core chrome controls are keyboard reachable, focus rings are visible, and rail/editor/pane controls expose useful labels."
+    },
+    {
+      "id": "PROJECT-TABS",
+      "title": "Project tabs replace multiple VS Code windows",
+      "column": "next",
+      "tier": "rock",
+      "track": "workspace",
+      "size": "M",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "The core multi-project workflow: Project A, Project B, Project C live in one app instead of separate VS Code windows.",
+      "done": "Open at least 3 folders as project tabs; switching tabs restores each project's rail, editor tabs, terminal panes, and focused pane."
+    },
+    {
+      "id": "PANE-MANAGER",
+      "title": "Multiple agent panes per project",
+      "column": "next",
+      "tier": "rock",
+      "track": "core",
+      "size": "L",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "Jason often runs multiple Claude/Codex sessions against the same project. Add a pane manager that can create/switch/close multiple terminal panes within one project.",
+      "done": "One project can run 3 live agent/shell panes; each has its own pty/process; focus is obvious; close/kill is explicit and safe."
+    },
+    {
+      "id": "PANE-NAMES",
+      "title": "Pane names and task labels",
+      "column": "next",
+      "tier": "pebble",
+      "track": "core",
+      "size": "S",
+      "launch": "v1",
+      "summary": "When several agents run in one project, each pane needs a human label so Jason can remember what it is doing.",
+      "done": "Each pane has an editable name/task label shown in the pane header and restored across relaunch."
+    },
+    {
+      "id": "AGENT-ATTENTION",
+      "title": "Agent attention and completion state",
+      "column": "next",
+      "tier": "rock",
+      "track": "core",
+      "size": "M",
+      "launch": "v1",
+      "summary": "Background agents need visible status when they exit, wait for input, or need attention. Build this in reliable layers: process exits first, then explicit Claude/Codex prompt heuristics; generic prompt-idle detection waits until measured useful.",
+      "done": "Pane/project tabs show running and exited states, plus needs-attention for explicit Claude/Codex prompts such as approval/permission/continue questions. Idle-time heuristics are not required for v1."
+    },
+    {
+      "id": "PROCESS-LIFECYCLE",
+      "title": "Agent process lifecycle controls",
+      "column": "next",
+      "tier": "pebble",
+      "track": "core",
+      "size": "M",
+      "launch": "v1",
+      "summary": "A cockpit needs basic process affordances: restart, kill, status, exited state, and command/cwd visibility.",
+      "done": "Each pane shows running/exited status, cwd, command profile, restart, and terminate. Exited panes keep scrollback until closed."
+    },
+    {
+      "id": "SESSION-RESTORE",
+      "title": "Restore projects, files, panes",
+      "column": "next",
+      "tier": "rock",
+      "track": "workspace",
+      "size": "M",
+      "launch": "v1",
+      "summary": "After quit/relaunch, the cockpit should come back as the same working context, without pretending to preserve live agent process state.",
+      "done": "Relaunch restores project tabs, rail expansion, editor tabs, pane layout, and starts fresh agent/shell panes where configured."
+    },
+    {
+      "id": "GIT-STATUS",
+      "title": "Git status in file rail",
+      "column": "next",
+      "tier": "sand",
+      "track": "files",
+      "size": "S",
+      "launch": "v1",
+      "summary": "Small but high-signal replacement for a VS Code affordance Jason likely relies on: dirty/new/deleted markers in the file tree.",
+      "done": "Rail marks modified, untracked, deleted, and ignored files for git workspaces without blocking UI on large repos."
+    },
+    {
+      "id": "DIFF-VIEW",
+      "title": "Diff view for agent changes",
+      "column": "next",
+      "tier": "rock",
+      "track": "files",
+      "size": "M",
+      "launch": "v1",
+      "summary": "Jason supervises agents by reading what changed. A file status marker is not enough; he needs to inspect diffs without opening VS Code.",
+      "done": "Modified files open a readable diff view with additions/deletions; the editor can jump from a diff hunk to the file."
+    },
+    {
+      "id": "GIT-ACTIONS-LITE",
+      "title": "Lightweight git review actions",
+      "column": "next",
+      "tier": "rock",
+      "track": "files",
+      "size": "S",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "Add only the git actions needed to review/clean agent work, not a full git client.",
+      "done": "Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces."
+    },
+    {
+      "id": "PERF-BUDGET",
+      "title": "Resource and jank budget",
+      "column": "next",
+      "tier": "pebble",
+      "track": "quality",
+      "size": "M",
+      "launch": "v1",
+      "summary": "The product exists to avoid VS Code resource bloat. Measure the thing the product promises: memory, CPU, and responsiveness with several projects/panes.",
+      "done": "Document baseline memory/CPU for 1 project/1 pane, 3 projects/3 panes, and fast terminal output; regressions are visible before release."
+    },
+    {
+      "id": "DAILY-DRIVER-METRICS",
+      "title": "Daily-driver success metrics",
+      "column": "next",
+      "tier": "pebble",
+      "track": "quality",
+      "size": "S",
+      "launch": "v1",
+      "summary": "Define how to know the app is actually replacing the VS Code workflow instead of just existing.",
+      "done": "Track project opens, agent pane starts, editor saves, crashes, memory/CPU snapshots, and whether Jason can complete a normal multi-project work block without opening VS Code."
     },
     {
       "id": "WORKTREE",
@@ -125,9 +482,119 @@
       "tier": "pebble",
       "track": "core",
       "size": "M",
-      "launch": "v3",
+      "launch": "v2",
       "summary": "One keystroke: new pane = git worktree add + agent launched inside it, named and disposable. The 'multiple agents on one repo, parallel' workflow.",
       "done": "From a project tab: new-worktree-agent in <5s; cleanup removes the worktree + branch."
+    },
+    {
+      "id": "SEARCH",
+      "title": "Find files and text",
+      "column": "later",
+      "tier": "pebble",
+      "track": "files",
+      "size": "M",
+      "launch": "v2",
+      "summary": "A lightweight replacement for the VS Code search/file-jump behaviors that matter while supervising agents.",
+      "done": "Keyboard-driven file quick-open and ripgrep-backed text search work inside the selected project."
+    },
+    {
+      "id": "TERMINAL-FIND",
+      "title": "Find in terminal scrollback",
+      "column": "later",
+      "tier": "pebble",
+      "track": "core",
+      "size": "M",
+      "launch": "v2",
+      "summary": "Agent output can be long. Search inside terminal scrollback is necessary for reviewing logs and prior agent output.",
+      "done": "Find text in the active pane scrollback, jump next/previous, and preserve terminal focus behavior."
+    },
+    {
+      "id": "COMMAND-PALETTE",
+      "title": "Command palette for cockpit actions",
+      "column": "later",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
+      "launch": "v2",
+      "summary": "A compact way to expose actions without adding IDE chrome: open folder, new agent pane, split, restart, kill, save, search.",
+      "done": "A keyboard palette can run core app actions and shows shortcuts where assigned."
+    },
+    {
+      "id": "SETTINGS",
+      "title": "Settings file for commands and appearance",
+      "column": "later",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
+      "launch": "v2",
+      "summary": "Keep settings boring and inspectable: agent commands, ignored folders, font, theme, and default layout.",
+      "done": "A local config file controls agent profiles, font/theme, ignored folders, and default pane layout; bad config reports actionable errors."
+    },
+    {
+      "id": "NOTIFICATIONS",
+      "title": "Background agent notifications",
+      "column": "later",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
+      "launch": "v2",
+      "summary": "When an agent in another project or pane stops or needs input, Jason should not have to manually inspect every pane.",
+      "done": "Background panes can surface in-app badges and optional macOS notifications for exit/attention events."
+    },
+    {
+      "id": "TRANSCRIPTS",
+      "title": "Pane transcript capture",
+      "column": "later",
+      "tier": "sand",
+      "track": "core",
+      "size": "S",
+      "launch": "v2",
+      "summary": "Completed agent sessions should be reviewable after the process exits without keeping panes open forever.",
+      "done": "A pane can save a plain-text transcript/log path for later review, with clear retention/reset behavior."
+    },
+    {
+      "id": "KEYBINDINGS-CONFIG",
+      "title": "Configurable keybindings",
+      "column": "later",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
+      "launch": "v2",
+      "summary": "After the default shortcut map stabilizes, allow overrides without hardcoding personal preferences into the app.",
+      "done": "A local config file can override app-level shortcuts and reports conflicts with terminal/editor reserved bindings."
+    },
+    {
+      "id": "THEME",
+      "title": "mono-ghost theme polish",
+      "column": "later",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
+      "launch": "v3",
+      "summary": "Apply the already-approved mono-ghost palette across chrome, terminal, rail, and editor after the core workflow is real.",
+      "done": "App chrome, terminal canvas, file rail, and editor share a coherent dark theme with readable contrast."
+    },
+    {
+      "id": "PACKAGING",
+      "title": "Local app packaging",
+      "column": "later",
+      "tier": "pebble",
+      "track": "quality",
+      "size": "M",
+      "launch": "v3",
+      "summary": "Make it launch like a real macOS app, not only from `npm run tauri dev`.",
+      "done": "A local signed or ad-hoc packaged .app launches, opens folders, and runs agents with documented setup requirements."
+    },
+    {
+      "id": "REUSE-AUDIT",
+      "title": "Mine old projects for reusable pieces",
+      "column": "later",
+      "tier": "sand",
+      "track": "research",
+      "size": "S",
+      "launch": "v3",
+      "summary": "Re-check Hallmark/hashmark/brutal/indx for reusable Tauri shell, persistence, editor, or design patterns without adopting their product shape.",
+      "done": "Reusable components/patterns are listed with exact source paths and either imported, adapted, or explicitly rejected."
     }
   ],
   "shipped": [
@@ -170,6 +637,26 @@
       "summary": "spike-ghostty-vt/: real pty (portable-pty) → real 'ls -la -G' → real ANSI codes → libghostty-vt Terminal::vt_write parses → cell-by-cell readback matches exactly. Proves the terminal ENGINE choice (Ghostty's real parser in a Rust backend, not xterm.js). Caught the Zig 0.15.2 pin requirement.",
       "done": "Compiles + runs correctly, verified 2026-07-07. Logged in DECISIONS.md.",
       "shipped": "2026-07-07"
+    },
+    {
+      "id": "S-SPIKE2",
+      "title": "Tauri render + input loop — PASSED",
+      "track": "core",
+      "size": "L",
+      "launch": "v0",
+      "summary": "spike-2/: real Tauri 2 + React/Vite + Rust app. pty → libghostty-vt → grid snapshot over IPC → Canvas 2D paint; browser key events → Ghostty encoder/compat mappings → pty. Includes Cmd+V paste, Cmd+K clear, Option word navigation/delete, mouse drag selection, and Cmd+C copy from selected canvas text.",
+      "done": "npm test, npm run build, and cargo test pass. Real app UI verification covered selection/Cmd+C, Cmd+V paste, Cmd+K clear, and Option-Backspace delete-word.",
+      "shipped": "2026-07-08"
+    },
+    {
+      "id": "S-SCAFFOLD",
+      "title": "Tauri 2 app scaffold — folded into SPIKE-2",
+      "track": "core",
+      "size": "M",
+      "launch": "v0",
+      "summary": "The scaffold was not a separate throwaway step: SPIKE-2 proved the real Tauri 2 + React/TS/Vite frontend, Rust backend, native window, IPC events, Tauri commands, plugins, and app menu accelerator path.",
+      "done": "Native app opens, IPC is wired both directions, frontend and Rust builds pass.",
+      "shipped": "2026-07-08"
     }
   ]
 }

@@ -11,9 +11,9 @@ The technical design that doesn't fit the one-page PRD. Stack is locked (DECISIO
 | Terminal engine | `libghostty-vt` 0.2.0 (Rust) | Ghostty's *actual* parsing engine, extracted for embedding. Real VT/xterm correctness without reinventing it. **Verified** (`spike-ghostty-vt/`). |
 | PTY | `portable-pty` | Real ptys hosting real `claude`/`codex` processes. Verified. |
 | Terminal render | Canvas 2D (v0) | Ship-ugly. WebGL only if perf demands it (measure first). |
-| Editor (v2) | CodeMirror 6 | Lighter than Monaco, good for an inline pane, real syntax highlighting. |
+| Editor (v0.5) | CodeMirror 6 | Lighter than Monaco, good for the VS Code-shell replacement slice, real syntax highlighting. |
 | State | React state / Zustand | Keep it boring for v0. |
-| Persistence | `tauri-plugin-sql` (SQLite) | Sessions + open folders. Matches hashmark's proven pattern. |
+| Persistence | Tauri Store plugin (v0/v0.5), then `tauri-plugin-sql` (SQLite) when state turns relational | JSON is enough for last folder/profile/recent projects; SQL waits for multi-project session state. |
 
 ## Data flow (one pane)
 
@@ -39,15 +39,14 @@ The technical design that doesn't fit the one-page PRD. Stack is locked (DECISIO
 
 **Ownership boundary:** backend owns ptys + terminal state; frontend owns rendering + input capture; IPC is the seam. Per pane: one pty + one `Terminal` instance + one render surface.
 
-## The one remaining rock: the render+input loop
+## Terminal foundation status
 
-The spike proved **parsing** (bytes → correct cell grid). It did **not** prove:
-1. **Rendering** the cell grid to pixels on a canvas at terminal speed.
-2. **Input** roundtrip — keyboard → escape sequences → pty → process reacts.
-3. **Fullscreen TUI** correctness — `claude`'s own alt-screen UI (not just line output) rendering right.
-4. **Performance** under fast output (big build logs) and rapid redraws (TUI repaint).
+The parsing spike proved bytes → correct cell grid. The promoted `app/` code, originally built as `spike-2/`, then proved the real Tauri render/input loop:
+1. **Rendering** the cell grid to pixels on a canvas in a native window.
+2. **Input** roundtrip — keyboard → encoded bytes → pty → shell/agent reacts.
+3. **Shortcut and clipboard basics** — paste, clear, Option word movement/delete, canvas selection, copy.
 
-**This is the first slice, before any app scaffolding.** If the loop doesn't feel like a real terminal, nothing built on top matters. See ROADMAP v0 → SPIKE-2.
+The remaining v0 work is not terminal architecture discovery; it is hardening the app wiring around the proven loop: package/root promotion, launch env/auth checks, and local state reset behavior.
 
 ### Rendering approach (v0)
 - Canvas 2D, monospace grid. Each cell: glyph + fg/bg. Redraw dirty cells only (libghostty-vt exposes cell state; diff against last frame).
@@ -65,9 +64,9 @@ N panes = N ptys + N `Terminal` instances + N render loops. Each pty read runs o
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| Render pipeline can't keep up with fast output / TUI redraws | **High — it's the rock** | Prove in SPIKE-2 before scaffolding; dirty-region diffing; rAF batching; measure early |
-| Input fidelity (every key/mod/escape right) | Med-high | Lean on libghostty-vt `key.rs`; test against `claude`'s real TUI, vim, arrow keys, ctrl-c |
+| Render pipeline can't keep up with fast output / TUI redraws | Med | SPIKE-2 proved the path; keep rAF batching, add dirty-region deltas only if measured jank appears |
+| Input fidelity (every key/mod/escape right) | Med | Lean on libghostty-vt `key.rs`; keep regression tests for shortcuts and real-app smoke tests |
 | Zig 0.15.2 pin (build breaks on 0.16) | Med (setup friction) | Documented; `zig@0.15` scoped to build; pin in any CI |
 | libghostty-vt is v0.2.0, young, API may churn | Med | Pin the version; the spike already caught one API shape (`graphemes` on `GridRef` not `Cell`) |
 | Many concurrent panes exhaust memory/CPU | Med (v1+) | Throttle non-focused panes; measure at 3-4 agents |
-| Scope creep (this is a big app) | **High — session history proves it** | v0 is ONE pane. Tabs/rail/editor are parked. Enforce hard. |
+| Scope creep (this is a big app) | **High — session history proves it** | v0 is one pane; v0.5 is the file rail/editor shell; tabs/panes wait for v1 |

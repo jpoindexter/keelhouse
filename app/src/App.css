@@ -1,0 +1,36 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #101010;
+}
+
+.term {
+  display: block;
+  cursor: text;
+  user-select: none;
+}
+
+.launch-error {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+  max-width: 920px;
+  padding: 12px 14px;
+  border: 1px solid #7f2d3b;
+  border-radius: 8px;
+  background: #210c12;
+  color: #ffd6dd;
+  font: 13px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.38);
+}

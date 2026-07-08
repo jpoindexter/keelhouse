@@ -126,3 +126,117 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 **Why it matters:** The mechanical tool-streak hook (added this session, `~/.claude/settings.json`) is a partial backstop, but the specific failure here was writing a not-yet-chosen option into the source-of-truth docs as decided. Fix: an evaluation writes to PARKED or a DECISIONS "considering" note, never to PRD/ROADMAP scope, until Jason picks it.
 
 **Reversible?** N/A — this is a process note, not a technical choice.
+
+## 2026-07-07 — SPIKE-2 PASSED: render+input loop proven; scaffold merged into it
+
+**What happened:** Built `spike-2/` — a real Tauri 2 app (React/Vite + Rust backend) that runs the full terminal loop: pty (`portable-pty`) → `libghostty-vt` parse → grid snapshot serialized over Tauri IPC → Canvas 2D paint; keydown → minimal JS encoder → bytes → `write_pty` command → pty. Verified by hand in the real window: zsh prompt renders (JetBrains Mono, color, block cursor), typing echoes, arrows/ctrl-c work, and `claude`'s fullscreen TUI renders correctly. **The one remaining rock is dead** — rendering, input, and TUI fidelity are all proven, not just parsing.
+
+**Design call (refines ROADMAP):** merged SPIKE-2 with the "minimal scaffold" step instead of proving the loop in a standalone Rust window. Rationale: the render risk I flagged lives at the **Tauri IPC seam** (Rust cell-grid → webview → canvas), which only exists once Tauri is in play — a pure-Rust window would have proven the wrong thing. `spike-2/` is therefore the real app foundation, not a throwaway.
+
+**Architecture forced by the engine:** all `libghostty-vt` types are `!Send`/`!Sync`, so the `Terminal` cannot cross threads. Structure: a **reader thread** does the blocking pty read and forwards raw bytes over an `mpsc` channel; a **terminal thread** owns the `Terminal` (created in-thread) + the pty master (for resize) + the child, applies bytes, and emits grid snapshots via `AppHandle`. Only the pty *writer* (which is `Send`) goes into Tauri state for the input command. See `spike-2/src-tauri/src/lib.rs`.
+
+**Shortcuts taken (ship-ugly, logged, non-blocking):** minimal JS key encoder (no kitty protocol / full modifier encoding), full-grid snapshots per frame (rAF-coalesced, not dirty-region diffed), no wide-CJK / scrollback handling. Upgrade only if measured need appears (e.g. fast-output jank → dirty-region deltas).
+
+**v0 remaining (small):** folder picker (`tauri-plugin-dialog`) → spawn `claude` in chosen cwd (currently hardcoded `$SHELL` in `$HOME`) → persist last folder + reopen on relaunch. Then promote `spike-2/` to the repo's app root.
+
+**Reversible?** The spike code is disposable-but-promotable; the *finding* (the loop works on this stack) is the durable result. Stack stays locked (v0 not yet shipped).
+
+## 2026-07-08 — Product framing corrected: lean VS Code workflow replacement
+
+**What happened:** Jason clarified the actual job this project exists to do. His current workflow is not "use VS Code as an IDE"; it is "use VS Code as a project/file shell around real Claude/Codex CLI terminals." The useful VS Code parts are the file explorer and file editor. The rest is resource-heavy chrome. He often runs multiple agent terminals against one project and has multiple projects open as separate VS Code windows.
+
+**Choice:** The product is framed as a lean replacement for that workflow: project tabs, file rail, real file editor, and real Claude/Codex CLI terminal panes. The terminal foundation remains v0, but file rail/editor are not distant garnish; they are the v0.5 shape that makes the app a plausible VS Code-shell replacement.
+
+**Why:** Earlier PRD/ROADMAP drafts under-translated this into "terminal cockpit first, rail/editor later." That misses the point: replacing the VS Code shell requires the explorer/editor surfaces as core product value, even if they follow the one-pane terminal foundation by one release slice.
+
+**Reversible?** Only if Jason's actual workflow changes. Treat this as the product north star for roadmap sequencing.
+
+## 2026-07-08 — Library choices locked from deep research
+
+**What happened:** Ran a deep-research pass (6 angles, 26 sources fetched, 119 claims extracted, 24/25 survived 3-vote adversarial verification) on how to execute each remaining build area without dead-ends. Full report + citations: `docs/vision-to-reality-2026-07-08.html`.
+
+**Choices (all primary-sourced):**
+- **Editor:** `@uiw/react-codemirror` (v4.25.x, wraps CM6). CM6 core ~300KB vs Monaco ~5–10MB; Monaco doesn't support webview apps, CM6 does. Add languages via the `extensions` prop. Don't hand-roll the React bridge.
+- **File rail:** `ignore::WalkBuilder` (respects .gitignore/.ignore/global by default) + `notify` (FSEvents) + `notify-debouncer-mini` (debouncing is NOT in notify core — omitting it = event storms on npm install/builds) + **React Arborist** 3.12.0 (virtualized VS-Code-style tree, built-in rename/keyboard/ARIA/filter).
+- **Persistence:** Tauri **Store plugin** (JSON, 100ms autosave) for v0/v0.5 workspace state → Tauri **SQL plugin** (SQLite, transactional migrations) only when state turns relational (v1).
+- **Multi-process:** `portable-pty` (already in use) scales to many panes — SPIKE-2's two-thread-per-pty design is exactly WezTerm's `LocalPane` shape. Reuse per pane.
+- **Packaging:** ad-hoc sign for local use; Developer ID + notarization only to distribute. Avoid `externalBin` sidecars (break notarization in Tauri 2.x).
+
+**Terminal render nuance (important):** the xterm.js "WebGL is 3–10× faster than Canvas" benchmark is for xterm.js, where JS does VT parsing. Here parsing is already in Rust and only the cell grid crosses IPC — so the bottleneck is **IPC volume, not draw calls**. Canvas 2D already passed the render test. Fix order if fast-output stutters: **dirty-region deltas first** (what Ghostty's render thread does), WebGL only if measured IPC-bound. The "WebKit lacks WebGL2" blocker was **refuted** — GPU path is available, just not yet needed.
+
+**Not settled (measure, don't search):** exact high-frequency IPC pattern + WKWebView throughput ceiling; CM6 vs Monaco for >1MB files; memory/CPU ceiling at 4–8+ concurrent agent ptys. See report open questions.
+
+**Reversible?** Library picks are per-phase and swappable before each is built; the research is a decision aid, not a lock. Re-check version pins at implementation time.
+
+## 2026-07-08 — Execution discipline for the build-out
+
+**Choice:** Execute the remaining roadmap as thin vertical slices under fixed guardrails (full detail in ROADMAP.md "Execution discipline"):
+- One slice at a time, each usable end-to-end before the next; app runnable at every commit.
+- Measure-don't-preempt: dirty-region IPC deltas (not WebGL) only when fast output stutters; measure the pty process ceiling only when running 4–8 agents; SQL/worktrees/WebGL/theming built at the phase that needs them, not earlier.
+- One driver per file per slice (`lib.rs`/`App.tsx` get a single owner per slice) to prevent concurrent-edit clobbers — a real risk this session, when Jason and Claude edited `lib.rs` in parallel.
+- First concrete step: **APPROOT** — promote `spike-2/` to the app root, remove the diagnostic `[key]`/`[paste]` `eprintln!` traces, then the v0 folder-picker → spawn-claude → persist-last-folder slice.
+
+**Why:** The roadmap plus research is now detailed enough to invite building breadth ahead of proven need — the documented over-engineering failure mode (CLAUDE.md §4). Naming the discipline in the source-of-truth docs, not just chat, is the countermeasure.
+
+**Reversible?** It's a working method, adjustable per slice; not a technical lock.
+
+## 2026-07-08 — Agent launch profile for v0
+
+**Choice:** v0 launches the selected workspace with a persisted `launchProfile` stored in Tauri Store (`workspace.json`). The default profile is `claude` with `useLoginShell: true`, so user-shell PATH setup such as nvm is honored. The Rust backend accepts the profile from the frontend and executes it in the selected cwd; it does not hardcode Claude inside the pty layer.
+
+**Why:** The v0 product wants "pick folder → real Claude pane" by default, but the app must not bake one CLI forever into the terminal engine. A small profile object gives the next slices a path to Codex/shell profiles without building settings UI early.
+
+**Verified:** 2026-07-08 real app run: `spike-2` launched a direct child process `claude`, the child cwd was `/Users/jasonpoindexter/Documents/GitHub/apps/agent cli`, and a cropped screenshot confirmed Claude Code v2.1.197 rendered in the canvas.
+
+**Reversible?** Yes. The profile schema is intentionally small and can be replaced by the later SETTINGS/AGENT-PROFILES work without changing the terminal-thread architecture.
+
+## 2026-07-08 — Terminal hardening uses Ghostty viewport state
+
+**Choice:** Scrollback is implemented through `Terminal::scroll_viewport` and `Point::Viewport` snapshots, not a parallel JavaScript history buffer. The frontend sends scroll deltas (`scroll_pty`) for wheel and Shift+PageUp/PageDown; the terminal thread owns viewport position and emits the visible grid. Key and paste input snap the viewport back to live output.
+
+**Why:** `libghostty-vt` already owns scrollback, reflow, alternate-screen behavior, and tracked grid semantics. Duplicating history in React would drift from the real terminal state and break the "Ghostty engine is the source of truth" architecture.
+
+**Verified:** 2026-07-08 real app run with a shell profile: a 300-line burst stayed responsive; Shift+PageDown showed live output through `LINE-300`; Shift+PageUp moved to older `LINE-245` history; resize smoke kept the app and shell child alive; drag selection plus Cmd+C copied scrolled text (`LINE-246` through `LINE-250`).
+
+**Reversible?** The controls can change later, but the state ownership should stay in Ghostty unless measured evidence shows the viewport API cannot support a needed workflow.
+
+## 2026-07-08 — APPROOT promotion complete
+
+**Choice:** Promote the working Tauri app from `spike-2/` to `app/` and drop throwaway package names. The app identity is now: npm package `agent-cli`, Rust package `agent-cli`, lib crate `agent_cli_lib`, Tauri product/window title `agent cli`, and identifier `com.jasonpoindexter.agent-cli`.
+
+**Why:** The render/input/folder/agent/scrollback foundation is no longer a disposable experiment. Daily development should start from the real app root, with stable package names and docs pointing contributors to the runnable app.
+
+**Verified:** 2026-07-08 from `app/`: `cargo test` passed 6 Rust tests, `cargo build` passed, `npm run build` passed, and `npm test` passed. A real `npm run tauri dev` launch started `target/debug/agent-cli`, spawned direct child `claude`, and `lsof` showed the Claude child cwd was `/Users/jasonpoindexter/Documents/GitHub/apps/agent cli`.
+
+**Reversible?** Low-cost rename reversal is possible before commits, but the decision should stand unless the repo layout itself changes. Historical SPIKE-2 entries remain as history; current development uses `app/`.
+
+## 2026-07-08 — PROCESS-ENV launch checks
+
+**Choice:** `open_workspace` now validates the selected cwd, preflights the selected command before replacing the current pane, returns launch errors to the frontend, and emits a `pane-exit` event when a launched process exits. The frontend renders a visible launch/error banner and does not persist a newly picked folder if launch preflight fails.
+
+**Why:** The app should not dump Jason into a blank/dead pane when `claude`/`codex` is missing from PATH, the workspace path is bad, or the agent exits immediately because of auth/session problems. This keeps the pty/Terminal ownership model intact: only Send handles cross threads; `Terminal` and `Encoder` still live only inside the terminal thread.
+
+**Verified:** 2026-07-08: Rust tests increased to 10 and passed; `npm run build`, `npm test`, and `cargo build` passed. Real bad-command launch rendered a missing-command banner and process inspection showed no child process under `agent-cli`. Real immediate-exit launch with `false` left no child process and exercised the `pane-exit` monitor path. Real Claude launch regression still spawned direct child `claude`, and `lsof` showed cwd `/Users/jasonpoindexter/Documents/GitHub/apps/agent cli`.
+
+**Reversible?** Yes. The preflight and exit banner can evolve into richer process lifecycle UI in v1, but the v0 behavior should remain: fail before replacing the pane when cwd/command preflight fails, and surface process exits visibly.
+
+## 2026-07-08 — DATA-STORAGE v0 state reset documented
+
+**Choice:** Keep v0/v0.5 state in Tauri Store and document the exact local file, schema, and reset path in `docs/local-state.md`. Current state lives at `~/Library/Application Support/com.jasonpoindexter.agent-cli/workspace.json`.
+
+**Why:** Store JSON is enough for last workspace and launch profile. SQL waits until v1, when state becomes relational across project tabs, pane layouts, process lifecycle metadata, and editor tabs. A manual reset path is needed now because bad folder/profile state can otherwise make the app feel stuck.
+
+**Verified:** 2026-07-08: `docs/local-state.md` documents the `workspace.json` schema, reversible `mv` reset command, relaunch command with the Zig pin, and default Claude `launchProfile` repair snippet. `roadmap.json` marks DATA-STORAGE done and `roadmap.html` was rebuilt.
+
+**Reversible?** Yes. The storage backend can move to SQL in v1 as already planned; the reset doc should remain the human recovery entrypoint.
+
+## 2026-07-08 — Remaining sequencing calls after v0
+
+**Choice:** Use the most logical sequence:
+1. v0 finishes package/root stability before env/auth hardening. This is now done: APPROOT landed before PROCESS-ENV.
+2. v1 includes both DIFF-VIEW and GIT-ACTIONS-LITE as must-have review workflow. DIFF-VIEW comes first because actions need a review surface; GIT-ACTIONS-LITE follows with only stage, unstage, discard with confirmation, and copy diff. This is not a full git client.
+3. Pane attention is layered by reliability: process exits first, explicit Claude/Codex prompt heuristics second, generic prompt-idle detection later only if measured useful.
+
+**Why:** The app exists to supervise real agents without VS Code. Diff viewing without basic cleanup actions leaves Jason bouncing back to VS Code/terminal for common review moves. Attention based only on idle time is too noisy for v1; explicit prompts and process exits are more reliable and easier to trust.
+
+**Reversible?** Yes. GIT-ACTIONS-LITE can shrink if implementation risk gets too high, and attention heuristics should be revised from real daily-use logs.
