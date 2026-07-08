@@ -51,7 +51,12 @@ This is where the clarified product point lands: not "terminal app with optional
 - ~~**FILE-WATCHER:** live rail updates, gitignore/app ignores, noisy-folder protection.~~ **DONE 2026-07-08** — backend owns a debounced `notify` watcher per selected workspace, filters noisy paths before emitting `workspace-tree-changed`, and frontend refreshes the existing tree source on that event. Verified with `npm run build`, `npm test`, `cargo test` (12 tests, including watcher noisy-path filtering), `cargo build`, and real `npm run tauri dev` visual smoke: creating `aaa-agent-cli-watch-smoke-dir` after launch appeared in the rail, then was removed.
 - ~~**RECENT-PROJECTS:** reopen active folders without a picker ceremony.~~ **DONE 2026-07-08** — persisted `recentFolders`, added a compact rail switcher with explicit `Switch` affordance, dedupe/cap/prune helpers, and missing-path cleanup. Verified with `npm run build`, `npm test`, real `npm run tauri dev`, seeded `agent cli` + `postures` recents, clicking `Switch`, `workspace.json` persisting `/Users/jasonpoindexter/Documents/postures`, and the rail/tree switching to the postures project.
 - ~~**EDITOR:** robust CodeMirror editor that opens files from the rail, edits, saves, and feels like a real coding surface.~~ **DONE 2026-07-08** — CodeMirror editor opens files from the rail, shows line numbers/path context, tracks dirty/saved state, supports Save/Cmd+S, and writes UTF-8 workspace files through guarded Tauri commands. Verified with build/tests plus native UI smoke opening/editing/saving `smoke.txt` and confirming disk contents changed.
-- **EDITOR-PARITY-UX:** line gutter, breadcrumbs/path context, restored scroll/selection, tabs, dirty markers, active-file reveal, and screenshot QA.
+- **EDITOR-PARITY-UX:** line gutter, path/breadcrumb context, active-file orientation, dirty markers, view-state restore, and screenshot QA.
+- **ACTIVE-FILE-SYNC:** selected file, editor title/path, rail highlight, watcher refresh, and workspace restore stay synchronized.
+- **EDITOR-VIEW-STATE:** restore cursor, selection, scroll position, and focus per file during the session.
+- **DIRTY-DRAFT-PROTECTION:** preserve unsaved edits across file/project switches and require save/discard/cancel before data loss.
+- **SAVE-ERROR-RECOVERY:** failed saves keep the buffer, show a scoped error, and provide explicit Retry/Open externally recovery actions.
+- **EDITOR-RESPONSIVE-QA:** screenshot QA for selected, dirty, save-error, and narrow-width editor states.
 - **EDITOR-FIND-REPLACE:** local find/replace inside files.
 - **EDITOR-LANGUAGE-MODES:** first-class TS/TSX/JSX/JS/MD/HTML/CSS/Rust/JSON/TOML/YAML/shell highlighting.
 - **SAVE-CONFLICTS:** detect external file edits before overwrite.

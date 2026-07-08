@@ -66,7 +66,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>agent cli</h1>
-<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 63 slices &middot; 6 shipped</p>
+<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 68 slices &middot; 6 shipped</p>
 <p class="loop">Open project folder → inspect/edit files → preview web output → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Terminal + process</span><span><i style="border-color:#5a4315;background:#171104"></i>Projects + sessions</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Files + editor</span><span><i style="border-color:#4c1d6f;background:#15091f"></i>Chrome + interaction</span><span><i style="border-color:#5f1f2d;background:#1d0b10"></i>Quality + shipping</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research &amp; spikes</span><span style="color:#f87171">🔒 launch blocker</span></div>
 <div class="filters">
@@ -134,12 +134,16 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
 <div class="card" data-track="files" data-id="EDITOR-PARITY-UX" data-size="M" data-tier="rock" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">EDITOR-PARITY-UX &middot; Robust editor parity UX</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Match the coding editor experience shown in the reference: dense file tree beside a real source editor with path context, gutter, syntax fidelity, tabs, dirty state, and active-file reveal.</p>
-<details><summary>Done criteria</summary><p class="done">Editor shows path/breadcrumb context, stable line gutter, selected file highlight, active-file reveal, restored scroll/selection per file, dirty markers in tabs/tree, go-to-line, quick open/reveal hooks, and screenshot QA for HTML, TS/TSX, Markdown, Rust, JSON, and editor+file-tree split.</p></details></div>
+<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Match the coding editor orientation shown in the reference: dense file tree beside a real source editor with path context, gutter, dirty state, restored view position, and active-file reveal.</p>
+<details><summary>Done criteria</summary><p class="done">Editor shows path/breadcrumb context, stable line gutter, selected file highlight, active-file reveal, restored scroll/selection per file, dirty markers in editor/rail, go-to-line or reveal hooks, and screenshot QA for selected, dirty, save-error, no-file, and narrow-width states. Tabs, find/replace, and expanded language modes remain separate cards.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
+<div class="card" data-track="files" data-id="DIRTY-DRAFT-PROTECTION" data-size="M" data-tier="rock" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">DIRTY-DRAFT-PROTECTION &middot; Dirty draft protection</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The userflow audit found the main trust risk: unsaved work can be lost when changing files/projects. This must be blocked before the editor feels real.</p>
+<details><summary>Done criteria</summary><p class="done">Unsaved editor buffers are preserved when switching files or projects. Closing/replacing a dirty buffer requires Save, Discard, or Cancel with the file name and consequence shown. Dirty drafts survive failed saves and never get cleared by navigation.</p></details></div>
 <div class="card" data-track="files" data-id="SAVE-CONFLICTS" data-size="M" data-tier="rock" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">SAVE-CONFLICTS &middot; External change and save conflict handling</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Agents and terminals can edit files while the editor is open. The app must not silently overwrite external changes.</p>
@@ -198,6 +202,22 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
+<div class="card" data-track="files" data-id="ACTIVE-FILE-SYNC" data-size="S" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">S</span><span class="ttl">ACTIVE-FILE-SYNC &middot; Active file sync across rail and editor</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The user must always know which file is active. File rail selection, editor tab title, path bar, watcher refreshes, and workspace restore need to agree.</p>
+<details><summary>Done criteria</summary><p class="done">Opening a file highlights and reveals it in the rail, editor title/path match the selected file, watcher refresh keeps the same active file highlighted when it still exists, missing active files show a clear stale/deleted state, and relaunch restores the active file metadata without pointing at the wrong file.</p></details></div>
+<div class="card" data-track="files" data-id="EDITOR-VIEW-STATE" data-size="S" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-VIEW-STATE &middot; Per-file editor view state</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Switching files should not throw away the user's place. Cursor, selection, scroll, and focus are part of the editor experience.</p>
+<details><summary>Done criteria</summary><p class="done">Within a session, each open file restores cursor position, selection, scroll position, and editor focus after switching away and back. Saved state survives tree refreshes and does not jump on save.</p></details></div>
+<div class="card" data-track="files" data-id="SAVE-ERROR-RECOVERY" data-size="S" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">S</span><span class="ttl">SAVE-ERROR-RECOVERY &middot; Save failure recovery</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Save failures need a recovery flow, not only a red message. The buffer must remain safe and the next action must be obvious.</p>
+<details><summary>Done criteria</summary><p class="done">Failed saves keep the edited buffer in place, show a scoped editor error with the human cause, expose explicit Retry and Open externally actions where applicable, avoid duplicate save spam while saving, and return to Saved only after the real write succeeds.</p></details></div>
+<div class="card" data-track="quality" data-id="EDITOR-RESPONSIVE-QA" data-size="S" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-RESPONSIVE-QA &middot; Editor responsive screenshot QA</span><span class="lens l-quality">Quality + shipping</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The userflow audit called out screenshot proof for editor states and small desktop widths before claiming parity.</p>
+<details><summary>Done criteria</summary><p class="done">Capture and keep QA artifacts for selected-file, dirty-file, save-error, no-file-selected, and 1024x640/narrow-width workbench states. Screenshots must show no overlapping chrome, no unusable squeezed editor, and clear rail/editor/terminal orientation.</p></details></div>
 <div class="card" data-track="files" data-id="EDITOR-FIND-REPLACE" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-FIND-REPLACE &middot; Editor find and replace</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Basic file editing needs local find/replace; otherwise the editor is too thin to replace the VS Code surface Jason actually uses.</p>

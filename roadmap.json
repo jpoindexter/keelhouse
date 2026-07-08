@@ -260,8 +260,64 @@
       "size": "M",
       "launch": "v0_5",
       "blocker": true,
-      "summary": "Match the coding editor experience shown in the reference: dense file tree beside a real source editor with path context, gutter, syntax fidelity, tabs, dirty state, and active-file reveal.",
-      "done": "Editor shows path/breadcrumb context, stable line gutter, selected file highlight, active-file reveal, restored scroll/selection per file, dirty markers in tabs/tree, go-to-line, quick open/reveal hooks, and screenshot QA for HTML, TS/TSX, Markdown, Rust, JSON, and editor+file-tree split."
+      "summary": "Match the coding editor orientation shown in the reference: dense file tree beside a real source editor with path context, gutter, dirty state, restored view position, and active-file reveal.",
+      "done": "Editor shows path/breadcrumb context, stable line gutter, selected file highlight, active-file reveal, restored scroll/selection per file, dirty markers in editor/rail, go-to-line or reveal hooks, and screenshot QA for selected, dirty, save-error, no-file, and narrow-width states. Tabs, find/replace, and expanded language modes remain separate cards."
+    },
+    {
+      "id": "ACTIVE-FILE-SYNC",
+      "title": "Active file sync across rail and editor",
+      "column": "next",
+      "tier": "pebble",
+      "track": "files",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "The user must always know which file is active. File rail selection, editor tab title, path bar, watcher refreshes, and workspace restore need to agree.",
+      "done": "Opening a file highlights and reveals it in the rail, editor title/path match the selected file, watcher refresh keeps the same active file highlighted when it still exists, missing active files show a clear stale/deleted state, and relaunch restores the active file metadata without pointing at the wrong file."
+    },
+    {
+      "id": "EDITOR-VIEW-STATE",
+      "title": "Per-file editor view state",
+      "column": "next",
+      "tier": "pebble",
+      "track": "files",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "Switching files should not throw away the user's place. Cursor, selection, scroll, and focus are part of the editor experience.",
+      "done": "Within a session, each open file restores cursor position, selection, scroll position, and editor focus after switching away and back. Saved state survives tree refreshes and does not jump on save."
+    },
+    {
+      "id": "DIRTY-DRAFT-PROTECTION",
+      "title": "Dirty draft protection",
+      "column": "next",
+      "tier": "rock",
+      "track": "files",
+      "size": "M",
+      "launch": "v0_5",
+      "blocker": true,
+      "summary": "The userflow audit found the main trust risk: unsaved work can be lost when changing files/projects. This must be blocked before the editor feels real.",
+      "done": "Unsaved editor buffers are preserved when switching files or projects. Closing/replacing a dirty buffer requires Save, Discard, or Cancel with the file name and consequence shown. Dirty drafts survive failed saves and never get cleared by navigation."
+    },
+    {
+      "id": "SAVE-ERROR-RECOVERY",
+      "title": "Save failure recovery",
+      "column": "next",
+      "tier": "pebble",
+      "track": "files",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "Save failures need a recovery flow, not only a red message. The buffer must remain safe and the next action must be obvious.",
+      "done": "Failed saves keep the edited buffer in place, show a scoped editor error with the human cause, expose explicit Retry and Open externally actions where applicable, avoid duplicate save spam while saving, and return to Saved only after the real write succeeds."
+    },
+    {
+      "id": "EDITOR-RESPONSIVE-QA",
+      "title": "Editor responsive screenshot QA",
+      "column": "next",
+      "tier": "pebble",
+      "track": "quality",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "The userflow audit called out screenshot proof for editor states and small desktop widths before claiming parity.",
+      "done": "Capture and keep QA artifacts for selected-file, dirty-file, save-error, no-file-selected, and 1024x640/narrow-width workbench states. Screenshots must show no overlapping chrome, no unusable squeezed editor, and clear rail/editor/terminal orientation."
     },
     {
       "id": "EDITOR-FIND-REPLACE",

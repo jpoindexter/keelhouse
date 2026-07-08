@@ -40,15 +40,20 @@ Build **agent cli** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 ## In progress
 
-**Next active slice: EDITOR-PARITY-UX.** Build on the verified editor by adding restored scroll/selection per file, active-file reveal behavior, stronger dirty close protection, and screenshot QA. Keep tabs/find/language expansion in their own roadmap cards unless a tiny dependency is required.
+**Next active slice: EDITOR-PARITY-UX.** Build on the verified editor by adding active-file orientation, stable line/path context, dirty markers, view-state restore, and screenshot QA. Userflow audit items are now explicit roadmap cards: ACTIVE-FILE-SYNC, EDITOR-VIEW-STATE, DIRTY-DRAFT-PROTECTION, SAVE-ERROR-RECOVERY, and EDITOR-RESPONSIVE-QA. Keep tabs/find/language expansion in their own roadmap cards unless a tiny dependency is required.
 
 ## Next (ordered)
 
-1. **EDITOR-PARITY-UX:** restored scroll/selection, active-file reveal, stronger dirty close protection, and screenshot QA.
-2. **EDITOR-FIND-REPLACE:** local find/replace inside files.
-3. **EDITOR-LANGUAGE-MODES:** expand first-class highlighting beyond TS/TSX/JSX/JS/MD to HTML/CSS/Rust/JSON/TOML/YAML/shell.
-4. **SAVE-CONFLICTS:** detect external file edits before overwrite.
-5. **LARGE-FILE-POLICY:** safe handling for large or binary files.
+1. **EDITOR-PARITY-UX:** active-file orientation, path/gutter stability, dirty markers, and screenshot QA.
+2. **ACTIVE-FILE-SYNC:** keep rail highlight/reveal, editor title/path, watcher refresh, and workspace restore synchronized.
+3. **EDITOR-VIEW-STATE:** restore cursor, selection, scroll position, and focus per file during the session.
+4. **DIRTY-DRAFT-PROTECTION:** preserve unsaved edits across file/project switches with save/discard/cancel.
+5. **SAVE-ERROR-RECOVERY:** failed saves keep the buffer and expose explicit Retry/Open externally recovery.
+6. **EDITOR-RESPONSIVE-QA:** selected, dirty, save-error, no-file, and 1024x640/narrow screenshots.
+7. **EDITOR-FIND-REPLACE:** local find/replace inside files.
+8. **EDITOR-LANGUAGE-MODES:** expand first-class highlighting beyond TS/TSX/JSX/JS/MD to HTML/CSS/Rust/JSON/TOML/YAML/shell.
+9. **SAVE-CONFLICTS:** detect external file edits before overwrite.
+10. **LARGE-FILE-POLICY:** safe handling for large or binary files.
 
 ## Gotchas
 
