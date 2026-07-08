@@ -5,11 +5,13 @@ import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { load } from "@tauri-apps/plugin-store";
-import type { EditorView, ViewUpdate } from "@codemirror/view";
+import type { Extension } from "@codemirror/state";
+import { keymap, type EditorView, type ViewUpdate } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { Tree } from "react-arborist";
 import type { NodeRendererProps, TreeApi } from "react-arborist";
 import { DraftNavigationDialog } from "./DraftNavigationDialog";
@@ -95,20 +97,27 @@ const markDirtyFile = (nodes: FileTreeNode[], dirtyPath: string | null): FileTre
   }));
 };
 
+const editorSearchExtensions: Extension[] = [search(), highlightSelectionMatches(), keymap.of(searchKeymap)];
+
 const editorExtensionsFor = (path: string) => {
+  let languageExtensions: Extension[] = [];
   switch (extension(path)) {
     case "js":
     case "jsx":
-      return [javascript({ jsx: true })];
+      languageExtensions = [javascript({ jsx: true })];
+      break;
     case "ts":
     case "tsx":
-      return [javascript({ jsx: extension(path) === "tsx", typescript: true })];
+      languageExtensions = [javascript({ jsx: extension(path) === "tsx", typescript: true })];
+      break;
     case "md":
     case "markdown":
-      return [markdown()];
+      languageExtensions = [markdown()];
+      break;
     default:
-      return [];
+      languageExtensions = [];
   }
+  return [...languageExtensions, ...editorSearchExtensions];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value != null;
@@ -438,6 +447,13 @@ function App() {
     } catch (err) {
       setEditorRecoveryError(`Could not open ${selectedFile.name} externally: ${err}`);
     }
+  };
+
+  const openEditorSearch = () => {
+    const view = editorViewRef.current;
+    if (!view) return;
+    openSearchPanel(view);
+    requestAnimationFrame(() => view.focus());
   };
 
   const continuePendingNavigation = async (navigation: PendingNavigation) => {
@@ -888,6 +904,9 @@ function App() {
                 <span className="editor-status" title={selectedFile.path}>
                   {editorLoading ? "Loading" : editorDirty ? "Unsaved" : "Saved"}
                 </span>
+                <button className="editor-command" type="button" disabled={editorLoading} title="Find and replace (Cmd+F)" onClick={openEditorSearch}>
+                  Find
+                </button>
                 <button
                   className="editor-save"
                   type="button"

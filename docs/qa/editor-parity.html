@@ -83,6 +83,7 @@
       .qa-state-selected .editor-empty,
       .qa-state-dirty .editor-empty,
       .qa-state-dirty-modal .editor-empty,
+      .qa-state-find-replace .editor-empty,
       .qa-state-save-error .editor-empty,
       .qa-state-missing .editor-empty,
       .qa-state-narrow .editor-empty {
@@ -140,6 +141,7 @@
               <span class="editor-meta">18.4 KB</span>
               <span class="editor-meta">Ln 42, Col 17</span>
               <span class="editor-status">Unsaved</span>
+              <button class="editor-command" type="button">Find</button>
               <button class="editor-save" type="button">Save</button>
             </div>
           </div>
@@ -160,6 +162,13 @@
             </div>
             <div class="cm-theme">
               <div class="cm-editor">
+                <div class="cm-search" style="display: none" role="search">
+                  <label>Find <input value="editor" /></label>
+                  <label>Replace <input value="workbench" /></label>
+                  <button type="button">next</button>
+                  <button type="button">replace</button>
+                  <button type="button">all</button>
+                </div>
                 <pre class="qa-lines" aria-label="Editor code sample"><span class="qa-line"><span class="qa-line-number">38</span><span class="qa-code"><span class="qa-keyword">const</span> editorLanguage = <span class="qa-function">languageLabelForPath</span>(selectedFile.path);</span></span><span class="qa-line qa-line--active"><span class="qa-line-number">39</span><span class="qa-code"><span class="qa-keyword">const</span> activeFileMissing = fileTree.length &gt; 0 &amp;&amp; !contains;</span></span><span class="qa-line"><span class="qa-line-number">40</span><span class="qa-code"></span></span><span class="qa-line"><span class="qa-line-number">41</span><span class="qa-code"><span class="qa-comment">// Preserve orientation while agents continue running below.</span></span></span><span class="qa-line"><span class="qa-line-number">42</span><span class="qa-code"><span class="qa-keyword">return</span> <span class="qa-string">"Keelhouse editor parity"</span>;</span></span></pre>
               </div>
             </div>
@@ -205,6 +214,10 @@
       } else if (state === "dirty" || state === "dirty-modal" || state === "narrow") {
         badge.remove();
         error.remove();
+      } else if (state === "find-replace") {
+        badge.remove();
+        error.remove();
+        document.querySelector(".cm-search").style.display = "flex";
       } else if (state === "save-error") {
         badge.remove();
       } else if (state === "missing") {

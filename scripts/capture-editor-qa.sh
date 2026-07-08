@@ -31,6 +31,7 @@ capture() {
 capture selected 1440,900
 capture dirty 1440,900
 capture save-error 1440,900
+capture find-replace 1440,900
 capture missing 1440,900
 capture no-file 1440,900
 capture narrow 1024,640
