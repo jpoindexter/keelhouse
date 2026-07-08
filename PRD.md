@@ -102,7 +102,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [x] Editor parity is screenshot-verified for selected, dirty, save-error, no-file, and narrow-width states.
 - [x] Terminal pane remains robust and responsive while browsing/editing files.
 - [x] Recent projects and last workspace make reopening cheap.
-- [ ] Common file/editor/terminal actions are reachable through VS Code-style shortcuts, menu bar entries, and right-click/Control-click context menus.
+- [x] Common file/editor/terminal actions are reachable through VS Code-style shortcuts, menu bar entries, and right-click/Control-click context menus.
 - [ ] Core chrome surfaces use a coherent token/icon system with hover, active, disabled, focus, loading, empty, and error states.
 - [x] Composer can target the selected terminal pane, send multiline prompts safely, stop/interrupt the pane, and show target/project/session context.
 

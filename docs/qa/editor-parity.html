@@ -83,6 +83,7 @@
       .qa-state-selected .editor-empty,
       .qa-state-dirty .editor-empty,
       .qa-state-dirty-modal .editor-empty,
+      .qa-state-context-menu .editor-empty,
       .qa-state-find-replace .editor-empty,
       .qa-state-save-conflict .editor-empty,
       .qa-state-save-error .editor-empty,
@@ -101,7 +102,9 @@
           <button class="rail-open-button" type="button" title="New folder">Folder</button>
           <button class="rail-open-button" type="button">Open</button>
         </div>
-        <div class="rail-root" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli">agent cli</div>
+        <div class="rail-root" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli">
+          <button class="rail-root__button" type="button">agent cli</button>
+        </div>
         <div class="rail-tree">
           <div class="file-node">
             <span class="file-node__twisty" aria-hidden="true">▾</span>
@@ -260,6 +263,34 @@
       } else if (state === "dirty" || state === "dirty-modal" || state === "narrow") {
         badge.remove();
         error.remove();
+      } else if (state === "context-menu") {
+        tab.classList.remove("editor-tab--dirty");
+        railDirty.remove();
+        tabDirty.remove();
+        badge.remove();
+        error.remove();
+        status.textContent = "Saved";
+        save.disabled = true;
+        document.querySelector(".app-shell").insertAdjacentHTML(
+          "beforeend",
+          `<div class="context-menu" role="menu" style="left: 508px; top: 126px">
+            <button class="context-menu__item" type="button" role="menuitem" disabled>
+              <span>Save</span><span class="context-menu__shortcut">Cmd+S</span>
+            </button>
+            <button class="context-menu__item" type="button" role="menuitem">
+              <span>Find and Replace</span><span class="context-menu__shortcut">Cmd+F / F3 / Cmd+G / Shift+Cmd+G</span>
+            </button>
+            <button class="context-menu__item" type="button" role="menuitem">
+              <span>Open Externally</span>
+            </button>
+            <button class="context-menu__item" type="button" role="menuitem">
+              <span>Reveal in Finder</span>
+            </button>
+            <button class="context-menu__item" type="button" role="menuitem">
+              <span>Copy File Path</span>
+            </button>
+          </div>`,
+        );
       } else if (state === "find-replace") {
         badge.remove();
         error.remove();

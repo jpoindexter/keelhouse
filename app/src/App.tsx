@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -68,7 +68,7 @@ import {
   routeComposerDraft,
 } from "./agentComposer";
 import type { ComposerAppCommand } from "./agentComposer";
-import { shortcutTitle } from "./shortcuts";
+import { shortcutKeys, shortcutTitle } from "./shortcuts";
 import { terminalPaneCwdLabel, terminalPaneStateLabel } from "./terminalPane";
 import type { TerminalPaneState } from "./terminalPane";
 import "./App.css";
@@ -103,7 +103,15 @@ type EditorBuffer = EditorBufferSnapshot & {
 type PendingNavigation =
   | { kind: "file"; file: FileTreeNode; options: OpenEditorFileOptions }
   | { kind: "workspace"; path: string };
-type FileContextMenu = { node: FileTreeNode; x: number; y: number };
+type ContextMenuItem = {
+  id: string;
+  label: string;
+  shortcut?: string;
+  disabled?: boolean;
+  danger?: boolean;
+  onSelect: () => void;
+};
+type ContextMenuState = { x: number; y: number; items: ContextMenuItem[] };
 
 const FONT_SIZE = 15;
 const FONT_FAMILY = "JetBrains Mono, monospace";
@@ -117,6 +125,13 @@ const formatBytes = (bytes: number | null) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+
+const menuItem = (
+  id: string,
+  label: string,
+  onSelect: () => void,
+  options: Pick<ContextMenuItem, "shortcut" | "disabled" | "danger"> = {},
+): ContextMenuItem => ({ id, label, onSelect, ...options });
 
 const markDirtyFile = (nodes: FileTreeNode[], dirtyPaths: Set<string>): FileTreeNode[] => {
   if (dirtyPaths.size === 0) return nodes;
@@ -135,6 +150,7 @@ function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<FileTreeNode
       style={style}
       className={`file-node ${node.isSelected ? "file-node--selected" : ""}`}
       onPointerDown={(event) => {
+        if (event.button !== 0) return;
         event.preventDefault();
         if (isDirectory) {
           node.toggle();
@@ -220,7 +236,7 @@ function App() {
   const [recentProjects, setRecentProjects] = useState<string[]>([]);
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
   const [draftDialogError, setDraftDialogError] = useState<string | null>(null);
-  const [fileContextMenu, setFileContextMenu] = useState<FileContextMenu | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [composerDraft, setComposerDraft] = useState("");
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
@@ -265,11 +281,15 @@ function App() {
 
   useEffect(() => {
     const onContextMenu = (event: Event) => {
-      const detail = (event as CustomEvent<FileContextMenu>).detail;
+      const detail = (event as CustomEvent<{ node: FileTreeNode; x: number; y: number }>).detail;
       if (!detail?.node) return;
-      setFileContextMenu(detail);
+      setContextMenu({
+        x: detail.x,
+        y: detail.y,
+        items: fileNodeContextMenuItems(detail.node),
+      });
     };
-    const closeMenu = () => setFileContextMenu(null);
+    const closeMenu = () => setContextMenu(null);
     window.addEventListener("file-tree-context-menu", onContextMenu);
     window.addEventListener("pointerdown", closeMenu);
     window.addEventListener("keydown", closeMenu);
@@ -278,7 +298,7 @@ function App() {
       window.removeEventListener("pointerdown", closeMenu);
       window.removeEventListener("keydown", closeMenu);
     };
-  }, []);
+  }, [editorDirty, selectedFile, workspacePath]);
 
   useEffect(() => {
     if (!selectedFile || fileTree.length === 0) return;
@@ -714,6 +734,20 @@ function App() {
     }
   };
 
+  const revealSelectedFile = async () => {
+    if (!selectedFile) return;
+    setEditorRecoveryError(null);
+    try {
+      await revealItemInDir(selectedFile.path);
+    } catch (err) {
+      setEditorRecoveryError(`Could not reveal ${selectedFile.name}: ${err}`);
+    }
+  };
+
+  const copyPathToClipboard = async (path: string) => {
+    await writeText(path);
+  };
+
   const openEditorSearch = () => {
     const view = editorViewRef.current;
     if (!view) return;
@@ -853,6 +887,123 @@ function App() {
       setFileOpError(`Could not reveal ${node.name}: ${err}`);
     }
   };
+
+  const terminalSelectedText = () => {
+    const snap = latest.current;
+    return snap && selection.current ? selectionToText(snap.cells, snap.cols, selection.current) : "";
+  };
+
+  const copyTerminalSelection = async () => {
+    const selectedText = terminalSelectedText();
+    if (!selectedText) return;
+    await writeText(selectedText);
+  };
+
+  const pasteIntoTerminal = async () => {
+    const text = await readText();
+    if (!text) return;
+    selection.current = null;
+    await invoke("paste", { text });
+  };
+
+  const clearActiveTerminal = async () => {
+    selection.current = null;
+    await invoke("send_key", { code: "KeyL", text: null, shift: false, alt: false, ctrl: true, sup: false });
+  };
+
+  const openContextMenu = (event: ReactMouseEvent, items: ContextMenuItem[]) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setContextMenu({ x: event.clientX, y: event.clientY, items });
+  };
+
+  const runContextMenuItem = (item: ContextMenuItem) => {
+    setContextMenu(null);
+    if (!item.disabled) item.onSelect();
+  };
+
+  const fileNodeContextMenuItems = (node: FileTreeNode): ContextMenuItem[] => [
+    menuItem("file.new", "New File", () => void createFileInRail(node)),
+    menuItem("folder.new", "New Folder", () => void createFolderInRail(node)),
+    menuItem("file.rename", "Rename", () => void renameRailNode(node)),
+    menuItem("file.duplicate", "Duplicate", () => void duplicateRailNode(node)),
+    menuItem("file.reveal", "Reveal in Finder", () => void revealRailNode(node)),
+    menuItem("file.copy-path", "Copy Path", () => void copyPathToClipboard(node.path)),
+    menuItem("file.delete", "Delete", () => void deleteRailNode(node), { danger: true }),
+  ];
+
+  const workspaceContextMenuItems = (): ContextMenuItem[] => [
+    menuItem("workspace.open", "Open Folder", () => void pickWorkspace(), { shortcut: shortcutKeys("workspace.open") }),
+    menuItem("workspace.new-file", "New File", () => void createFileInRail(), { disabled: !workspacePath }),
+    menuItem("workspace.new-folder", "New Folder", () => void createFolderInRail(), { disabled: !workspacePath }),
+    menuItem("workspace.reveal", "Reveal in Finder", () => workspacePath && void revealItemInDir(workspacePath), { disabled: !workspacePath }),
+    menuItem("workspace.copy-path", "Copy Workspace Path", () => workspacePath && void copyPathToClipboard(workspacePath), {
+      disabled: !workspacePath,
+    }),
+  ];
+
+  const recentProjectContextMenuItems = (project: string): ContextMenuItem[] => [
+    menuItem("recent.switch", "Switch to Project", () => void requestOpenWorkspace(project)),
+    menuItem("recent.reveal", "Reveal in Finder", () => void revealItemInDir(project)),
+    menuItem("recent.copy-path", "Copy Path", () => void copyPathToClipboard(project)),
+    menuItem(
+      "recent.remove",
+      "Remove from Recents",
+      () => {
+        const nextRecent = removeRecentProject(recentProjectsRef.current, project);
+        recentProjectsRef.current = nextRecent;
+        setRecentProjects(nextRecent);
+        void storeRef.current?.set("recentFolders", nextRecent).then(() => storeRef.current?.save());
+      },
+      { danger: true },
+    ),
+  ];
+
+  const editorTabContextMenuItems = (tab: FileTreeNode): ContextMenuItem[] => [
+    menuItem("tab.open", "Open", () => void requestOpenEditorFile(tab, { focusEditor: true })),
+    menuItem("tab.close", "Close Tab", () => void closeEditorTab(tab), { shortcut: shortcutKeys("editor.close-tab") }),
+    menuItem("tab.reveal", "Reveal in Finder", () => void revealRailNode(tab)),
+    menuItem("tab.copy-path", "Copy Path", () => void copyPathToClipboard(tab.path)),
+  ];
+
+  const editorContextMenuItems = (): ContextMenuItem[] => [
+    menuItem("editor.save", "Save", () => void saveEditorFile(), {
+      shortcut: shortcutKeys("editor.save"),
+      disabled: !editorDirty || editorSaving || editorLoading,
+    }),
+    menuItem("editor.find", "Find and Replace", openEditorSearch, {
+      shortcut: shortcutKeys("editor.find"),
+      disabled: !selectedFile || editorLoading,
+    }),
+    menuItem("editor.open-external", "Open Externally", () => void openSelectedFileExternally(), { disabled: !selectedFile }),
+    menuItem("editor.reveal", "Reveal in Finder", () => void revealSelectedFile(), { disabled: !selectedFile }),
+    menuItem("editor.copy-path", "Copy File Path", () => selectedFile && void copyPathToClipboard(selectedFile.path), { disabled: !selectedFile }),
+  ];
+
+  const terminalContextMenuItems = (): ContextMenuItem[] => [
+    menuItem("terminal.copy", "Copy Selection", () => void copyTerminalSelection(), {
+      shortcut: shortcutKeys("terminal.copy-selection"),
+      disabled: !terminalSelectedText(),
+    }),
+    menuItem("terminal.paste", "Paste", () => void pasteIntoTerminal(), { shortcut: shortcutKeys("terminal.paste") }),
+    menuItem("terminal.clear", "Clear Terminal", () => void clearActiveTerminal(), { shortcut: shortcutKeys("terminal.clear") }),
+    menuItem("terminal.interrupt", "Interrupt Process", () => void interruptActivePane(), { danger: true }),
+    menuItem("terminal.copy-cwd", "Copy Working Directory", () => workspacePath && void copyPathToClipboard(workspacePath), {
+      disabled: !workspacePath,
+    }),
+  ];
+
+  const composerContextMenuItems = (): ContextMenuItem[] => [
+    menuItem("composer.send", "Send Draft", () => void submitComposerDraft(), {
+      shortcut: shortcutKeys("composer.send"),
+      disabled: composerSending || !composerDraft.trim(),
+    }),
+    menuItem("composer.clear", "Clear Draft", () => setComposerDraft(""), { disabled: !composerDraft }),
+    menuItem("composer.stop", "Stop Selected Pane", () => void interruptActivePane(), { danger: true }),
+    menuItem("composer.copy-cwd", "Copy Target Workspace", () => workspacePath && void copyPathToClipboard(workspacePath), {
+      disabled: !workspacePath,
+    }),
+  ];
 
   const tabIsDirty = (path: string) => dirtyTabPathSet.has(path);
 
@@ -1286,7 +1437,13 @@ function App() {
           </button>
         </div>
         <div className="rail-root" title={workspacePath ?? ""}>
-          {workspacePath ? basename(workspacePath) : "No workspace"}
+          <button
+            className="rail-root__button"
+            type="button"
+            onContextMenu={(event) => openContextMenu(event, workspaceContextMenuItems())}
+          >
+            {workspacePath ? basename(workspacePath) : "No workspace"}
+          </button>
         </div>
         {visibleRecentProjects.length > 0 ? (
           <div className="recent-projects" aria-label="Recent projects">
@@ -1298,9 +1455,11 @@ function App() {
                 aria-label={`Switch to recent project ${basename(project)}`}
                 title={project}
                 onPointerDown={(event) => {
+                  if (event.button !== 0) return;
                   event.preventDefault();
                   void requestOpenWorkspace(project);
                 }}
+                onContextMenu={(event) => openContextMenu(event, recentProjectContextMenuItems(project))}
               >
                 <span className="recent-project__copy">
                   <span className="recent-project__name">{basename(project)}</span>
@@ -1378,11 +1537,13 @@ function App() {
                       aria-selected={active}
                       title={tab.path}
                       key={tab.path}
+                      onContextMenu={(event) => openContextMenu(event, editorTabContextMenuItems(tab))}
                     >
                       <button
                         className="editor-tab__activate"
                         type="button"
                         onPointerDown={(event) => {
+                          if (event.button !== 0) return;
                           event.preventDefault();
                           void requestOpenEditorFile(tab, { focusEditor: true });
                         }}
@@ -1396,6 +1557,7 @@ function App() {
                         aria-label={`Close ${tab.name}`}
                         title={shortcutTitle("editor.close-tab", `Close ${tab.name}`)}
                         onPointerDown={(event) => {
+                          if (event.button !== 0) return;
                           event.preventDefault();
                           event.stopPropagation();
                           void closeEditorTab(tab);
@@ -1451,6 +1613,7 @@ function App() {
           {selectedFile ? (
             <div
               className="editor-code"
+              onContextMenu={(event) => openContextMenu(event, editorContextMenuItems())}
               onKeyDown={(event) => {
                 if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
                   event.preventDefault();
@@ -1526,10 +1689,10 @@ function App() {
               </select>
             </label>
           </div>
-          <div ref={terminalHostRef} className="terminal-host">
+          <div ref={terminalHostRef} className="terminal-host" onContextMenu={(event) => openContextMenu(event, terminalContextMenuItems())}>
             <canvas ref={canvasRef} className="term" />
           </div>
-          <div className="agent-composer" aria-label="Agent composer">
+          <div className="agent-composer" aria-label="Agent composer" onContextMenu={(event) => openContextMenu(event, composerContextMenuItems())}>
             <div className="agent-composer__target" title={workspacePath ?? ""}>
               <span>Target</span>
               <strong>{launchProfile.label}</strong>
@@ -1585,80 +1748,26 @@ function App() {
           {launchError}
         </div>
       ) : null}
-      {fileContextMenu ? (
+      {contextMenu ? (
         <div
-          className="file-context-menu"
-          style={{ left: fileContextMenu.x, top: fileContextMenu.y }}
+          className="context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
           role="menu"
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              const node = fileContextMenu.node;
-              setFileContextMenu(null);
-              void createFileInRail(node);
-            }}
-          >
-            New File
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              const node = fileContextMenu.node;
-              setFileContextMenu(null);
-              void createFolderInRail(node);
-            }}
-          >
-            New Folder
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              const node = fileContextMenu.node;
-              setFileContextMenu(null);
-              void renameRailNode(node);
-            }}
-          >
-            Rename
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              const node = fileContextMenu.node;
-              setFileContextMenu(null);
-              void duplicateRailNode(node);
-            }}
-          >
-            Duplicate
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              const node = fileContextMenu.node;
-              setFileContextMenu(null);
-              void revealRailNode(node);
-            }}
-          >
-            Reveal in Finder
-          </button>
-          <button
-            className="file-context-menu__danger"
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              const node = fileContextMenu.node;
-              setFileContextMenu(null);
-              void deleteRailNode(node);
-            }}
-          >
-            Delete
-          </button>
+          {contextMenu.items.map((item) => (
+            <button
+              className={item.danger ? "context-menu__item context-menu__item--danger" : "context-menu__item"}
+              type="button"
+              role="menuitem"
+              disabled={item.disabled}
+              key={item.id}
+              onClick={() => runContextMenuItem(item)}
+            >
+              <span>{item.label}</span>
+              {item.shortcut ? <span className="context-menu__shortcut">{item.shortcut}</span> : null}
+            </button>
+          ))}
         </div>
       ) : null}
       {pendingNavigation && selectedFile ? (

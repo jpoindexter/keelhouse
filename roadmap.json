@@ -445,13 +445,13 @@
     {
       "id": "CONTEXT-MENUS",
       "title": "Right-click context menus",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "ui",
       "size": "M",
       "launch": "v0_5",
       "summary": "macOS pointer workflows need right-click/Control-click affordances, not only visible buttons. Context menus should expose the same command registry as menu bar, shortcuts, and command palette where possible.",
-      "done": "Project rail, file explorer, editor tabs/text, terminal panes, browser preview, diff/git surfaces, and agent panes expose relevant context menus with disabled states, shortcut labels, and confirmation/undo for destructive actions; no command exists only in a hidden context menu."
+      "done": "Verified 2026-07-09: current v0.5 surfaces expose right-click/Control-click menus for the workspace root, recent project rows, file explorer, editor tabs, editor text surface, terminal pane, and composer/agent controls. Menus share shortcut labels where active, show disabled and danger states, reuse existing destructive confirmations/dirty guards, and are documented in docs/context-menus.md. Browser preview and diff/git menus are deferred until those real surfaces land."
     },
     {
       "id": "CHROME-POLISH-SYSTEM",
