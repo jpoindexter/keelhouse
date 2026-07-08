@@ -456,13 +456,13 @@
     {
       "id": "CHROME-POLISH-SYSTEM",
       "title": "Codex-level chrome polish system",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "ui",
       "size": "M",
       "launch": "v0_5",
       "summary": "Define the workbench chrome system before more surfaces drift: dense rails, calm dark surfaces, tokens, menus, badges, pane headers, settings/sidebar rhythm, command palette, toasts, and restrained motion.",
-      "done": "Core chrome uses semantic tokens, one icon family, compact desktop density, consistent active/hover/focus/disabled/loading/empty/error states, shared command labels across menus/tooltips/palette, accessible badges, and screenshot-based visual QA for one-project workbench, settings, context menu, command palette, and agent attention state."
+      "done": "Verified 2026-07-09: current v0.5 chrome uses primitive -> semantic -> component CSS tokens, shared control/menu/badge/field/overlay states, visible focus, disabled/danger/success/warning states, reduced-motion handling, and screenshot QA for one-project workbench, context menu, recovery alerts, narrow layout, and a chrome state palette. Icon replacement remains ICON-SYSTEM; settings, command palette, browser, and diff/review surfaces consume these tokens when their cards create real UI."
     },
     {
       "id": "ICON-SYSTEM",

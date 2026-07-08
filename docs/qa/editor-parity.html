@@ -84,12 +84,41 @@
       .qa-state-dirty .editor-empty,
       .qa-state-dirty-modal .editor-empty,
       .qa-state-context-menu .editor-empty,
+      .qa-state-chrome-states .editor-empty,
       .qa-state-find-replace .editor-empty,
       .qa-state-save-conflict .editor-empty,
       .qa-state-save-error .editor-empty,
       .qa-state-missing .editor-empty,
       .qa-state-narrow .editor-empty {
         display: none;
+      }
+
+      .chrome-state-palette {
+        position: absolute;
+        right: 18px;
+        top: 76px;
+        z-index: 15;
+        width: 312px;
+        border: 1px solid var(--color-border-strong);
+        border-radius: 8px;
+        background: var(--color-surface-overlay);
+        box-shadow: var(--shadow-overlay);
+        padding: 12px;
+      }
+
+      .chrome-state-palette__title {
+        color: var(--color-text-strong);
+        font-size: 12px;
+        font-weight: 750;
+        margin-bottom: 10px;
+      }
+
+      .chrome-state-palette__row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
       }
     </style>
   </head>
@@ -289,6 +318,37 @@
             <button class="context-menu__item" type="button" role="menuitem">
               <span>Copy File Path</span>
             </button>
+          </div>`,
+        );
+      } else if (state === "chrome-states") {
+        badge.remove();
+        error.remove();
+        document.querySelector(".app-shell").insertAdjacentHTML(
+          "beforeend",
+          `<div class="chrome-state-palette" aria-label="Chrome state palette">
+            <div class="chrome-state-palette__title">Chrome states</div>
+            <div class="chrome-state-palette__row">
+              <span class="terminal-state terminal-state--running">Running</span>
+              <span class="terminal-state terminal-state--starting">Starting</span>
+              <span class="terminal-state terminal-state--exited">Exited</span>
+              <span class="terminal-state terminal-state--idle">Idle</span>
+            </div>
+            <div class="chrome-state-palette__row">
+              <span class="editor-badge editor-badge--warn">Missing from tree</span>
+              <span class="file-node__dirty" aria-label="Unsaved changes"></span>
+            </div>
+            <div class="chrome-state-palette__row">
+              <button class="draft-modal__button" type="button">Default</button>
+              <button class="draft-modal__button draft-modal__button--primary" type="button">Primary</button>
+              <button class="draft-modal__button draft-modal__button--danger" type="button">Danger</button>
+              <button class="draft-modal__button" type="button" disabled>Disabled</button>
+            </div>
+            <div class="chrome-state-palette__row">
+              <button class="context-menu__item" type="button" disabled>
+                <span>Disabled item</span><span class="context-menu__shortcut">Cmd+S</span>
+              </button>
+            </div>
+            <div class="draft-modal__error">Recovery text uses the shared danger surface.</div>
           </div>`,
         );
       } else if (state === "find-replace") {

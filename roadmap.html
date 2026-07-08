@@ -196,6 +196,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">CONTEXT-MENUS &middot; Right-click context menus</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">macOS pointer workflows need right-click/Control-click affordances, not only visible buttons. Context menus should expose the same command registry as menu bar, shortcuts, and command palette where possible.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: current v0.5 surfaces expose right-click/Control-click menus for the workspace root, recent project rows, file explorer, editor tabs, editor text surface, terminal pane, and composer/agent controls. Menus share shortcut labels where active, show disabled and danger states, reuse existing destructive confirmations/dirty guards, and are documented in docs/context-menus.md. Browser preview and diff/git menus are deferred until those real surfaces land.</p></details></div>
+<div class="card" data-track="ui" data-id="CHROME-POLISH-SYSTEM" data-size="M" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">CHROME-POLISH-SYSTEM &middot; Codex-level chrome polish system</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Define the workbench chrome system before more surfaces drift: dense rails, calm dark surfaces, tokens, menus, badges, pane headers, settings/sidebar rhythm, command palette, toasts, and restrained motion.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: current v0.5 chrome uses primitive -&gt; semantic -&gt; component CSS tokens, shared control/menu/badge/field/overlay states, visible focus, disabled/danger/success/warning states, reduced-motion handling, and screenshot QA for one-project workbench, context menu, recovery alerts, narrow layout, and a chrome state palette. Icon replacement remains ICON-SYSTEM; settings, command palette, browser, and diff/review surfaces consume these tokens when their cards create real UI.</p></details></div>
 </div>
 <div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
 <div class="card" data-track="quality" data-id="PRODUCT-NAME-README" data-size="S" data-tier="sand" data-launch="v0_5">
@@ -258,10 +262,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
-<div class="card" data-track="ui" data-id="CHROME-POLISH-SYSTEM" data-size="M" data-tier="pebble" data-launch="v0_5">
-<div class="hd"><span class="sz">M</span><span class="ttl">CHROME-POLISH-SYSTEM &middot; Codex-level chrome polish system</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Define the workbench chrome system before more surfaces drift: dense rails, calm dark surfaces, tokens, menus, badges, pane headers, settings/sidebar rhythm, command palette, toasts, and restrained motion.</p>
-<details><summary>Done criteria</summary><p class="done">Core chrome uses semantic tokens, one icon family, compact desktop density, consistent active/hover/focus/disabled/loading/empty/error states, shared command labels across menus/tooltips/palette, accessible badges, and screenshot-based visual QA for one-project workbench, settings, context menu, command palette, and agent attention state.</p></details></div>
 <div class="card" data-track="ui" data-id="ICON-SYSTEM" data-size="M" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">ICON-SYSTEM &middot; Codex-quality icon and status system</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The app should feel like a polished Codex-style workbench, not a raw prototype. Define one consistent icon language for project rail, file explorer, editor, browser, terminal, agent panes, git state, and common actions.</p>

@@ -19,6 +19,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `harness-contract.md`: app-owned pane/session handle contract.
 - `shortcuts.md`: active v0.5 shortcut map and planned exceptions.
 - `context-menus.md`: right-click/Control-click coverage and deferred browser/git surfaces.
+- `chrome-polish-system.md`: current token/state system and deferred chrome surfaces.
 
 ## Quality References
 

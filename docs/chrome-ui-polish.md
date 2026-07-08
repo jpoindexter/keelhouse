@@ -2,6 +2,8 @@
 
 The app should feel as finished as Codex in the surrounding workbench chrome, while staying lean. Polish means consistent systems, not decorative bulk.
 
+Implementation baseline: `docs/chrome-polish-system.md` records the current v0.5 token/state contract and deferred surfaces.
+
 ## Surfaces
 
 - Left project/session rail, file rail, editor tabs, terminal pane headers, browser preview toolbar, settings shell, command palette, context menus, dialogs, toasts, badges, and status strips.

@@ -31,6 +31,7 @@ capture() {
 capture selected 1440,900
 capture dirty 1440,900
 capture context-menu 1440,900
+capture chrome-states 1440,900
 capture save-error 1440,900
 capture save-conflict 1440,900
 capture find-replace 1440,900
