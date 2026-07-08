@@ -66,7 +66,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>agent cli</h1>
-<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 49 slices &middot; 6 shipped</p>
+<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 50 slices &middot; 6 shipped</p>
 <p class="loop">Open project folder → inspect/edit files → preview web output → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Terminal + process</span><span><i style="border-color:#5a4315;background:#171104"></i>Projects + sessions</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Files + editor</span><span><i style="border-color:#4c1d6f;background:#15091f"></i>Chrome + interaction</span><span><i style="border-color:#5f1f2d;background:#1d0b10"></i>Quality + shipping</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research &amp; spikes</span><span style="color:#f87171">🔒 launch blocker</span></div>
 <div class="filters">
@@ -184,8 +184,8 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Large text files show a warning before full load; binary files show an explicit unsupported/preview state and never open as corrupt text.</p></details></div>
 <div class="card" data-track="files" data-id="FILE-OPS" data-size="M" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">FILE-OPS &middot; Basic file operations</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Replacing the VS Code shell requires basic rail operations, not only open-file.</p>
-<details><summary>Done criteria</summary><p class="done">Create file, create folder, rename, delete, duplicate, and reveal in Finder work from the rail with confirmation for destructive operations.</p></details></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Replacing the VS Code shell requires basic rail operations, not only open-file. These commands must be reachable from the rail, menu/shortcut paths, and the file context menu where relevant.</p>
+<details><summary>Done criteria</summary><p class="done">Create file, create folder, rename, delete, duplicate, and reveal in Finder work from the rail/context menu with confirmation for destructive operations.</p></details></div>
 <div class="card" data-track="files" data-id="EDITOR-TABS" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-TABS &middot; Open files and dirty-state tabs</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Let the user bounce between a few files without losing place. This is the minimum editor workflow, not a full IDE tab system.</p>
@@ -201,7 +201,11 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="card" data-track="ui" data-id="SHORTCUTS" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">SHORTCUTS &middot; VS Code shortcut baseline</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Keep VS Code muscle memory for the supported workflow: open folder, quick open/search, save, close, copy/paste, terminal focus, new pane, split/switch pane, and command palette.</p>
-<details><summary>Done criteria</summary><p class="done">A documented shortcut map covers the v0.5 workflow, matches VS Code defaults where applicable, and explicitly lists terminal/editor/app-chrome conflicts and exceptions.</p></details></div>
+<details><summary>Done criteria</summary><p class="done">A documented shortcut map covers the v0.5 workflow, matches VS Code defaults where applicable, appears in menu items/tooltips where relevant, and explicitly lists terminal/editor/app-chrome conflicts and exceptions.</p></details></div>
+<div class="card" data-track="ui" data-id="CONTEXT-MENUS" data-size="M" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">CONTEXT-MENUS &middot; Right-click context menus</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">macOS pointer workflows need right-click/Control-click affordances, not only visible buttons. Context menus should expose the same command registry as menu bar, shortcuts, and command palette where possible.</p>
+<details><summary>Done criteria</summary><p class="done">Project rail, file explorer, editor tabs/text, terminal panes, browser preview, diff/git surfaces, and agent panes expose relevant context menus with disabled states, shortcut labels, and confirmation/undo for destructive actions; no command exists only in a hidden context menu.</p></details></div>
 <div class="card" data-track="ui" data-id="ICON-SYSTEM" data-size="M" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">ICON-SYSTEM &middot; Codex-quality icon and status system</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The app should feel like a polished Codex-style workbench, not a raw prototype. Define one consistent icon language for project rail, file explorer, editor, browser, terminal, agent panes, git state, and common actions.</p>
@@ -270,8 +274,8 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
 <div class="card" data-track="ui" data-id="COMMAND-PALETTE" data-size="S" data-tier="sand" data-launch="v2">
 <div class="hd"><span class="sz">S</span><span class="ttl">COMMAND-PALETTE &middot; VS Code-style command palette</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">A compact VS Code-style way to expose actions without adding IDE chrome: open folder, quick open, new agent pane, split, restart, kill, save, search, settings.</p>
-<details><summary>Done criteria</summary><p class="done">A keyboard palette can run core app actions and shows shortcuts where assigned.</p></details></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">A compact VS Code-style way to expose actions without adding IDE chrome: open folder, quick open, new agent pane, split, restart, kill, save, search, settings. It should share the same command registry as shortcuts and context menus.</p>
+<details><summary>Done criteria</summary><p class="done">A keyboard palette can run core app actions, shows shortcuts where assigned, and stays consistent with menu/context-menu labels.</p></details></div>
 <div class="card" data-track="ui" data-id="SETTINGS" data-size="M" data-tier="sand" data-launch="v2">
 <div class="hd"><span class="sz">M</span><span class="ttl">SETTINGS &middot; Settings for commands, themes, and shortcuts</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">Keep settings boring and inspectable: agent commands, AI connections, ignored folders, font, color theme, default layout, and shortcut overrides. This is not a plugin platform.</p>
@@ -287,7 +291,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="card" data-track="ui" data-id="KEYBINDINGS-CONFIG" data-size="S" data-tier="sand" data-launch="v2">
 <div class="hd"><span class="sz">S</span><span class="ttl">KEYBINDINGS-CONFIG &middot; Configurable keybindings</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">After the VS Code-compatible default shortcut map stabilizes, allow focused overrides without hardcoding personal preferences into the app.</p>
-<details><summary>Done criteria</summary><p class="done">A local config file can override app-level shortcuts and reports conflicts with terminal/editor reserved bindings.</p></details></div>
+<details><summary>Done criteria</summary><p class="done">A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference.</p></details></div>
 <div class="card" data-track="ui" data-id="THEME" data-size="S" data-tier="sand" data-launch="v2">
 <div class="hd"><span class="sz">S</span><span class="ttl">THEME &middot; Color themes</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">Support practical color themes across chrome, terminal, rail, and editor. Start with the approved mono-ghost theme; do not expand into plugin theming.</p>

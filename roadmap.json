@@ -304,8 +304,8 @@
       "track": "files",
       "size": "M",
       "launch": "v0_5",
-      "summary": "Replacing the VS Code shell requires basic rail operations, not only open-file.",
-      "done": "Create file, create folder, rename, delete, duplicate, and reveal in Finder work from the rail with confirmation for destructive operations."
+      "summary": "Replacing the VS Code shell requires basic rail operations, not only open-file. These commands must be reachable from the rail, menu/shortcut paths, and the file context menu where relevant.",
+      "done": "Create file, create folder, rename, delete, duplicate, and reveal in Finder work from the rail/context menu with confirmation for destructive operations."
     },
     {
       "id": "EDITOR-TABS",
@@ -349,7 +349,18 @@
       "size": "S",
       "launch": "v0_5",
       "summary": "Keep VS Code muscle memory for the supported workflow: open folder, quick open/search, save, close, copy/paste, terminal focus, new pane, split/switch pane, and command palette.",
-      "done": "A documented shortcut map covers the v0.5 workflow, matches VS Code defaults where applicable, and explicitly lists terminal/editor/app-chrome conflicts and exceptions."
+      "done": "A documented shortcut map covers the v0.5 workflow, matches VS Code defaults where applicable, appears in menu items/tooltips where relevant, and explicitly lists terminal/editor/app-chrome conflicts and exceptions."
+    },
+    {
+      "id": "CONTEXT-MENUS",
+      "title": "Right-click context menus",
+      "column": "next",
+      "tier": "pebble",
+      "track": "ui",
+      "size": "M",
+      "launch": "v0_5",
+      "summary": "macOS pointer workflows need right-click/Control-click affordances, not only visible buttons. Context menus should expose the same command registry as menu bar, shortcuts, and command palette where possible.",
+      "done": "Project rail, file explorer, editor tabs/text, terminal panes, browser preview, diff/git surfaces, and agent panes expose relevant context menus with disabled states, shortcut labels, and confirmation/undo for destructive actions; no command exists only in a hidden context menu."
     },
     {
       "id": "ICON-SYSTEM",
@@ -561,8 +572,8 @@
       "track": "ui",
       "size": "S",
       "launch": "v2",
-      "summary": "A compact VS Code-style way to expose actions without adding IDE chrome: open folder, quick open, new agent pane, split, restart, kill, save, search, settings.",
-      "done": "A keyboard palette can run core app actions and shows shortcuts where assigned."
+      "summary": "A compact VS Code-style way to expose actions without adding IDE chrome: open folder, quick open, new agent pane, split, restart, kill, save, search, settings. It should share the same command registry as shortcuts and context menus.",
+      "done": "A keyboard palette can run core app actions, shows shortcuts where assigned, and stays consistent with menu/context-menu labels."
     },
     {
       "id": "AI-CONNECTIONS",
@@ -617,7 +628,7 @@
       "size": "S",
       "launch": "v2",
       "summary": "After the VS Code-compatible default shortcut map stabilizes, allow focused overrides without hardcoding personal preferences into the app.",
-      "done": "A local config file can override app-level shortcuts and reports conflicts with terminal/editor reserved bindings."
+      "done": "A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference."
     },
     {
       "id": "THEME",

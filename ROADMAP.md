@@ -18,6 +18,7 @@ Added 2026-07-08. The roadmap is now detailed enough to invite building breadth 
 - **One driver per file per slice.** Decided 2026-07-08: **the coding agent drives the code** (`app/src-tauri/src/lib.rs`, `app/src/App.tsx`); Jason reviews rather than hand-editing in parallel, to avoid concurrent-edit clobbers.
 - **Rule of 3 / no platform-thinking** (from CLAUDE.md) still apply: no abstraction until 3 concrete uses; no multi-tenancy/plugins/extension system. Settings are allowed only for concrete product knobs: theme, font, keybindings, ignored folders, layout, and agent commands.
 - **VS Code muscle memory is a feature.** For supported files/editor/terminal/project workflows, default shortcuts and interactions should match VS Code unless the native terminal path requires a deliberate exception.
+- **Commands need multiple doors.** Important actions should be reachable by menu bar/shortcut and either context menu or command palette. Right-click/Control-click is first-class on macOS; no command should exist only as a hidden context-menu item.
 
 ## Done so far (research + verification — see DECISIONS.md)
 
@@ -59,6 +60,7 @@ This is where the clarified product point lands: not "terminal app with optional
 - **AGENT-PROFILES:** Claude default, plus Codex/shell profiles without hardcoding one CLI forever.
 - **AGENT-COMPOSER:** compact input that routes prompts/instructions to the selected real terminal agent or app action.
 - **SHORTCUTS:** VS Code-compatible shortcut map across terminal/editor/chrome.
+- **CONTEXT-MENUS:** right-click/Control-click menus across rail, files, editor, terminal, browser, git/diff, and agent panes.
 - **ICON-SYSTEM:** polished Codex-quality iconography, labels, tooltips, and status badges.
 - **ACCESSIBILITY-BASICS:** keyboard reachability, visible focus, and labelled chrome controls.
 
@@ -83,14 +85,14 @@ This is where the clarified product point lands: not "terminal app with optional
 - **WORKTREE:** create disposable worktree + agent pane from a project.
 - **SEARCH:** file quick-open and ripgrep-backed text search.
 - **TERMINAL-FIND:** search active terminal output/scrollback.
-- **COMMAND-PALETTE:** VS Code-style compact action access without adding IDE chrome.
+- **COMMAND-PALETTE:** VS Code-style compact action access without adding IDE chrome; uses the same command registry as shortcuts and context menus.
 - **AI-CONNECTIONS:** settings for providers, API keys, MCP servers, CLI auth, env vars, model defaults, and permission policy.
 - **SETTINGS:** inspectable config for agent commands, ignored folders, font/theme, layout, AI connections, and shortcut overrides.
 - **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost.
 - **AGENT-HOOKS:** built-in MCP/API surface so agents can inspect app state and request app-owned actions.
 - **NOTIFICATIONS:** background agent exit/attention badges and optional macOS notifications.
 - **TRANSCRIPTS:** save/review completed pane output.
-- **KEYBINDINGS-CONFIG:** configurable app shortcut overrides after defaults stabilize.
+- **KEYBINDINGS-CONFIG:** configurable app shortcut overrides after defaults stabilize, including conflict detection and a visible shortcut reference.
 
 ## v3 — Polish and shipping
 

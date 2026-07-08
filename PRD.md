@@ -34,6 +34,7 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 - Show agent activity state clearly: thinking, running command, editing files, waiting for approval/input, errored, exited, and complete. Surface concise activity/progress summaries and tool events, not hidden chain-of-thought.
 - Keep browser/web-preview controls minimal: address/local URL, back/forward, reload, open external, and per-project remembered preview URL.
 - Keep common VS Code shortcuts and interaction patterns for the supported workflow, including command palette-style action access.
+- Provide right-click/Control-click context menus on project rail, file explorer, editor tabs, editor text, terminal panes, browser preview, diff/git surfaces, and agent panes. Context menus must mirror the same command registry as menus/shortcuts/palette where possible, show disabled states, and confirm destructive actions.
 - Provide only practical customization: color themes, font/terminal/editor settings, ignored folders, agent commands, model/provider/API configuration, MCP servers, credentials/auth checks, permission defaults, environment variables, and keybinding overrides.
 - Recover from quit/crash by restoring project/session metadata without pretending dead agent processes are still alive.
 
@@ -58,6 +59,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [ ] Editor opens source files, supports syntax highlighting, find/replace, dirty state, save, and external-change warnings.
 - [ ] Terminal pane remains usable while browsing/editing files.
 - [x] Recent projects and last workspace make reopening cheap.
+- [ ] Common file/editor/terminal actions are reachable through VS Code-style shortcuts, menu bar entries, and right-click/Control-click context menus.
 
 ## v1 done criteria
 
