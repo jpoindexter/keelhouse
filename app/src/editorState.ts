@@ -69,8 +69,23 @@ export const reconcileActiveFileNode = <T extends TreePathNode>(nodes: T[], sele
 };
 
 export const languageLabelForPath = (path: string): string => {
-  const ext = basename(path).split(".").pop()?.toLowerCase() ?? "";
+  const name = basename(path).toLowerCase();
+  const ext = name.split(".").pop() ?? "";
+  if ([".bashrc", ".zshrc", ".profile", ".bash_profile", ".zprofile"].includes(name)) return "Shell";
   switch (ext) {
+    case "bash":
+      return "Bash";
+    case "css":
+      return "CSS";
+    case "fish":
+      return "Fish";
+    case "html":
+    case "htm":
+      return "HTML";
+    case "json":
+      return "JSON";
+    case "ksh":
+      return "Shell";
     case "ts":
       return "TypeScript";
     case "tsx":
@@ -82,6 +97,16 @@ export const languageLabelForPath = (path: string): string => {
     case "md":
     case "markdown":
       return "Markdown";
+    case "rs":
+      return "Rust";
+    case "sh":
+    case "zsh":
+      return "Shell";
+    case "toml":
+      return "TOML";
+    case "yaml":
+    case "yml":
+      return "YAML";
     default:
       return ext ? ext.toUpperCase() : "Plain text";
   }

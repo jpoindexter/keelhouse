@@ -333,13 +333,13 @@
     {
       "id": "EDITOR-LANGUAGE-MODES",
       "title": "Editor language modes",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "files",
       "size": "S",
       "launch": "v0_5",
       "summary": "The first editor pass needs credible syntax support for the file types this repo and Jason's projects use most.",
-      "done": "TypeScript, TSX/JSX, JavaScript, Markdown, HTML, CSS, Rust, JSON, TOML, YAML, and shell scripts open with syntax highlighting and sensible indentation defaults."
+      "done": "Verified 2026-07-08: editor language extensions cover TypeScript, TSX/JSX, JavaScript, Markdown, HTML, CSS, Rust, JSON, TOML, YAML, and shell scripts/dotfiles. Covered by npm build and focused mode mapping tests."
     },
     {
       "id": "SAVE-CONFLICTS",

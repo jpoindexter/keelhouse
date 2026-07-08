@@ -5,17 +5,15 @@ import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { load } from "@tauri-apps/plugin-store";
-import type { Extension } from "@codemirror/state";
-import { keymap, type EditorView, type ViewUpdate } from "@codemirror/view";
+import type { EditorView, ViewUpdate } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
-import { javascript } from "@codemirror/lang-javascript";
-import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
+import { openSearchPanel } from "@codemirror/search";
 import { Tree } from "react-arborist";
 import type { NodeRendererProps, TreeApi } from "react-arborist";
 import { DraftNavigationDialog } from "./DraftNavigationDialog";
 import { EditorSaveError } from "./EditorSaveError";
+import { editorExtensionsFor } from "./editorLanguages";
 import { isCellSelected, pointFromMouse, selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import {
@@ -80,7 +78,6 @@ const DEFAULT_LAUNCH_PROFILE: LaunchProfile = {
 
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
-const extension = (path: string) => basename(path).split(".").pop()?.toLowerCase() ?? "";
 const formatBytes = (bytes: number | null) => {
   if (bytes == null) return "--";
   if (bytes < 1024) return `${bytes} B`;
@@ -95,29 +92,6 @@ const markDirtyFile = (nodes: FileTreeNode[], dirtyPath: string | null): FileTre
     dirty: node.path === dirtyPath,
     children: node.children ? markDirtyFile(node.children, dirtyPath) : undefined,
   }));
-};
-
-const editorSearchExtensions: Extension[] = [search(), highlightSelectionMatches(), keymap.of(searchKeymap)];
-
-const editorExtensionsFor = (path: string) => {
-  let languageExtensions: Extension[] = [];
-  switch (extension(path)) {
-    case "js":
-    case "jsx":
-      languageExtensions = [javascript({ jsx: true })];
-      break;
-    case "ts":
-    case "tsx":
-      languageExtensions = [javascript({ jsx: extension(path) === "tsx", typescript: true })];
-      break;
-    case "md":
-    case "markdown":
-      languageExtensions = [markdown()];
-      break;
-    default:
-      languageExtensions = [];
-  }
-  return [...languageExtensions, ...editorSearchExtensions];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value != null;

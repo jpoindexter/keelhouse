@@ -57,5 +57,13 @@ describe("editorState helpers", () => {
   it("labels known editor modes", () => {
     expect(languageLabelForPath("/work/project/README.md")).toBe("Markdown");
     expect(languageLabelForPath("/work/project/src/App.tsx")).toBe("TSX");
+    expect(languageLabelForPath("/work/project/index.html")).toBe("HTML");
+    expect(languageLabelForPath("/work/project/styles.css")).toBe("CSS");
+    expect(languageLabelForPath("/work/project/src/main.rs")).toBe("Rust");
+    expect(languageLabelForPath("/work/project/package.json")).toBe("JSON");
+    expect(languageLabelForPath("/work/project/Cargo.toml")).toBe("TOML");
+    expect(languageLabelForPath("/work/project/config.yaml")).toBe("YAML");
+    expect(languageLabelForPath("/work/project/scripts/smoke.sh")).toBe("Shell");
+    expect(languageLabelForPath("/Users/jason/.zshrc")).toBe("Shell");
   });
 });

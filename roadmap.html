@@ -156,6 +156,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-FIND-REPLACE &middot; Editor find and replace</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Basic file editing needs local find/replace; otherwise the editor is too thin to replace the VS Code surface Jason actually uses.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: CodeMirror search is included as a first-class editor extension with Cmd+F/F3/Cmd+G search keybindings, a visible Find button, and replace/replace-all support through the editor-native search panel. Screenshot proof: docs/qa/editor-parity/find-replace.png.</p></details></div>
+<div class="card" data-track="files" data-id="EDITOR-LANGUAGE-MODES" data-size="S" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-LANGUAGE-MODES &middot; Editor language modes</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The first editor pass needs credible syntax support for the file types this repo and Jason's projects use most.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: editor language extensions cover TypeScript, TSX/JSX, JavaScript, Markdown, HTML, CSS, Rust, JSON, TOML, YAML, and shell scripts/dotfiles. Covered by npm build and focused mode mapping tests.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
@@ -220,10 +224,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
-<div class="card" data-track="files" data-id="EDITOR-LANGUAGE-MODES" data-size="S" data-tier="pebble" data-launch="v0_5">
-<div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-LANGUAGE-MODES &middot; Editor language modes</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The first editor pass needs credible syntax support for the file types this repo and Jason's projects use most.</p>
-<details><summary>Done criteria</summary><p class="done">TypeScript, TSX/JSX, JavaScript, Markdown, HTML, CSS, Rust, JSON, TOML, YAML, and shell scripts open with syntax highlighting and sensible indentation defaults.</p></details></div>
 <div class="card" data-track="files" data-id="LARGE-FILE-POLICY" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">LARGE-FILE-POLICY &middot; Large and binary file policy</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The editor should fail safely on huge or binary files instead of freezing the app.</p>
