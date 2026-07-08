@@ -2,13 +2,17 @@
 
 Keelhouse is a lean native macOS workbench for real CLI coding agents. It keeps the VS Code parts Jason actually uses: project/session rail, file explorer, robust editor, browser preview, and real Claude/Codex terminal panes. It drops extension/plugin bloat and account/chat chrome.
 
-The repo/package slug remains `agent-cli` for now; Keelhouse is the product name.
+The repo/package slug remains `agent-cli` for now; **Keelhouse** is the product name.
+
+## Name & Positioning
+
+Keelhouse is the stable structure around heavy agent work: projects, files, terminal panes, browser context, sessions, and review surfaces stay aligned while real CLI agents do the work. It is intentionally not named after "AI", "chat", or "terminal" because the product is the whole workbench, not one pane.
 
 ## Status
 
 Direction is locked: build our own app using open-source components, not a fork of cmux, Superconductor, hashmark, or zellij. The terminal foundation is verified: real pty -> `libghostty-vt` in Rust -> Tauri IPC -> Canvas 2D, with keyboard, paste, selection/copy, scrollback, folder picker, persisted workspace, agent launch, file rail, watcher, recent projects, and basic CodeMirror editing already working.
 
-Current active slice: `EDITOR-PARITY-UX`. See `ROADMAP.md` for the board and `STATE.md` for handoff details.
+Current active slice: `DIRTY-DRAFT-PROTECTION`. See `ROADMAP.md` for the board and `STATE.md` for handoff details.
 
 ## Product Shape
 

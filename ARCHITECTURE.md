@@ -1,6 +1,6 @@
-# ARCHITECTURE — agent cli
+# ARCHITECTURE — Keelhouse
 
-The technical design that doesn't fit the one-page PRD. Stack is locked (DECISIONS.md 2026-07-07).
+The technical design that doesn't fit the one-page PRD. Stack is locked (DECISIONS.md 2026-07-07). The repository/package slug is still `agent-cli`; Keelhouse is the product name used in user-facing docs and app metadata.
 
 ## Stack
 
