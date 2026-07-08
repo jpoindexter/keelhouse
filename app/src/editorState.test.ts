@@ -45,11 +45,12 @@ describe("editorState helpers", () => {
     expect(cursorFromText("one\ntwo\nthree", 6)).toEqual({ line: 2, column: 3 });
   });
 
-  it("clamps stale view state into the current document", () => {
-    expect(clampEditorViewState({ anchor: -4, head: 99, scrollTop: -8 }, 12)).toEqual({
+  it("clamps stale view state into the current document and preserves focus intent", () => {
+    expect(clampEditorViewState({ anchor: -4, head: 99, scrollTop: -8, focused: true }, 12)).toEqual({
       anchor: 0,
       head: 12,
       scrollTop: 0,
+      focused: true,
     });
   });
 

@@ -136,22 +136,22 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">ACTIVE-FILE-SYNC &middot; Active file sync across rail and editor</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The user must always know which file is active. File rail selection, editor tab title, path bar, watcher refreshes, and workspace restore need to agree.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: activeFileByWorkspace persists by canonical workspace root; relaunch restores the saved file into rail selection, editor tab/path, and content; stale paths are cleared; watcher refresh reconciles the selected file to the fresh tree node when it still exists and preserves the missing-file warning when it disappears. Native screenshot proof: docs/qa/active-file-sync/restore.png.</p></details></div>
-</div>
-</div>
-<div class="col" data-status="now"><h2 class="s-now">Now</h2>
-<div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="files" data-id="EDITOR-VIEW-STATE" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-VIEW-STATE &middot; Per-file editor view state</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Switching files should not throw away the user's place. Cursor, selection, scroll, and focus are part of the editor experience.</p>
-<details><summary>Done criteria</summary><p class="done">Within a session, each open file restores cursor position, selection, scroll position, and editor focus after switching away and back. Saved state survives tree refreshes and does not jump on save.</p></details></div>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: per-file view state captures selection anchor/head, scrollTop, and focus intent. Native smoke set first.ts to Ln 5, Col 9, switched to second.ts, switched back, restored the same line/column, then ArrowDown advanced to Ln 6, Col 1, proving CodeMirror focus was restored. Proof screenshots: docs/qa/editor-view-state/restore.png and docs/qa/editor-view-state/focus-restored.png.</p></details></div>
 </div>
 </div>
-<div class="col" data-status="next"><h2 class="s-next">Next</h2>
+<div class="col" data-status="now"><h2 class="s-now">Now</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
 <div class="card" data-track="files" data-id="DIRTY-DRAFT-PROTECTION" data-size="M" data-tier="rock" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">DIRTY-DRAFT-PROTECTION &middot; Dirty draft protection</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The userflow audit found the main trust risk: unsaved work can be lost when changing files/projects. This must be blocked before the editor feels real.</p>
 <details><summary>Done criteria</summary><p class="done">Unsaved editor buffers are preserved when switching files or projects. Closing/replacing a dirty buffer requires Save, Discard, or Cancel with the file name and consequence shown. Dirty drafts survive failed saves and never get cleared by navigation.</p></details></div>
+</div>
+</div>
+<div class="col" data-status="next"><h2 class="s-next">Next</h2>
+<div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
 <div class="card" data-track="files" data-id="SAVE-CONFLICTS" data-size="M" data-tier="rock" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">SAVE-CONFLICTS &middot; External change and save conflict handling</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Agents and terminals can edit files while the editor is open. The app must not silently overwrite external changes.</p>

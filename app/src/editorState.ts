@@ -2,6 +2,7 @@ export type EditorViewState = {
   anchor: number;
   head: number;
   scrollTop: number;
+  focused: boolean;
 };
 
 export type TreePathNode = {
@@ -26,6 +27,7 @@ export const clampEditorViewState = (
     anchor: Math.min(Math.max(0, state.anchor), max),
     head: Math.min(Math.max(0, state.head), max),
     scrollTop: Math.max(0, state.scrollTop),
+    focused: state.focused,
   };
 };
 

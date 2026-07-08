@@ -53,6 +53,7 @@ type FileTreeNode = {
 type FileTreeResponse = { root: string; nodes: FileTreeNode[]; truncated: boolean };
 type WorkspaceTreeChanged = { root: string; count: number };
 type TextFileResponse = { path: string; content: string; bytes: number };
+type OpenEditorFileOptions = { focusEditor?: boolean };
 
 const FONT_SIZE = 15;
 const FONT_FAMILY = "JetBrains Mono, monospace";
@@ -158,6 +159,7 @@ function App() {
   const selectedFileRef = useRef<FileTreeNode | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const editorViewStatesRef = useRef<Record<string, EditorViewState>>({});
+  const pendingEditorFocusRef = useRef(false);
   const editorLoadSeq = useRef(0);
   const latest = useRef<Snapshot | null>(null);
   const frame = useRef<number | null>(null);
@@ -235,6 +237,7 @@ function App() {
       anchor,
       head,
       scrollTop: view.scrollDOM.scrollTop,
+      focused: view.hasFocus,
     };
   };
 
@@ -323,10 +326,11 @@ function App() {
   const visibleRecentProjects = recentProjects.filter((project) => project !== workspacePath).slice(0, 3);
   const hiddenRecentCount = Math.max(0, recentProjects.filter((project) => project !== workspacePath).length - visibleRecentProjects.length);
 
-  const openEditorFile = async (file: FileTreeNode) => {
+  const openEditorFile = async (file: FileTreeNode, options: OpenEditorFileOptions = {}) => {
     const root = workspacePathRef.current ?? workspacePath;
     if (!root) return;
     captureCurrentEditorViewState();
+    pendingEditorFocusRef.current = options.focusEditor ?? false;
     const seq = editorLoadSeq.current + 1;
     editorLoadSeq.current = seq;
     setSelectedFile(file);
@@ -344,6 +348,11 @@ function App() {
       const restoredForContent = clampEditorViewState(editorViewStatesRef.current[file.path], result.content.length);
       setEditorCursor(restoredForContent ? cursorFromText(result.content, restoredForContent.head) : { line: 1, column: 1 });
       await persistActiveFile(root, file.path);
+      if (options.focusEditor) {
+        requestAnimationFrame(() => {
+          editorViewRef.current?.focus();
+        });
+      }
     } catch (err) {
       if (editorLoadSeq.current !== seq) return;
       setEditorText("");
@@ -446,6 +455,7 @@ function App() {
       anchor,
       head,
       scrollTop: update.view.scrollDOM.scrollTop,
+      focused: update.view.hasFocus,
     };
     const line = update.state.doc.lineAt(head);
     setEditorCursor({ line: line.number, column: head - line.from + 1 });
@@ -456,13 +466,16 @@ function App() {
     const file = selectedFileRef.current;
     if (!file) return;
     const restored = clampEditorViewState(editorViewStatesRef.current[file.path], view.state.doc.length);
-    if (!restored) return;
-    view.dispatch({
-      selection: { anchor: restored.anchor, head: restored.head },
-      scrollIntoView: false,
-    });
+    if (restored) {
+      view.dispatch({
+        selection: { anchor: restored.anchor, head: restored.head },
+        scrollIntoView: false,
+      });
+    }
     requestAnimationFrame(() => {
-      view.scrollDOM.scrollTop = restored.scrollTop;
+      if (restored) view.scrollDOM.scrollTop = restored.scrollTop;
+      if (pendingEditorFocusRef.current || restored?.focused) view.focus();
+      pendingEditorFocusRef.current = false;
     });
   };
 
@@ -760,7 +773,7 @@ function App() {
                 if (node.data.kind === "directory") {
                   node.toggle();
                 } else {
-                  void openEditorFile(node.data);
+                  void openEditorFile(node.data, { focusEditor: true });
                 }
               }}
             >

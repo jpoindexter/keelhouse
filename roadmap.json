@@ -277,18 +277,18 @@
     {
       "id": "EDITOR-VIEW-STATE",
       "title": "Per-file editor view state",
-      "column": "now",
+      "column": "done",
       "tier": "pebble",
       "track": "files",
       "size": "S",
       "launch": "v0_5",
       "summary": "Switching files should not throw away the user's place. Cursor, selection, scroll, and focus are part of the editor experience.",
-      "done": "Within a session, each open file restores cursor position, selection, scroll position, and editor focus after switching away and back. Saved state survives tree refreshes and does not jump on save."
+      "done": "Verified 2026-07-08: per-file view state captures selection anchor/head, scrollTop, and focus intent. Native smoke set first.ts to Ln 5, Col 9, switched to second.ts, switched back, restored the same line/column, then ArrowDown advanced to Ln 6, Col 1, proving CodeMirror focus was restored. Proof screenshots: docs/qa/editor-view-state/restore.png and docs/qa/editor-view-state/focus-restored.png."
     },
     {
       "id": "DIRTY-DRAFT-PROTECTION",
       "title": "Dirty draft protection",
-      "column": "next",
+      "column": "now",
       "tier": "rock",
       "track": "files",
       "size": "M",
