@@ -274,20 +274,33 @@ body,
   min-width: 156px;
   max-width: 260px;
   align-items: center;
+  gap: 8px;
   border-right: 1px solid var(--panel-border);
   background: var(--panel-bg);
   color: #c9c9c9;
   padding: 0 12px;
   font-size: 12px;
+}
+
+.editor-tab--active {
+  background: #20242a;
+  color: #eeeeee;
+}
+
+.editor-tab__name {
   overflow: hidden;
+  min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.editor-tab--dirty::after {
-  content: "•";
-  margin-left: 7px;
-  color: #e2c06d;
+.editor-tab__dirty {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 999px;
+  background: #e2c06d;
+  box-shadow: 0 0 0 1px rgba(226, 192, 109, 0.24);
 }
 
 .editor-actions {
@@ -300,12 +313,34 @@ body,
   padding: 0 10px;
 }
 
+.editor-meta,
 .editor-status {
   overflow: hidden;
   color: #858585;
   font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.editor-meta {
+  color: #747474;
+}
+
+.editor-badge {
+  flex: 0 0 auto;
+  border: 1px solid #594b24;
+  border-radius: 999px;
+  background: #211c0e;
+  color: #e2c06d;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  padding: 0 7px;
+  white-space: nowrap;
+}
+
+.editor-badge--warn {
+  border-color: #6b5520;
 }
 
 .editor-save {
@@ -336,16 +371,41 @@ body,
 }
 
 .editor-pathbar {
+  display: flex;
   flex: 0 0 auto;
   overflow: hidden;
+  align-items: center;
   border-bottom: 1px solid #292929;
   background: #1c1c1c;
   color: #8f8f8f;
   font-size: 11px;
   line-height: 24px;
   padding: 0 12px;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.editor-crumb {
+  display: inline-flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  align-items: center;
+}
+
+.editor-crumb span:last-child {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.editor-crumb__separator {
+  flex: 0 0 auto;
+  color: #5f5f5f;
+  padding: 0 6px;
+}
+
+.editor-crumb__current {
+  color: #d8d8d8;
+  font-weight: 650;
 }
 
 .editor-code {
@@ -364,6 +424,16 @@ body,
 .editor-code .cm-editor {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
+}
+
+.editor-code .cm-gutters {
+  border-right-color: #2a2a2a;
+  background: #1a1a1a;
+}
+
+.editor-code .cm-activeLineGutter,
+.editor-code .cm-activeLine {
+  background: rgba(90, 143, 184, 0.11);
 }
 
 .editor-error {

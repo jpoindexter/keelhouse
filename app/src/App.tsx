@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
 import { load } from "@tauri-apps/plugin-store";
+import type { EditorView, ViewUpdate } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { markdown } from "@codemirror/lang-markdown";
@@ -18,6 +19,14 @@ import {
   pushRecentProject,
   removeRecentProject,
 } from "./workspaceState";
+import {
+  clampEditorViewState,
+  cursorFromText,
+  fileTreeContainsPath,
+  languageLabelForPath,
+  pathBreadcrumbs,
+} from "./editorState";
+import type { CursorPosition, EditorViewState } from "./editorState";
 import "./App.css";
 
 // SPIKE-2 frontend: paint the grid snapshots from the Rust backend onto a canvas,
@@ -51,6 +60,12 @@ const DEFAULT_LAUNCH_PROFILE: LaunchProfile = {
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 const extension = (path: string) => basename(path).split(".").pop()?.toLowerCase() ?? "";
+const formatBytes = (bytes: number | null) => {
+  if (bytes == null) return "--";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const editorExtensionsFor = (path: string) => {
   switch (extension(path)) {
@@ -120,6 +135,10 @@ function App() {
   const workspacePathRef = useRef<string | null>(null);
   const storeRef = useRef<Awaited<ReturnType<typeof load>> | null>(null);
   const recentProjectsRef = useRef<string[]>([]);
+  const selectedFileRef = useRef<FileTreeNode | null>(null);
+  const editorViewRef = useRef<EditorView | null>(null);
+  const editorViewStatesRef = useRef<Record<string, EditorViewState>>({});
+  const editorLoadSeq = useRef(0);
   const latest = useRef<Snapshot | null>(null);
   const frame = useRef<number | null>(null);
   const metrics = useRef({ cw: 9, ch: 19 });
@@ -139,14 +158,53 @@ function App() {
   const [editorLoading, setEditorLoading] = useState(false);
   const [editorSaving, setEditorSaving] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
+  const [editorBytes, setEditorBytes] = useState<number | null>(null);
+  const [editorCursor, setEditorCursor] = useState<CursorPosition>({ line: 1, column: 1 });
   const [recentProjects, setRecentProjects] = useState<string[]>([]);
   const editorDirty = selectedFile != null && editorText !== savedEditorText;
+  const activeFileMissing = useMemo(
+    () => selectedFile != null && fileTree.length > 0 && !fileTreeContainsPath(fileTree, selectedFile.path),
+    [fileTree, selectedFile],
+  );
+  const editorBreadcrumbs = useMemo(
+    () => (selectedFile ? pathBreadcrumbs(workspacePath, selectedFile.path) : []),
+    [selectedFile, workspacePath],
+  );
+  const editorLanguage = selectedFile ? languageLabelForPath(selectedFile.path) : "No file";
 
   useEffect(() => {
     recentProjectsRef.current = recentProjects;
   }, [recentProjects]);
 
+  useEffect(() => {
+    selectedFileRef.current = selectedFile;
+  }, [selectedFile]);
+
+  const resetEditor = () => {
+    editorViewRef.current = null;
+    editorLoadSeq.current += 1;
+    setSelectedFile(null);
+    setEditorText("");
+    setSavedEditorText("");
+    setEditorError(null);
+    setEditorBytes(null);
+    setEditorCursor({ line: 1, column: 1 });
+  };
+
+  const captureCurrentEditorViewState = () => {
+    const file = selectedFileRef.current;
+    const view = editorViewRef.current;
+    if (!file || !view) return;
+    const { anchor, head } = view.state.selection.main;
+    editorViewStatesRef.current[file.path] = {
+      anchor,
+      head,
+      scrollTop: view.scrollDOM.scrollTop,
+    };
+  };
+
   const openWorkspace = async (path: string) => {
+    captureCurrentEditorViewState();
     const store = storeRef.current;
     const saved = await store?.get<unknown>("launchProfile");
     const profile = normalizeLaunchProfile(saved);
@@ -158,10 +216,7 @@ function App() {
       await invoke("open_workspace", { path, profile });
       setLaunchError(null);
       setWorkspacePath(path);
-      setSelectedFile(null);
-      setEditorText("");
-      setSavedEditorText("");
-      setEditorError(null);
+      resetEditor();
       setTimeout(sendTerminalResize, 0);
       const nextRecent = pushRecentProject(recentProjectsRef.current, path);
       recentProjectsRef.current = nextRecent;
@@ -181,10 +236,7 @@ function App() {
         if (workspacePathRef.current === path) {
           setWorkspacePath(null);
           setFileTree([]);
-          setSelectedFile(null);
-          setEditorText("");
-          setSavedEditorText("");
-          setEditorError(null);
+          resetEditor();
         }
         await store?.delete("folder");
         await store?.save();
@@ -221,21 +273,31 @@ function App() {
   const openEditorFile = async (file: FileTreeNode) => {
     const root = workspacePathRef.current ?? workspacePath;
     if (!root) return;
+    captureCurrentEditorViewState();
+    const seq = editorLoadSeq.current + 1;
+    editorLoadSeq.current = seq;
     setSelectedFile(file);
     setEditorLoading(true);
     setEditorSaving(false);
     setEditorError(null);
+    setEditorBytes(null);
+    setEditorCursor({ line: 1, column: 1 });
     try {
       const result = await invoke<TextFileResponse>("read_text_file", { root, path: file.path });
-      if (result.path !== file.path) return;
+      if (editorLoadSeq.current !== seq || result.path !== file.path) return;
       setEditorText(result.content);
       setSavedEditorText(result.content);
+      setEditorBytes(result.bytes);
+      const restoredForContent = clampEditorViewState(editorViewStatesRef.current[file.path], result.content.length);
+      setEditorCursor(restoredForContent ? cursorFromText(result.content, restoredForContent.head) : { line: 1, column: 1 });
     } catch (err) {
+      if (editorLoadSeq.current !== seq) return;
       setEditorText("");
       setSavedEditorText("");
+      setEditorBytes(null);
       setEditorError(String(err));
     } finally {
-      setEditorLoading(false);
+      if (editorLoadSeq.current === seq) setEditorLoading(false);
     }
   };
 
@@ -251,6 +313,7 @@ function App() {
         content: editorText,
       });
       setSavedEditorText(result.content);
+      setEditorBytes(result.bytes);
     } catch (err) {
       setEditorError(String(err));
     } finally {
@@ -280,10 +343,7 @@ function App() {
       setFileTree([]);
       setFileTreeError(null);
       setFileTreeTruncated(false);
-      setSelectedFile(null);
-      setEditorText("");
-      setSavedEditorText("");
-      setEditorError(null);
+      resetEditor();
       return;
     }
     let cancelled = false;
@@ -309,6 +369,34 @@ function App() {
       cancelled = true;
     };
   }, [workspacePath, treeRefreshNonce]);
+
+  const handleEditorUpdate = (update: ViewUpdate) => {
+    const file = selectedFileRef.current;
+    if (!file) return;
+    const { anchor, head } = update.state.selection.main;
+    editorViewStatesRef.current[file.path] = {
+      anchor,
+      head,
+      scrollTop: update.view.scrollDOM.scrollTop,
+    };
+    const line = update.state.doc.lineAt(head);
+    setEditorCursor({ line: line.number, column: head - line.from + 1 });
+  };
+
+  const restoreEditorView = (view: EditorView) => {
+    editorViewRef.current = view;
+    const file = selectedFileRef.current;
+    if (!file) return;
+    const restored = clampEditorViewState(editorViewStatesRef.current[file.path], view.state.doc.length);
+    if (!restored) return;
+    view.dispatch({
+      selection: { anchor: restored.anchor, head: restored.head },
+      scrollIntoView: false,
+    });
+    requestAnimationFrame(() => {
+      view.scrollDOM.scrollTop = restored.scrollTop;
+    });
+  };
 
   useEffect(() => {
     if (!workspacePath) return;
@@ -616,11 +704,21 @@ function App() {
       <main className="workbench">
         <section className="editor-area" aria-label="Editor">
           <div className="editor-tabbar">
-            <div className={`editor-tab ${editorDirty ? "editor-tab--dirty" : ""}`}>
-              {selectedFile ? selectedFile.name : "No file open"}
+            <div
+              className={`editor-tab ${editorDirty ? "editor-tab--dirty" : ""} ${selectedFile ? "editor-tab--active" : ""}`}
+              title={selectedFile?.path}
+            >
+              <span className="editor-tab__name">{selectedFile ? selectedFile.name : "No file open"}</span>
+              {editorDirty ? <span className="editor-tab__dirty" aria-label="Unsaved changes" /> : null}
             </div>
             {selectedFile ? (
               <div className="editor-actions">
+                {activeFileMissing ? <span className="editor-badge editor-badge--warn">Missing from tree</span> : null}
+                <span className="editor-meta">{editorLanguage}</span>
+                <span className="editor-meta">{formatBytes(editorBytes)}</span>
+                <span className="editor-meta">
+                  Ln {editorCursor.line}, Col {editorCursor.column}
+                </span>
                 <span className="editor-status" title={selectedFile.path}>
                   {editorLoading ? "Loading" : editorDirty ? "Unsaved" : "Saved"}
                 </span>
@@ -635,7 +733,16 @@ function App() {
               </div>
             ) : null}
           </div>
-          {selectedFile ? <div className="editor-pathbar">{selectedFile.path}</div> : null}
+          {selectedFile ? (
+            <nav className="editor-pathbar" aria-label="Active file path" title={selectedFile.path}>
+              {editorBreadcrumbs.map((part, index) => (
+                <span className="editor-crumb" key={`${part}-${index}`}>
+                  {index > 0 ? <span className="editor-crumb__separator">/</span> : null}
+                  <span className={index === editorBreadcrumbs.length - 1 ? "editor-crumb__current" : ""}>{part}</span>
+                </span>
+              ))}
+            </nav>
+          ) : null}
           {selectedFile ? (
             <div
               className="editor-code"
@@ -648,6 +755,7 @@ function App() {
             >
               {editorError ? <div className="editor-error">{editorError}</div> : null}
               <CodeMirror
+                key={selectedFile.path}
                 value={editorText}
                 height="100%"
                 theme={oneDark}
@@ -660,6 +768,8 @@ function App() {
                 editable={!editorLoading}
                 extensions={editorExtensionsFor(selectedFile.path)}
                 onChange={(value) => setEditorText(value)}
+                onCreateEditor={restoreEditorView}
+                onUpdate={handleEditorUpdate}
               />
             </div>
           ) : (

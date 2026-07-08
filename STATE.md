@@ -42,6 +42,8 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 **Next active slice: EDITOR-PARITY-UX.** Build on the verified editor by adding active-file orientation, stable line/path context, dirty markers, view-state restore, and screenshot QA. Userflow audit items are now explicit roadmap cards: ACTIVE-FILE-SYNC, EDITOR-VIEW-STATE, DIRTY-DRAFT-PROTECTION, SAVE-ERROR-RECOVERY, and EDITOR-RESPONSIVE-QA. Keep tabs/find/language expansion in their own roadmap cards unless a tiny dependency is required.
 
+Progress 2026-07-08: editor orientation chrome is implemented but the card is not closed yet. Added active tab/title treatment, breadcrumb path bar, language/size/cursor/status readouts, stale active-file warning when a watcher refresh no longer contains the selected path, per-file selection/scroll capture and restore through CodeMirror `onUpdate`/`onCreateEditor`, and helper tests for breadcrumbs/tree lookup/cursor/clamping/language labels. Verified with `npm run build`, `npm test` (3 files, 13 tests), `cargo test`, and `git diff --check`. Remaining before marking `EDITOR-PARITY-UX` done: real visual/screenshot QA of selected, dirty, stale/missing, and narrow editor states in the app shell.
+
 ## Next (ordered)
 
 1. **EDITOR-PARITY-UX:** active-file orientation, path/gutter stability, dirty markers, and screenshot QA.
