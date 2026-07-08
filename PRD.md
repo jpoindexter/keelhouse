@@ -72,6 +72,10 @@ Agent panes need Codex-style activity visibility: compact current state in pane 
 
 Use a bottom composer like Codex as the lightweight control surface over real panes. v0.5 routes prompts to the selected pty. v1 adds harness controls: permission mode, goal chip, target pane, model/profile selector, attachments/screenshot references, stop/send state, and activity logging. v2 may add an optional direct API/MCP agent harness, but only for app-owned orchestration; real Claude/Codex terminal panes remain first-class. Research and phased scope live in `docs/composer-harness-research.md`.
 
+## Harness Contract
+
+The composer talks to app-owned agent session handles, not directly to UI components. A handle owns pane identity, project/session context, cwd, agent profile, process state, approval mode, send, interrupt, readTail, close, and activity metadata. App-owned actions such as focus pane, open diff, attach screenshot reference, interrupt process, create pane, or open file must pass through a minimal action gate before Codex-style permission controls are shown. Glossary, event shape, and Vanta-derived boundaries live in `docs/harness-contract.md`.
+
 ## User
 
 Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and testable over speculative; decides aesthetics by seeing, not describing (proven: rejected two color schemes before picking one by eye). Stack fluency: Node/ESM/TS, React, Tauri 2, Rust-adjacent (indx/hashmark/brutal all Tauri). **Not** a Swift/AppKit dev — a reason building native-in-Tauri beats forking a Swift app.
@@ -107,8 +111,11 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [ ] Each project can run multiple named agent/shell panes, and different projects can run different agents concurrently.
 - [ ] Pane lifecycle controls and icon badges cover thinking, running, waiting, errored, exited, restart, terminate, and attention-needed states.
 - [ ] Agent activity rows show recent thinking/planning summaries, file edits, commands, tool/app actions, approvals, errors, and completion per pane/session.
+- [ ] Each pane/session exposes an app-owned agent session handle with send, interrupt, readTail, close, state, cwd, profile, approval mode, and activity metadata.
+- [ ] App-owned actions use a minimal action gate with risk class, approval decision, audit event, and undo/rollback hint where possible.
 - [ ] Composer harness supports permission mode, goal state, model/profile selector, attachments, and approval logging for app-owned actions.
 - [ ] Session restore brings back projects, file tabs, pane layout, and enough metadata to resume intentionally.
+- [ ] Daily-driver workflows are measured against the equivalent VS Code habit: one-project edit+agent, two-agent same-project, and three-project switching after quit/relaunch.
 - [ ] Resource use is measured against the equivalent VS Code workflow.
 
 ## In scope (v0)

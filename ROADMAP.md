@@ -74,8 +74,10 @@ This is where the clarified product point lands: not "terminal app with optional
 - **BROWSER-PREVIEW:** lightweight browser/web preview pane for localhost apps, docs, auth flows, and generated pages.
 - **PANE-MANAGER:** multiple Claude/Codex/shell panes per project.
 - **PANE-NAMES:** pane names and task labels.
+- **AGENT-SESSION-HANDLE:** app-owned handle contract for every pane/session: send, interrupt, readTail, close, cwd, profile, state, approval mode, and activity metadata.
 - **AGENT-ACTIVITY:** visible thinking/running/tool/waiting/error/exited/complete state. Show Codex-style activity rows and tool events, not hidden chain-of-thought.
 - **AGENT-ACTIVITY-LOG:** per-pane/session event timeline for thinking summaries, file edits, commands, tool/app events, git/source-control events, approvals, errors, and completion.
+- **APP-ACTIONS-MINIMAL:** minimal gated app-owned actions for focus/open/interrupt/create/attach/open-diff before permission controls imply more than they enforce.
 - **COMPOSER-HARNESS:** permission mode, goal chip, target pane, model/profile selector, attachments, stop/send state, and approval logging around real panes.
 - **PROCESS-LIFECYCLE:** running/exited status, restart, kill, command/cwd visibility.
 - **SESSION-RESTORE:** restore project rail, editor tabs, rail state, pane layout.
@@ -83,8 +85,8 @@ This is where the clarified product point lands: not "terminal app with optional
 - **DIFF-VIEW:** inspect agent-created changes without VS Code.
 - **GIT-ACTIONS-LITE:** stage/unstage/discard/copy diff; v1 must-have after DIFF-VIEW, not a full git client.
 - **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
-- **PERF-BUDGET:** prove this is lighter than the VS Code workflow it replaces.
-- **DAILY-DRIVER-METRICS:** prove the app can replace the current workflow.
+- **PERF-BUDGET:** prove this is lighter than the VS Code workflow it replaces across 1-project, 2-agent, and 3-project task runs.
+- **DAILY-DRIVER-METRICS:** prove the app can replace the current workflow with scripted one-project edit+agent, two-agent same-project, and three-project switch/relaunch runs.
 
 ## v2 — Workflow leverage
 

@@ -66,7 +66,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>agent cli</h1>
-<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 61 slices &middot; 6 shipped</p>
+<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 63 slices &middot; 6 shipped</p>
 <p class="loop">Open project folder → inspect/edit files → preview web output → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Terminal + process</span><span><i style="border-color:#5a4315;background:#171104"></i>Projects + sessions</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Files + editor</span><span><i style="border-color:#4c1d6f;background:#15091f"></i>Chrome + interaction</span><span><i style="border-color:#5f1f2d;background:#1d0b10"></i>Quality + shipping</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research &amp; spikes</span><span style="color:#f87171">🔒 launch blocker</span></div>
 <div class="filters">
@@ -164,6 +164,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">L</span><span class="ttl">PANE-MANAGER &middot; Multiple agent panes per project</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Jason often runs multiple Claude/Codex sessions against the same project, and different open projects may run different agents at the same time. Add a pane manager that can create/switch/close multiple terminal panes per project.</p>
 <details><summary>Done criteria</summary><p class="done">One project can run 3 live agent/shell panes, and at least 2 open projects can run different agents concurrently; each pane has its own pty/process; focus is obvious; close/kill is explicit and safe.</p></details></div>
+<div class="card" data-track="core" data-id="AGENT-SESSION-HANDLE" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-SESSION-HANDLE &middot; App-owned agent session handles</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Define the missing middle layer between real pty panes and the Codex-style composer: a stable app-owned handle for each pane/session.</p>
+<details><summary>Done criteria</summary><p class="done">Every pane/session exposes id, project/session ids, cwd, agent profile, process state, approval mode, send, interrupt, readTail, close, and activity metadata. Composer, activity log, and future hooks target the handle contract instead of UI component state.</p></details></div>
 <div class="card" data-track="core" data-id="AGENT-ACTIVITY" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">AGENT-ACTIVITY &middot; Agent activity and thinking states</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">Background agents need Codex-style visible status and activity rows when they think, run commands, edit files, call tools, wait for approval/input, error, exit, or complete. Show concise activity/progress summaries and tool events, not hidden chain-of-thought.</p>
@@ -172,6 +176,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">AGENT-ACTIVITY-LOG &middot; Agent activity timeline</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Each pane/session needs an inspectable timeline of user-safe agent events so Jason can see what happened without reading every terminal line.</p>
 <details><summary>Done criteria</summary><p class="done">Per-pane/session log captures thinking/planning summaries, file read/edit/create/delete/rename events, command start/finish/failure with cwd and exit code, tool/app actions, git/source-control events, approval requests, errors, exits, and completion; events are attributed, filterable, retained with session metadata, and link to diffs/output/undo where available.</p></details></div>
+<div class="card" data-track="core" data-id="APP-ACTIONS-MINIMAL" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">APP-ACTIONS-MINIMAL &middot; Minimal app-owned action gate</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Permission controls need real enforcement behind them. Add the small action gate for app-owned actions before showing Codex-style approval modes.</p>
+<details><summary>Done criteria</summary><p class="done">Focus pane, open file, open diff, attach screenshot/file reference, interrupt process, create pane, close pane, and open browser preview route through action descriptors with risk class, approval decision, audit event, and undo/rollback hint where possible.</p></details></div>
 <div class="card" data-track="core" data-id="COMPOSER-HARNESS" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">COMPOSER-HARNESS &middot; Composer harness controls</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Grow the bottom composer into a Codex-style app-owned harness around real terminal panes: permission mode, goal state, target pane, model/profile, attachments, and stop/send controls.</p>
@@ -253,11 +261,11 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="card" data-track="quality" data-id="PERF-BUDGET" data-size="M" data-tier="pebble" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">PERF-BUDGET &middot; Resource and jank budget</span><span class="lens l-quality">Quality + shipping</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">The product exists to avoid VS Code resource bloat. Measure the thing the product promises: memory, CPU, and responsiveness with several projects/panes.</p>
-<details><summary>Done criteria</summary><p class="done">Document baseline memory/CPU for 1 project/1 pane, 3 projects/3 panes, and fast terminal output; regressions are visible before release.</p></details></div>
+<details><summary>Done criteria</summary><p class="done">Document baseline memory/CPU/jank for one-project edit+agent, two-agent same-project, three-project switch/relaunch, and fast terminal output runs; compare against the equivalent VS Code workflow and make regressions visible before release.</p></details></div>
 <div class="card" data-track="quality" data-id="DAILY-DRIVER-METRICS" data-size="S" data-tier="pebble" data-launch="v1">
 <div class="hd"><span class="sz">S</span><span class="ttl">DAILY-DRIVER-METRICS &middot; Daily-driver success metrics</span><span class="lens l-quality">Quality + shipping</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">Define how to know the app is actually replacing the VS Code workflow instead of just existing.</p>
-<details><summary>Done criteria</summary><p class="done">Track project opens, agent pane starts, editor saves, crashes, memory/CPU snapshots, and whether Jason can complete a normal multi-project work block without opening VS Code.</p></details></div>
+<details><summary>Done criteria</summary><p class="done">Script and record three workflow runs: one-project edit+agent, two-agent same-project, and three-project switch/relaunch. Track steps, elapsed time, project opens, pane starts/stops, editor saves, crashes, memory/CPU snapshots, and whether VS Code was needed.</p></details></div>
 </div>
 <div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
 <div class="card" data-track="files" data-id="GIT-STATUS" data-size="S" data-tier="sand" data-launch="v1">

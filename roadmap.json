@@ -479,6 +479,18 @@
       "done": "Each pane has an editable name/task label shown in the pane header and restored across relaunch."
     },
     {
+      "id": "AGENT-SESSION-HANDLE",
+      "title": "App-owned agent session handles",
+      "column": "next",
+      "tier": "rock",
+      "track": "core",
+      "size": "M",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "Define the missing middle layer between real pty panes and the Codex-style composer: a stable app-owned handle for each pane/session.",
+      "done": "Every pane/session exposes id, project/session ids, cwd, agent profile, process state, approval mode, send, interrupt, readTail, close, and activity metadata. Composer, activity log, and future hooks target the handle contract instead of UI component state."
+    },
+    {
       "id": "AGENT-ACTIVITY",
       "title": "Agent activity and thinking states",
       "column": "next",
@@ -500,6 +512,18 @@
       "blocker": true,
       "summary": "Each pane/session needs an inspectable timeline of user-safe agent events so Jason can see what happened without reading every terminal line.",
       "done": "Per-pane/session log captures thinking/planning summaries, file read/edit/create/delete/rename events, command start/finish/failure with cwd and exit code, tool/app actions, git/source-control events, approval requests, errors, exits, and completion; events are attributed, filterable, retained with session metadata, and link to diffs/output/undo where available."
+    },
+    {
+      "id": "APP-ACTIONS-MINIMAL",
+      "title": "Minimal app-owned action gate",
+      "column": "next",
+      "tier": "rock",
+      "track": "core",
+      "size": "M",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "Permission controls need real enforcement behind them. Add the small action gate for app-owned actions before showing Codex-style approval modes.",
+      "done": "Focus pane, open file, open diff, attach screenshot/file reference, interrupt process, create pane, close pane, and open browser preview route through action descriptors with risk class, approval decision, audit event, and undo/rollback hint where possible."
     },
     {
       "id": "COMPOSER-HARNESS",
@@ -589,7 +613,7 @@
       "size": "M",
       "launch": "v1",
       "summary": "The product exists to avoid VS Code resource bloat. Measure the thing the product promises: memory, CPU, and responsiveness with several projects/panes.",
-      "done": "Document baseline memory/CPU for 1 project/1 pane, 3 projects/3 panes, and fast terminal output; regressions are visible before release."
+      "done": "Document baseline memory/CPU/jank for one-project edit+agent, two-agent same-project, three-project switch/relaunch, and fast terminal output runs; compare against the equivalent VS Code workflow and make regressions visible before release."
     },
     {
       "id": "DAILY-DRIVER-METRICS",
@@ -600,7 +624,7 @@
       "size": "S",
       "launch": "v1",
       "summary": "Define how to know the app is actually replacing the VS Code workflow instead of just existing.",
-      "done": "Track project opens, agent pane starts, editor saves, crashes, memory/CPU snapshots, and whether Jason can complete a normal multi-project work block without opening VS Code."
+      "done": "Script and record three workflow runs: one-project edit+agent, two-agent same-project, and three-project switch/relaunch. Track steps, elapsed time, project opens, pane starts/stops, editor saves, crashes, memory/CPU snapshots, and whether VS Code was needed."
     },
     {
       "id": "WORKTREE",
