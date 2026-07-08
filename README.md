@@ -1,42 +1,58 @@
-# agent cli
+# Keelhouse
 
-A lean native macOS replacement for the parts of VS Code Jason actually uses: project tabs, file explorer, file editor, and real Claude/Codex CLI terminals — built on Ghostty's terminal engine, without the rest of the IDE chrome.
+Keelhouse is a lean native macOS workbench for real CLI coding agents. It keeps the VS Code parts Jason actually uses: project/session rail, file explorer, robust editor, browser preview, and real Claude/Codex terminal panes. It drops extension/plugin bloat and account/chat chrome.
 
-## Current state — building it (direction locked 2026-07-07)
+The repo/package slug remains `agent-cli` for now; Keelhouse is the product name.
 
-**Build our own app, leveraging open-source components** — not adopting a finished third-party app. cmux/Superconductor/hashmark/zellij were all evaluated and are reference only (see `DECISIONS.md` for the full trail, `PARKED.md` for what's shelved).
+## Status
 
-The core architecture is **verified working** — `spike-ghostty-vt/` proves a real pty → `libghostty-vt` (Ghostty's actual parsing engine, in a Rust backend) → correct cell readback, and `app/` contains the promoted Tauri render/input loop, shortcuts, paste, copy/selection, folder picker, persisted workspace, agent launch, and scrollback hardening.
+Direction is locked: build our own app using open-source components, not a fork of cmux, Superconductor, hashmark, or zellij. The terminal foundation is verified: real pty -> `libghostty-vt` in Rust -> Tauri IPC -> Canvas 2D, with keyboard, paste, selection/copy, scrollback, folder picker, persisted workspace, agent launch, file rail, watcher, recent projects, and basic CodeMirror editing already working.
 
-**Next up (v0.5):** build the stable app shell: file rail area, editor area, and terminal pane area. See `ROADMAP.md`.
+Current active slice: `EDITOR-PARITY-UX`. See `ROADMAP.md` for the board and `STATE.md` for handoff details.
 
-- **Stack:** Tauri 2 + React/TS/Vite + `libghostty-vt` + `portable-pty` + Canvas 2D + CodeMirror 6. Full design in `ARCHITECTURE.md`. Locked (`DECISIONS.md`).
-- **Toolchain gotcha:** Zig must be pinned to **0.15.2** (`brew install zig@0.15`) — the default 0.16 breaks the libghostty-vt build. See `spike-ghostty-vt/README.md`.
-- **Theme:** mono-ghost palette approved (`ghostty/config` has the values); applied in v1, not before the core loop works.
+## Product Shape
 
-Read `PRD.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `DECISIONS.md`, `PARKED.md`, `ERRORS.md` at the start of any session on this project.
+- Project/session rail for multiple workspaces and task contexts.
+- Dense file explorer with ignores, watching, and git-aware state.
+- CodeMirror editor with VS Code-style shortcuts, tabs, dirty state, find/replace, and file safety.
+- Ghostty-backed terminal panes running real `claude`, `codex`, or shell processes.
+- Lightweight browser preview for localhost apps, docs, auth flows, and generated pages.
+- Codex-quality chrome: icons, activity rows, permission-aware composer, settings, and source-control surfaces.
 
-## In this repo
+Keelhouse is not a VS Code clone, generic terminal emulator, general browser, plugin marketplace, or custom chat UI.
 
-| Path | What |
+## Run Locally
+
+```bash
+cd app
+npm install
+PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH" npm run tauri dev
+```
+
+Useful checks:
+
+```bash
+cd app && npm run build
+cd app && npm test
+cd app/src-tauri && PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH" cargo test
+```
+
+Zig must stay pinned to `0.15.2`; Homebrew's default `0.16` breaks the Ghostty bridge build.
+
+## Repository Map
+
+| Path | Purpose |
 |---|---|
-| `PRD.md` / `ROADMAP.md` / `DECISIONS.md` / `PARKED.md` / `ERRORS.md` | Planning docs — source of truth |
-| `ARCHITECTURE.md` | Stack, data flow, terminal architecture, risks |
-| `app/` | Current Tauri app — canvas terminal, keyboard roundtrip, paste, shortcuts, copy/selection, folder picker, agent launch |
-| `docs/local-state.md` | Tauri Store path, `workspace.json` schema, and reset commands |
-| `spike-ghostty-vt/` | **Verified** libghostty-vt-in-Rust spike — the terminal engine proof |
-| `roadmap.json` / `roadmap.html` | The plan as a rockmap board — open `roadmap.html` in a browser |
-| `ghostty/config` | **The theme** — contrast-verified mono-ghost palette cmux inherits for terminal rendering |
-| `spike/` | The editor-fidelity test — `cd spike && hx sample.tsx` (passed 2026-07-07; informs the CodeMirror editor slice) |
-| `zellij/agent.kdl` | Earlier trial config — not deleted, not the shipped path. See `DECISIONS.md`. |
-| `rockmap/` | Vendored [rockmap](https://github.com/jpoindexter/rockmap) (board generator) |
-| `demo/cockpit-demo.html` | Early interactive mockup — reference only; superseded by the build-our-own Tauri app direction |
-| `docs/brainstorm/` | Design-phase mockups (platform options, approaches, tab models) |
-| `docs/blind-spot-audit-2026-07-07.html` | 16-framework audit that caught the demo-replaced-the-trial drift |
-| `docs/blind-audit-cmux-fork-decision-2026-07-07.html` | 16-framework audit of the fork-cmux decision — found cmux's chrome is config-themeable |
-| `resources/superconductor-reference/` | Superconductor UX notes (settings-key feature map) + icon — signed binary removed, see `DECISIONS.md` |
+| `app/` | Tauri 2 + React/TypeScript app, including terminal, rail, editor, and local state |
+| `app/src-tauri/` | Rust backend for pty/process/workspace/file commands |
+| `PRD.md` / `ROADMAP.md` / `STATE.md` | Product scope, sequence, and current handoff |
+| `ARCHITECTURE.md` / `DECISIONS.md` | Stack, terminal data flow, and append-only decisions |
+| `docs/` | Local state, parity research, audits, and implementation notes |
+| `roadmap.json` / `roadmap.html` | Rockmap source and generated roadmap board |
+| `spike-ghostty-vt/` | Verified Ghostty parser spike |
+| `ghostty/`, `zellij/`, `resources/` | Reference configs and parked research |
 
-Rebuild the board after editing `roadmap.json`:
+Rebuild the roadmap board after editing `roadmap.json`:
 
 ```bash
 node rockmap/build-roadmap.mjs roadmap.json roadmap.html

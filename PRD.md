@@ -1,6 +1,8 @@
-# PRD — agent cli
+# PRD — Keelhouse
 
-**One-liner:** A lean native macOS replacement for Jason's actual VS Code workflow: project tabs, a file explorer, a real file editor, browser/web preview, and multiple real Claude/Codex CLI terminals — built on Ghostty's terminal engine, without the IDE chrome he does not use.
+**One-liner:** Keelhouse is a lean native macOS replacement for Jason's actual VS Code workflow: project/session rail, a file explorer, a real file editor, browser/web preview, and multiple real Claude/Codex CLI terminals — built on Ghostty's terminal engine, without the IDE chrome he does not use.
+
+**Naming:** `agent-cli` remains the repo/package slug while the product name is Keelhouse.
 
 **Direction locked 2026-07-07** (see DECISIONS.md for the full trail): build our own app, leveraging open-source *components* (Ghostty's terminal engine, Tauri, CodeMirror) — not adopting a finished third-party app. cmux/Superconductor/hashmark were evaluated and are reference only. The core architecture (`libghostty-vt` in a Rust backend parsing a real pty) is **verified working** — see `spike-ghostty-vt/`.
 

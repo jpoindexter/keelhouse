@@ -1,4 +1,4 @@
-# ROADMAP — agent cli
+# ROADMAP — Keelhouse
 
 Source of truth: `roadmap.json` → `roadmap.html` (rockmap board). Rebuild after editing:
 
@@ -6,7 +6,7 @@ Source of truth: `roadmap.json` → `roadmap.html` (rockmap board). Rebuild afte
 node rockmap/build-roadmap.mjs roadmap.json roadmap.html
 ```
 
-Sequential where risk gates the next step; parallel only when cards are independent. Ship ugly first, but do not lose the actual product shape: this replaces Jason's VS Code workflow of file explorer + file editor + browser/web preview + real CLI agents.
+Sequential where risk gates the next step; parallel only when cards are independent. Ship ugly first, but do not lose the actual product shape: Keelhouse replaces Jason's VS Code workflow of file explorer + file editor + browser/web preview + real CLI agents.
 
 ## Execution discipline (governs every phase)
 
@@ -49,7 +49,7 @@ This is where the clarified product point lands: not "terminal app with optional
 - ~~**APP-SHELL:** stable three-part layout: file rail, editor area, terminal pane area.~~ **DONE 2026-07-08** — React shell now has a left file rail surface, main editor surface, and bottom terminal panel; terminal resize now uses the measured terminal panel instead of the whole window. Verified with `npm run build`, `npm test`, `cargo test`, `cargo build`, and real `npm run tauri dev` smoke launching `target/debug/agent-cli` with direct child `claude` in the repo cwd.
 - ~~**FILE-RAIL:** dense project file explorer, with noisy folders ignored.~~ **DONE 2026-07-08** — backend `list_workspace_tree` uses `ignore::WalkBuilder` with gitignore/app noisy-folder filtering; frontend renders a dense React Arborist tree in the left rail, supports directory expand/collapse, and activates files into the editor surface. Verified with `npm run build`, `npm test`, `cargo test` (11 tests, including noisy-dir/gitignore coverage), `cargo build`, and real `npm run tauri dev` smoke launching Claude in the selected cwd.
 - ~~**FILE-WATCHER:** live rail updates, gitignore/app ignores, noisy-folder protection.~~ **DONE 2026-07-08** — backend owns a debounced `notify` watcher per selected workspace, filters noisy paths before emitting `workspace-tree-changed`, and frontend refreshes the existing tree source on that event. Verified with `npm run build`, `npm test`, `cargo test` (12 tests, including watcher noisy-path filtering), `cargo build`, and real `npm run tauri dev` visual smoke: creating `aaa-agent-cli-watch-smoke-dir` after launch appeared in the rail, then was removed.
-- ~~**RECENT-PROJECTS:** reopen active folders without a picker ceremony.~~ **DONE 2026-07-08** — persisted `recentFolders`, added a compact rail switcher with explicit `Switch` affordance, dedupe/cap/prune helpers, and missing-path cleanup. Verified with `npm run build`, `npm test`, real `npm run tauri dev`, seeded `agent cli` + `postures` recents, clicking `Switch`, `workspace.json` persisting `/Users/jasonpoindexter/Documents/postures`, and the rail/tree switching to the postures project.
+- ~~**RECENT-PROJECTS:** reopen active folders without a picker ceremony.~~ **DONE 2026-07-08** — persisted `recentFolders`, added a compact rail switcher with explicit `Switch` affordance, dedupe/cap/prune helpers, and missing-path cleanup. Verified with `npm run build`, `npm test`, real `npm run tauri dev`, seeded `Keelhouse` + `postures` recents, clicking `Switch`, `workspace.json` persisting `/Users/jasonpoindexter/Documents/postures`, and the rail/tree switching to the postures project.
 - ~~**EDITOR:** robust CodeMirror editor that opens files from the rail, edits, saves, and feels like a real coding surface.~~ **DONE 2026-07-08** — CodeMirror editor opens files from the rail, shows line numbers/path context, tracks dirty/saved state, supports Save/Cmd+S, and writes UTF-8 workspace files through guarded Tauri commands. Verified with build/tests plus native UI smoke opening/editing/saving `smoke.txt` and confirming disk contents changed.
 - **EDITOR-PARITY-UX:** line gutter, path/breadcrumb context, active-file orientation, dirty markers, view-state restore, and screenshot QA.
 - **ACTIVE-FILE-SYNC:** selected file, editor title/path, rail highlight, watcher refresh, and workspace restore stay synchronized.

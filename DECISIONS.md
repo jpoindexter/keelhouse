@@ -1,4 +1,4 @@
-# DECISIONS — agent cli
+# DECISIONS — Keelhouse
 
 Append-only. Don't edit past entries — add a new one that supersedes.
 
@@ -240,3 +240,13 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 **Why:** The app exists to supervise real agents without VS Code. Diff viewing without basic cleanup actions leaves Jason bouncing back to VS Code/terminal for common review moves. Attention based only on idle time is too noisy for v1; explicit prompts and process exits are more reliable and easier to trust.
 
 **Reversible?** Yes. GIT-ACTIONS-LITE can shrink if implementation risk gets too high, and attention heuristics should be revised from real daily-use logs.
+
+## 2026-07-08 — Product name: Keelhouse
+
+**Choice:** Use **Keelhouse** as the product name. Keep `agent-cli` as the repo/package/binary slug for now, and use Keelhouse in product-facing docs and app window metadata.
+
+**Why:** The name needs to carry the real product shape: a stable workbench around heavy agent processes, project files, panes, and sessions. Obvious alternatives like "Switchyard" and "Termdock" collide with terminal/workbench-adjacent products or sound like generic category labels. Keelhouse is distinctive, avoids AI/code-name mush, and still implies the structural spine of the app.
+
+**Verified:** 2026-07-08 quick web sanity check found direct conflicts for the obvious terminal/workbench names and no obvious active terminal/developer-tool product using "Keelhouse." This is product naming sanity, not trademark clearance.
+
+**Reversible?** Yes. The app identifiers, package names, and storage paths remain `agent-cli` until a later explicit rename/migration slice.

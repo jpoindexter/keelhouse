@@ -1,6 +1,6 @@
 # Local State
 
-`agent cli` uses Tauri Store for v0/v0.5 state. The current file is:
+Keelhouse uses Tauri Store for v0/v0.5 state. The current file still uses the `agent-cli` app identifier:
 
 ```bash
 ~/Library/Application Support/com.jasonpoindexter.agent-cli/workspace.json

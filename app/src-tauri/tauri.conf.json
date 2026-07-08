@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "agent cli",
+  "productName": "Keelhouse",
   "version": "0.1.0",
   "identifier": "com.jasonpoindexter.agent-cli",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "agent cli",
+        "title": "Keelhouse",
         "width": 800,
         "height": 600
       }

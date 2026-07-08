@@ -1,8 +1,8 @@
 {
   "$schema": "./rockmap/roadmap.schema.json",
-  "title": "agent cli",
-  "subtitle": "lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat",
-  "loop": "Open project folder → inspect/edit files → preview web output → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat.",
+  "title": "Keelhouse",
+  "subtitle": "lean macOS workbench for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat",
+  "loop": "Open project folder → inspect/edit files → preview web output → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat. Product name: Keelhouse; repo/package slug: agent-cli.",
   "columns": [
     {
       "id": "done",
@@ -237,7 +237,7 @@
       "size": "S",
       "launch": "v0_5",
       "summary": "Opening the same active projects repeatedly should be cheap, not a folder-picker ceremony every time.",
-      "done": "Verified 2026-07-08: recentFolders persists, dedupes, caps, and prunes missing folders; the rail lists recent projects with an explicit Switch affordance; real Tauri smoke switched from agent cli to postures and persisted postures as the active folder."
+      "done": "Verified 2026-07-08: recentFolders persists, dedupes, caps, and prunes missing folders; the rail lists recent projects with an explicit Switch affordance; real Tauri smoke switched from Keelhouse to postures and persisted postures as the active folder."
     },
     {
       "id": "EDITOR",
