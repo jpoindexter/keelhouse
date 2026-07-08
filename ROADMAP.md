@@ -44,7 +44,7 @@ The whole app in one vertical slice. If this works, everything else is compositi
 
 This is where the clarified product point lands: not "terminal app with optional editor later," but the lean subset of VS Code Jason actually uses.
 
-- **APP-SHELL:** stable three-part layout: file rail, editor area, terminal pane area.
+- ~~**APP-SHELL:** stable three-part layout: file rail, editor area, terminal pane area.~~ **DONE 2026-07-08** — React shell now has a left file rail surface, main editor surface, and bottom terminal panel; terminal resize now uses the measured terminal panel instead of the whole window. Verified with `npm run build`, `npm test`, `cargo test`, `cargo build`, and real `npm run tauri dev` smoke launching `target/debug/agent-cli` with direct child `claude` in the repo cwd.
 - **FILE-RAIL:** dense project file explorer, with noisy folders ignored.
 - **FILE-WATCHER:** live rail updates, gitignore/app ignores, noisy-folder protection.
 - **RECENT-PROJECTS:** reopen active folders without a picker ceremony.

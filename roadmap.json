@@ -195,19 +195,19 @@
     {
       "id": "APP-SHELL",
       "title": "Lean app shell: rail/editor/terminal layout",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "ui",
       "size": "M",
       "launch": "v0_5",
       "blocker": true,
       "summary": "Build the shape that replaces VS Code for this workflow: left file rail, main editor area, bottom/right terminal pane area. No marketing page, no extra IDE chrome.",
-      "done": "One project opens into a stable three-part shell; terminal remains usable while files are browsed/edited; layout survives window resize."
+      "done": "Verified 2026-07-08: one project opens into a stable three-part shell with left file rail surface, editor surface, and bottom terminal panel; terminal resize uses the measured terminal panel; build/tests pass; real Tauri smoke launched Claude in the selected cwd."
     },
     {
       "id": "FILE-RAIL",
       "title": "File explorer rail",
-      "column": "next",
+      "column": "now",
       "tier": "rock",
       "track": "files",
       "size": "M",

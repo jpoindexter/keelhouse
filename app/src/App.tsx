@@ -45,6 +45,7 @@ const normalizeLaunchProfile = (value: unknown): LaunchProfile => {
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const terminalHostRef = useRef<HTMLDivElement>(null);
   const latest = useRef<Snapshot | null>(null);
   const frame = useRef<number | null>(null);
   const metrics = useRef({ cw: 9, ch: 19 });
@@ -108,10 +109,19 @@ function App() {
       await initWorkspace();
     };
 
+    const terminalSize = () => {
+      const rect = terminalHostRef.current?.getBoundingClientRect();
+      if (rect && rect.width > 0 && rect.height > 0) {
+        return { width: rect.width, height: rect.height };
+      }
+      return { width: window.innerWidth, height: window.innerHeight };
+    };
+
     const sendResize = () => {
       const { cw, ch } = metrics.current;
-      const cols = Math.max(2, Math.floor(window.innerWidth / cw));
-      const rows = Math.max(2, Math.floor(window.innerHeight / ch));
+      const { width, height } = terminalSize();
+      const cols = Math.max(2, Math.floor(width / cw));
+      const rows = Math.max(2, Math.floor(height / ch));
       invoke("resize_pty", { cols, rows }).catch(() => {});
     };
 
@@ -270,6 +280,8 @@ function App() {
     canvas.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+    const resizeObserver = new ResizeObserver(sendResize);
+    if (terminalHostRef.current) resizeObserver.observe(terminalHostRef.current);
     window.addEventListener("resize", sendResize);
     setup();
 
@@ -283,15 +295,48 @@ function App() {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
       window.removeEventListener("resize", sendResize);
+      resizeObserver.disconnect();
       if (frame.current != null) cancelAnimationFrame(frame.current);
     };
   }, []);
 
   return (
-    <>
-      <canvas ref={canvasRef} className="term" />
-      {launchError ? <div className="launch-error">{launchError}</div> : null}
-    </>
+    <div className="app-shell">
+      <aside className="file-rail" aria-label="Project files">
+        <div className="panel-title">Files</div>
+        <div className="rail-empty">No folder tree</div>
+      </aside>
+
+      <main className="workbench">
+        <section className="editor-area" aria-label="Editor">
+          <div className="editor-tabbar">
+            <div className="editor-tab">No file open</div>
+          </div>
+          <div className="editor-empty">
+            <div className="editor-empty-title">Select a file</div>
+            <div className="editor-empty-path">Project editor surface</div>
+          </div>
+        </section>
+
+        <section className="terminal-panel" aria-label="Agent terminal">
+          <div className="terminal-titlebar">
+            <div>
+              <span className="terminal-kicker">Agent</span>
+              <span className="terminal-title">Claude</span>
+            </div>
+          </div>
+          <div ref={terminalHostRef} className="terminal-host">
+            <canvas ref={canvasRef} className="term" />
+          </div>
+        </section>
+      </main>
+
+      {launchError ? (
+        <div className="launch-error" role="alert">
+          {launchError}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
