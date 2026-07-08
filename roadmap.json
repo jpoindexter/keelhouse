@@ -341,6 +341,17 @@
       "done": "A documented shortcut map covers the v0.5 workflow, matches VS Code defaults where applicable, and explicitly lists terminal/editor/app-chrome conflicts and exceptions."
     },
     {
+      "id": "ICON-SYSTEM",
+      "title": "Codex-quality icon and status system",
+      "column": "next",
+      "tier": "pebble",
+      "track": "ui",
+      "size": "M",
+      "launch": "v0_5",
+      "summary": "The app should feel like a polished Codex-style workbench, not a raw prototype. Define one consistent icon language for project rail, file explorer, editor, browser, terminal, agent panes, git state, and common actions.",
+      "done": "A single SVG/icon system covers primary actions and object types; selected states use filled/active treatment; non-universal icons have labels or tooltips; status badges cover thinking/running/waiting/error/exited/complete with accessible names."
+    },
+    {
       "id": "ACCESSIBILITY-BASICS",
       "title": "Keyboard and focus accessibility baseline",
       "column": "next",
@@ -399,15 +410,15 @@
       "done": "Each pane has an editable name/task label shown in the pane header and restored across relaunch."
     },
     {
-      "id": "AGENT-ATTENTION",
-      "title": "Agent attention and completion state",
+      "id": "AGENT-ACTIVITY",
+      "title": "Agent activity and thinking states",
       "column": "next",
       "tier": "rock",
       "track": "core",
       "size": "M",
       "launch": "v1",
-      "summary": "Background agents need visible status when they exit, wait for input, or need attention. Build this in reliable layers: process exits first, then explicit Claude/Codex prompt heuristics; generic prompt-idle detection waits until measured useful.",
-      "done": "Pane/project tabs show running and exited states, plus needs-attention for explicit Claude/Codex prompts such as approval/permission/continue questions. Idle-time heuristics are not required for v1."
+      "summary": "Background agents need visible status when they think, run commands, edit files, call tools, wait for approval/input, error, exit, or complete. Show concise activity/progress summaries and tool events, not hidden chain-of-thought.",
+      "done": "Pane/project rail badges and pane headers show thinking/running-command/editing/waiting/error/exited/complete states; activity feed entries attribute tool calls and file/git actions; raw hidden reasoning is never displayed."
     },
     {
       "id": "PROCESS-LIFECYCLE",

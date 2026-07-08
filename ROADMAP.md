@@ -58,6 +58,7 @@ This is where the clarified product point lands: not "terminal app with optional
 - **EDITOR-TABS:** several open files, dirty indicators, close protection.
 - **AGENT-PROFILES:** Claude default, plus Codex/shell profiles without hardcoding one CLI forever.
 - **SHORTCUTS:** VS Code-compatible shortcut map across terminal/editor/chrome.
+- **ICON-SYSTEM:** polished Codex-quality iconography, labels, tooltips, and status badges.
 - **ACCESSIBILITY-BASICS:** keyboard reachability, visible focus, and labelled chrome controls.
 
 ## v1 — Multi-project, multi-agent cockpit
@@ -66,7 +67,7 @@ This is where the clarified product point lands: not "terminal app with optional
 - **BROWSER-PREVIEW:** lightweight browser/web preview pane for localhost apps, docs, auth flows, and generated pages.
 - **PANE-MANAGER:** multiple Claude/Codex/shell panes per project.
 - **PANE-NAMES:** pane names and task labels.
-- **AGENT-ATTENTION:** visible exited/needs-input state. Start with reliable process exits, then explicit Claude/Codex prompt heuristics; prompt-idle detection is later/experimental.
+- **AGENT-ACTIVITY:** visible thinking/running/tool/waiting/error/exited/complete state. Show activity summaries and tool events, not hidden chain-of-thought.
 - **PROCESS-LIFECYCLE:** running/exited status, restart, kill, command/cwd visibility.
 - **SESSION-RESTORE:** restore project rail, editor tabs, rail state, pane layout.
 - **GIT-STATUS:** dirty/new/deleted markers in the file rail.

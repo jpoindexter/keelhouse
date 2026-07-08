@@ -29,6 +29,8 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 - Switch across multiple active projects without separate heavyweight VS Code windows.
 - Review agent-created changes through file status, diffs, editor gutters, and lightweight git actions.
 - Search files and terminal scrollback without leaving the app.
+- Use polished, consistent Codex-quality iconography for project rail, file explorer, editor, browser, terminal, agent panes, git state, and common actions. Icons must carry labels/tooltips where meaning is not universal.
+- Show agent activity state clearly: thinking, running command, editing files, waiting for approval/input, errored, exited, and complete. Surface concise activity/progress summaries and tool events, not hidden chain-of-thought.
 - Keep browser/web-preview controls minimal: address/local URL, back/forward, reload, open external, and per-project remembered preview URL.
 - Keep common VS Code shortcuts and interaction patterns for the supported workflow, including command palette-style action access.
 - Provide only practical customization: color themes, font/terminal/editor settings, ignored folders, agent commands, and keybinding overrides.
@@ -63,7 +65,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [ ] A persistent left project/workspace rail opens at least 3 projects in one window and shows active, running, exited, and attention-needed states.
 - [ ] Browser/web preview opens localhost apps, docs, auth flows, and generated pages inside the workbench.
 - [ ] Each project can run multiple named agent/shell panes, and different projects can run different agents concurrently.
-- [ ] Pane lifecycle controls cover running, exited, restart, terminate, and attention-needed states.
+- [ ] Pane lifecycle controls and icon badges cover thinking, running, waiting, errored, exited, restart, terminate, and attention-needed states.
 - [ ] Session restore brings back projects, file tabs, pane layout, and enough metadata to resume intentionally.
 - [ ] Resource use is measured against the equivalent VS Code workflow.
 

@@ -66,7 +66,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>agent cli</h1>
-<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 46 slices &middot; 6 shipped</p>
+<p class="meta">lean VS Code replacement for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 47 slices &middot; 6 shipped</p>
 <p class="loop">Open project folder → inspect/edit files → preview web output → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Terminal + process</span><span><i style="border-color:#5a4315;background:#171104"></i>Projects + sessions</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Files + editor</span><span><i style="border-color:#4c1d6f;background:#15091f"></i>Chrome + interaction</span><span><i style="border-color:#5f1f2d;background:#1d0b10"></i>Quality + shipping</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research &amp; spikes</span><span style="color:#f87171">🔒 launch blocker</span></div>
 <div class="filters">
@@ -152,10 +152,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">L</span><span class="ttl">PANE-MANAGER &middot; Multiple agent panes per project</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Jason often runs multiple Claude/Codex sessions against the same project, and different open projects may run different agents at the same time. Add a pane manager that can create/switch/close multiple terminal panes per project.</p>
 <details><summary>Done criteria</summary><p class="done">One project can run 3 live agent/shell panes, and at least 2 open projects can run different agents concurrently; each pane has its own pty/process; focus is obvious; close/kill is explicit and safe.</p></details></div>
-<div class="card" data-track="core" data-id="AGENT-ATTENTION" data-size="M" data-tier="rock" data-launch="v1">
-<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-ATTENTION &middot; Agent attention and completion state</span><span class="lens l-core">Terminal + process</span></div>
-<div class="badges"><span class="me ver">v1</span></div><p class="sum">Background agents need visible status when they exit, wait for input, or need attention. Build this in reliable layers: process exits first, then explicit Claude/Codex prompt heuristics; generic prompt-idle detection waits until measured useful.</p>
-<details><summary>Done criteria</summary><p class="done">Pane/project tabs show running and exited states, plus needs-attention for explicit Claude/Codex prompts such as approval/permission/continue questions. Idle-time heuristics are not required for v1.</p></details></div>
+<div class="card" data-track="core" data-id="AGENT-ACTIVITY" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-ACTIVITY &middot; Agent activity and thinking states</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">Background agents need visible status when they think, run commands, edit files, call tools, wait for approval/input, error, exit, or complete. Show concise activity/progress summaries and tool events, not hidden chain-of-thought.</p>
+<details><summary>Done criteria</summary><p class="done">Pane/project rail badges and pane headers show thinking/running-command/editing/waiting/error/exited/complete states; activity feed entries attribute tool calls and file/git actions; raw hidden reasoning is never displayed.</p></details></div>
 <div class="card" data-track="workspace" data-id="SESSION-RESTORE" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">SESSION-RESTORE &middot; Restore projects, files, panes</span><span class="lens l-workspace">Projects + sessions</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">After quit/relaunch, the cockpit should come back as the same working context, without pretending to preserve live agent process state.</p>
@@ -198,6 +198,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">SHORTCUTS &middot; VS Code shortcut baseline</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Keep VS Code muscle memory for the supported workflow: open folder, quick open/search, save, close, copy/paste, terminal focus, new pane, split/switch pane, and command palette.</p>
 <details><summary>Done criteria</summary><p class="done">A documented shortcut map covers the v0.5 workflow, matches VS Code defaults where applicable, and explicitly lists terminal/editor/app-chrome conflicts and exceptions.</p></details></div>
+<div class="card" data-track="ui" data-id="ICON-SYSTEM" data-size="M" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">ICON-SYSTEM &middot; Codex-quality icon and status system</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The app should feel like a polished Codex-style workbench, not a raw prototype. Define one consistent icon language for project rail, file explorer, editor, browser, terminal, agent panes, git state, and common actions.</p>
+<details><summary>Done criteria</summary><p class="done">A single SVG/icon system covers primary actions and object types; selected states use filled/active treatment; non-universal icons have labels or tooltips; status badges cover thinking/running/waiting/error/exited/complete with accessible names.</p></details></div>
 <div class="card" data-track="ui" data-id="ACCESSIBILITY-BASICS" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">ACCESSIBILITY-BASICS &middot; Keyboard and focus accessibility baseline</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">A dense tool still needs visible focus, keyboard reachability, and labelled controls so it can be used without pointer precision.</p>
