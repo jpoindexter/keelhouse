@@ -9,6 +9,7 @@
 // also flow to the terminal thread over the same channel; it encodes them (using
 // the live terminal's modes) and writes to the pty. Nothing non-Send escapes.
 
+use ignore::WalkBuilder;
 use libghostty_vt::key::{Action, Encoder, Event, Key, Mods, OptionAsAlt};
 use libghostty_vt::paste;
 use libghostty_vt::style::{RgbColor, StyleColor};
@@ -17,6 +18,7 @@ use libghostty_vt::terminal::{
 };
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, PtySize};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -31,6 +33,7 @@ const FALLBACK_FG: [u8; 3] = [220, 220, 220];
 const FALLBACK_BG: [u8; 3] = [16, 16, 16];
 const MENU_CLEAR: &str = "terminal.clear";
 const MENU_OPEN: &str = "workspace.open";
+const MAX_TREE_ENTRIES: usize = 8_000;
 
 #[rustfmt::skip]
 const LETTER_KEYS: [Key; 26] = [
@@ -115,6 +118,122 @@ struct PaneExit {
     command: String,
     code: u32,
     message: String,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FileTreeKind {
+    Directory,
+    File,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FileTreeNode {
+    id: String,
+    name: String,
+    path: String,
+    kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    children: Option<Vec<FileTreeNode>>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FileTreeResponse {
+    root: String,
+    nodes: Vec<FileTreeNode>,
+    truncated: bool,
+}
+
+struct FileTreeBuilder {
+    name: String,
+    path: String,
+    kind: FileTreeKind,
+    children: BTreeMap<String, FileTreeBuilder>,
+}
+
+impl FileTreeBuilder {
+    fn root(path: String) -> Self {
+        Self {
+            name: path.clone(),
+            path,
+            kind: FileTreeKind::Directory,
+            children: BTreeMap::new(),
+        }
+    }
+
+    fn insert(&mut self, parts: &[String], path: String, is_dir: bool) {
+        if parts.is_empty() {
+            return;
+        }
+        let name = &parts[0];
+        let child = self
+            .children
+            .entry(name.to_lowercase())
+            .or_insert_with(|| FileTreeBuilder {
+                name: name.clone(),
+                path: String::new(),
+                kind: FileTreeKind::Directory,
+                children: BTreeMap::new(),
+            });
+        if parts.len() == 1 {
+            child.name = name.clone();
+            child.path = path;
+            child.kind = if is_dir {
+                FileTreeKind::Directory
+            } else {
+                FileTreeKind::File
+            };
+            return;
+        }
+        child.kind = FileTreeKind::Directory;
+        child.insert(&parts[1..], path, is_dir);
+    }
+
+    fn into_children(self) -> Vec<FileTreeNode> {
+        let mut children: Vec<_> = self.children.into_values().map(Self::into_node).collect();
+        children.sort_by(|a, b| {
+            let ak = if a.kind == "directory" { 0 } else { 1 };
+            let bk = if b.kind == "directory" { 0 } else { 1 };
+            ak.cmp(&bk)
+                .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+        });
+        children
+    }
+
+    fn into_node(self) -> FileTreeNode {
+        let FileTreeBuilder {
+            name,
+            path,
+            kind,
+            children,
+        } = self;
+        let kind_name = match kind {
+            FileTreeKind::Directory => "directory",
+            FileTreeKind::File => "file",
+        }
+        .to_string();
+        let children = if kind == FileTreeKind::Directory {
+            Some(
+                FileTreeBuilder {
+                    name: String::new(),
+                    path: String::new(),
+                    kind,
+                    children,
+                }
+                .into_children(),
+            )
+        } else {
+            None
+        };
+        FileTreeNode {
+            id: path.clone(),
+            name,
+            path,
+            kind: kind_name,
+            children,
+        }
+    }
 }
 
 /// User/workspace-selected command to launch inside the pty. The frontend owns the
@@ -430,6 +549,76 @@ fn resize_pty(state: State<PtyState>, cols: u16, rows: u16) {
 #[tauri::command]
 fn scroll_pty(state: State<PtyState>, delta: isize) {
     state.send(Msg::Scroll { delta });
+}
+
+fn is_noisy_dir(name: &str) -> bool {
+    matches!(
+        name,
+        ".git"
+            | ".next"
+            | ".turbo"
+            | ".vite"
+            | "build"
+            | "coverage"
+            | "dist"
+            | "node_modules"
+            | "target"
+    )
+}
+
+/// Frontend -> filesystem: list a workspace tree using gitignore/app ignore rules.
+#[tauri::command]
+fn list_workspace_tree(path: String) -> Result<FileTreeResponse, String> {
+    let root = validate_workspace_path(&path)?;
+    let root_path = Path::new(&root);
+    let mut tree = FileTreeBuilder::root(root.clone());
+    let mut count = 0usize;
+    let mut truncated = false;
+
+    let walker = WalkBuilder::new(&root)
+        .standard_filters(true)
+        .require_git(false)
+        .hidden(false)
+        .filter_entry(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .map(|name| !is_noisy_dir(name))
+                .unwrap_or(true)
+        })
+        .build();
+
+    for entry in walker {
+        let entry = entry.map_err(|err| format!("Could not read workspace tree: {err}"))?;
+        let path = entry.path();
+        if path == root_path {
+            continue;
+        }
+        if count >= MAX_TREE_ENTRIES {
+            truncated = true;
+            break;
+        }
+        let rel = match path.strip_prefix(root_path) {
+            Ok(rel) => rel,
+            Err(_) => continue,
+        };
+        let parts: Vec<String> = rel
+            .components()
+            .map(|component| component.as_os_str().to_string_lossy().into_owned())
+            .collect();
+        if parts.is_empty() {
+            continue;
+        }
+        let is_dir = entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false);
+        tree.insert(&parts, path.to_string_lossy().into_owned(), is_dir);
+        count += 1;
+    }
+
+    Ok(FileTreeResponse {
+        root,
+        nodes: tree.into_children(),
+        truncated,
+    })
 }
 
 /// Open (or switch to) a workspace folder: spawn a fresh pane in `path` using the
@@ -792,7 +981,8 @@ pub fn run() {
             paste,
             resize_pty,
             scroll_pty,
-            open_workspace
+            open_workspace,
+            list_workspace_tree
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -801,6 +991,8 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn encode_key(code: &str, shift: bool, alt: bool, ctrl: bool) -> Vec<u8> {
         let term = Terminal::new(Options {
@@ -919,5 +1111,45 @@ mod tests {
         )
         .expect_err("missing command should fail");
         assert!(err.contains("login-shell PATH"));
+    }
+
+    fn tree_contains(nodes: &[FileTreeNode], name: &str) -> bool {
+        nodes.iter().any(|node| {
+            node.name == name
+                || node
+                    .children
+                    .as_ref()
+                    .map(|children| tree_contains(children, name))
+                    .unwrap_or(false)
+        })
+    }
+
+    #[test]
+    fn list_workspace_tree_skips_noisy_dirs_and_keeps_gitignore_visible() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("agent-cli-tree-test-{suffix}"));
+        fs::create_dir_all(root.join("src")).expect("create src");
+        fs::create_dir_all(root.join("node_modules/pkg")).expect("create node_modules");
+        fs::create_dir_all(root.join("target/debug")).expect("create target");
+        fs::write(root.join(".gitignore"), "ignored.txt\n").expect("write gitignore");
+        fs::write(root.join("visible.txt"), "visible").expect("write visible");
+        fs::write(root.join("ignored.txt"), "ignored").expect("write ignored");
+        fs::write(root.join("src/main.rs"), "fn main() {}\n").expect("write src");
+        fs::write(root.join("node_modules/pkg/index.js"), "").expect("write node module");
+        fs::write(root.join("target/debug/app"), "").expect("write target file");
+
+        let tree = list_workspace_tree(root.to_string_lossy().into_owned()).expect("tree");
+        assert!(tree_contains(&tree.nodes, "src"));
+        assert!(tree_contains(&tree.nodes, "main.rs"));
+        assert!(tree_contains(&tree.nodes, ".gitignore"));
+        assert!(tree_contains(&tree.nodes, "visible.txt"));
+        assert!(!tree_contains(&tree.nodes, "ignored.txt"));
+        assert!(!tree_contains(&tree.nodes, "node_modules"));
+        assert!(!tree_contains(&tree.nodes, "target"));
+
+        let _ = fs::remove_dir_all(root);
     }
 }

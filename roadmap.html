@@ -102,6 +102,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">APP-SHELL &middot; Lean app shell: rail/editor/terminal layout</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Build the shape that replaces VS Code for this workflow: left file rail, main editor area, bottom/right terminal pane area. No marketing page, no extra IDE chrome.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: one project opens into a stable three-part shell with left file rail surface, editor surface, and bottom terminal panel; terminal resize uses the measured terminal panel; build/tests pass; real Tauri smoke launched Claude in the selected cwd.</p></details></div>
+<div class="card" data-track="files" data-id="FILE-RAIL" data-size="M" data-tier="rock" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">FILE-RAIL &middot; File explorer rail</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The VS Code feature Jason actually uses: a project tree on the left. Keep it dense, fast, and boring.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: backend lists the selected workspace with ignore::WalkBuilder, gitignore/app noisy-folder filtering, and an 8000-entry cap; frontend renders a dense React Arborist tree, directories expand/collapse, and files activate into the editor surface.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="workspace" data-id="LAST-WORKSPACE" data-size="S" data-tier="pebble" data-launch="v0">
@@ -116,18 +120,14 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="files" data-id="FILE-RAIL" data-size="M" data-tier="rock" data-launch="v0_5">
-<div class="hd"><span class="sz">M</span><span class="ttl">FILE-RAIL &middot; File explorer rail</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The VS Code feature Jason actually uses: a project tree on the left. Keep it dense, fast, and boring.</p>
-<details><summary>Done criteria</summary><p class="done">Rail lists workspace files/folders, expands/collapses directories, ignores noisy folders like node_modules/target by default, and opens files into the editor.</p></details></div>
-</div>
-</div>
-<div class="col" data-status="next"><h2 class="s-next">Next</h2>
-<div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
 <div class="card" data-track="files" data-id="FILE-WATCHER" data-size="M" data-tier="rock" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">FILE-WATCHER &middot; File watcher and ignore rules</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The rail must reflect real project changes without drowning in node_modules, target, build output, or ignored files.</p>
 <details><summary>Done criteria</summary><p class="done">File changes from agents or external tools update the rail; gitignore and app ignore rules are respected; large/noisy folders do not freeze the UI.</p></details></div>
+</div>
+</div>
+<div class="col" data-status="next"><h2 class="s-next">Next</h2>
+<div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
 <div class="card" data-track="files" data-id="EDITOR" data-size="L" data-tier="rock" data-launch="v0_5">
 <div class="hd"><span class="sz">L</span><span class="ttl">EDITOR &middot; CodeMirror file editor</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Open files from the rail into a real editor pane. This is not a decorative preview; it is the VS Code editor surface Jason actually uses.</p>

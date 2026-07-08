@@ -45,7 +45,7 @@ The whole app in one vertical slice. If this works, everything else is compositi
 This is where the clarified product point lands: not "terminal app with optional editor later," but the lean subset of VS Code Jason actually uses.
 
 - ~~**APP-SHELL:** stable three-part layout: file rail, editor area, terminal pane area.~~ **DONE 2026-07-08** — React shell now has a left file rail surface, main editor surface, and bottom terminal panel; terminal resize now uses the measured terminal panel instead of the whole window. Verified with `npm run build`, `npm test`, `cargo test`, `cargo build`, and real `npm run tauri dev` smoke launching `target/debug/agent-cli` with direct child `claude` in the repo cwd.
-- **FILE-RAIL:** dense project file explorer, with noisy folders ignored.
+- ~~**FILE-RAIL:** dense project file explorer, with noisy folders ignored.~~ **DONE 2026-07-08** — backend `list_workspace_tree` uses `ignore::WalkBuilder` with gitignore/app noisy-folder filtering; frontend renders a dense React Arborist tree in the left rail, supports directory expand/collapse, and activates files into the editor surface. Verified with `npm run build`, `npm test`, `cargo test` (11 tests, including noisy-dir/gitignore coverage), `cargo build`, and real `npm run tauri dev` smoke launching Claude in the selected cwd.
 - **FILE-WATCHER:** live rail updates, gitignore/app ignores, noisy-folder protection.
 - **RECENT-PROJECTS:** reopen active folders without a picker ceremony.
 - **EDITOR:** CodeMirror editor that opens files from the rail, edits, and saves.
@@ -95,6 +95,6 @@ This is where the clarified product point lands: not "terminal app with optional
 Deep-research (6 angles, 26 sources, 24/25 claims verified) locked a concrete library to each phase. Full report + citations: `docs/vision-to-reality-2026-07-08.html`. DECISIONS.md 2026-07-08.
 
 - **v0** — `portable-pty` (have it) + **Tauri Store plugin** for last-folder.
-- **v0.5** — rail: `ignore::WalkBuilder` (gitignore-free) + `notify`+`notify-debouncer-mini` (FSEvents, debounce or storm) + **React Arborist** (virtualized VS-Code-style tree). editor: **`@uiw/react-codemirror`** (CM6; ~300KB vs Monaco ~5–10MB; Monaco doesn't support webviews).
+- **v0.5** — rail: `ignore::WalkBuilder` (gitignore-aware) + `notify`+`notify-debouncer-mini` (FSEvents, debounce or storm) + **React Arborist** (virtualized VS-Code-style tree). editor: **`@uiw/react-codemirror`** (CM6; ~300KB vs Monaco ~5–10MB; Monaco doesn't support webviews).
 - **v1** — **Tauri SQL/SQLite plugin** when state turns relational; `Child`/`ChildKiller`/`ExitStatus` lifecycle; **measure the process ceiling** (4–8+ ptys) here. Terminal under load: **dirty-region IPC deltas first**, WebGL renderer only if measured IPC-bound (WebKit WebGL2 works — the "no WebGL2" blocker was refuted).
 - **v3** — Tauri CLI `.app` bundle, **ad-hoc sign** for local use; avoid `externalBin` sidecars (break notarization).

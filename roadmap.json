@@ -207,19 +207,19 @@
     {
       "id": "FILE-RAIL",
       "title": "File explorer rail",
-      "column": "now",
+      "column": "done",
       "tier": "rock",
       "track": "files",
       "size": "M",
       "launch": "v0_5",
       "blocker": true,
       "summary": "The VS Code feature Jason actually uses: a project tree on the left. Keep it dense, fast, and boring.",
-      "done": "Rail lists workspace files/folders, expands/collapses directories, ignores noisy folders like node_modules/target by default, and opens files into the editor."
+      "done": "Verified 2026-07-08: backend lists the selected workspace with ignore::WalkBuilder, gitignore/app noisy-folder filtering, and an 8000-entry cap; frontend renders a dense React Arborist tree, directories expand/collapse, and files activate into the editor surface."
     },
     {
       "id": "FILE-WATCHER",
       "title": "File watcher and ignore rules",
-      "column": "next",
+      "column": "now",
       "tier": "rock",
       "track": "files",
       "size": "M",

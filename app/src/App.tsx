@@ -4,6 +4,8 @@ import { listen } from "@tauri-apps/api/event";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
 import { load } from "@tauri-apps/plugin-store";
+import { Tree } from "react-arborist";
+import type { NodeRendererProps } from "react-arborist";
 import { isCellSelected, pointFromMouse, selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import "./App.css";
@@ -15,6 +17,14 @@ type Cell = { t: string; f: [number, number, number]; b: [number, number, number
 type Snapshot = { cols: number; rows: number; cx: number; cy: number; cvis: boolean; sb: number; cells: Cell[] };
 type LaunchProfile = { id: string; command: string; args: string[]; useLoginShell: boolean };
 type PaneExit = { command: string; code: number; message: string };
+type FileTreeNode = {
+  id: string;
+  name: string;
+  path: string;
+  kind: "directory" | "file";
+  children?: FileTreeNode[];
+};
+type FileTreeResponse = { root: string; nodes: FileTreeNode[]; truncated: boolean };
 
 const FONT_SIZE = 15;
 const FONT_FAMILY = "JetBrains Mono, monospace";
@@ -27,6 +37,7 @@ const DEFAULT_LAUNCH_PROFILE: LaunchProfile = {
 };
 
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
+const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value != null;
 
@@ -43,15 +54,84 @@ const normalizeLaunchProfile = (value: unknown): LaunchProfile => {
   };
 };
 
+function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<FileTreeNode>) {
+  const isDirectory = node.data.kind === "directory";
+  return (
+    <div ref={dragHandle} style={style} className={`file-node ${node.isSelected ? "file-node--selected" : ""}`}>
+      <span className="file-node__twisty" aria-hidden="true">
+        {isDirectory ? (node.isOpen ? "▾" : "▸") : ""}
+      </span>
+      <span className={`file-node__icon file-node__icon--${node.data.kind}`} aria-hidden="true">
+        {isDirectory ? "□" : "·"}
+      </span>
+      <span className="file-node__name" title={node.data.path}>
+        {node.data.name}
+      </span>
+    </div>
+  );
+}
+
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const terminalHostRef = useRef<HTMLDivElement>(null);
+  const railBodyRef = useRef<HTMLDivElement>(null);
   const latest = useRef<Snapshot | null>(null);
   const frame = useRef<number | null>(null);
   const metrics = useRef({ cw: 9, ch: 19 });
   const selection = useRef<SelectionRange | null>(null);
   const selecting = useRef(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
+  const [workspacePath, setWorkspacePath] = useState<string | null>(null);
+  const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
+  const [fileTreeError, setFileTreeError] = useState<string | null>(null);
+  const [fileTreeLoading, setFileTreeLoading] = useState(false);
+  const [fileTreeTruncated, setFileTreeTruncated] = useState(false);
+  const [railHeight, setRailHeight] = useState(240);
+  const [selectedFile, setSelectedFile] = useState<FileTreeNode | null>(null);
+
+  useEffect(() => {
+    const el = railBodyRef.current;
+    if (!el) return;
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setRailHeight(Math.max(120, Math.floor(rect.height)));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!workspacePath) {
+      setFileTree([]);
+      setFileTreeError(null);
+      setFileTreeTruncated(false);
+      setSelectedFile(null);
+      return;
+    }
+    let cancelled = false;
+    setFileTreeLoading(true);
+    setFileTreeError(null);
+    invoke<FileTreeResponse>("list_workspace_tree", { path: workspacePath })
+      .then((result) => {
+        if (cancelled) return;
+        setFileTree(result.nodes);
+        setFileTreeTruncated(result.truncated);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setFileTree([]);
+        setFileTreeError(String(err));
+        setFileTreeTruncated(false);
+      })
+      .finally(() => {
+        if (!cancelled) setFileTreeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspacePath]);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -151,6 +231,7 @@ function App() {
       try {
         await invoke("open_workspace", { path, profile: await launchProfile() });
         setLaunchError(null);
+        setWorkspacePath(path);
         sendResize(); // size the fresh pane to the current window
         return true;
       } catch (err) {
@@ -176,6 +257,8 @@ function App() {
     };
 
     const onKey = (e: KeyboardEvent) => {
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      if (target?.closest(".file-rail, .editor-area")) return;
       if (e.isComposing) return;
       // Cmd (meta) combos are app-level, not pty input. Let them through so the
       // native copy/paste clipboard events fire; handle the few we own explicitly.
@@ -304,17 +387,55 @@ function App() {
     <div className="app-shell">
       <aside className="file-rail" aria-label="Project files">
         <div className="panel-title">Files</div>
-        <div className="rail-empty">No folder tree</div>
+        <div className="rail-root" title={workspacePath ?? ""}>
+          {workspacePath ? basename(workspacePath) : "No workspace"}
+        </div>
+        <div ref={railBodyRef} className="rail-tree">
+          {fileTreeLoading ? <div className="rail-status">Loading…</div> : null}
+          {fileTreeError ? <div className="rail-status rail-status--error">{fileTreeError}</div> : null}
+          {!fileTreeLoading && !fileTreeError && workspacePath && fileTree.length === 0 ? (
+            <div className="rail-status">Empty folder</div>
+          ) : null}
+          {!workspacePath ? <div className="rail-status">Open a folder</div> : null}
+          {workspacePath && fileTree.length > 0 ? (
+            <Tree<FileTreeNode>
+              aria-label="Project files"
+              data={fileTree}
+              idAccessor="id"
+              childrenAccessor="children"
+              rowHeight={24}
+              height={railHeight}
+              width="100%"
+              indent={14}
+              overscanCount={8}
+              disableDrag
+              disableDrop
+              disableEdit
+              disableMultiSelection
+              selection={selectedFile?.id}
+              onActivate={(node) => {
+                if (node.data.kind === "directory") {
+                  node.toggle();
+                } else {
+                  setSelectedFile(node.data);
+                }
+              }}
+            >
+              {FileTreeRow}
+            </Tree>
+          ) : null}
+          {fileTreeTruncated ? <div className="rail-status rail-status--muted">Showing first 8000 entries</div> : null}
+        </div>
       </aside>
 
       <main className="workbench">
         <section className="editor-area" aria-label="Editor">
           <div className="editor-tabbar">
-            <div className="editor-tab">No file open</div>
+            <div className="editor-tab">{selectedFile ? selectedFile.name : "No file open"}</div>
           </div>
           <div className="editor-empty">
-            <div className="editor-empty-title">Select a file</div>
-            <div className="editor-empty-path">Project editor surface</div>
+            <div className="editor-empty-title">{selectedFile ? selectedFile.name : "Select a file"}</div>
+            <div className="editor-empty-path">{selectedFile ? selectedFile.path : "Project editor surface"}</div>
           </div>
         </section>
 
