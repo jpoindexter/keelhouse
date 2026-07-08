@@ -23,4 +23,4 @@ Keelhouse replaces the useful shell of VS Code for agent-driven coding: open pro
 
 ## Name Check
 
-Quick web sanity check on 2026-07-08 found no obvious active developer-tool or AI-terminal product named Keelhouse. Existing hits were unrelated fiction, historical references, hospitality/OCR noise, or game/mod content. This is product-name sanity, not legal trademark clearance.
+Quick web sanity check on 2026-07-09 found no obvious active developer-tool or AI-terminal product named Keelhouse. Existing hits were unrelated fiction, historical references, hospitality/housing/OCR noise, company records, or game/mod content. This is product-name sanity, not legal trademark clearance.

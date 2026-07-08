@@ -60,6 +60,14 @@ import {
   normalizeLaunchProfile,
 } from "./launchProfiles";
 import type { LaunchProfile } from "./launchProfiles";
+import {
+  composerHistoryAfterSubmit,
+  composerHistoryAt,
+  nextComposerHistoryIndex,
+  previousComposerHistoryIndex,
+  routeComposerDraft,
+} from "./agentComposer";
+import type { ComposerAppCommand } from "./agentComposer";
 import "./App.css";
 
 // SPIKE-2 frontend: paint the grid snapshots from the Rust backend onto a canvas,
@@ -203,6 +211,11 @@ function App() {
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
   const [draftDialogError, setDraftDialogError] = useState<string | null>(null);
   const [fileContextMenu, setFileContextMenu] = useState<FileContextMenu | null>(null);
+  const [composerDraft, setComposerDraft] = useState("");
+  const [composerSending, setComposerSending] = useState(false);
+  const [composerError, setComposerError] = useState<string | null>(null);
+  const [composerHistory, setComposerHistory] = useState<string[]>([]);
+  const [composerHistoryIndex, setComposerHistoryIndex] = useState<number | null>(null);
   const editorDirty = selectedFile != null && editorText !== savedEditorText;
   const dirtyTabPaths = useMemo(
     () => dirtyEditorTabPaths(editorTabs, editorBuffersRef.current, selectedFile?.path ?? null, editorDirty),
@@ -389,6 +402,88 @@ function App() {
     const dir = await open({ directory: true });
     if (typeof dir !== "string") return;
     await requestOpenWorkspace(dir);
+  };
+
+  const interruptActivePane = async () => {
+    setComposerError(null);
+    await invoke("send_key", { code: "KeyC", text: null, shift: false, alt: false, ctrl: true, sup: false });
+  };
+
+  const sendEnterToActivePane = async () => {
+    await invoke("send_key", { code: "Enter", text: null, shift: false, alt: false, ctrl: false, sup: false });
+  };
+
+  const runComposerAppCommand = async (command: ComposerAppCommand): Promise<boolean> => {
+    if (command === "save") {
+      if (!selectedFile) {
+        setComposerError("No editor file is selected.");
+        return false;
+      }
+      const ok = await saveEditorFile();
+      if (!ok) {
+        setComposerError("Save failed. The editor recovery panel has the details.");
+        return false;
+      }
+      return true;
+    }
+    if (command === "find") {
+      if (!selectedFile) {
+        setComposerError("Open a file before using Find.");
+        return false;
+      }
+      openEditorSearch();
+      return true;
+    }
+    if (command === "open-folder") {
+      await pickWorkspace();
+      return true;
+    }
+    if (command === "clear-terminal") {
+      await invoke("send_key", { code: "KeyL", text: null, shift: false, alt: false, ctrl: true, sup: false });
+      return true;
+    }
+    return false;
+  };
+
+  const submitComposerDraft = async () => {
+    if (composerSending) return;
+    const route = routeComposerDraft(composerDraft);
+    if (route.kind === "empty") return;
+    setComposerSending(true);
+    setComposerError(null);
+    try {
+      if (route.kind === "pty") {
+        if (!workspacePathRef.current) {
+          setComposerError("Open a workspace before sending to an agent.");
+          return;
+        }
+        await invoke("paste", { text: route.text });
+        await sendEnterToActivePane();
+      } else {
+        const ok = await runComposerAppCommand(route.command);
+        if (!ok) return;
+      }
+      setComposerHistory((history) => composerHistoryAfterSubmit(history, composerDraft));
+      setComposerHistoryIndex(null);
+      setComposerDraft("");
+    } catch (err) {
+      setComposerError(String(err));
+    } finally {
+      setComposerSending(false);
+    }
+  };
+
+  const showPreviousComposerHistory = () => {
+    const nextIndex = previousComposerHistoryIndex(composerHistory, composerHistoryIndex);
+    if (nextIndex == null) return;
+    setComposerHistoryIndex(nextIndex);
+    setComposerDraft(composerHistoryAt(composerHistory, nextIndex));
+  };
+
+  const showNextComposerHistory = () => {
+    const nextIndex = nextComposerHistoryIndex(composerHistory, composerHistoryIndex);
+    setComposerHistoryIndex(nextIndex);
+    setComposerDraft(nextIndex == null ? "" : composerHistoryAt(composerHistory, nextIndex));
   };
 
   const switchLaunchProfile = async (profile: LaunchProfile) => {
@@ -983,7 +1078,7 @@ function App() {
 
     const onKey = (e: KeyboardEvent) => {
       const target = e.target instanceof HTMLElement ? e.target : null;
-      if (target?.closest(".file-rail, .editor-area, .terminal-titlebar")) return;
+      if (target?.closest(".file-rail, .editor-area, .terminal-titlebar, .agent-composer")) return;
       if (e.isComposing) return;
       // Cmd (meta) combos are app-level, not pty input. Let them through so the
       // native copy/paste clipboard events fire; handle the few we own explicitly.
@@ -1364,6 +1459,53 @@ function App() {
           </div>
           <div ref={terminalHostRef} className="terminal-host">
             <canvas ref={canvasRef} className="term" />
+          </div>
+          <div className="agent-composer" aria-label="Agent composer">
+            <div className="agent-composer__target" title={workspacePath ?? ""}>
+              <span>Target</span>
+              <strong>{launchProfile.label}</strong>
+              <span>{workspacePath ? basename(workspacePath) : "No workspace"}</span>
+              <span>single pane</span>
+            </div>
+            <textarea
+              className="agent-composer__input"
+              value={composerDraft}
+              rows={2}
+              placeholder="Send to selected agent. Use >save, >find, >open, or >clear for app actions."
+              disabled={composerSending}
+              onChange={(event) => {
+                setComposerDraft(event.currentTarget.value);
+                setComposerHistoryIndex(null);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void submitComposerDraft();
+                } else if (event.key === "Escape") {
+                  event.currentTarget.blur();
+                } else if (event.key === "ArrowUp" && !composerDraft && composerHistory.length > 0) {
+                  event.preventDefault();
+                  showPreviousComposerHistory();
+                } else if (event.key === "ArrowDown" && composerHistoryIndex != null) {
+                  event.preventDefault();
+                  showNextComposerHistory();
+                }
+              }}
+            />
+            <div className="agent-composer__actions">
+              <button
+                className="agent-composer__button"
+                type="button"
+                disabled={composerSending || !composerDraft.trim()}
+                onClick={() => void submitComposerDraft()}
+              >
+                {composerSending ? "Sending" : "Send"}
+              </button>
+              <button className="agent-composer__button" type="button" onClick={() => void interruptActivePane()}>
+                Stop
+              </button>
+            </div>
+            {composerError ? <div className="agent-composer__error">{composerError}</div> : null}
           </div>
         </section>
       </main>

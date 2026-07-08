@@ -398,9 +398,20 @@
       "done": "Verified 2026-07-09: terminal header exposes Claude, Codex, and Shell profiles; shows active command/mode details; successful changes restart the pane through open_workspace and persist to workspace.json; missing-command errors stay visible and do not overwrite the saved profile. Covered by npm build/test, cargo missing-command preflight tests, screenshot QA, selected/narrow visual inspection, and docs/local-state.md schema update."
     },
     {
+      "id": "PRODUCT-NAME-README",
+      "title": "Product name and README docs",
+      "column": "done",
+      "tier": "sand",
+      "track": "quality",
+      "size": "S",
+      "launch": "v0_5",
+      "summary": "Lock the user-facing product name and give contributors a clear README/doc map without renaming the repo/package slug prematurely.",
+      "done": "Product name is Keelhouse across PRD, README, product positioning, app metadata, generated roadmap, and docs index; repo/package/storage slug remains agent-cli until an explicit migration."
+    },
+    {
       "id": "AGENT-COMPOSER",
       "title": "Codex-style agent composer",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "core",
       "size": "M",

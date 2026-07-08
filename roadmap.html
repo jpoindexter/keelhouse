@@ -66,7 +66,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>Keelhouse</h1>
-<p class="meta">lean macOS workbench for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 68 slices &middot; 6 shipped</p>
+<p class="meta">lean macOS workbench for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat &middot; 69 slices &middot; 6 shipped</p>
 <p class="loop">Open project folder → inspect/edit files → preview web output → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat. Product name: Keelhouse; repo/package slug: agent-cli.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Terminal + process</span><span><i style="border-color:#5a4315;background:#171104"></i>Projects + sessions</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Files + editor</span><span><i style="border-color:#4c1d6f;background:#15091f"></i>Chrome + interaction</span><span><i style="border-color:#5f1f2d;background:#1d0b10"></i>Quality + shipping</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research &amp; spikes</span><span style="color:#f87171">🔒 launch blocker</span></div>
 <div class="filters">
@@ -180,6 +180,16 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">AGENT-PROFILES &middot; Agent command profiles</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Make Claude the default but stop hardcoding one command forever. Add simple profiles for Claude, Codex, and shell so the pane can launch the desired CLI.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: terminal header exposes Claude, Codex, and Shell profiles; shows active command/mode details; successful changes restart the pane through open_workspace and persist to workspace.json; missing-command errors stay visible and do not overwrite the saved profile. Covered by npm build/test, cargo missing-command preflight tests, screenshot QA, selected/narrow visual inspection, and docs/local-state.md schema update.</p></details></div>
+<div class="card" data-track="core" data-id="AGENT-COMPOSER" data-size="M" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-COMPOSER &middot; Codex-style agent composer</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Keep terminal panes as the trusted source-of-truth agent interface, but add a bottom Codex-style composer for sending prompts/instructions to the selected real agent pane or triggering app-owned actions.</p>
+<details><summary>Done criteria</summary><p class="done">Composer can target the selected Claude/Codex/shell pane, send multiline text safely through the real pty, show target project/session/pane context, stop/interrupt the pane, retain draft/history, handle Enter/Shift+Enter/Escape predictably, and run app actions via command palette routing; it never replaces the underlying terminal transcript.</p></details></div>
+</div>
+<div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
+<div class="card" data-track="quality" data-id="PRODUCT-NAME-README" data-size="S" data-tier="sand" data-launch="v0_5">
+<div class="hd"><span class="sz">S</span><span class="ttl">PRODUCT-NAME-README &middot; Product name and README docs</span><span class="lens l-quality">Quality + shipping</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Lock the user-facing product name and give contributors a clear README/doc map without renaming the repo/package slug prematurely.</p>
+<details><summary>Done criteria</summary><p class="done">Product name is Keelhouse across PRD, README, product positioning, app metadata, generated roadmap, and docs index; repo/package/storage slug remains agent-cli until an explicit migration.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
@@ -240,10 +250,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
-<div class="card" data-track="core" data-id="AGENT-COMPOSER" data-size="M" data-tier="pebble" data-launch="v0_5">
-<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-COMPOSER &middot; Codex-style agent composer</span><span class="lens l-core">Terminal + process</span></div>
-<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Keep terminal panes as the trusted source-of-truth agent interface, but add a bottom Codex-style composer for sending prompts/instructions to the selected real agent pane or triggering app-owned actions.</p>
-<details><summary>Done criteria</summary><p class="done">Composer can target the selected Claude/Codex/shell pane, send multiline text safely through the real pty, show target project/session/pane context, stop/interrupt the pane, retain draft/history, handle Enter/Shift+Enter/Escape predictably, and run app actions via command palette routing; it never replaces the underlying terminal transcript.</p></details></div>
 <div class="card" data-track="ui" data-id="SHORTCUTS" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">SHORTCUTS &middot; VS Code shortcut baseline</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Keep VS Code muscle memory for the supported workflow: open folder, quick open/search, save, close, copy/paste, terminal focus, new pane, split/switch pane, and command palette.</p>

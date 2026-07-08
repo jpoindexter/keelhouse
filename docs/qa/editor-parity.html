@@ -14,7 +14,7 @@
       .qa-note {
         position: fixed;
         right: 12px;
-        bottom: 12px;
+        top: 42px;
         z-index: 20;
         border: 1px solid #3a3a3a;
         border-radius: 6px;
@@ -217,6 +217,19 @@
           </div>
           <div class="terminal-host">
             <canvas class="term" width="960" height="260"></canvas>
+          </div>
+          <div class="agent-composer" aria-label="Agent composer">
+            <div class="agent-composer__target" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli">
+              <span>Target</span>
+              <strong>Claude</strong>
+              <span>agent cli</span>
+              <span>single pane</span>
+            </div>
+            <textarea class="agent-composer__input" rows="2" placeholder="Send to selected agent. Use >save, >find, >open, or >clear for app actions.">Summarize the selected file and propose the next edit.</textarea>
+            <div class="agent-composer__actions">
+              <button class="agent-composer__button" type="button">Send</button>
+              <button class="agent-composer__button" type="button">Stop</button>
+            </div>
           </div>
         </section>
       </main>

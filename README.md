@@ -2,7 +2,7 @@
 
 Keelhouse is a lean native macOS workbench for real CLI coding agents. It keeps the VS Code parts Jason actually uses: project/session rail, file explorer, robust editor, browser preview, and real Claude/Codex terminal panes. It drops extension/plugin bloat, debugger/IDE sprawl, and account/chat chrome.
 
-The repo/package slug remains `agent-cli` for now; **Keelhouse** is the product name.
+The repo/package slug remains `agent-cli` for now; **Keelhouse** is the locked product name.
 
 ## Product Positioning
 
@@ -62,6 +62,7 @@ Zig must stay pinned to `0.15.2`; Homebrew's default `0.16` breaks the Ghostty b
 
 | Document | Use |
 |---|---|
+| `docs/README.md` | Documentation index and product naming note |
 | `PRD.md` | Product requirements and scope boundaries |
 | `ROADMAP.md` | Human-readable roadmap and execution discipline |
 | `STATE.md` | Current handoff, verified slices, next step |
