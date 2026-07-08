@@ -266,18 +266,18 @@
     {
       "id": "ACTIVE-FILE-SYNC",
       "title": "Active file sync across rail and editor",
-      "column": "now",
+      "column": "done",
       "tier": "pebble",
       "track": "files",
       "size": "S",
       "launch": "v0_5",
       "summary": "The user must always know which file is active. File rail selection, editor tab title, path bar, watcher refreshes, and workspace restore need to agree.",
-      "done": "Opening a file highlights and reveals it in the rail, editor title/path match the selected file, watcher refresh keeps the same active file highlighted when it still exists, missing active files show a clear stale/deleted state, and relaunch restores the active file metadata without pointing at the wrong file."
+      "done": "Verified 2026-07-08: activeFileByWorkspace persists by canonical workspace root; relaunch restores the saved file into rail selection, editor tab/path, and content; stale paths are cleared; watcher refresh reconciles the selected file to the fresh tree node when it still exists and preserves the missing-file warning when it disappears. Native screenshot proof: docs/qa/active-file-sync/restore.png."
     },
     {
       "id": "EDITOR-VIEW-STATE",
       "title": "Per-file editor view state",
-      "column": "next",
+      "column": "now",
       "tier": "pebble",
       "track": "files",
       "size": "S",

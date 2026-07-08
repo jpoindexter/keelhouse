@@ -132,14 +132,18 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">RECENT-PROJECTS &middot; Recent projects switcher</span><span class="lens l-workspace">Projects + sessions</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Opening the same active projects repeatedly should be cheap, not a folder-picker ceremony every time.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: recentFolders persists, dedupes, caps, and prunes missing folders; the rail lists recent projects with an explicit Switch affordance; real Tauri smoke switched from Keelhouse to postures and persisted postures as the active folder.</p></details></div>
+<div class="card" data-track="files" data-id="ACTIVE-FILE-SYNC" data-size="S" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">S</span><span class="ttl">ACTIVE-FILE-SYNC &middot; Active file sync across rail and editor</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The user must always know which file is active. File rail selection, editor tab title, path bar, watcher refreshes, and workspace restore need to agree.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: activeFileByWorkspace persists by canonical workspace root; relaunch restores the saved file into rail selection, editor tab/path, and content; stale paths are cleared; watcher refresh reconciles the selected file to the fresh tree node when it still exists and preserves the missing-file warning when it disappears. Native screenshot proof: docs/qa/active-file-sync/restore.png.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
-<div class="card" data-track="files" data-id="ACTIVE-FILE-SYNC" data-size="S" data-tier="pebble" data-launch="v0_5">
-<div class="hd"><span class="sz">S</span><span class="ttl">ACTIVE-FILE-SYNC &middot; Active file sync across rail and editor</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">The user must always know which file is active. File rail selection, editor tab title, path bar, watcher refreshes, and workspace restore need to agree.</p>
-<details><summary>Done criteria</summary><p class="done">Opening a file highlights and reveals it in the rail, editor title/path match the selected file, watcher refresh keeps the same active file highlighted when it still exists, missing active files show a clear stale/deleted state, and relaunch restores the active file metadata without pointing at the wrong file.</p></details></div>
+<div class="card" data-track="files" data-id="EDITOR-VIEW-STATE" data-size="S" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-VIEW-STATE &middot; Per-file editor view state</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Switching files should not throw away the user's place. Cursor, selection, scroll, and focus are part of the editor experience.</p>
+<details><summary>Done criteria</summary><p class="done">Within a session, each open file restores cursor position, selection, scroll position, and editor focus after switching away and back. Saved state survives tree refreshes and does not jump on save.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
@@ -206,10 +210,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
-<div class="card" data-track="files" data-id="EDITOR-VIEW-STATE" data-size="S" data-tier="pebble" data-launch="v0_5">
-<div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-VIEW-STATE &middot; Per-file editor view state</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Switching files should not throw away the user's place. Cursor, selection, scroll, and focus are part of the editor experience.</p>
-<details><summary>Done criteria</summary><p class="done">Within a session, each open file restores cursor position, selection, scroll position, and editor focus after switching away and back. Saved state survives tree refreshes and does not jump on save.</p></details></div>
 <div class="card" data-track="files" data-id="SAVE-ERROR-RECOVERY" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">SAVE-ERROR-RECOVERY &middot; Save failure recovery</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Save failures need a recovery flow, not only a red message. The buffer must remain safe and the next action must be obvious.</p>

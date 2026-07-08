@@ -6,6 +6,7 @@ import {
   fileTreeContainsPath,
   languageLabelForPath,
   pathBreadcrumbs,
+  reconcileActiveFileNode,
 } from "./editorState";
 
 describe("editorState helpers", () => {
@@ -29,6 +30,15 @@ describe("editorState helpers", () => {
       path: "/work/project/src/App.tsx",
       kind: "file",
     });
+  });
+
+  it("reconciles active files to fresh tree nodes and keeps stale nodes when missing", () => {
+    type TestNode = { path: string; name?: string; children?: TestNode[] };
+    const previous = { path: "/work/project/src/App.tsx", name: "old" };
+    const fresh = { path: "/work/project/src/App.tsx", name: "fresh" };
+    expect(reconcileActiveFileNode<TestNode>([{ path: "/work/project/src", children: [fresh] }], previous)).toBe(fresh);
+    expect(reconcileActiveFileNode([], previous)).toBe(previous);
+    expect(reconcileActiveFileNode<TestNode>([{ path: "/work/project/src/Other.tsx" }], previous)).toBe(previous);
   });
 
   it("reports one-based cursor positions", () => {

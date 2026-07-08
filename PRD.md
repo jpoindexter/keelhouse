@@ -97,7 +97,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 
 - [x] File rail lists the workspace with ignores and live updates.
 - [ ] Editor opens source files with line numbers, syntax highlighting, find/replace, dirty state, tabs, path context, save, and external-change warnings.
-- [ ] Editor navigation preserves active-file orientation: rail highlight/reveal, editor title/path, watcher refresh, and workspace restore stay synchronized.
+- [x] Editor navigation preserves active-file orientation: rail highlight/reveal, editor title/path, watcher refresh, and workspace restore stay synchronized.
 - [ ] Unsaved editor work is protected: per-file view state is restored, dirty drafts survive file/project switches, save failures keep the buffer, and recovery actions are explicit.
 - [ ] Editor parity is screenshot-verified for selected, dirty, save-error, no-file, and narrow-width states.
 - [ ] Terminal pane remains robust and responsive while browsing/editing files.

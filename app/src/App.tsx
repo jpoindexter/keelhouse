@@ -30,6 +30,7 @@ import {
   fileTreeContainsPath,
   languageLabelForPath,
   pathBreadcrumbs,
+  reconcileActiveFileNode,
 } from "./editorState";
 import type { CursorPosition, EditorViewState } from "./editorState";
 import "./App.css";
@@ -207,6 +208,12 @@ function App() {
     if (!selectedFile) return;
     treeRef.current?.scrollTo(selectedFile.id, "smart");
   }, [selectedFile, visibleFileTree]);
+
+  useEffect(() => {
+    if (!selectedFile || fileTree.length === 0) return;
+    const syncedFile = reconcileActiveFileNode(fileTree, selectedFile);
+    if (syncedFile !== selectedFile) setSelectedFile(syncedFile);
+  }, [fileTree, selectedFile]);
 
   const resetEditor = () => {
     editorViewRef.current = null;

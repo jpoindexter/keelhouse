@@ -61,6 +61,11 @@ export const findFileTreeNode = <T extends TreePathNode>(nodes: T[], path: strin
   return null;
 };
 
+export const reconcileActiveFileNode = <T extends TreePathNode>(nodes: T[], selected: T | null): T | null => {
+  if (!selected) return null;
+  return findFileTreeNode(nodes, selected.path) ?? selected;
+};
+
 export const languageLabelForPath = (path: string): string => {
   const ext = basename(path).split(".").pop()?.toLowerCase() ?? "";
   switch (ext) {
