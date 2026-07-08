@@ -219,19 +219,19 @@
     {
       "id": "FILE-WATCHER",
       "title": "File watcher and ignore rules",
-      "column": "now",
+      "column": "done",
       "tier": "rock",
       "track": "files",
       "size": "M",
       "launch": "v0_5",
       "blocker": true,
       "summary": "The rail must reflect real project changes without drowning in node_modules, target, build output, or ignored files.",
-      "done": "File changes from agents or external tools update the rail; gitignore and app ignore rules are respected; large/noisy folders do not freeze the UI."
+      "done": "Verified 2026-07-08: debounced notify watcher emits workspace-tree-changed for relevant paths only; frontend refreshes the rail from list_workspace_tree; noisy paths are unit-tested; visual smoke showed a newly created top-level directory appear in the rail after launch."
     },
     {
       "id": "RECENT-PROJECTS",
       "title": "Recent projects switcher",
-      "column": "next",
+      "column": "now",
       "tier": "pebble",
       "track": "workspace",
       "size": "S",

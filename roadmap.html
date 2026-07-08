@@ -106,6 +106,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">FILE-RAIL &middot; File explorer rail</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The VS Code feature Jason actually uses: a project tree on the left. Keep it dense, fast, and boring.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: backend lists the selected workspace with ignore::WalkBuilder, gitignore/app noisy-folder filtering, and an 8000-entry cap; frontend renders a dense React Arborist tree, directories expand/collapse, and files activate into the editor surface.</p></details></div>
+<div class="card" data-track="files" data-id="FILE-WATCHER" data-size="M" data-tier="rock" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">FILE-WATCHER &middot; File watcher and ignore rules</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The rail must reflect real project changes without drowning in node_modules, target, build output, or ignored files.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: debounced notify watcher emits workspace-tree-changed for relevant paths only; frontend refreshes the rail from list_workspace_tree; noisy paths are unit-tested; visual smoke showed a newly created top-level directory appear in the rail after launch.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="workspace" data-id="LAST-WORKSPACE" data-size="S" data-tier="pebble" data-launch="v0">
@@ -119,11 +123,11 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </div>
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
-<div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="files" data-id="FILE-WATCHER" data-size="M" data-tier="rock" data-launch="v0_5">
-<div class="hd"><span class="sz">M</span><span class="ttl">FILE-WATCHER &middot; File watcher and ignore rules</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The rail must reflect real project changes without drowning in node_modules, target, build output, or ignored files.</p>
-<details><summary>Done criteria</summary><p class="done">File changes from agents or external tools update the rail; gitignore and app ignore rules are respected; large/noisy folders do not freeze the UI.</p></details></div>
+<div class="tg t-pebble"><h3>Pebbles · features</h3>
+<div class="card" data-track="workspace" data-id="RECENT-PROJECTS" data-size="S" data-tier="pebble" data-launch="v0_5">
+<div class="hd"><span class="sz">S</span><span class="ttl">RECENT-PROJECTS &middot; Recent projects switcher</span><span class="lens l-workspace">Projects + sessions</span></div>
+<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Opening the same active projects repeatedly should be cheap, not a folder-picker ceremony every time.</p>
+<details><summary>Done criteria</summary><p class="done">The app lists recent project folders, reopens one quickly, and prunes missing paths without blocking startup.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
@@ -162,10 +166,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
-<div class="card" data-track="workspace" data-id="RECENT-PROJECTS" data-size="S" data-tier="pebble" data-launch="v0_5">
-<div class="hd"><span class="sz">S</span><span class="ttl">RECENT-PROJECTS &middot; Recent projects switcher</span><span class="lens l-workspace">Projects + sessions</span></div>
-<div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Opening the same active projects repeatedly should be cheap, not a folder-picker ceremony every time.</p>
-<details><summary>Done criteria</summary><p class="done">The app lists recent project folders, reopens one quickly, and prunes missing paths without blocking startup.</p></details></div>
 <div class="card" data-track="files" data-id="EDITOR-FIND-REPLACE" data-size="S" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">S</span><span class="ttl">EDITOR-FIND-REPLACE &middot; Editor find and replace</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Basic file editing needs local find/replace; otherwise the editor is too thin to replace the VS Code surface Jason actually uses.</p>

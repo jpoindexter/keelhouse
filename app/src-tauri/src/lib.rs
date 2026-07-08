@@ -16,6 +16,11 @@ use libghostty_vt::style::{RgbColor, StyleColor};
 use libghostty_vt::terminal::{
     Mode, Options, Point, PointCoordinate, PointSpace, ScrollViewport, Terminal,
 };
+use notify_debouncer_mini::{
+    new_debouncer,
+    notify::{RecommendedWatcher, RecursiveMode},
+    DebounceEventResult, Debouncer,
+};
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, PtySize};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -24,6 +29,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Mutex;
+use std::time::Duration;
 use tauri::menu::{Menu, MenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -80,6 +86,7 @@ struct Pane {
 /// live in the terminal thread); only the `Send` channel sender crosses the boundary.
 struct PtyState {
     pane: Mutex<Option<Pane>>,
+    watcher: Mutex<Option<WorkspaceWatcher>>,
 }
 
 impl PtyState {
@@ -118,6 +125,17 @@ struct PaneExit {
     command: String,
     code: u32,
     message: String,
+}
+
+struct WorkspaceWatcher {
+    _debouncer: Debouncer<RecommendedWatcher>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceTreeChanged {
+    root: String,
+    count: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -566,6 +584,53 @@ fn is_noisy_dir(name: &str) -> bool {
     )
 }
 
+fn watch_event_is_relevant(root: &str, path: &Path) -> bool {
+    let root = Path::new(root);
+    let rel = match path.strip_prefix(root) {
+        Ok(rel) => rel,
+        Err(_) => return false,
+    };
+    !rel.components().any(|component| {
+        component
+            .as_os_str()
+            .to_str()
+            .map(is_noisy_dir)
+            .unwrap_or(false)
+    })
+}
+
+fn start_workspace_watcher(app: AppHandle, root: String) -> Result<WorkspaceWatcher, String> {
+    let event_root = root.clone();
+    let mut debouncer = new_debouncer(
+        Duration::from_millis(250),
+        move |result: DebounceEventResult| {
+            if let Ok(events) = result {
+                let relevant_count = events
+                    .iter()
+                    .filter(|event| watch_event_is_relevant(&event_root, &event.path))
+                    .count();
+                if relevant_count > 0 {
+                    let _ = app.emit(
+                        "workspace-tree-changed",
+                        WorkspaceTreeChanged {
+                            root: event_root.clone(),
+                            count: relevant_count,
+                        },
+                    );
+                }
+            }
+        },
+    )
+    .map_err(|err| format!("Could not start workspace watcher: {err}"))?;
+    debouncer
+        .watcher()
+        .watch(Path::new(&root), RecursiveMode::Recursive)
+        .map_err(|err| format!("Could not watch workspace folder {root}: {err}"))?;
+    Ok(WorkspaceWatcher {
+        _debouncer: debouncer,
+    })
+}
+
 /// Frontend -> filesystem: list a workspace tree using gitignore/app ignore rules.
 #[tauri::command]
 fn list_workspace_tree(path: String) -> Result<FileTreeResponse, String> {
@@ -619,6 +684,23 @@ fn list_workspace_tree(path: String) -> Result<FileTreeResponse, String> {
         nodes: tree.into_children(),
         truncated,
     })
+}
+
+/// Frontend -> filesystem: start or replace the live watcher for the current
+/// workspace. The watcher only emits a refresh signal; `list_workspace_tree` stays
+/// the single source of truth for rail data.
+#[tauri::command]
+fn watch_workspace_tree(
+    app: AppHandle,
+    state: State<PtyState>,
+    path: String,
+) -> Result<(), String> {
+    let root = validate_workspace_path(&path)?;
+    let watcher = start_workspace_watcher(app, root)?;
+    if let Ok(mut guard) = state.watcher.lock() {
+        guard.replace(watcher);
+    }
+    Ok(())
 }
 
 /// Open (or switch to) a workspace folder: spawn a fresh pane in `path` using the
@@ -973,6 +1055,7 @@ pub fn run() {
             // startup, which spawns the first pane via `open_workspace`.
             app.manage(PtyState {
                 pane: Mutex::new(None),
+                watcher: Mutex::new(None),
             });
             Ok(())
         })
@@ -982,7 +1065,8 @@ pub fn run() {
             resize_pty,
             scroll_pty,
             open_workspace,
-            list_workspace_tree
+            list_workspace_tree,
+            watch_workspace_tree
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -1151,5 +1235,26 @@ mod tests {
         assert!(!tree_contains(&tree.nodes, "target"));
 
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn watch_event_filter_ignores_noisy_tree_paths() {
+        let root = "/tmp/agent-cli-watch-root";
+        assert!(watch_event_is_relevant(
+            root,
+            Path::new("/tmp/agent-cli-watch-root/src/main.rs")
+        ));
+        assert!(!watch_event_is_relevant(
+            root,
+            Path::new("/tmp/agent-cli-watch-root/node_modules/pkg/index.js")
+        ));
+        assert!(!watch_event_is_relevant(
+            root,
+            Path::new("/tmp/agent-cli-watch-root/target/debug/app")
+        ));
+        assert!(!watch_event_is_relevant(
+            root,
+            Path::new("/tmp/other-root/src/main.rs")
+        ));
     }
 }

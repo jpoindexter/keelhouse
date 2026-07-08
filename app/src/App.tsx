@@ -25,6 +25,7 @@ type FileTreeNode = {
   children?: FileTreeNode[];
 };
 type FileTreeResponse = { root: string; nodes: FileTreeNode[]; truncated: boolean };
+type WorkspaceTreeChanged = { root: string; count: number };
 
 const FONT_SIZE = 15;
 const FONT_FAMILY = "JetBrains Mono, monospace";
@@ -75,6 +76,7 @@ function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const terminalHostRef = useRef<HTMLDivElement>(null);
   const railBodyRef = useRef<HTMLDivElement>(null);
+  const workspacePathRef = useRef<string | null>(null);
   const latest = useRef<Snapshot | null>(null);
   const frame = useRef<number | null>(null);
   const metrics = useRef({ cw: 9, ch: 19 });
@@ -86,8 +88,13 @@ function App() {
   const [fileTreeError, setFileTreeError] = useState<string | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
   const [fileTreeTruncated, setFileTreeTruncated] = useState(false);
+  const [treeRefreshNonce, setTreeRefreshNonce] = useState(0);
   const [railHeight, setRailHeight] = useState(240);
   const [selectedFile, setSelectedFile] = useState<FileTreeNode | null>(null);
+
+  useEffect(() => {
+    workspacePathRef.current = workspacePath;
+  }, [workspacePath]);
 
   useEffect(() => {
     const el = railBodyRef.current;
@@ -116,6 +123,7 @@ function App() {
     invoke<FileTreeResponse>("list_workspace_tree", { path: workspacePath })
       .then((result) => {
         if (cancelled) return;
+        workspacePathRef.current = result.root;
         setFileTree(result.nodes);
         setFileTreeTruncated(result.truncated);
       })
@@ -131,7 +139,29 @@ function App() {
     return () => {
       cancelled = true;
     };
+  }, [workspacePath, treeRefreshNonce]);
+
+  useEffect(() => {
+    if (!workspacePath) return;
+    let cancelled = false;
+    invoke("watch_workspace_tree", { path: workspacePath }).catch((err) => {
+      if (!cancelled) setFileTreeError(`Live file watcher unavailable: ${err}`);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [workspacePath]);
+
+  useEffect(() => {
+    const unlisten = listen<WorkspaceTreeChanged>("workspace-tree-changed", (event) => {
+      if (workspacePathRef.current && event.payload.root === workspacePathRef.current) {
+        setTreeRefreshNonce((value) => value + 1);
+      }
+    });
+    return () => {
+      unlisten.then((stop) => stop());
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current!;

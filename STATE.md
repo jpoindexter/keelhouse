@@ -1,10 +1,10 @@
-# STATE — agent cli (handoff 2026-07-08 18:14)
+# STATE — agent cli (handoff 2026-07-08 18:23)
 
 Mirror of `~/Documents/Obsidian Vault/ops/handoffs/handoff-2026-07-08-1519-agent-cli-folder-picker.md`. Overwrite on each handoff.
 
 ## Goal
 
-Build **agent cli** — a native macOS Tauri 2 app that replaces Jason's VS Code workflow (file-explorer rail + CodeMirror editor + real `claude`/`codex` CLI terminal panes), built on Ghostty's terminal engine. Current work: starting the v0.5 file watcher.
+Build **agent cli** — a native macOS Tauri 2 app that replaces Jason's VS Code workflow (file-explorer rail + CodeMirror editor + real `claude`/`codex` CLI terminal panes), built on Ghostty's terminal engine. Current work: starting recent-projects switching.
 
 ## Done
 
@@ -19,16 +19,17 @@ Build **agent cli** — a native macOS Tauri 2 app that replaces Jason's VS Code
 - **DATA-STORAGE (VERIFIED 2026-07-08):** `docs/local-state.md` documents the v0/v0.5 Tauri Store path (`~/Library/Application Support/com.jasonpoindexter.agent-cli/workspace.json`), current schema, reversible reset command, and default `launchProfile` repair path. `roadmap.html` rebuilt from `roadmap.json`.
 - **APP-SHELL (VERIFIED 2026-07-08):** frontend now has the stable VS Code-shell replacement shape: left file rail surface, main editor surface, and bottom agent terminal panel. Terminal resize now measures the terminal panel instead of the full window, so the pty grid matches the visible pane. Verified with `npm run build`, `npm test`, `cargo test`, `cargo build`, and real `npm run tauri dev` smoke launching `target/debug/agent-cli` with direct child `claude` in cwd `/Users/jasonpoindexter/Documents/GitHub/apps/agent cli`.
 - **FILE-RAIL (VERIFIED 2026-07-08):** backend command `list_workspace_tree(path)` lists the selected workspace with `ignore::WalkBuilder`, `.require_git(false)`, app noisy-folder filtering (`node_modules`, `target`, `dist`, `.git`, etc.), and an 8000-entry cap. Frontend renders the left rail with React Arborist, directory expand/collapse, loading/error/empty states, and file activation into the editor surface. Verified with `npm run build`, `npm test`, `cargo test` (11 tests, including `.gitignore`/noisy-dir coverage), `cargo build`, and real `npm run tauri dev` smoke launching `target/debug/agent-cli` with direct child `claude` in cwd `/Users/jasonpoindexter/Documents/GitHub/apps/agent cli`.
+- **FILE-WATCHER (VERIFIED 2026-07-08):** backend command `watch_workspace_tree(path)` owns one debounced `notify`/`notify-debouncer-mini` watcher per selected workspace, filters noisy paths before emitting `workspace-tree-changed`, and frontend reloads the rail from `list_workspace_tree`. Verified with `npm run build`, `npm test`, `cargo test` (12 tests, including watcher noisy-path filtering), `cargo build`, and real `npm run tauri dev` visual smoke: creating `aaa-agent-cli-watch-smoke-dir` after launch appeared in the rail; the smoke directory was removed afterward.
 
 ## In progress
 
-**Next active slice: FILE-WATCHER.** FILE-RAIL is verified. Add live file tree refresh for changes made by agents/external tools, using the planned `notify` + `notify-debouncer-mini` stack and keeping noisy folders protected.
+**Next active slice: RECENT-PROJECTS.** File rail/watch are verified. Add a small recent-projects list so switching active workspaces does not require the native folder picker every time.
 
 ## Next (ordered)
 
-1. **FILE-WATCHER:** live rail updates, gitignore/app ignores, noisy-folder protection.
-2. **RECENT-PROJECTS:** reopen active folders without a picker ceremony.
-3. **EDITOR:** CodeMirror editor via `@uiw/react-codemirror`.
+1. **RECENT-PROJECTS:** reopen active folders without a picker ceremony.
+2. **EDITOR:** CodeMirror editor via `@uiw/react-codemirror`.
+3. **EDITOR-FIND-REPLACE:** local find/replace inside files.
 
 ## Gotchas
 
@@ -37,7 +38,7 @@ Build **agent cli** — a native macOS Tauri 2 app that replaces Jason's VS Code
 - **Data flow:** pty bytes → `Terminal::vt_write` → `snapshot()` (full grid, cells w/ fg/bg/bold) → Tauri event `"grid"` → Canvas 2D. Input: JS `send_key`/`paste`/`resize_pty` commands → current pane's channel → terminal thread encodes + writes. Full-grid snapshots per frame (rAF-coalesced, not dirty-diffed yet — fine until fast output stutters).
 - **Key files:**
   - `app/src-tauri/src/lib.rs` — backend: `spawn_pane()`, `open_workspace()`, `handle_key()`, `handle_paste()`, `snapshot()`, `key_from_code()`, `PtyState{pane: Mutex<Option<Pane>>}`, menu, tests.
-  - `app/src-tauri/src/lib.rs` — file rail command: `list_workspace_tree()`, `FileTreeBuilder`, `is_noisy_dir()`.
+  - `app/src-tauri/src/lib.rs` — file rail/watch commands: `list_workspace_tree()`, `watch_workspace_tree()`, `FileTreeBuilder`, `is_noisy_dir()`, `watch_event_is_relevant()`.
   - `app/src/App.tsx` — app shell layout, file rail rendering, canvas render loop, input encoding, workspace init (`initWorkspace`/`pickFolder`), selection wiring.
   - `app/src/selection.ts` — mouse selection math (`pointFromMouse`, `isCellSelected`, `selectionToText`).
   - `spike-ghostty-vt/` — original parsing-only spike + Zig-pin notes.
@@ -47,4 +48,4 @@ Build **agent cli** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 ## Continuation prompt (for Codex)
 
-Continue agent cli: read `STATE.md`, `ROADMAP.md`, and `DECISIONS.md` at the repo root, then resume at "Next" step 1 — FILE-WATCHER. v0 is verified, and v0.5 has APP-SHELL + FILE-RAIL verified. All builds/runs need `PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH"` (zig 0.15.2 pin). Respect the Execution discipline in ROADMAP: one slice at a time, app runnable every commit, measure-don't-preempt.
+Continue agent cli: read `STATE.md`, `ROADMAP.md`, and `DECISIONS.md` at the repo root, then resume at "Next" step 1 — RECENT-PROJECTS. v0 is verified, and v0.5 has APP-SHELL + FILE-RAIL + FILE-WATCHER verified. All builds/runs need `PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH"` (zig 0.15.2 pin). Respect the Execution discipline in ROADMAP: one slice at a time, app runnable every commit, measure-don't-preempt.
