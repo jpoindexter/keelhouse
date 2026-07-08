@@ -599,6 +599,28 @@
       "done": "Settings can configure Claude/Codex command profiles, provider/API credentials via OS-safe storage, MCP server entries, env vars, default models, permission policy, and validation checks that explain missing auth or broken connections."
     },
     {
+      "id": "SOURCE-CONTROL-CONNECTIONS",
+      "title": "GitHub and GitLab connections",
+      "column": "later",
+      "tier": "rock",
+      "track": "files",
+      "size": "M",
+      "launch": "v2",
+      "summary": "Local Git is not enough once agent work needs to move through PR/MR review. Add first-class source-hosting connections without becoming a full forge client.",
+      "done": "Settings detects `git`, `gh`, and `glab` auth health; supports GitHub, GitLab.com, and self-hosted GitLab remotes; opens repo/PR/MR/issue/pipeline links in browser preview or external browser; shows source-host status for the active repo; credentials are stored only through OS-safe storage."
+    },
+    {
+      "id": "INTEGRATIONS-POLICY",
+      "title": "Integration adapter policy",
+      "column": "later",
+      "tier": "sand",
+      "track": "quality",
+      "size": "S",
+      "launch": "v2",
+      "summary": "Define the allowed lane for other integrations so Bitbucket, Azure DevOps, Linear, Jira, Slack, or Discord do not turn the app into a plugin hub.",
+      "done": "Documented integration policy classifies integrations as core, first-class, adapter-lane, parked, or out-of-scope; every integration requires a concrete workflow, health check, credential boundary, and app-owned command surface."
+    },
+    {
       "id": "SETTINGS-PARITY",
       "title": "Codex-style settings parity",
       "column": "later",
@@ -617,8 +639,8 @@
       "track": "ui",
       "size": "M",
       "launch": "v2",
-      "summary": "Keep settings boring and inspectable: agent commands, AI connections, ignored folders, font, color theme, default layout, browser preview, hooks, git/worktree defaults, environments, and shortcut overrides. This is not a plugin platform.",
-      "done": "A local config file controls agent profiles, AI connections, font/theme, ignored folders, default pane layout, browser preview, hooks, Git/worktree behavior, environments, and app-level keybindings; bad config reports actionable errors and plugins/extensions are not supported."
+      "summary": "Keep settings boring and inspectable: agent commands, AI connections, source-control connections, ignored folders, font, color theme, default layout, browser preview, hooks, git/worktree defaults, environments, and shortcut overrides. This is not a plugin platform.",
+      "done": "A local config file controls agent profiles, AI connections, source-control connections, font/theme, ignored folders, default pane layout, browser preview, hooks, Git/worktree behavior, environments, and app-level keybindings; bad config reports actionable errors and plugins/extensions are not supported."
     },
     {
       "id": "NOTIFICATIONS",

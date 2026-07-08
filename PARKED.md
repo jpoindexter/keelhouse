@@ -55,3 +55,9 @@ Deferred ideas. Promote, never delete.
 **Captured:** 2026-07-08
 **Why parked:** Codex shows Scheduled and archived chat concepts. For this app, Scheduled could mean background agent runs and Archive could mean old project sessions/transcripts, but both require project sessions, transcript capture, and agent hooks first.
 **Cost to revisit:** Medium — promote only after `PROJECT-SESSIONS`, `TRANSCRIPTS`, and `AGENT-HOOKS`; keep labels task/workbench-oriented, not chat-oriented.
+
+## Non-source-control integrations
+
+**Captured:** 2026-07-08
+**Why parked:** Bitbucket/Azure DevOps, Linear/Jira, Slack/Discord, and similar tools may be useful, but Git/GitHub/GitLab cover the immediate code-review/shipping path. Broader integrations risk turning the app into another plugin hub.
+**Cost to revisit:** Medium — promote one integration only when a concrete workflow needs it; require a narrow app-owned adapter, health check, credentials boundary, and no chat/project-management clone.

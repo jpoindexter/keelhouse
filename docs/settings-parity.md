@@ -14,8 +14,8 @@ This app should borrow the Codex settings shape where it supports the lean VS Co
 | MCP servers | MCP servers | Local MCP server entries, enable/disable, health checks. |
 | Browser | Browser preview | Localhost URL memory, external-open behavior, auth/doc preview settings. |
 | Hooks | Agent hooks | Permissioned app-owned hooks/events, approvals, attribution log. |
-| Connections | Connections | Claude/Codex CLI auth checks, provider API keys, GitHub/Git credentials where needed. |
-| Git | Git | Diff/review defaults, stage/discard confirmations, branch/worktree display. |
+| Connections | Connections | Claude/Codex CLI auth checks, provider API keys, GitHub/GitLab/source-host credentials, CLI health, and API endpoints where needed. |
+| Git | Git | Diff/review defaults, stage/discard confirmations, branch/worktree display, source-host remote detection. |
 | Environments | Environments | Per-project env vars, PATH/login-shell behavior, secret handling. |
 | Worktrees | Worktrees | Defaults for creating, naming, cleaning, and launching agent panes in worktrees. |
 

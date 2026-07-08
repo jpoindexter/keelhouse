@@ -29,7 +29,8 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 - Run multiple agent panes per project, and allow different open projects to run different agents at the same time. Each pane needs a visible name/task label, status, cwd, command, restart, and kill controls.
 - Let agents hook into the app through a built-in, permissioned MCP/API surface for app-owned actions such as listing projects, reading open files, opening diffs, focusing panes, creating panes, and reporting task status.
 - Switch across multiple active projects without separate heavyweight VS Code windows.
-- Review agent-created changes through file status, diffs, editor gutters, and lightweight git actions.
+- Review agent-created changes through file status, diffs, editor gutters, lightweight Git actions, and source-hosting links/status where useful.
+- Connect to local Git plus source hosts that matter for real coding work: GitHub and GitLab first, with Bitbucket/Azure DevOps as adapter-lane later. Connections should detect existing `git`/`gh`/`glab` auth, show health/errors, open repos/PRs/MRs/issues/pipelines, and support PR/MR creation only after local review flows are solid.
 - Search files and terminal scrollback without leaving the app.
 - Use polished, consistent Codex-quality iconography for project rail, file explorer, editor, browser, terminal, agent panes, git state, and common actions. Icons must carry labels/tooltips where meaning is not universal.
 - Show agent activity state clearly: thinking, running command, editing files, waiting for approval/input, errored, exited, and complete. Surface concise activity/progress summaries and tool events, not hidden chain-of-thought.
@@ -48,6 +49,10 @@ Drop categories that imply an account/chat product or novelty feature: Profile, 
 ## Navigation Parity
 
 Use Codex's project/chat sidebar as a reference for information density, grouping, recency labels, active-row styling, and icon rhythm. Translate chats into project sessions: "New chat" becomes "New session", chat rows become named task sessions under each project, and "Show more" collapses older sessions. Search stays. Plugins and account/profile chrome are dropped. Scheduled/background sessions and archived sessions are parked until project sessions, transcripts, and agent hooks exist. Detailed mapping lives in `docs/navigation-parity.md`.
+
+## Integration Scope
+
+Local Git is core because it is part of supervising agent work. GitHub and GitLab are first-class source-hosting integrations because they cover common repo, PR/MR, issue, and CI/pipeline workflows. Prefer existing CLIs (`git`, `gh`, `glab`) and OS-safe credential storage before direct API work. Bitbucket, Azure DevOps, Linear, Jira, Slack, and Discord are adapter-lane or notification/link targets only; they should not turn the app into a project management, chat, or plugin platform. Detailed mapping lives in `docs/integrations-scope.md`.
 
 ## User
 
@@ -119,3 +124,4 @@ The file rail and editor are not optional product garnish; they are the reason t
 - Not a task database: pane names/status/transcripts exist only to orient agent work, not to become project management software.
 - Not a Codex settings clone: copy the useful structure, search, icons, and developer/AI connection surfaces; do not copy account, billing, pets, archived-chat, or custom-chat settings.
 - Not a Codex chat clone: project sessions may look like chat rows in the rail, but the underlying object is a workbench session, not a custom LLM conversation thread.
+- Not a general integration hub: GitHub/GitLab/source-control integrations are allowed because they support code review and shipping; unrelated services stay parked unless they directly improve agent supervision.
