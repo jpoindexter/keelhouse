@@ -82,6 +82,7 @@
 
       .qa-state-selected .editor-empty,
       .qa-state-dirty .editor-empty,
+      .qa-state-dirty-modal .editor-empty,
       .qa-state-save-error .editor-empty,
       .qa-state-missing .editor-empty,
       .qa-state-narrow .editor-empty {
@@ -194,7 +195,7 @@
         error.remove();
         status.textContent = "Saved";
         save.disabled = true;
-      } else if (state === "dirty" || state === "narrow") {
+      } else if (state === "dirty" || state === "dirty-modal" || state === "narrow") {
         badge.remove();
         error.remove();
       } else if (state === "save-error") {
@@ -209,6 +210,22 @@
         railDirty.remove();
         tabDirty.remove();
         document.querySelector(".file-node--selected")?.classList.remove("file-node--selected");
+      }
+      if (state === "dirty-modal") {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          `<div class="draft-modal-backdrop" role="presentation">
+            <div class="draft-modal" role="dialog" aria-modal="true" aria-labelledby="draft-modal-title">
+              <div class="draft-modal__title" id="draft-modal-title">Save changes to App.tsx?</div>
+              <div class="draft-modal__body">Switching now would replace the unsaved editor buffer for this file.</div>
+              <div class="draft-modal__actions">
+                <button class="draft-modal__button" type="button">Cancel</button>
+                <button class="draft-modal__button draft-modal__button--danger" type="button">Discard</button>
+                <button class="draft-modal__button draft-modal__button--primary" type="button">Save</button>
+              </div>
+            </div>
+          </div>`,
+        );
       }
     </script>
   </body>

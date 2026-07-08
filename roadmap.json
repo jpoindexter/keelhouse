@@ -288,14 +288,14 @@
     {
       "id": "DIRTY-DRAFT-PROTECTION",
       "title": "Dirty draft protection",
-      "column": "now",
+      "column": "done",
       "tier": "rock",
       "track": "files",
       "size": "M",
       "launch": "v0_5",
       "blocker": true,
       "summary": "The userflow audit found the main trust risk: unsaved work can be lost when changing files/projects. This must be blocked before the editor feels real.",
-      "done": "Unsaved editor buffers are preserved when switching files or projects. Closing/replacing a dirty buffer requires Save, Discard, or Cancel with the file name and consequence shown. Dirty drafts survive failed saves and never get cleared by navigation."
+      "done": "Verified 2026-07-08: dirty file/workspace replacement opens a Save/Discard/Cancel modal with the file name and consequence. Save continues only after write_text_file succeeds; failed saves keep the draft and pending navigation. Covered by npm test flows for save failure, save success, discard, no pending navigation, prompt trigger logic, and modal copy; screenshot proof: docs/qa/dirty-draft-protection/modal.png."
     },
     {
       "id": "SAVE-ERROR-RECOVERY",

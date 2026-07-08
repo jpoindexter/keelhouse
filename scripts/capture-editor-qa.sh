@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FIXTURE="$ROOT/docs/qa/editor-parity.html"
 OUT_DIR="$ROOT/docs/qa/editor-parity"
+DIRTY_OUT_DIR="$ROOT/docs/qa/dirty-draft-protection"
 
 if ! command -v playwright >/dev/null 2>&1; then
   echo "playwright CLI is required for editor QA screenshots" >&2
@@ -11,11 +12,12 @@ if ! command -v playwright >/dev/null 2>&1; then
 fi
 
 mkdir -p "$OUT_DIR"
+mkdir -p "$DIRTY_OUT_DIR"
 
 capture() {
   local state="$1"
   local viewport="$2"
-  local file="$OUT_DIR/${state}.png"
+  local file="${3:-$OUT_DIR/${state}.png}"
   playwright screenshot \
     --browser chromium \
     --channel chrome \
@@ -32,5 +34,7 @@ capture save-error 1440,900
 capture missing 1440,900
 capture no-file 1440,900
 capture narrow 1024,640
+capture dirty-modal 1440,900 "$DIRTY_OUT_DIR/modal.png"
 
 echo "Captured editor QA screenshots in $OUT_DIR"
+echo "Captured dirty draft QA screenshots in $DIRTY_OUT_DIR"

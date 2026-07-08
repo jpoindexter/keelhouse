@@ -11,6 +11,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { Tree } from "react-arborist";
 import type { NodeRendererProps, TreeApi } from "react-arborist";
+import { DraftNavigationDialog } from "./DraftNavigationDialog";
 import { isCellSelected, pointFromMouse, selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import {
@@ -33,7 +34,11 @@ import {
   reconcileActiveFileNode,
 } from "./editorState";
 import type { CursorPosition, EditorViewState } from "./editorState";
-import { shouldPromptForDirtyDraft } from "./draftProtection";
+import {
+  discardDraftAndContinueNavigation,
+  saveDraftAndContinueNavigation,
+  shouldPromptForDirtyDraft,
+} from "./draftProtection";
 import "./App.css";
 
 // SPIKE-2 frontend: paint the grid snapshots from the Rust backend onto a canvas,
@@ -427,24 +432,22 @@ function App() {
   };
 
   const saveDraftAndContinue = async () => {
-    if (!pendingNavigation) return;
-    setDraftDialogError(null);
-    const ok = await saveEditorFile();
-    if (!ok) {
-      setDraftDialogError("Save failed. The draft is still open; fix the save error before switching.");
-      return;
-    }
-    const next = pendingNavigation;
-    setPendingNavigation(null);
-    await continuePendingNavigation(next);
+    await saveDraftAndContinueNavigation({
+      pendingNavigation,
+      saveEditorFile,
+      continuePendingNavigation,
+      setPendingNavigation,
+      setDraftDialogError,
+    });
   };
 
   const discardDraftAndContinue = async () => {
-    if (!pendingNavigation) return;
-    const next = pendingNavigation;
-    setPendingNavigation(null);
-    setDraftDialogError(null);
-    await continuePendingNavigation(next);
+    await discardDraftAndContinueNavigation({
+      pendingNavigation,
+      continuePendingNavigation,
+      setPendingNavigation,
+      setDraftDialogError,
+    });
   };
 
   useEffect(() => {
@@ -945,33 +948,14 @@ function App() {
         </div>
       ) : null}
       {pendingNavigation && selectedFile ? (
-        <div className="draft-modal-backdrop" role="presentation">
-          <div className="draft-modal" role="dialog" aria-modal="true" aria-labelledby="draft-modal-title">
-            <div className="draft-modal__title" id="draft-modal-title">
-              Save changes to {selectedFile.name}?
-            </div>
-            <div className="draft-modal__body">
-              Switching now would replace the unsaved editor buffer for this file.
-            </div>
-            {draftDialogError ? <div className="draft-modal__error">{draftDialogError}</div> : null}
-            <div className="draft-modal__actions">
-              <button className="draft-modal__button" type="button" onClick={() => setPendingNavigation(null)}>
-                Cancel
-              </button>
-              <button className="draft-modal__button draft-modal__button--danger" type="button" onClick={() => void discardDraftAndContinue()}>
-                Discard
-              </button>
-              <button
-                className="draft-modal__button draft-modal__button--primary"
-                type="button"
-                disabled={editorSaving}
-                onClick={() => void saveDraftAndContinue()}
-              >
-                {editorSaving ? "Saving" : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DraftNavigationDialog
+          fileName={selectedFile.name}
+          error={draftDialogError}
+          saving={editorSaving}
+          onCancel={() => setPendingNavigation(null)}
+          onDiscard={() => void discardDraftAndContinue()}
+          onSave={() => void saveDraftAndContinue()}
+        />
       ) : null}
     </div>
   );

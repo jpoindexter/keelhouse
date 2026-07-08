@@ -118,6 +118,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">EDITOR-PARITY-UX &middot; Robust editor parity UX</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">Match the coding editor orientation shown in the reference: dense file tree beside a real source editor with path context, gutter, dirty state, restored view position, and active-file reveal.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: editor shows breadcrumb path context, stable CodeMirror line gutter, selected file highlight, active-file reveal via React Arborist scrollTo, restored per-file selection/scroll state, dirty markers in editor and rail, and screenshot QA artifacts for selected, dirty, save-error, no-file, missing, and 1024x640 narrow states in docs/qa/editor-parity/.</p></details></div>
+<div class="card" data-track="files" data-id="DIRTY-DRAFT-PROTECTION" data-size="M" data-tier="rock" data-launch="v0_5">
+<div class="hd"><span class="sz">M</span><span class="ttl">DIRTY-DRAFT-PROTECTION &middot; Dirty draft protection</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The userflow audit found the main trust risk: unsaved work can be lost when changing files/projects. This must be blocked before the editor feels real.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-08: dirty file/workspace replacement opens a Save/Discard/Cancel modal with the file name and consequence. Save continues only after write_text_file succeeds; failed saves keep the draft and pending navigation. Covered by npm test flows for save failure, save success, discard, no pending navigation, prompt trigger logic, and modal copy; screenshot proof: docs/qa/dirty-draft-protection/modal.png.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="workspace" data-id="LAST-WORKSPACE" data-size="S" data-tier="pebble" data-launch="v0">
@@ -143,12 +147,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </div>
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
-<div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="files" data-id="DIRTY-DRAFT-PROTECTION" data-size="M" data-tier="rock" data-launch="v0_5">
-<div class="hd"><span class="sz">M</span><span class="ttl">DIRTY-DRAFT-PROTECTION &middot; Dirty draft protection</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v0_5</span><span class="me lock">🔒</span></div><p class="sum">The userflow audit found the main trust risk: unsaved work can be lost when changing files/projects. This must be blocked before the editor feels real.</p>
-<details><summary>Done criteria</summary><p class="done">Unsaved editor buffers are preserved when switching files or projects. Closing/replacing a dirty buffer requires Save, Discard, or Cancel with the file name and consequence shown. Dirty drafts survive failed saves and never get cleared by navigation.</p></details></div>
-</div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
