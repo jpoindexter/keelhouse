@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openPath } from "@tauri-apps/plugin-opener";
+import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { load } from "@tauri-apps/plugin-store";
 import type { EditorView, ViewUpdate } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
@@ -61,11 +61,13 @@ type FileTreeNode = {
 type FileTreeResponse = { root: string; nodes: FileTreeNode[]; truncated: boolean };
 type WorkspaceTreeChanged = { root: string; count: number };
 type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
+type FileOpResponse = { path: string };
 type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
 type PendingNavigation =
   | { kind: "file"; file: FileTreeNode; options: OpenEditorFileOptions }
   | { kind: "workspace"; path: string };
+type FileContextMenu = { node: FileTreeNode; x: number; y: number };
 
 const FONT_SIZE = 15;
 const FONT_FAMILY = "JetBrains Mono, monospace";
@@ -79,6 +81,7 @@ const DEFAULT_LAUNCH_PROFILE: LaunchProfile = {
 
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+const dirname = (path: string) => path.replace(/[\\/][^\\/]*$/, "") || path;
 const formatBytes = (bytes: number | null) => {
   if (bytes == null) return "--";
   if (bytes < 1024) return `${bytes} B`;
@@ -126,6 +129,14 @@ function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<FileTreeNode
           node.activate();
         }
       }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent("file-tree-context-menu", {
+            detail: { node: node.data, x: event.clientX, y: event.clientY },
+          }),
+        );
+      }}
     >
       <span className="file-node__twisty" aria-hidden="true">
         {isDirectory ? (node.isOpen ? "▾" : "▸") : ""}
@@ -165,6 +176,7 @@ function App() {
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
   const [fileTreeError, setFileTreeError] = useState<string | null>(null);
+  const [fileOpError, setFileOpError] = useState<string | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
   const [fileTreeTruncated, setFileTreeTruncated] = useState(false);
   const [treeRefreshNonce, setTreeRefreshNonce] = useState(0);
@@ -182,6 +194,7 @@ function App() {
   const [recentProjects, setRecentProjects] = useState<string[]>([]);
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
   const [draftDialogError, setDraftDialogError] = useState<string | null>(null);
+  const [fileContextMenu, setFileContextMenu] = useState<FileContextMenu | null>(null);
   const editorDirty = selectedFile != null && editorText !== savedEditorText;
   const editorSaveConflict = editorError?.startsWith("File changed on disk since it was opened") ?? false;
   const activeFileMissing = useMemo(
@@ -198,6 +211,8 @@ function App() {
     [fileTree, editorDirty, selectedFile],
   );
 
+  const refreshFileTree = () => setTreeRefreshNonce((value) => value + 1);
+
   useEffect(() => {
     recentProjectsRef.current = recentProjects;
   }, [recentProjects]);
@@ -210,6 +225,23 @@ function App() {
     if (!selectedFile) return;
     treeRef.current?.scrollTo(selectedFile.id, "smart");
   }, [selectedFile, visibleFileTree]);
+
+  useEffect(() => {
+    const onContextMenu = (event: Event) => {
+      const detail = (event as CustomEvent<FileContextMenu>).detail;
+      if (!detail?.node) return;
+      setFileContextMenu(detail);
+    };
+    const closeMenu = () => setFileContextMenu(null);
+    window.addEventListener("file-tree-context-menu", onContextMenu);
+    window.addEventListener("pointerdown", closeMenu);
+    window.addEventListener("keydown", closeMenu);
+    return () => {
+      window.removeEventListener("file-tree-context-menu", onContextMenu);
+      window.removeEventListener("pointerdown", closeMenu);
+      window.removeEventListener("keydown", closeMenu);
+    };
+  }, []);
 
   useEffect(() => {
     if (!selectedFile || fileTree.length === 0) return;
@@ -446,6 +478,121 @@ function App() {
     if (!view) return;
     openSearchPanel(view);
     requestAnimationFrame(() => view.focus());
+  };
+
+  const fileOpParent = (node: FileTreeNode | null) => {
+    if (!workspacePath) return null;
+    if (!node) return workspacePath;
+    return node.kind === "directory" ? node.path : dirname(node.path);
+  };
+
+  const fileNodeFromPath = (path: string, kind: FileTreeNode["kind"]): FileTreeNode => ({
+    id: path,
+    name: basename(path),
+    path,
+    kind,
+  });
+
+  const createFileInRail = async (node: FileTreeNode | null = null) => {
+    const root = workspacePathRef.current ?? workspacePath;
+    const parent = fileOpParent(node);
+    if (!root || !parent) return;
+    const name = window.prompt("New file name");
+    if (!name) return;
+    setFileOpError(null);
+    try {
+      const result = await invoke<FileOpResponse>("create_workspace_file", { root, parent, name });
+      refreshFileTree();
+      await requestOpenEditorFile(fileNodeFromPath(result.path, "file"), { focusEditor: true });
+    } catch (err) {
+      setFileOpError(String(err));
+    }
+  };
+
+  const createFolderInRail = async (node: FileTreeNode | null = null) => {
+    const root = workspacePathRef.current ?? workspacePath;
+    const parent = fileOpParent(node);
+    if (!root || !parent) return;
+    const name = window.prompt("New folder name");
+    if (!name) return;
+    setFileOpError(null);
+    try {
+      await invoke<FileOpResponse>("create_workspace_folder", { root, parent, name });
+      refreshFileTree();
+    } catch (err) {
+      setFileOpError(String(err));
+    }
+  };
+
+  const renameRailNode = async (node: FileTreeNode) => {
+    const root = workspacePathRef.current ?? workspacePath;
+    if (!root) return;
+    const affectedSelectedFile = selectedFileIsWithin(node);
+    if (
+      affectedSelectedFile &&
+      editorDirty &&
+      !window.confirm("Rename this item and discard the unsaved editor buffer?")
+    ) {
+      return;
+    }
+    const name = window.prompt("Rename to", node.name);
+    if (!name || name === node.name) return;
+    setFileOpError(null);
+    try {
+      const result = await invoke<FileOpResponse>("rename_workspace_path", { root, path: node.path, name });
+      refreshFileTree();
+      if (affectedSelectedFile && selectedFile) {
+        const nextSelectedPath =
+          selectedFile.path === node.path ? result.path : `${result.path}${selectedFile.path.slice(node.path.length)}`;
+        await openEditorFileDirect(fileNodeFromPath(nextSelectedPath, "file"), { focusEditor: true });
+      }
+    } catch (err) {
+      setFileOpError(String(err));
+    }
+  };
+
+  const selectedFileIsWithin = (node: FileTreeNode) =>
+    selectedFile != null && (selectedFile.path === node.path || selectedFile.path.startsWith(`${node.path}/`));
+
+  const deleteRailNode = async (node: FileTreeNode) => {
+    const root = workspacePathRef.current ?? workspacePath;
+    if (!root) return;
+    const affectedSelectedFile = selectedFileIsWithin(node);
+    const message = `Delete ${node.kind === "directory" ? "folder" : "file"} "${node.name}"? This cannot be undone.`;
+    if (!window.confirm(message)) return;
+    if (affectedSelectedFile && editorDirty && !window.confirm("The selected file has unsaved changes. Delete anyway?")) return;
+    setFileOpError(null);
+    try {
+      await invoke("delete_workspace_path", { root, path: node.path });
+      if (affectedSelectedFile) {
+        if (workspacePathRef.current) void clearPersistedActiveFile(workspacePathRef.current);
+        resetEditor();
+      }
+      refreshFileTree();
+    } catch (err) {
+      setFileOpError(String(err));
+    }
+  };
+
+  const duplicateRailNode = async (node: FileTreeNode) => {
+    const root = workspacePathRef.current ?? workspacePath;
+    if (!root) return;
+    setFileOpError(null);
+    try {
+      await invoke<FileOpResponse>("duplicate_workspace_path", { root, path: node.path });
+      refreshFileTree();
+    } catch (err) {
+      setFileOpError(String(err));
+    }
+  };
+
+  const revealRailNode = async (node: FileTreeNode) => {
+    setFileOpError(null);
+    try {
+      await revealItemInDir(node.path);
+    } catch (err) {
+      setFileOpError(`Could not reveal ${node.name}: ${err}`);
+    }
   };
 
   const continuePendingNavigation = async (navigation: PendingNavigation) => {
@@ -803,6 +950,12 @@ function App() {
       <aside className="file-rail" aria-label="Project files">
         <div className="panel-title panel-title--with-action">
           <span>Files</span>
+          <button className="rail-open-button" type="button" disabled={!workspacePath} onClick={() => void createFileInRail()}>
+            New File
+          </button>
+          <button className="rail-open-button" type="button" disabled={!workspacePath} onClick={() => void createFolderInRail()}>
+            New Folder
+          </button>
           <button className="rail-open-button" type="button" onClick={pickWorkspace}>
             Open
           </button>
@@ -839,6 +992,7 @@ function App() {
         <div ref={railBodyRef} className="rail-tree">
           {fileTreeLoading ? <div className="rail-status">Loading…</div> : null}
           {fileTreeError ? <div className="rail-status rail-status--error">{fileTreeError}</div> : null}
+          {fileOpError ? <div className="rail-status rail-status--error">{fileOpError}</div> : null}
           {!fileTreeLoading && !fileTreeError && workspacePath && fileTree.length === 0 ? (
             <div className="rail-status">Empty folder</div>
           ) : null}
@@ -985,6 +1139,82 @@ function App() {
       {launchError ? (
         <div className="launch-error" role="alert">
           {launchError}
+        </div>
+      ) : null}
+      {fileContextMenu ? (
+        <div
+          className="file-context-menu"
+          style={{ left: fileContextMenu.x, top: fileContextMenu.y }}
+          role="menu"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              const node = fileContextMenu.node;
+              setFileContextMenu(null);
+              void createFileInRail(node);
+            }}
+          >
+            New File
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              const node = fileContextMenu.node;
+              setFileContextMenu(null);
+              void createFolderInRail(node);
+            }}
+          >
+            New Folder
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              const node = fileContextMenu.node;
+              setFileContextMenu(null);
+              void renameRailNode(node);
+            }}
+          >
+            Rename
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              const node = fileContextMenu.node;
+              setFileContextMenu(null);
+              void duplicateRailNode(node);
+            }}
+          >
+            Duplicate
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              const node = fileContextMenu.node;
+              setFileContextMenu(null);
+              void revealRailNode(node);
+            }}
+          >
+            Reveal in Finder
+          </button>
+          <button
+            className="file-context-menu__danger"
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              const node = fileContextMenu.node;
+              setFileContextMenu(null);
+              void deleteRailNode(node);
+            }}
+          >
+            Delete
+          </button>
         </div>
       ) : null}
       {pendingNavigation && selectedFile ? (

@@ -367,13 +367,13 @@
     {
       "id": "FILE-OPS",
       "title": "Basic file operations",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "files",
       "size": "M",
       "launch": "v0_5",
       "summary": "Replacing the VS Code shell requires basic rail operations, not only open-file. These commands must be reachable from the rail, menu/shortcut paths, and the file context menu where relevant.",
-      "done": "Create file, create folder, rename, delete, duplicate, and reveal in Finder work from the rail/context menu with confirmation for destructive operations."
+      "done": "Verified 2026-07-08: create file, create folder, rename, delete, duplicate, and reveal in Finder work from the rail/context menu. Backend guards every mutation against escaping the workspace root; destructive operations confirm; dirty active files are protected. Covered by npm build/test, cargo test file-op guard/roundtrip coverage, and git diff --check."
     },
     {
       "id": "EDITOR-TABS",

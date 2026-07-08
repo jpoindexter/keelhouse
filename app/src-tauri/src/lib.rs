@@ -174,6 +174,12 @@ struct TextFileResponse {
     modified_ms: Option<u64>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FileOpResponse {
+    path: String,
+}
+
 struct FileTreeBuilder {
     name: String,
     path: String,
@@ -760,6 +766,61 @@ fn write_text_file(
     })
 }
 
+#[tauri::command]
+fn create_workspace_file(root: String, parent: String, name: String) -> Result<FileOpResponse, String> {
+    let path = validate_new_child_path(&root, &parent, &name)?;
+    fs::write(&path, "").map_err(|err| format!("Could not create file {}: {err}", path.display()))?;
+    Ok(FileOpResponse {
+        path: path.to_string_lossy().into_owned(),
+    })
+}
+
+#[tauri::command]
+fn create_workspace_folder(root: String, parent: String, name: String) -> Result<FileOpResponse, String> {
+    let path = validate_new_child_path(&root, &parent, &name)?;
+    fs::create_dir(&path).map_err(|err| format!("Could not create folder {}: {err}", path.display()))?;
+    Ok(FileOpResponse {
+        path: path.to_string_lossy().into_owned(),
+    })
+}
+
+#[tauri::command]
+fn rename_workspace_path(root: String, path: String, name: String) -> Result<FileOpResponse, String> {
+    let path = validate_workspace_existing_path(&root, &path)?;
+    let target = sibling_with_name(&path, &name)?;
+    fs::rename(&path, &target)
+        .map_err(|err| format!("Could not rename {} to {}: {err}", path.display(), target.display()))?;
+    Ok(FileOpResponse {
+        path: target.to_string_lossy().into_owned(),
+    })
+}
+
+#[tauri::command]
+fn delete_workspace_path(root: String, path: String) -> Result<(), String> {
+    let path = validate_workspace_existing_path(&root, &path)?;
+    if path.is_dir() {
+        fs::remove_dir_all(&path).map_err(|err| format!("Could not delete folder {}: {err}", path.display()))?;
+    } else {
+        fs::remove_file(&path).map_err(|err| format!("Could not delete file {}: {err}", path.display()))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn duplicate_workspace_path(root: String, path: String) -> Result<FileOpResponse, String> {
+    let path = validate_workspace_existing_path(&root, &path)?;
+    let target = duplicate_target(&path)?;
+    if path.is_dir() {
+        copy_dir_recursive(&path, &target)?;
+    } else {
+        fs::copy(&path, &target)
+            .map_err(|err| format!("Could not duplicate file {} to {}: {err}", path.display(), target.display()))?;
+    }
+    Ok(FileOpResponse {
+        path: target.to_string_lossy().into_owned(),
+    })
+}
+
 /// Frontend -> filesystem: start or replace the live watcher for the current
 /// workspace. The watcher only emits a refresh signal; `list_workspace_tree` stays
 /// the single source of truth for rail data.
@@ -842,6 +903,138 @@ fn validate_workspace_file_path(root: &str, path: &str) -> Result<PathBuf, Strin
         return Err(format!("File is outside the selected workspace: {trimmed}"));
     }
     Ok(canonical)
+}
+
+fn validate_workspace_existing_path(root: &str, path: &str) -> Result<PathBuf, String> {
+    let root = validate_workspace_path(root)?;
+    let root_path = PathBuf::from(&root);
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("No path was selected.".into());
+    }
+    let candidate = Path::new(trimmed);
+    if !candidate.exists() {
+        return Err(format!("Path does not exist: {trimmed}"));
+    }
+    let canonical = candidate
+        .canonicalize()
+        .map_err(|err| format!("Cannot inspect path {trimmed}: {err}"))?;
+    if canonical == root_path {
+        return Err("Cannot operate on the workspace root.".into());
+    }
+    if !canonical.starts_with(&root_path) {
+        return Err(format!("Path is outside the selected workspace: {trimmed}"));
+    }
+    Ok(canonical)
+}
+
+fn validate_new_child_path(root: &str, parent: &str, name: &str) -> Result<PathBuf, String> {
+    let root = validate_workspace_path(root)?;
+    let root_path = PathBuf::from(&root);
+    let parent_trimmed = parent.trim();
+    if parent_trimmed.is_empty() {
+        return Err("No parent folder was selected.".into());
+    }
+    let parent = Path::new(parent_trimmed);
+    if !parent.exists() {
+        return Err(format!("Parent folder does not exist: {parent_trimmed}"));
+    }
+    let parent = parent
+        .canonicalize()
+        .map_err(|err| format!("Cannot inspect parent folder {parent_trimmed}: {err}"))?;
+    if !parent.starts_with(&root_path) {
+        return Err(format!("Parent folder is outside the selected workspace: {parent_trimmed}"));
+    }
+    if !parent.is_dir() {
+        return Err(format!("Parent path is not a folder: {}", parent.display()));
+    }
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err("Name cannot be empty.".into());
+    }
+    if trimmed == "." || trimmed == ".." || trimmed.contains('/') || trimmed.contains('\\') {
+        return Err(format!("Name is not valid for a workspace item: {trimmed}"));
+    }
+    let path = parent.join(trimmed);
+    if !path.starts_with(&root_path) {
+        return Err(format!("New path is outside the selected workspace: {trimmed}"));
+    }
+    if path.exists() {
+        return Err(format!("Path already exists: {}", path.display()));
+    }
+    Ok(path)
+}
+
+fn sibling_with_name(path: &Path, name: &str) -> Result<PathBuf, String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| format!("Cannot find parent folder for {}", path.display()))?;
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err("Name cannot be empty.".into());
+    }
+    if trimmed == "." || trimmed == ".." || trimmed.contains('/') || trimmed.contains('\\') {
+        return Err(format!("Name is not valid for a workspace item: {trimmed}"));
+    }
+    let target = parent.join(trimmed);
+    if target.exists() {
+        return Err(format!("Path already exists: {}", target.display()));
+    }
+    Ok(target)
+}
+
+fn duplicate_target(path: &Path) -> Result<PathBuf, String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| format!("Cannot find parent folder for {}", path.display()))?;
+    let stem = path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty())
+        .unwrap_or("copy");
+    let ext = path.extension().and_then(|value| value.to_str());
+    for index in 1..1000 {
+        let copy_name = if index == 1 {
+            match ext {
+                Some(ext) => format!("{stem} copy.{ext}"),
+                None => format!("{stem} copy"),
+            }
+        } else {
+            match ext {
+                Some(ext) => format!("{stem} copy {index}.{ext}"),
+                None => format!("{stem} copy {index}"),
+            }
+        };
+        let target = parent.join(copy_name);
+        if !target.exists() {
+            return Ok(target);
+        }
+    }
+    Err(format!("Could not find an available duplicate name for {}", path.display()))
+}
+
+fn copy_dir_recursive(from: &Path, to: &Path) -> Result<(), String> {
+    fs::create_dir(to).map_err(|err| format!("Could not create folder {}: {err}", to.display()))?;
+    for entry in fs::read_dir(from).map_err(|err| format!("Could not read folder {}: {err}", from.display()))? {
+        let entry = entry.map_err(|err| format!("Could not read folder entry: {err}"))?;
+        let source = entry.path();
+        let target = to.join(entry.file_name());
+        let kind = entry
+            .file_type()
+            .map_err(|err| format!("Could not inspect {}: {err}", source.display()))?;
+        if kind.is_dir() {
+            copy_dir_recursive(&source, &target)?;
+        } else if kind.is_file() {
+            fs::copy(&source, &target).map_err(|err| {
+                format!(
+                    "Could not duplicate file {} to {}: {err}",
+                    source.display(),
+                    target.display()
+                )
+            })?;
+        }
+    }
+    Ok(())
 }
 
 fn modified_ms(metadata: &fs::Metadata) -> Option<u64> {
@@ -1173,7 +1366,12 @@ pub fn run() {
             list_workspace_tree,
             watch_workspace_tree,
             read_text_file,
-            write_text_file
+            write_text_file,
+            create_workspace_file,
+            create_workspace_folder,
+            rename_workspace_path,
+            delete_workspace_path,
+            duplicate_workspace_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -1411,6 +1609,76 @@ mod tests {
         assert_eq!(fs::read_to_string(&file).expect("read file"), "before");
 
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn workspace_file_ops_create_rename_duplicate_delete_inside_root() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("agent-cli-file-ops-root-{suffix}"));
+        fs::create_dir_all(&root).expect("create root");
+        let root_s = root.to_string_lossy().into_owned();
+
+        let folder = create_workspace_folder(root_s.clone(), root_s.clone(), "src".into())
+            .expect("create folder");
+        assert!(Path::new(&folder.path).is_dir());
+
+        let file = create_workspace_file(root_s.clone(), folder.path.clone(), "main.txt".into())
+            .expect("create file");
+        assert!(Path::new(&file.path).is_file());
+        fs::write(&file.path, "hello").expect("seed file");
+
+        let renamed = rename_workspace_path(root_s.clone(), file.path.clone(), "renamed.txt".into())
+            .expect("rename file");
+        assert!(!Path::new(&file.path).exists());
+        assert_eq!(fs::read_to_string(&renamed.path).expect("read renamed"), "hello");
+
+        let duplicate = duplicate_workspace_path(root_s.clone(), renamed.path.clone())
+            .expect("duplicate file");
+        assert!(duplicate.path.ends_with("renamed copy.txt"));
+        assert_eq!(fs::read_to_string(&duplicate.path).expect("read duplicate"), "hello");
+
+        delete_workspace_path(root_s.clone(), duplicate.path.clone()).expect("delete duplicate");
+        assert!(!Path::new(&duplicate.path).exists());
+
+        let folder_copy = duplicate_workspace_path(root_s.clone(), folder.path.clone())
+            .expect("duplicate folder");
+        assert!(Path::new(&folder_copy.path).join("renamed.txt").is_file());
+
+        delete_workspace_path(root_s, folder.path).expect("delete folder");
+        assert!(!root.join("src").exists());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn workspace_file_ops_reject_bad_names_and_outside_paths() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("agent-cli-file-ops-guard-root-{suffix}"));
+        let outside = std::env::temp_dir().join(format!("agent-cli-file-ops-outside-{suffix}.txt"));
+        fs::create_dir_all(&root).expect("create root");
+        fs::write(&outside, "outside").expect("write outside");
+        let root_s = root.to_string_lossy().into_owned();
+
+        let bad_name = create_workspace_file(root_s.clone(), root_s.clone(), "../bad.txt".into())
+            .expect_err("bad name should fail");
+        assert!(bad_name.contains("Name is not valid"));
+
+        let outside_err = delete_workspace_path(root_s.clone(), outside.to_string_lossy().into_owned())
+            .expect_err("outside delete should fail");
+        assert!(outside_err.contains("outside the selected workspace"));
+        assert!(outside.exists());
+
+        let root_err = delete_workspace_path(root_s.clone(), root_s).expect_err("root delete should fail");
+        assert!(root_err.contains("workspace root"));
+
+        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_file(outside);
     }
 
     #[test]
