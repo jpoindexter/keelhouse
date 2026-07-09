@@ -604,13 +604,13 @@
     {
       "id": "PROCESS-LIFECYCLE",
       "title": "Agent process lifecycle controls",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "core",
       "size": "M",
       "launch": "v1",
       "summary": "A cockpit needs basic process affordances: restart, kill, status, exited state, and command/cwd visibility.",
-      "done": "Each pane shows running/exited status, cwd, command profile, restart, and terminate. Exited panes keep scrollback until closed."
+      "done": "Verified 2026-07-09: backend terminate_pane kills a pane child process while keeping the pane/transcript for exit state; backend restart_pane spawns and focuses a fresh process, then removes/kills the replaced process. The frontend preserves pane slot and label across restart, updates project/session status, clears stale snapshots, logs terminate/restart events, and routes both actions through the action gate. The terminal header shows command, mode, cwd, state, Restart, Kill, New, and Close, with narrow responsive icon controls."
     },
     {
       "id": "SESSION-RESTORE",

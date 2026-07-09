@@ -150,6 +150,50 @@ impl PtyState {
         Ok(*active)
     }
 
+    fn terminate(&self, pane_id: u64) -> Result<(), String> {
+        let mut panes = self
+            .panes
+            .lock()
+            .map_err(|_| "Could not terminate terminal pane.".to_string())?;
+        let Some(pane) = panes.get_mut(&pane_id) else {
+            return Err(format!("Terminal pane {pane_id} is no longer available."));
+        };
+        pane.killer
+            .kill()
+            .map_err(|err| format!("Could not terminate terminal pane {pane_id}: {err}"))
+    }
+
+    fn replace_and_focus(
+        &self,
+        old_pane_id: u64,
+        new_pane_id: u64,
+        mut new_pane: Pane,
+    ) -> Result<(), String> {
+        let removed = {
+            let mut panes = self
+                .panes
+                .lock()
+                .map_err(|_| "Could not restart terminal pane.".to_string())?;
+            if !panes.contains_key(&old_pane_id) {
+                let _ = new_pane.killer.kill();
+                return Err(format!(
+                    "Terminal pane {old_pane_id} is no longer available."
+                ));
+            }
+            panes.insert(new_pane_id, new_pane);
+            panes.remove(&old_pane_id)
+        };
+        if let Some(mut pane) = removed {
+            let _ = pane.killer.kill();
+        }
+        let mut active = self
+            .active_pane_id
+            .lock()
+            .map_err(|_| "Could not focus restarted terminal pane.".to_string())?;
+        *active = Some(new_pane_id);
+        Ok(())
+    }
+
     fn focus(&self, pane_id: u64) -> Result<(), String> {
         let exists = self
             .panes
@@ -1029,6 +1073,32 @@ fn close_pane(state: State<PtyState>, pane_id: u64) -> Result<ClosePaneResponse,
     })
 }
 
+/// Kill a pane's child process but keep the pane record/transcript for exit state.
+#[tauri::command]
+fn terminate_pane(state: State<PtyState>, pane_id: u64) -> Result<(), String> {
+    state.terminate(pane_id)
+}
+
+/// Replace one pane with a fresh process using the supplied profile and cwd.
+#[tauri::command]
+fn restart_pane(
+    app: AppHandle,
+    state: State<PtyState>,
+    path: String,
+    pane_id: u64,
+    profile: Option<LaunchProfile>,
+) -> Result<OpenPaneResponse, String> {
+    let cwd = validate_workspace_path(&path)?;
+    let profile = profile.unwrap_or_default().normalized();
+    preflight_profile(&profile, &cwd)?;
+    let new_pane_id = state.allocate_pane_id();
+    let new_pane = spawn_pane(app, cwd, profile, new_pane_id)?;
+    state.replace_and_focus(pane_id, new_pane_id, new_pane)?;
+    Ok(OpenPaneResponse {
+        pane_id: new_pane_id,
+    })
+}
+
 /// Quote one shell token for the login-shell profile path.
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
@@ -1573,6 +1643,8 @@ pub fn run() {
             create_pane,
             focus_pane,
             close_pane,
+            terminate_pane,
+            restart_pane,
             list_workspace_tree,
             watch_workspace_tree,
             read_text_file,
@@ -1672,6 +1744,53 @@ mod tests {
             None
         );
         assert_eq!(kills.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn pty_state_replaces_and_focuses_restarted_pane() {
+        let kills = Arc::new(AtomicUsize::new(0));
+        let state = PtyState {
+            panes: Mutex::new(BTreeMap::new()),
+            active_pane_id: Mutex::new(None),
+            watcher: Mutex::new(None),
+            next_pane_id: Mutex::new(0),
+        };
+
+        state.insert_and_focus(1, test_pane(Arc::clone(&kills)));
+        state
+            .replace_and_focus(1, 2, test_pane(Arc::clone(&kills)))
+            .expect("restart pane");
+
+        let panes = state.panes.lock().expect("pane lock");
+        assert!(!panes.contains_key(&1));
+        assert!(panes.contains_key(&2));
+        drop(panes);
+        assert_eq!(
+            *state.active_pane_id.lock().expect("active pane lock"),
+            Some(2)
+        );
+        assert_eq!(kills.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn pty_state_terminates_without_removing_pane() {
+        let kills = Arc::new(AtomicUsize::new(0));
+        let state = PtyState {
+            panes: Mutex::new(BTreeMap::new()),
+            active_pane_id: Mutex::new(None),
+            watcher: Mutex::new(None),
+            next_pane_id: Mutex::new(0),
+        };
+
+        state.insert_and_focus(1, test_pane(Arc::clone(&kills)));
+        state.terminate(1).expect("terminate pane");
+
+        assert!(state.panes.lock().expect("pane lock").contains_key(&1));
+        assert_eq!(
+            *state.active_pane_id.lock().expect("active pane lock"),
+            Some(1)
+        );
+        assert_eq!(kills.load(Ordering::SeqCst), 1);
     }
 
     fn snapshot_line(snapshot: &Snapshot, row: usize) -> String {

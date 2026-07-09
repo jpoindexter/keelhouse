@@ -304,6 +304,7 @@ function App() {
   const composerHarnessBySessionRef = useRef<ComposerHarnessRecords>({});
   const browserUrlRef = useRef(DEFAULT_BROWSER_PREVIEW_URL);
   const launchProfileRef = useRef<LaunchProfile>(defaultLaunchProfile());
+  const intentionallyTerminatedPaneIdsRef = useRef<Set<number>>(new Set());
   const terminalPanesRef = useRef<ManagedTerminalPane[]>([]);
   const terminalPanesByProjectRef = useRef<TerminalPanesByProject>({});
   const activeTerminalPaneByProjectRef = useRef<ActiveTerminalPaneByProject>({});
@@ -1187,6 +1188,102 @@ function App() {
       detail: activeAgentSessionHandle.label,
       status: "waiting",
     });
+  };
+
+  const terminateTerminalPane = async (pane: ManagedTerminalPane | null = activeTerminalPane) => {
+    const root = workspacePathRef.current;
+    if (!root || !pane) return false;
+    const label = terminalPaneLabelForDisplay(pane.label, pane.profile.label, pane.slot);
+    const audit = await gateAppAction(createAppAction({
+      kind: "terminate-process",
+      label: "Terminate process",
+      target: label,
+      risk: "destructive",
+      requestedBy: "user",
+      undoHint: "Restart the pane from the same profile.",
+    }), activeAgentSessionDescriptor);
+    if (audit.decision !== "approved") return false;
+    try {
+      await invoke("terminate_pane", { paneId: pane.id });
+      intentionallyTerminatedPaneIdsRef.current.add(pane.id);
+      const nextPanes = setPaneState(pane.id, "exited", null);
+      await updateOpenProjectStatus(root, terminalPaneProjectStatus(nextPanes));
+      await updateActiveSessionStatus(root, terminalPaneProjectStatus(nextPanes));
+      recordAgentActivity(activeAgentSessionDescriptor, {
+        kind: "process",
+        label: "Terminate sent",
+        detail: label,
+        target: pane.cwd,
+        status: "waiting",
+      });
+      setLaunchError(null);
+      return true;
+    } catch (err) {
+      setLaunchError(String(err));
+      await updateOpenProjectStatus(root, "attention");
+      await updateActiveSessionStatus(root, "attention");
+      return false;
+    }
+  };
+
+  const restartTerminalPane = async (pane: ManagedTerminalPane | null = activeTerminalPane) => {
+    const root = workspacePathRef.current;
+    if (!root || !pane || launchProfileChanging) return false;
+    const label = terminalPaneLabelForDisplay(pane.label, pane.profile.label, pane.slot);
+    const audit = await gateAppAction(createAppAction({
+      kind: "restart-process",
+      label: "Restart process",
+      target: `${label} · ${launchProfileCommandLine(pane.profile)}`,
+      risk: "high",
+      requestedBy: "user",
+      undoHint: "The previous live process is terminated; pane label and slot are preserved.",
+    }), activeAgentSessionDescriptor);
+    if (audit.decision !== "approved") return false;
+    setLaunchProfileChanging(true);
+    try {
+      const result = await invoke<OpenPaneResponse>("restart_pane", { path: root, paneId: pane.id, profile: pane.profile });
+      const nextPanes = terminalPanesForProject(root).map((item) =>
+        item.id === pane.id
+          ? { ...item, id: result.paneId, state: "running" as TerminalPaneState, exitCode: null, createdAt: Date.now() }
+          : item,
+      );
+      delete terminalSnapshotsRef.current[pane.id];
+      latest.current = null;
+      setProjectTerminalPanes(root, nextPanes, result.paneId);
+      requestTerminalPaintRef.current();
+      setLaunchError(null);
+      setTimeout(sendTerminalResize, 0);
+      await updateOpenProjectStatus(root, terminalPaneProjectStatus(nextPanes));
+      await updateActiveSessionStatus(root, terminalPaneProjectStatus(nextPanes));
+      const restarted = nextPanes.find((item) => item.id === result.paneId);
+      const sessionId = activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, root);
+      if (restarted && sessionId) {
+        recordAgentActivity(
+          buildAgentSessionHandleDescriptor({
+            pane: restarted,
+            projectId: root,
+            projectSessionId: sessionId,
+            label,
+            approvalMode: agentApprovalMode,
+          }),
+          {
+            kind: "process",
+            label: "Restarted process",
+            detail: launchProfileCommandLine(pane.profile),
+            target: pane.cwd,
+            status: "running",
+          },
+        );
+      }
+      return true;
+    } catch (err) {
+      setLaunchError(String(err));
+      await updateOpenProjectStatus(root, "attention");
+      await updateActiveSessionStatus(root, "attention");
+      return false;
+    } finally {
+      setLaunchProfileChanging(false);
+    }
   };
 
   const composerAppAction = (command: ComposerAppCommand): AppActionDescriptor => {
@@ -2155,8 +2252,17 @@ function App() {
       icon: "terminal",
       disabled: !activeTerminalPane,
     }),
-    menuItem("terminal.close-pane", "Close Selected Pane", () => activeAgentSessionHandle && void activeAgentSessionHandle.close(), {
+    menuItem("terminal.restart-pane", "Restart Selected Process", () => activeTerminalPane && void restartTerminalPane(activeTerminalPane), {
+      icon: "reload",
+      disabled: !activeTerminalPane || launchProfileChanging,
+    }),
+    menuItem("terminal.terminate-pane", "Kill Selected Process", () => activeTerminalPane && void terminateTerminalPane(activeTerminalPane), {
       icon: "stop",
+      danger: true,
+      disabled: !activeTerminalPane || activeTerminalPane.state === "exited",
+    }),
+    menuItem("terminal.close-pane", "Close Selected Pane", () => activeAgentSessionHandle && void activeAgentSessionHandle.close(), {
+      icon: "close",
       danger: true,
       disabled: !activeAgentSessionHandle,
     }),
@@ -2623,6 +2729,7 @@ function App() {
       void closeActiveEditorTabRef.current();
     });
     const unlistenPaneExit = listen<PaneExit>("pane-exit", (ev) => {
+      const wasIntentionallyTerminated = intentionallyTerminatedPaneIdsRef.current.delete(ev.payload.paneId);
       const root = Object.entries(terminalPanesByProjectRef.current).find(([, panes]) => panes.some((pane) => pane.id === ev.payload.paneId))?.[0] ?? workspacePathRef.current;
       const nextPanes = setPaneState(ev.payload.paneId, "exited", ev.payload.code);
       const nextStatus = terminalPaneProjectStatus(nextPanes);
@@ -2639,17 +2746,17 @@ function App() {
             approvalMode: agentApprovalMode,
           }),
           {
-            kind: "command",
-            label: ev.payload.code === 0 ? "Command finished" : "Command failed",
+            kind: wasIntentionallyTerminated ? "process" : "command",
+            label: wasIntentionallyTerminated ? "Process terminated" : ev.payload.code === 0 ? "Command finished" : "Command failed",
             detail: ev.payload.command,
             target: root,
             exitCode: ev.payload.code,
             outputRef: "terminal",
-            status: ev.payload.code === 0 ? "complete" : "error",
+            status: wasIntentionallyTerminated ? "exited" : ev.payload.code === 0 ? "complete" : "error",
           },
         );
       }
-      if (ev.payload.paneId === activeTerminalPaneIdRef.current) setLaunchError(ev.payload.message);
+      if (!wasIntentionallyTerminated && ev.payload.paneId === activeTerminalPaneIdRef.current) setLaunchError(ev.payload.message);
       void updateOpenProjectStatus(workspacePathRef.current, nextStatus);
       void updateActiveSessionStatus(workspacePathRef.current, nextStatus);
     });
@@ -3163,6 +3270,26 @@ function App() {
               >
                 <AppIcon name="terminal" />
                 <span>New</span>
+              </button>
+              <button
+                className="terminal-new-pane"
+                type="button"
+                title="Restart selected process"
+                disabled={!activeTerminalPane || launchProfileChanging}
+                onClick={() => void restartTerminalPane(activeTerminalPane)}
+              >
+                <AppIcon name="reload" />
+                <span>Restart</span>
+              </button>
+              <button
+                className="terminal-new-pane terminal-new-pane--danger"
+                type="button"
+                title="Kill selected process and keep the pane visible"
+                disabled={!activeTerminalPane || activeTerminalPane.state === "exited"}
+                onClick={() => void terminateTerminalPane(activeTerminalPane)}
+              >
+                <AppIcon name="stop" />
+                <span>Kill</span>
               </button>
               <button
                 className="terminal-new-pane terminal-new-pane--danger"

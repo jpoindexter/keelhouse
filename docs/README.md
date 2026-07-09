@@ -26,6 +26,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `browser-preview.md`: v1 lightweight browser/web preview pane.
 - `pane-manager.md`: v1 real multi-pane terminal manager.
 - `pane-names.md`: v1 editable terminal pane names/task labels.
+- `process-lifecycle.md`: v1 restart, kill, close, status, command, and cwd controls.
 - `integrations-scope.md`: Git, GitHub, GitLab, and adapter-lane boundaries.
 - `composer-harness-research.md`: bottom composer and future harness scope.
 - `composer-harness.md`: v1 implemented composer permission, goal, profile, and attachment controls.

@@ -1076,14 +1076,16 @@ body,
 .terminal-profile {
   display: flex;
   min-width: 0;
+  flex: 1 1 auto;
   align-items: center;
   gap: 8px;
+  overflow: hidden;
 }
 
 .terminal-actions {
   display: flex;
   min-width: 0;
-  flex: 1;
+  flex: 0 1 auto;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
@@ -1654,6 +1656,39 @@ body,
 }
 
 @media (max-width: 960px) {
+  .terminal-titlebar {
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  .terminal-profile,
+  .terminal-actions {
+    gap: 5px;
+  }
+
+  .terminal-pane-strip {
+    max-width: min(25vw, 220px);
+  }
+
+  .terminal-command {
+    max-width: 72px;
+  }
+
+  .terminal-mode,
+  .terminal-cwd,
+  .terminal-profile-picker__label {
+    display: none;
+  }
+
+  .terminal-new-pane {
+    width: 30px;
+    padding: 0;
+  }
+
+  .terminal-new-pane span {
+    display: none;
+  }
+
   .agent-composer__harness {
     grid-template-columns: minmax(0, 1fr) minmax(92px, auto) minmax(96px, auto);
   }

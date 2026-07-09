@@ -9,6 +9,7 @@ PANE-MANAGER adds real multi-pane terminal support without turning the terminal 
 - `create_pane` launches an additional Codex/Gemini/Claude/Shell pane in the active workspace.
 - `focus_pane` routes keyboard, paste, scroll, and resize input to the selected pane.
 - `close_pane` kills one pane process, removes its route, and focuses a remaining pane when available.
+- `PROCESS-LIFECYCLE` adds `restart_pane` and `terminate_pane` so restart preserves pane slot/label and kill can keep the transcript visible.
 - Grid events include `paneId`; the frontend caches snapshots by pane and paints only the focused pane.
 - The terminal header shows a pane strip, active pane state, New pane profile selector, New, and Close controls.
 - Project/session running/exited/attention state aggregates all panes for that project, so switching projects does not imply background panes stopped.
@@ -16,7 +17,7 @@ PANE-MANAGER adds real multi-pane terminal support without turning the terminal 
 ## Deliberate Boundaries
 
 - Pane names and task labels are implemented by `PANE-NAMES`.
-- Restart, kill-all, and richer lifecycle controls belong to `PROCESS-LIFECYCLE`.
+- Kill-all and bulk lifecycle controls remain future work; single-pane restart/kill is implemented by `PROCESS-LIFECYCLE`.
 - Cross-relaunch pane layout restore belongs to `SESSION-RESTORE`.
 - App-owned send/readTail/session APIs belong to `AGENT-SESSION-HANDLE`.
 

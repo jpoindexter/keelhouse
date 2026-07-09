@@ -114,7 +114,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [x] Each project can show multiple task sessions in the rail; selecting one restores the current implemented editor context without pretending dead processes are live.
 - [x] Browser/web preview opens localhost apps, docs, auth flows, and generated pages inside the workbench.
 - [x] Each project can run multiple named agent/shell panes, and different projects can run different agents concurrently.
-- [ ] Pane lifecycle controls and icon badges cover thinking, running, waiting, errored, exited, restart, terminate, and attention-needed states.
+- [x] Pane lifecycle controls and icon badges cover thinking, running, waiting, errored, exited, restart, terminate, and attention-needed states.
 - [ ] Agent activity rows show recent thinking/planning summaries, file edits, commands, tool/app actions, approvals, errors, and completion per pane/session.
 - [x] Each pane/session exposes an app-owned agent session handle with send, interrupt, readTail, close, state, cwd, profile, approval mode, and activity metadata.
 - [x] App-owned actions use a minimal action gate with risk class, approval decision, audit event, and undo/rollback hint where possible.

@@ -6,6 +6,8 @@ export type AppActionKind =
   | "open-diff"
   | "attach-reference"
   | "interrupt-process"
+  | "restart-process"
+  | "terminate-process"
   | "create-pane"
   | "close-pane"
   | "open-browser-preview"
