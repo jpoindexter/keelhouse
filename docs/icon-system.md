@@ -17,7 +17,7 @@ Keelhouse uses `lucide-react` as the single SVG icon family for v0.5 chrome. Ico
 - Use filled/stronger treatment only for active or stateful meaning; default chrome stays outline.
 - Do not mix icon families in one surface.
 - New icons should be added to `app/src/icons.tsx` first, then consumed by components.
-- Browser, git/diff, source-host, and multi-pane icons wait until those surfaces exist.
+- Git/diff, source-host, and multi-pane icons wait until those surfaces exist. Browser preview now uses the shared icon contract for navigation, reload, URL, and external-open controls.
 
 ## QA
 

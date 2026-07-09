@@ -11,12 +11,13 @@ Keelhouse treats right-click/Control-click as a first-class macOS workflow, not 
 | File explorer row | New File, New Folder, Rename, Duplicate, Reveal in Finder, Copy Path, Delete | Delete keeps the existing destructive confirmation and dirty-buffer guard. |
 | Editor tab | Open, Close Tab, Reveal in Finder, Copy Path | Close Tab uses the same dirty-tab confirmation as `Cmd+W`. |
 | Editor text surface | Save, Find and Replace, Open Externally, Reveal in Finder, Copy File Path | Save and Find show shortcut labels and disabled states. |
+| Browser preview | Back, Forward, Reload, Open externally, Copy URL | Back/Forward disable when preview history has no matching entry. |
 | Terminal pane | Copy Selection, Paste, Clear Terminal, Interrupt Process, Copy Working Directory | Copy Selection disables when no terminal text is selected. |
 | Composer / agent controls | Send Draft, Clear Draft, Stop Selected Pane, Copy Target Workspace | Send and Clear disable when there is no draft. |
 
 ## Deferred Surfaces
 
-Browser preview and diff/git surfaces are still roadmap cards, so their menus are not faked in v0.5. Add their context menus when `BROWSER-PREVIEW`, `DIFF-VIEW`, `GIT-STATUS`, and `GIT-ACTIONS-LITE` create real surfaces and commands.
+Diff/git surfaces are still roadmap cards, so their menus are not faked. Add their context menus when `DIFF-VIEW`, `GIT-STATUS`, and `GIT-ACTIONS-LITE` create real surfaces and commands.
 
 ## QA
 

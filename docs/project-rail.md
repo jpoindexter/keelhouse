@@ -15,7 +15,7 @@ PROJECT-RAIL is the first v1 navigation slice: multiple workspaces are represent
 ## Deferred
 
 - Project session rows live in PROJECT-SESSIONS.
-- Browser preview state lives in BROWSER-PREVIEW.
+- Browser preview URL state is implemented by BROWSER-PREVIEW.
 - Multiple live panes per project and true background-running project status live in PANE-MANAGER and PROCESS-LIFECYCLE.
 - Persisted cross-relaunch editor tab/session snapshots live in SESSION-RESTORE.
 

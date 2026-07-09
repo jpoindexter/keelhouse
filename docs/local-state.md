@@ -39,13 +39,19 @@ Current schema:
   },
   "activeSessionByProject": {
     "/absolute/path/to/workspace": "session-lt72gs"
+  },
+  "browserPreviewByProject": {
+    "/absolute/path/to/workspace": "http://localhost:3000/"
+  },
+  "browserPreviewBySession": {
+    "/absolute/path/to/workspace\nsession-lt72gs": "http://localhost:5173/"
   }
 }
 ```
 
 `folder` is the last workspace to reopen. `launchProfile` is the command the pane launches in that workspace. Built-in profile ids are `claude`, `codex`, and `shell`. Claude and Codex run through a login shell so shell-managed paths such as `nvm` are available; Shell launches `/bin/zsh -l` directly.
 `activeFileByWorkspace` stores the last active editor file per canonical workspace root; stale paths are ignored instead of being opened.
-`openProjects` stores the project rail. `projectSessions` stores named task/workbench session rows under each project, and `activeSessionByProject` stores the selected session id per project. Session rows are metadata; cross-relaunch editor/pane/browser restore is owned by later `SESSION-RESTORE`, `PANE-MANAGER`, and `BROWSER-PREVIEW` slices.
+`openProjects` stores the project rail. `projectSessions` stores named task/workbench session rows under each project, and `activeSessionByProject` stores the selected session id per project. `browserPreviewByProject` and `browserPreviewBySession` remember the lightweight preview URL for project/session context. Session rows are metadata; cross-relaunch editor/pane layout restore is owned by later `SESSION-RESTORE` and `PANE-MANAGER` slices.
 
 ## Reset Path
 

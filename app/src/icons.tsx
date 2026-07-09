@@ -1,6 +1,8 @@
 import type { ComponentType, SVGProps } from "react";
 import {
   AlertCircle,
+  ArrowLeft,
+  ArrowRight,
   Bot,
   Brain,
   CheckCircle2,
@@ -13,9 +15,12 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
+  Globe2,
   HardDrive,
   LoaderCircle,
+  ExternalLink,
   PanelBottom,
+  RotateCw,
   Save,
   Search,
   Send,
@@ -28,6 +33,8 @@ type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
 export type AppIconName =
   | "agent"
+  | "back"
+  | "browser"
   | "check"
   | "chevronDown"
   | "chevronRight"
@@ -39,8 +46,11 @@ export type AppIconName =
   | "folder"
   | "folderOpen"
   | "folderPlus"
+  | "forward"
   | "idle"
   | "loading"
+  | "openExternal"
+  | "reload"
   | "save"
   | "search"
   | "send"
@@ -52,6 +62,8 @@ export type AppIconName =
 
 export const ICONS: Record<AppIconName, IconComponent> = {
   agent: Bot,
+  back: ArrowLeft,
+  browser: Globe2,
   check: CheckCircle2,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
@@ -63,8 +75,11 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   folder: Folder,
   folderOpen: FolderOpen,
   folderPlus: FolderPlus,
+  forward: ArrowRight,
   idle: Circle,
   loading: LoaderCircle,
+  openExternal: ExternalLink,
+  reload: RotateCw,
   save: Save,
   search: Search,
   send: Send,

@@ -1,4 +1,4 @@
-import { type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -13,6 +13,15 @@ import { Tree } from "react-arborist";
 import type { NodeRendererProps, TreeApi } from "react-arborist";
 import { DraftNavigationDialog } from "./DraftNavigationDialog";
 import { EditorSaveError } from "./EditorSaveError";
+import {
+  browserHistoryCanGoBack,
+  browserHistoryCanGoForward,
+  DEFAULT_BROWSER_PREVIEW_URL,
+  normalizeBrowserPreviewRecords,
+  normalizeBrowserPreviewUrl,
+  pushBrowserHistory,
+} from "./browserPreview";
+import type { BrowserPreviewRecords } from "./browserPreview";
 import { editorExtensionsFor } from "./editorLanguages";
 import { isCellSelected, pointFromMouse, selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
@@ -216,6 +225,9 @@ function App() {
   const openProjectsRef = useRef<OpenProject[]>([]);
   const projectSessionsRef = useRef<ProjectSessionsByProject>({});
   const activeSessionByProjectRef = useRef<ActiveSessionByProject>({});
+  const browserPreviewByProjectRef = useRef<BrowserPreviewRecords>({});
+  const browserPreviewBySessionRef = useRef<BrowserPreviewRecords>({});
+  const browserUrlRef = useRef(DEFAULT_BROWSER_PREVIEW_URL);
   const launchProfileRef = useRef<LaunchProfile>(defaultLaunchProfile());
   const terminalPaneIdRef = useRef<number | null>(null);
   const activeFilesByWorkspaceRef = useRef<ActiveFileByWorkspace>({});
@@ -266,6 +278,14 @@ function App() {
   const [projectSessions, setProjectSessions] = useState<ProjectSessionsByProject>({});
   const [activeSessionByProject, setActiveSessionByProjectState] = useState<ActiveSessionByProject>({});
   const [expandedSessionProjects, setExpandedSessionProjects] = useState<Record<string, boolean>>({});
+  const [browserPreviewByProject, setBrowserPreviewByProject] = useState<BrowserPreviewRecords>({});
+  const [browserPreviewBySession, setBrowserPreviewBySession] = useState<BrowserPreviewRecords>({});
+  const [browserUrl, setBrowserUrl] = useState(DEFAULT_BROWSER_PREVIEW_URL);
+  const [browserAddress, setBrowserAddress] = useState(DEFAULT_BROWSER_PREVIEW_URL);
+  const [browserHistory, setBrowserHistory] = useState([DEFAULT_BROWSER_PREVIEW_URL]);
+  const [browserHistoryIndex, setBrowserHistoryIndex] = useState(0);
+  const [browserReloadNonce, setBrowserReloadNonce] = useState(0);
+  const [browserError, setBrowserError] = useState<string | null>(null);
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
   const [draftDialogError, setDraftDialogError] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -299,6 +319,8 @@ function App() {
     () => activeProjectSessionId(activeSessionByProject, projectSessions, workspacePath),
     [activeSessionByProject, projectSessions, workspacePath],
   );
+  const browserCanGoBack = browserHistoryCanGoBack(browserHistoryIndex);
+  const browserCanGoForward = browserHistoryCanGoForward(browserHistory, browserHistoryIndex);
 
   const refreshFileTree = () => setTreeRefreshNonce((value) => value + 1);
 
@@ -317,6 +339,18 @@ function App() {
   useEffect(() => {
     activeSessionByProjectRef.current = activeSessionByProject;
   }, [activeSessionByProject]);
+
+  useEffect(() => {
+    browserPreviewByProjectRef.current = browserPreviewByProject;
+  }, [browserPreviewByProject]);
+
+  useEffect(() => {
+    browserPreviewBySessionRef.current = browserPreviewBySession;
+  }, [browserPreviewBySession]);
+
+  useEffect(() => {
+    browserUrlRef.current = browserUrl;
+  }, [browserUrl]);
 
   useEffect(() => {
     selectedFileRef.current = selectedFile;
@@ -438,6 +472,74 @@ function App() {
     await storeRef.current?.save();
   };
 
+  const browserPreviewSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
+
+  const setBrowserLocation = (url: string, options: { pushHistory?: boolean } = {}) => {
+    browserUrlRef.current = url;
+    setBrowserUrl(url);
+    setBrowserAddress(url);
+    setBrowserError(null);
+    if (options.pushHistory ?? true) {
+      const next = pushBrowserHistory(browserHistory, browserHistoryIndex, url);
+      setBrowserHistory(next.history);
+      setBrowserHistoryIndex(next.index);
+    }
+  };
+
+  const persistBrowserPreviewUrl = async (root: string | null, sessionId: string | null, url: string) => {
+    if (!root) return;
+    const nextByProject = { ...browserPreviewByProjectRef.current, [root]: url };
+    const nextBySession = sessionId
+      ? { ...browserPreviewBySessionRef.current, [browserPreviewSessionKey(root, sessionId)]: url }
+      : browserPreviewBySessionRef.current;
+    browserPreviewByProjectRef.current = nextByProject;
+    browserPreviewBySessionRef.current = nextBySession;
+    setBrowserPreviewByProject(nextByProject);
+    setBrowserPreviewBySession(nextBySession);
+    await storeRef.current?.set("browserPreviewByProject", nextByProject);
+    await storeRef.current?.set("browserPreviewBySession", nextBySession);
+    await storeRef.current?.save();
+  };
+
+  const restoreBrowserPreview = (root: string | null, sessionId: string | null) => {
+    const sessionUrl = root && sessionId ? browserPreviewBySessionRef.current[browserPreviewSessionKey(root, sessionId)] : null;
+    const projectUrl = root ? browserPreviewByProjectRef.current[root] : null;
+    const nextUrl = sessionUrl ?? projectUrl ?? DEFAULT_BROWSER_PREVIEW_URL;
+    browserUrlRef.current = nextUrl;
+    setBrowserUrl(nextUrl);
+    setBrowserAddress(nextUrl);
+    setBrowserHistory([nextUrl]);
+    setBrowserHistoryIndex(0);
+    setBrowserError(null);
+    setBrowserReloadNonce((value) => value + 1);
+  };
+
+  const navigateBrowserPreview = async (rawUrl: string) => {
+    const normalized = normalizeBrowserPreviewUrl(rawUrl);
+    if (!normalized) {
+      setBrowserError("Enter an http, https, or file URL.");
+      return false;
+    }
+    setBrowserLocation(normalized);
+    await persistBrowserPreviewUrl(workspacePathRef.current, activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, workspacePathRef.current), normalized);
+    return true;
+  };
+
+  const submitBrowserAddress = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void navigateBrowserPreview(browserAddress);
+  };
+
+  const goBrowserHistory = (direction: -1 | 1) => {
+    const nextIndex = browserHistoryIndex + direction;
+    const nextUrl = browserHistory[nextIndex];
+    if (!nextUrl) return;
+    setBrowserHistoryIndex(nextIndex);
+    setBrowserLocation(nextUrl, { pushHistory: false });
+  };
+
+  const reloadBrowserPreview = () => setBrowserReloadNonce((value) => value + 1);
+
   const updateOpenProjectStatus = async (path: string | null, status: ProjectRailStatus) => {
     if (!path) return;
     const next = setOpenProjectStatus(openProjectsRef.current, path, status);
@@ -545,6 +647,7 @@ function App() {
       await store?.set("activeSessionByProject", nextActiveSessions);
       await store?.save();
       restoreSessionEditorSnapshot(root, sessionId);
+      restoreBrowserPreview(root, sessionId);
       return true;
     } catch (err) {
       const message = String(err);
@@ -556,18 +659,28 @@ function App() {
         const nextOpen = removeOpenProject(openProjectsRef.current, path);
         const { [path]: _removedSessions, ...nextSessions } = projectSessionsRef.current;
         const { [path]: _removedActiveSession, ...nextActiveSessions } = activeSessionByProjectRef.current;
+        const { [path]: _removedBrowserProject, ...nextBrowserProjects } = browserPreviewByProjectRef.current;
+        const nextBrowserSessions = Object.fromEntries(
+          Object.entries(browserPreviewBySessionRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
+        );
         recentProjectsRef.current = nextRecent;
         openProjectsRef.current = nextOpen;
         projectSessionsRef.current = nextSessions;
         activeSessionByProjectRef.current = nextActiveSessions;
+        browserPreviewByProjectRef.current = nextBrowserProjects;
+        browserPreviewBySessionRef.current = nextBrowserSessions;
         setRecentProjects(nextRecent);
         setOpenProjects(nextOpen);
         setProjectSessions(nextSessions);
         setActiveSessionByProjectState(nextActiveSessions);
+        setBrowserPreviewByProject(nextBrowserProjects);
+        setBrowserPreviewBySession(nextBrowserSessions);
         await store?.set("recentFolders", nextRecent);
         await store?.set("openProjects", nextOpen);
         await store?.set("projectSessions", nextSessions);
         await store?.set("activeSessionByProject", nextActiveSessions);
+        await store?.set("browserPreviewByProject", nextBrowserProjects);
+        await store?.set("browserPreviewBySession", nextBrowserSessions);
         if (workspacePathRef.current === path) {
           setWorkspacePath(null);
           setFileTree([]);
@@ -635,6 +748,7 @@ function App() {
     await persistProjectSessions(nextSessions, nextActiveSessions);
     if (sameProject) {
       restoreSessionEditorSnapshot(projectPath, sessionId);
+      restoreBrowserPreview(projectPath, sessionId);
     } else {
       await requestOpenWorkspace(projectPath);
     }
@@ -652,8 +766,10 @@ function App() {
     const nextSessions = upsertProjectSession(projectSessionsRef.current, projectPath, session);
     const nextActiveSessions = setActiveProjectSession(activeSessionByProjectRef.current, projectPath, session.id);
     await persistProjectSessions(nextSessions, nextActiveSessions);
+    await persistBrowserPreviewUrl(projectPath, session.id, sameProject ? browserUrlRef.current : browserPreviewByProjectRef.current[projectPath] ?? DEFAULT_BROWSER_PREVIEW_URL);
     if (sameProject) {
       restoreSessionEditorSnapshot(projectPath, session.id);
+      restoreBrowserPreview(projectPath, session.id);
     } else {
       await requestOpenWorkspace(projectPath);
     }
@@ -682,9 +798,15 @@ function App() {
       ? setActiveProjectSession(activeSessionByProjectRef.current, projectPath, fallbackSessionId)
       : activeSessionByProjectRef.current;
     delete sessionEditorSnapshotsRef.current[sessionSnapshotKey(projectPath, session.id)];
+    const nextBrowserSessions = { ...browserPreviewBySessionRef.current };
+    delete nextBrowserSessions[browserPreviewSessionKey(projectPath, session.id)];
+    browserPreviewBySessionRef.current = nextBrowserSessions;
+    setBrowserPreviewBySession(nextBrowserSessions);
+    await storeRef.current?.set("browserPreviewBySession", nextBrowserSessions);
     await persistProjectSessions(nextSessions, nextActiveSessions);
     if (workspacePathRef.current === projectPath && activeSessionId === session.id) {
       restoreSessionEditorSnapshot(projectPath, fallbackSessionId);
+      restoreBrowserPreview(projectPath, fallbackSessionId);
     }
   };
 
@@ -1315,6 +1437,20 @@ function App() {
     }),
   ];
 
+  const browserContextMenuItems = (): ContextMenuItem[] => [
+    menuItem("browser.back", "Back", () => goBrowserHistory(-1), {
+      icon: "back",
+      disabled: !browserCanGoBack,
+    }),
+    menuItem("browser.forward", "Forward", () => goBrowserHistory(1), {
+      icon: "forward",
+      disabled: !browserCanGoForward,
+    }),
+    menuItem("browser.reload", "Reload", reloadBrowserPreview, { icon: "reload" }),
+    menuItem("browser.open-external", "Open Externally", () => void openPath(browserUrl), { icon: "openExternal" }),
+    menuItem("browser.copy-url", "Copy URL", () => void writeText(browserUrl), { icon: "browser" }),
+  ];
+
   const composerContextMenuItems = (): ContextMenuItem[] => [
     menuItem("composer.send", "Send Draft", () => void submitComposerDraft(), {
       icon: "send",
@@ -1582,6 +1718,8 @@ function App() {
       const savedOpenProjects = normalizeOpenProjects(await store.get<unknown>("openProjects"));
       const savedProjectSessions = normalizeProjectSessionsByProject(await store.get<unknown>("projectSessions"));
       const savedActiveSessions = normalizeActiveSessionByProject(await store.get<unknown>("activeSessionByProject"));
+      const savedBrowserProjects = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewByProject"));
+      const savedBrowserSessions = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewBySession"));
       const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
       activeFilesByWorkspaceRef.current = normalizeActiveFileByWorkspace(await store.get<unknown>("activeFileByWorkspace"));
       const initialOpenProjects = savedOpenProjects.length > 0 ? savedOpenProjects : openProjectsFromRecent(savedRecent);
@@ -1593,12 +1731,16 @@ function App() {
       openProjectsRef.current = initialOpenProjects;
       projectSessionsRef.current = initialProjectSessions;
       activeSessionByProjectRef.current = savedActiveSessions;
+      browserPreviewByProjectRef.current = savedBrowserProjects;
+      browserPreviewBySessionRef.current = savedBrowserSessions;
       launchProfileRef.current = savedProfile;
       setLaunchProfile(savedProfile);
       setRecentProjects(savedRecent);
       setOpenProjects(initialOpenProjects);
       setProjectSessions(initialProjectSessions);
       setActiveSessionByProjectState(savedActiveSessions);
+      setBrowserPreviewByProject(savedBrowserProjects);
+      setBrowserPreviewBySession(savedBrowserSessions);
       const last = await store.get<string>("folder");
       if (last) await openWorkspaceDirect(last, savedProfile);
       else await pickWorkspace();
@@ -1607,7 +1749,7 @@ function App() {
 
     const onKey = (e: KeyboardEvent) => {
       const target = e.target instanceof HTMLElement ? e.target : null;
-      if (target?.closest(".file-rail, .editor-area, .terminal-titlebar, .agent-composer")) return;
+      if (target?.closest(".file-rail, .editor-area, .browser-preview, .terminal-titlebar, .agent-composer")) return;
       if (e.isComposing) return;
       // Cmd (meta) combos are app-level, not pty input. Let them through so the
       // native copy/paste clipboard events fire; handle the few we own explicitly.
@@ -2091,6 +2233,69 @@ function App() {
               <div className="editor-empty-path">Project editor surface</div>
             </div>
           )}
+        </section>
+
+        <section className="browser-preview" aria-label="Browser preview" onContextMenu={(event) => openContextMenu(event, browserContextMenuItems())}>
+          <div className="browser-toolbar">
+            <div className="browser-toolbar__nav" aria-label="Browser navigation">
+              <button
+                className="browser-button"
+                type="button"
+                title="Back"
+                aria-label="Back"
+                disabled={!browserCanGoBack}
+                onClick={() => goBrowserHistory(-1)}
+              >
+                <AppIcon name="back" />
+              </button>
+              <button
+                className="browser-button"
+                type="button"
+                title="Forward"
+                aria-label="Forward"
+                disabled={!browserCanGoForward}
+                onClick={() => goBrowserHistory(1)}
+              >
+                <AppIcon name="forward" />
+              </button>
+              <button className="browser-button" type="button" title="Reload" aria-label="Reload browser preview" onClick={reloadBrowserPreview}>
+                <AppIcon name="reload" />
+              </button>
+            </div>
+            <form className="browser-address" onSubmit={submitBrowserAddress}>
+              <label className="browser-address__label" htmlFor="browser-preview-url">
+                Preview URL
+              </label>
+              <AppIcon name="browser" />
+              <input
+                id="browser-preview-url"
+                value={browserAddress}
+                spellCheck={false}
+                inputMode="url"
+                placeholder="localhost:3000"
+                onChange={(event) => {
+                  setBrowserAddress(event.currentTarget.value);
+                  setBrowserError(null);
+                }}
+              />
+              <button className="browser-button browser-button--go" type="submit" title="Open preview URL">
+                Open
+              </button>
+            </form>
+            <button className="browser-button" type="button" title="Open preview externally" aria-label="Open preview externally" onClick={() => void openPath(browserUrl)}>
+              <AppIcon name="openExternal" />
+            </button>
+          </div>
+          <div className="browser-frame-wrap">
+            {browserError ? <div className="browser-error" role="alert">{browserError}</div> : null}
+            <iframe
+              key={`${browserUrl}-${browserReloadNonce}`}
+              className="browser-frame"
+              title={`Browser preview: ${browserUrl}`}
+              src={browserUrl}
+              referrerPolicy="no-referrer"
+            />
+          </div>
         </section>
 
         <section className="terminal-panel" aria-label="Agent terminal">

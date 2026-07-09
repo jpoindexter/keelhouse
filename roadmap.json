@@ -451,7 +451,7 @@
       "size": "M",
       "launch": "v0_5",
       "summary": "macOS pointer workflows need right-click/Control-click affordances, not only visible buttons. Context menus should expose the same command registry as menu bar, shortcuts, and command palette where possible.",
-      "done": "Verified 2026-07-09: current v0.5 surfaces expose right-click/Control-click menus for the workspace root, recent project rows, file explorer, editor tabs, editor text surface, terminal pane, and composer/agent controls. Menus share shortcut labels where active, show disabled and danger states, reuse existing destructive confirmations/dirty guards, and are documented in docs/context-menus.md. Browser preview and diff/git menus are deferred until those real surfaces land."
+      "done": "Verified 2026-07-09: current surfaces expose right-click/Control-click menus for the workspace root, project/session rows, file explorer, editor tabs, editor text surface, browser preview, terminal pane, and composer/agent controls. Menus share shortcut labels where active, show disabled and danger states, reuse existing destructive confirmations/dirty guards, and are documented in docs/context-menus.md. Diff/git menus are deferred until those real surfaces land."
     },
     {
       "id": "CHROME-POLISH-SYSTEM",
@@ -473,7 +473,7 @@
       "size": "M",
       "launch": "v0_5",
       "summary": "The app should feel like a polished Codex-style workbench, not a raw prototype. Define one consistent icon language for project rail, file explorer, editor, browser, terminal, agent panes, git state, and common actions.",
-      "done": "Verified 2026-07-09: current v0.5 chrome uses lucide-react through app/src/icons.tsx as one SVG icon contract. File-tree object icons, rail actions, editor actions, terminal status pills, composer controls, context menu rows, and QA fixtures use currentColor icons on a 16px dense grid. Non-universal controls keep labels, tooltips, or accessible names. Pane status and future activity status mappings cover thinking/running/waiting/error/exited/complete. Browser, git/diff, source-host, and multi-pane icons remain deferred until those surfaces exist."
+      "done": "Verified 2026-07-09: current v0.5 chrome uses lucide-react through app/src/icons.tsx as one SVG icon contract. File-tree object icons, rail actions, editor actions, terminal status pills, composer controls, browser preview, context menu rows, and QA fixtures use currentColor icons on a 16px dense grid. Non-universal controls keep labels, tooltips, or accessible names. Pane status and future activity status mappings cover thinking/running/waiting/error/exited/complete. Git/diff, source-host, and multi-pane icons remain deferred until those surfaces exist."
     },
     {
       "id": "ACCESSIBILITY-BASICS",
@@ -484,7 +484,7 @@
       "size": "S",
       "launch": "v0_5",
       "summary": "A dense tool still needs visible focus, keyboard reachability, and labelled controls so it can be used without pointer precision.",
-      "done": "Verified 2026-07-09: current v0.5 chrome has explicit labels for rail actions, workspace root, agent profile picker, terminal canvas, and composer draft; editor tabs put tab semantics on the actual focusable buttons; the terminal canvas is tabbable and has a visible focus ring; context menus focus the first enabled item, support Arrow Up/Down, and close with Escape. Full modal trapping, canvas transcript screen-reader review, and future browser/git/settings/multi-pane surfaces remain deferred."
+      "done": "Verified 2026-07-09: current v0.5 chrome has explicit labels for rail actions, workspace root, agent profile picker, terminal canvas, composer draft, and browser preview controls; editor tabs put tab semantics on the actual focusable buttons; the terminal canvas is tabbable and has a visible focus ring; context menus focus the first enabled item, support Arrow Up/Down, and close with Escape. Full modal trapping, canvas transcript screen-reader review, and future git/settings/multi-pane surfaces remain deferred."
     },
     {
       "id": "PROJECT-RAIL",
@@ -496,7 +496,7 @@
       "launch": "v1",
       "blocker": true,
       "summary": "The core multi-project workflow: Project A, Project B, Project C live in one app instead of separate VS Code windows. Use a persistent left project/workspace rail, similar in spirit to Codex's sidebar, rather than relying only on top tabs.",
-      "done": "Verified 2026-07-09: the left rail now has persisted openProjects separate from recents, shows at least three project rows in QA, marks active/running/exited/attention states, promotes opened folders into the rail, prunes missing paths, and exposes switch/reveal/copy/close context-menu actions. Switching projects uses the real workspace load path and restores in-session editor tabs, active file, editor buffers, and view state. Project session rows, browser preview state, multiple live panes, background-running status, and cross-relaunch session restore stay with their dedicated later cards."
+      "done": "Verified 2026-07-09: the left rail now has persisted openProjects separate from recents, shows at least three project rows in QA, marks active/running/exited/attention states, promotes opened folders into the rail, prunes missing paths, and exposes switch/reveal/copy/close context-menu actions. Switching projects uses the real workspace load path and restores in-session editor tabs, active file, editor buffers, and view state. Project session rows and browser preview URL state are now implemented; multiple live panes, background-running status, and cross-relaunch session restore stay with their dedicated later cards."
     },
     {
       "id": "PROJECT-SESSIONS",
@@ -513,14 +513,14 @@
     {
       "id": "BROWSER-PREVIEW",
       "title": "Browser and web preview pane",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "ui",
       "size": "M",
       "launch": "v1",
       "blocker": true,
       "summary": "The stripped VS Code workbench still needs a browser surface for localhost apps, docs, auth flows, and agent-generated pages without context switching.",
-      "done": "A project can open a browser/web preview pane with address/local URL, back/forward, reload, open-external, and per-project remembered preview URL; it is clearly scoped as dev preview, not a general browser."
+      "done": "Verified 2026-07-09: the workbench has a docked iframe browser preview pane between editor and terminal with Back, Forward, Reload, address/local URL input, Open, and Open externally controls. Preview URLs are normalized, remembered per project and active project session in workspace.json, restored on project/session switch, and exposed through a browser context menu with copy/open/navigation actions. Dev-server auto-detection and agent-controlled browser actions remain with their dedicated later cards."
     },
     {
       "id": "PANE-MANAGER",
