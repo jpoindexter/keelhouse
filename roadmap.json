@@ -660,14 +660,14 @@
     {
       "id": "ACTIVITY-DRAWERS",
       "title": "Switchable activity drawers",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "ui",
       "size": "M",
       "launch": "v1",
       "blocker": true,
       "summary": "Continue drawer navigation only when it is functional, not decorative. Borrow Zed's agentic layout principle: project/session thread sidebar plus rearrangeable real panels, not a decorative VS Code rail clone. Remaining useful drawers are Search, Source Control/Git, Browser/tools, and Settings.",
-      "done": "Drawer controls switch real side-drawer content; drawer width persists; pinned/collapsed state is keyboard reachable; Search, Source Control/Git, Browser/tools, and Settings are represented with real behavior instead of placeholders."
+      "done": "Verified 2026-07-09: the side drawer has Projects, Files, Search, Git, Browser, and Settings modes. Search filters the live file tree and opens editor matches; Git reads real git status through Rust; Browser controls the preview URL/history/reload/external open actions; Settings changes current profile, permission mode, agent surface, tray position, open folder, and file refresh. Drawer width is pointer/keyboard resizable; collapsed icon-only state and width persist locally. Verified with npm run build, npm test, cargo test, npm run qa:editor, selected screenshot inspection, and git diff --check."
     },
     {
       "id": "SESSION-RESTORE",

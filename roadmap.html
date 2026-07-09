@@ -174,6 +174,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">VSCODE-CHROME-SHELL &middot; Keelhouse shell chrome</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Correct the outer application chrome toward the useful VS Code/Codex structure without copying controls that do not fit Keelhouse.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: the app shell now uses titlebar/sidebar/main/status grid geometry. The header shows real Keelhouse state and actions: workspace, session, selected agent/pane, process status, Open Folder, and Reload Preview. Fake traffic lights, fake back/forward, the search-shaped folder picker, and the nonfunctional activity rail were removed. Activity drawer navigation remains parked until it switches real drawer content.</p></details></div>
+<div class="card" data-track="ui" data-id="ACTIVITY-DRAWERS" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">ACTIVITY-DRAWERS &middot; Switchable activity drawers</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Continue drawer navigation only when it is functional, not decorative. Borrow Zed's agentic layout principle: project/session thread sidebar plus rearrangeable real panels, not a decorative VS Code rail clone. Remaining useful drawers are Search, Source Control/Git, Browser/tools, and Settings.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: the side drawer has Projects, Files, Search, Git, Browser, and Settings modes. Search filters the live file tree and opens editor matches; Git reads real git status through Rust; Browser controls the preview URL/history/reload/external open actions; Settings changes current profile, permission mode, agent surface, tray position, open folder, and file refresh. Drawer width is pointer/keyboard resizable; collapsed icon-only state and width persist locally. Verified with npm run build, npm test, cargo test, npm run qa:editor, selected screenshot inspection, and git diff --check.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="workspace" data-id="LAST-WORKSPACE" data-size="S" data-tier="pebble" data-launch="v0">
@@ -280,10 +284,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="ui" data-id="ACTIVITY-DRAWERS" data-size="M" data-tier="rock" data-launch="v1">
-<div class="hd"><span class="sz">M</span><span class="ttl">ACTIVITY-DRAWERS &middot; Switchable activity drawers</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Continue drawer navigation only when it is functional, not decorative. Borrow Zed's agentic layout principle: project/session thread sidebar plus rearrangeable real panels, not a decorative VS Code rail clone. Remaining useful drawers are Search, Source Control/Git, Browser/tools, and Settings.</p>
-<details><summary>Done criteria</summary><p class="done">Drawer controls switch real side-drawer content; drawer width persists; pinned/collapsed state is keyboard reachable; Search, Source Control/Git, Browser/tools, and Settings are represented with real behavior instead of placeholders.</p></details></div>
 <div class="card" data-track="workspace" data-id="SESSION-RESTORE" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">SESSION-RESTORE &middot; Restore projects, files, panes</span><span class="lens l-workspace">Projects + sessions</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">After quit/relaunch, the cockpit should come back as the same working context, without pretending to preserve live agent process state.</p>

@@ -136,7 +136,9 @@
       <symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5M12 11v6M9 14h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
       <symbol id="i-folder-plus" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v6M9 13h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-git" viewBox="0 0 24 24"><path d="M6 3v18M18 7a4 4 0 0 1-4 4H6M18 7a4 4 0 1 0-4-4 4 4 0 0 0 4 4ZM18 21a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-search" viewBox="0 0 24 24"><path d="m21 21-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 7a2 2 0 1 0 4 0 2 2 0 0 0-4 0ZM6 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
       <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h12l2 2v16H5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 3v6h8V3M8 21v-7h8v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
       <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M22 2 11 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
       <symbol id="i-stop" viewBox="0 0 24 24"><path d="M7 7h10v10H7Z" fill="currentColor"/></symbol>
@@ -167,9 +169,17 @@
         </div>
       </header>
       <aside class="file-rail" aria-label="Project drawer">
+        <div class="drawer-toolbar">
+          <span>Drawer</span>
+          <button class="drawer-collapse-button" type="button" aria-label="Collapse side drawer"><svg class="app-icon"><use href="#i-chevron-down" /></svg></button>
+        </div>
         <div class="drawer-mode-switcher" role="tablist" aria-label="Side drawer">
           <button class="drawer-mode-switcher__button drawer-mode-switcher__button--active" type="button" role="tab" aria-selected="true"><svg class="app-icon"><use href="#i-workspace" /></svg><span>Projects</span></button>
           <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-file" /></svg><span>Files</span></button>
+          <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-search" /></svg><span>Search</span></button>
+          <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-git" /></svg><span>Git</span></button>
+          <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-browser" /></svg><span>Browser</span></button>
+          <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-settings" /></svg><span>Settings</span></button>
         </div>
         <nav class="project-rail" aria-label="Open projects">
           <div class="project-rail__heading">Projects</div>

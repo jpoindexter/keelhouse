@@ -15,6 +15,7 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
+  GitBranch,
   Globe2,
   HardDrive,
   LoaderCircle,
@@ -24,6 +25,7 @@ import {
   Save,
   Search,
   Send,
+  SlidersHorizontal,
   Square,
   X,
 } from "lucide-react";
@@ -47,6 +49,7 @@ export type AppIconName =
   | "folderOpen"
   | "folderPlus"
   | "forward"
+  | "git"
   | "idle"
   | "loading"
   | "openExternal"
@@ -54,6 +57,7 @@ export type AppIconName =
   | "save"
   | "search"
   | "send"
+  | "settings"
   | "stop"
   | "thinking"
   | "terminal"
@@ -76,6 +80,7 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   folderOpen: FolderOpen,
   folderPlus: FolderPlus,
   forward: ArrowRight,
+  git: GitBranch,
   idle: Circle,
   loading: LoaderCircle,
   openExternal: ExternalLink,
@@ -83,6 +88,7 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   save: Save,
   search: Search,
   send: Send,
+  settings: SlidersHorizontal,
   stop: Square,
   thinking: Brain,
   terminal: PanelBottom,

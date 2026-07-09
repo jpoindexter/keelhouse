@@ -172,12 +172,23 @@ type FileTreeResponse = { root: string; nodes: FileTreeNode[]; truncated: boolea
 type WorkspaceTreeChanged = { root: string; count: number };
 type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
 type FileOpResponse = { path: string };
+type GitStatusFile = { path: string; index: string; worktree: string };
+type GitStatusResponse = {
+  isRepository: boolean;
+  branch: string | null;
+  ahead: number;
+  behind: number;
+  staged: number;
+  unstaged: number;
+  untracked: number;
+  files: GitStatusFile[];
+};
 type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
 type WorkbenchLayoutMode = "right" | "left" | "bottom" | "hidden";
 type WorkbenchSizing = { trayPercent: number; toolSplitPercent: number };
 type AgentSurfaceMode = "chat" | "terminal";
-type SideDrawerMode = "projects" | "files";
+type SideDrawerMode = "projects" | "files" | "search" | "git" | "browser" | "settings";
 type EditorBuffer = EditorBufferSnapshot & {
   bytes: number | null;
   modifiedMs: number | null;
@@ -211,7 +222,10 @@ const clampWorkbenchPercent = (value: number, min: number, max: number) => Math.
 const WORKBENCH_LAYOUT_STORAGE_KEY = "keelhouse.workbench.layout";
 const WORKBENCH_SIZING_STORAGE_KEY = "keelhouse.workbench.sizing";
 const AGENT_SURFACE_STORAGE_KEY = "keelhouse.agent.surface";
+const SIDE_DRAWER_WIDTH_STORAGE_KEY = "keelhouse.sideDrawer.width";
+const SIDE_DRAWER_COLLAPSED_STORAGE_KEY = "keelhouse.sideDrawer.collapsed";
 const DEFAULT_WORKBENCH_SIZING: WorkbenchSizing = { trayPercent: 30, toolSplitPercent: 58 };
+const DEFAULT_SIDE_DRAWER_WIDTH = 300;
 const readStoredWorkbenchLayout = (): WorkbenchLayoutMode => {
   if (typeof window === "undefined") return "right";
   try {
@@ -242,6 +256,23 @@ const readStoredAgentSurfaceMode = (): AgentSurfaceMode => {
     return value === "terminal" ? "terminal" : "chat";
   } catch {
     return "chat";
+  }
+};
+const readStoredSideDrawerWidth = () => {
+  if (typeof window === "undefined") return DEFAULT_SIDE_DRAWER_WIDTH;
+  try {
+    const value = Number(window.localStorage.getItem(SIDE_DRAWER_WIDTH_STORAGE_KEY));
+    return Number.isFinite(value) ? clampWorkbenchPercent(value, 220, 420) : DEFAULT_SIDE_DRAWER_WIDTH;
+  } catch {
+    return DEFAULT_SIDE_DRAWER_WIDTH;
+  }
+};
+const readStoredSideDrawerCollapsed = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(SIDE_DRAWER_COLLAPSED_STORAGE_KEY) === "true";
+  } catch {
+    return false;
   }
 };
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
@@ -287,6 +318,20 @@ const markDirtyFile = (nodes: FileTreeNode[], dirtyPaths: Set<string>): FileTree
     dirty: dirtyPaths.has(node.path),
     children: node.children ? markDirtyFile(node.children, dirtyPaths) : undefined,
   }));
+};
+
+const flattenFiles = (nodes: FileTreeNode[]): FileTreeNode[] =>
+  nodes.flatMap((node) => [
+    ...(node.kind === "file" ? [node] : []),
+    ...(node.children ? flattenFiles(node.children) : []),
+  ]);
+
+const gitStatusLabel = (file: GitStatusFile) => {
+  if (file.index === "?") return "Untracked";
+  const parts = [];
+  if (file.index !== " ") parts.push("Staged");
+  if (file.worktree !== " ") parts.push("Modified");
+  return parts.join(" + ") || "Clean";
 };
 
 function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<FileTreeNode>) {
@@ -425,11 +470,44 @@ function App() {
   const [workbenchSizing, setWorkbenchSizing] = useState<WorkbenchSizing>(readStoredWorkbenchSizing);
   const [agentSurfaceMode, setAgentSurfaceMode] = useState<AgentSurfaceMode>(readStoredAgentSurfaceMode);
   const [sideDrawerMode, setSideDrawerMode] = useState<SideDrawerMode>("projects");
+  const [sideDrawerWidth, setSideDrawerWidth] = useState(readStoredSideDrawerWidth);
+  const [sideDrawerCollapsed, setSideDrawerCollapsed] = useState(readStoredSideDrawerCollapsed);
+  const [drawerSearchQuery, setDrawerSearchQuery] = useState("");
+  const [gitStatus, setGitStatus] = useState<GitStatusResponse | null>(null);
+  const [gitStatusLoading, setGitStatusLoading] = useState(false);
+  const [gitStatusError, setGitStatusError] = useState<string | null>(null);
   const workbenchRef = useRef<HTMLElement | null>(null);
   const workbenchStyle = {
     "--tool-tray-size": `${workbenchSizing.trayPercent}%`,
     "--tool-primary-size": `${workbenchSizing.toolSplitPercent}%`,
   } as CSSProperties;
+  const appShellStyle = {
+    "--side-drawer-width": `${sideDrawerCollapsed ? 52 : sideDrawerWidth}px`,
+  } as CSSProperties;
+  const resizeSideDrawer = (clientX: number) => {
+    setSideDrawerWidth(clampWorkbenchPercent(clientX, 220, 420));
+  };
+  const beginSideDrawerResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (sideDrawerCollapsed) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    document.body.classList.add("is-resizing-workbench");
+    const move = (pointerEvent: PointerEvent) => resizeSideDrawer(pointerEvent.clientX);
+    const stop = () => {
+      document.body.classList.remove("is-resizing-workbench");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop, { once: true });
+    window.addEventListener("pointercancel", stop, { once: true });
+  };
+  const nudgeSideDrawerResize = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    setSideDrawerWidth((width) => clampWorkbenchPercent(width + (event.key === "ArrowRight" ? 12 : -12), 220, 420));
+  };
   const resizeWorkbenchTray = (clientX: number, clientY: number) => {
     const rect = workbenchRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -507,6 +585,14 @@ function App() {
       // Local surface preference is best-effort.
     }
   }, [agentSurfaceMode]);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDE_DRAWER_WIDTH_STORAGE_KEY, String(sideDrawerWidth));
+      window.localStorage.setItem(SIDE_DRAWER_COLLAPSED_STORAGE_KEY, sideDrawerCollapsed ? "true" : "false");
+    } catch {
+      // Local drawer persistence is best-effort.
+    }
+  }, [sideDrawerCollapsed, sideDrawerWidth]);
   const editorDirty = selectedFile != null && editorText !== savedEditorText;
   const dirtyTabPaths = useMemo(
     () => dirtyEditorTabPaths(editorTabs, editorBuffersRef.current, selectedFile?.path ?? null, editorDirty),
@@ -527,6 +613,14 @@ function App() {
     () => markDirtyFile(fileTree, dirtyTabPathSet),
     [fileTree, dirtyTabPathSet],
   );
+  const searchableFiles = useMemo(() => flattenFiles(visibleFileTree), [visibleFileTree]);
+  const drawerSearchResults = useMemo(() => {
+    const query = drawerSearchQuery.trim().toLowerCase();
+    if (!query) return searchableFiles.slice(0, 40);
+    return searchableFiles
+      .filter((file) => file.path.toLowerCase().includes(query) || file.name.toLowerCase().includes(query))
+      .slice(0, 80);
+  }, [drawerSearchQuery, searchableFiles]);
   const activeSessionId = useMemo(
     () => activeProjectSessionId(activeSessionByProject, projectSessions, workspacePath),
     [activeSessionByProject, projectSessions, workspacePath],
@@ -598,6 +692,24 @@ function App() {
   const browserCanGoForward = browserHistoryCanGoForward(browserHistory, browserHistoryIndex);
 
   const refreshFileTree = () => setTreeRefreshNonce((value) => value + 1);
+  const refreshGitStatus = async () => {
+    const root = workspacePathRef.current ?? workspacePath;
+    if (!root) {
+      setGitStatus(null);
+      setGitStatusError(null);
+      return;
+    }
+    setGitStatusLoading(true);
+    setGitStatusError(null);
+    try {
+      setGitStatus(await invoke<GitStatusResponse>("git_status", { root }));
+    } catch (err) {
+      setGitStatusError(String(err));
+      setGitStatus(null);
+    } finally {
+      setGitStatusLoading(false);
+    }
+  };
 
   useEffect(() => {
     recentProjectsRef.current = recentProjects;
@@ -618,6 +730,12 @@ function App() {
   useEffect(() => {
     paneLabelsBySessionRef.current = paneLabelsBySession;
   }, [paneLabelsBySession]);
+
+  useEffect(() => {
+    if (sideDrawerMode === "git") {
+      void refreshGitStatus();
+    }
+  }, [sideDrawerMode, workspacePath, treeRefreshNonce]);
 
   useEffect(() => {
     browserPreviewByProjectRef.current = browserPreviewByProject;
@@ -2925,9 +3043,17 @@ function App() {
   const activeSessionTitle = activeSessionId
     ? projectSessionsFor(workspacePath ?? "").find((session) => session.id === activeSessionId)?.title ?? "New session"
     : "No session";
+  const drawerModes: { id: SideDrawerMode; label: string; icon: AppIconName }[] = [
+    { id: "projects", label: "Projects", icon: "workspace" },
+    { id: "files", label: "Files", icon: "file" },
+    { id: "search", label: "Search", icon: "search" },
+    { id: "git", label: "Git", icon: "git" },
+    { id: "browser", label: "Browser", icon: "browser" },
+    { id: "settings", label: "Settings", icon: "settings" },
+  ];
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${sideDrawerCollapsed ? "app-shell--side-drawer-collapsed" : ""}`} style={appShellStyle}>
       <header className="app-titlebar" aria-label="Application chrome">
         <div className="titlebar-identity">
           <span className="titlebar-product">Keelhouse</span>
@@ -2959,30 +3085,37 @@ function App() {
           </button>
         </div>
       </header>
-      <aside className="file-rail" aria-label="Project drawer">
-        <div className="drawer-mode-switcher" role="tablist" aria-label="Side drawer">
+      <aside className={`file-rail ${sideDrawerCollapsed ? "file-rail--collapsed" : ""}`} aria-label="Project drawer">
+        <div className="drawer-toolbar">
+          <span>Drawer</span>
           <button
-            className={`drawer-mode-switcher__button ${sideDrawerMode === "projects" ? "drawer-mode-switcher__button--active" : ""}`}
+            className="drawer-collapse-button"
             type="button"
-            role="tab"
-            aria-selected={sideDrawerMode === "projects"}
-            onClick={() => setSideDrawerMode("projects")}
+            title={sideDrawerCollapsed ? "Expand side drawer" : "Collapse side drawer"}
+            aria-label={sideDrawerCollapsed ? "Expand side drawer" : "Collapse side drawer"}
+            aria-pressed={sideDrawerCollapsed}
+            onClick={() => setSideDrawerCollapsed((collapsed) => !collapsed)}
           >
-            <AppIcon name="workspace" />
-            <span>Projects</span>
-          </button>
-          <button
-            className={`drawer-mode-switcher__button ${sideDrawerMode === "files" ? "drawer-mode-switcher__button--active" : ""}`}
-            type="button"
-            role="tab"
-            aria-selected={sideDrawerMode === "files"}
-            onClick={() => setSideDrawerMode("files")}
-          >
-            <AppIcon name="file" />
-            <span>Files</span>
+            <AppIcon name={sideDrawerCollapsed ? "chevronRight" : "chevronDown"} />
           </button>
         </div>
-        {sideDrawerMode === "files" ? (
+        <div className="drawer-mode-switcher" role="tablist" aria-label="Side drawer">
+          {drawerModes.map((mode) => (
+            <button
+              className={`drawer-mode-switcher__button ${sideDrawerMode === mode.id ? "drawer-mode-switcher__button--active" : ""}`}
+              type="button"
+              role="tab"
+              key={mode.id}
+              aria-selected={sideDrawerMode === mode.id}
+              title={mode.label}
+              onClick={() => setSideDrawerMode(mode.id)}
+            >
+              <AppIcon name={mode.icon} />
+              <span>{mode.label}</span>
+            </button>
+          ))}
+        </div>
+        {!sideDrawerCollapsed && sideDrawerMode === "files" ? (
           <>
             <div className="panel-title panel-title--with-action">
               <span>Files</span>
@@ -3032,7 +3165,7 @@ function App() {
             </div>
           </>
         ) : null}
-        {sideDrawerMode === "projects" && visibleOpenProjects.length > 0 ? (
+        {!sideDrawerCollapsed && sideDrawerMode === "projects" && visibleOpenProjects.length > 0 ? (
           <nav className="project-rail" aria-label="Open projects">
             <div className="project-rail__heading">Projects</div>
             {visibleOpenProjects.map((project) => {
@@ -3137,8 +3270,221 @@ function App() {
             })}
           </nav>
         ) : null}
-        {sideDrawerMode === "projects" && visibleOpenProjects.length === 0 ? <div className="rail-status">Open a folder to start a project session</div> : null}
-        {sideDrawerMode === "files" ? (
+        {!sideDrawerCollapsed && sideDrawerMode === "projects" && visibleOpenProjects.length === 0 ? <div className="rail-status">Open a folder to start a project session</div> : null}
+        {!sideDrawerCollapsed && sideDrawerMode === "search" ? (
+          <section className="drawer-panel" aria-label="Search files">
+            <div className="panel-title panel-title--with-action">
+              <span>Search</span>
+              <button className="rail-open-button" type="button" onClick={() => setSideDrawerMode("files")}>
+                <AppIcon name="file" />
+                <span>Files</span>
+              </button>
+            </div>
+            <label className="drawer-field">
+              <span>Filter files</span>
+              <input
+                value={drawerSearchQuery}
+                placeholder="Type a filename or path"
+                disabled={!workspacePath}
+                onChange={(event) => setDrawerSearchQuery(event.currentTarget.value)}
+              />
+            </label>
+            <div className="drawer-list">
+              {!workspacePath ? <div className="rail-status">Open a folder to search files</div> : null}
+              {workspacePath && drawerSearchResults.length === 0 ? <div className="rail-status">No matching files</div> : null}
+              {workspacePath && drawerSearchResults.map((file) => (
+                <button
+                  className="drawer-list-row"
+                  type="button"
+                  key={file.path}
+                  title={file.path}
+                  onClick={() => void requestOpenEditorFile(file, { focusEditor: true })}
+                >
+                  <AppIcon name="file" />
+                  <span className="drawer-list-row__main">{file.name}</span>
+                  <span className="drawer-list-row__meta">{pathBreadcrumbs(workspacePath, file.path).join(" / ")}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {!sideDrawerCollapsed && sideDrawerMode === "git" ? (
+          <section className="drawer-panel" aria-label="Source control">
+            <div className="panel-title panel-title--with-action">
+              <span>Source Control</span>
+              <button
+                className="rail-open-button"
+                type="button"
+                disabled={!workspacePath || gitStatusLoading}
+                onClick={() => void refreshGitStatus()}
+              >
+                <AppIcon name="reload" />
+                <span>Refresh</span>
+              </button>
+            </div>
+            {gitStatusLoading ? <div className="rail-status">Reading git status…</div> : null}
+            {gitStatusError ? <div className="rail-status rail-status--error">{gitStatusError}</div> : null}
+            {!workspacePath ? <div className="rail-status">Open a folder to read source control</div> : null}
+            {workspacePath && gitStatus?.isRepository === false ? <div className="rail-status">This workspace is not a Git repository</div> : null}
+            {gitStatus?.isRepository ? (
+              <>
+                <div className="drawer-summary">
+                  <div>
+                    <span>Branch</span>
+                    <strong>{gitStatus.branch ?? "Detached"}</strong>
+                  </div>
+                  <div>
+                    <span>Changes</span>
+                    <strong>{gitStatus.files.length}</strong>
+                  </div>
+                  <div>
+                    <span>Staged</span>
+                    <strong>{gitStatus.staged}</strong>
+                  </div>
+                  <div>
+                    <span>Untracked</span>
+                    <strong>{gitStatus.untracked}</strong>
+                  </div>
+                  {gitStatus.ahead > 0 || gitStatus.behind > 0 ? (
+                    <div>
+                      <span>Remote</span>
+                      <strong>{`+${gitStatus.ahead} / -${gitStatus.behind}`}</strong>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="drawer-list">
+                  {gitStatus.files.length === 0 ? <div className="rail-status">Working tree clean</div> : null}
+                  {gitStatus.files.map((file) => (
+                    <button
+                      className="drawer-list-row"
+                      type="button"
+                      key={`${file.index}${file.worktree}${file.path}`}
+                      title={`${gitStatusLabel(file)} · ${file.path}`}
+                      onClick={() => {
+                        const node = searchableFiles.find((item) => item.path === `${workspacePath}/${file.path}` || item.path.endsWith(`/${file.path}`));
+                        if (node) void requestOpenEditorFile(node, { focusEditor: true });
+                        else setSideDrawerMode("files");
+                      }}
+                    >
+                      <AppIcon name={file.index === "?" ? "filePlus" : "git"} />
+                      <span className="drawer-list-row__main">{basename(file.path)}</span>
+                      <span className="drawer-list-row__meta">{gitStatusLabel(file)}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </section>
+        ) : null}
+        {!sideDrawerCollapsed && sideDrawerMode === "browser" ? (
+          <section className="drawer-panel" aria-label="Browser tools">
+            <div className="panel-title panel-title--with-action">
+              <span>Browser</span>
+              <button className="rail-open-button" type="button" onClick={() => setWorkbenchLayout(workbenchLayout === "hidden" ? "right" : workbenchLayout)}>
+                <AppIcon name="browser" />
+                <span>Show</span>
+              </button>
+            </div>
+            <form className="drawer-form" onSubmit={submitBrowserAddress}>
+              <label className="drawer-field">
+                <span>Preview URL</span>
+                <input
+                  value={browserAddress}
+                  placeholder="localhost:5173"
+                  onChange={(event) => {
+                    setBrowserAddress(event.currentTarget.value);
+                    setBrowserError(null);
+                  }}
+                />
+              </label>
+              <button className="rail-open-button" type="submit">
+                <AppIcon name="browser" />
+                <span>Open</span>
+              </button>
+            </form>
+            {browserError ? <div className="rail-status rail-status--error">{browserError}</div> : null}
+            <div className="drawer-action-grid">
+              <button className="rail-open-button" type="button" disabled={!browserCanGoBack} onClick={() => goBrowserHistory(-1)}>
+                <AppIcon name="back" />
+                <span>Back</span>
+              </button>
+              <button className="rail-open-button" type="button" disabled={!browserCanGoForward} onClick={() => goBrowserHistory(1)}>
+                <AppIcon name="forward" />
+                <span>Forward</span>
+              </button>
+              <button className="rail-open-button" type="button" onClick={reloadBrowserPreview}>
+                <AppIcon name="reload" />
+                <span>Reload</span>
+              </button>
+              <button className="rail-open-button" type="button" onClick={() => void openPath(browserUrl)}>
+                <AppIcon name="openExternal" />
+                <span>External</span>
+              </button>
+            </div>
+            <div className="drawer-callout" title={browserUrl}>
+              <AppIcon name="browser" />
+              <span>{browserUrl}</span>
+            </div>
+          </section>
+        ) : null}
+        {!sideDrawerCollapsed && sideDrawerMode === "settings" ? (
+          <section className="drawer-panel" aria-label="Settings">
+            <div className="panel-title">Settings</div>
+            <label className="drawer-field">
+              <span>Default pane profile</span>
+              <select
+                value={launchProfile.id}
+                disabled={launchProfileChanging}
+                onChange={(event) => void switchLaunchProfile(launchProfileById(event.currentTarget.value))}
+              >
+                {LAUNCH_PROFILES.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="drawer-field">
+              <span>Permission mode</span>
+              <select
+                value={activeComposerHarness.approvalMode}
+                disabled={!activeComposerHarnessKey}
+                onChange={(event) => void setComposerApprovalMode(event.currentTarget.value as AgentApprovalMode)}
+              >
+                <option value="ask">Ask</option>
+                <option value="approveSafe">Approve safe</option>
+                <option value="fullAccess">Full access</option>
+              </select>
+            </label>
+            <label className="drawer-field">
+              <span>Agent surface</span>
+              <select value={agentSurfaceMode} onChange={(event) => setAgentSurfaceMode(event.currentTarget.value as AgentSurfaceMode)}>
+                <option value="chat">Chat run view</option>
+                <option value="terminal">Raw terminal</option>
+              </select>
+            </label>
+            <label className="drawer-field">
+              <span>Tool tray</span>
+              <select value={workbenchLayout} onChange={(event) => setWorkbenchLayout(event.currentTarget.value as WorkbenchLayoutMode)}>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="bottom">Bottom</option>
+                <option value="hidden">Hidden</option>
+              </select>
+            </label>
+            <div className="drawer-action-grid">
+              <button className="rail-open-button" type="button" onClick={pickWorkspace}>
+                <AppIcon name="folderOpen" />
+                <span>Open Folder</span>
+              </button>
+              <button className="rail-open-button" type="button" disabled={!workspacePath} onClick={refreshFileTree}>
+                <AppIcon name="reload" />
+                <span>Refresh Files</span>
+              </button>
+            </div>
+          </section>
+        ) : null}
+        {!sideDrawerCollapsed && sideDrawerMode === "files" ? (
           <div ref={railBodyRef} className="rail-tree">
             {fileTreeLoading ? <div className="rail-status">Loading…</div> : null}
             {fileTreeError ? <div className="rail-status rail-status--error">{fileTreeError}</div> : null}
@@ -3179,6 +3525,16 @@ function App() {
           </div>
         ) : null}
       </aside>
+      {!sideDrawerCollapsed ? (
+        <button
+          className="side-drawer-resizer"
+          type="button"
+          aria-label="Resize side drawer"
+          title="Resize side drawer"
+          onPointerDown={beginSideDrawerResize}
+          onKeyDown={nudgeSideDrawerResize}
+        />
+      ) : null}
 
       <main ref={workbenchRef} className={`workbench workbench--drawer-${workbenchLayout}`} style={workbenchStyle}>
         <section

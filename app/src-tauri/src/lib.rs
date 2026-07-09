@@ -325,6 +325,27 @@ struct FileOpResponse {
     path: String,
 }
 
+#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct GitStatusFile {
+    path: String,
+    index: String,
+    worktree: String,
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct GitStatusResponse {
+    is_repository: bool,
+    branch: Option<String>,
+    ahead: u32,
+    behind: u32,
+    staged: usize,
+    unstaged: usize,
+    untracked: usize,
+    files: Vec<GitStatusFile>,
+}
+
 struct FileTreeBuilder {
     name: String,
     path: String,
@@ -1006,6 +1027,108 @@ fn duplicate_workspace_path(root: String, path: String) -> Result<FileOpResponse
     })
 }
 
+fn parse_git_status_output(output: &str) -> GitStatusResponse {
+    let mut branch = None;
+    let mut ahead = 0;
+    let mut behind = 0;
+    let mut files = Vec::new();
+
+    for line in output.lines() {
+        if let Some(header) = line.strip_prefix("## ") {
+            let (branch_part, meta) = header.split_once('[').unwrap_or((header, ""));
+            branch = Some(
+                branch_part
+                    .split("...")
+                    .next()
+                    .unwrap_or(branch_part)
+                    .trim()
+                    .to_string(),
+            )
+            .filter(|value| !value.is_empty());
+            if let Some(meta) = meta.strip_suffix(']') {
+                for part in meta.split(',') {
+                    let part = part.trim();
+                    if let Some(value) = part.strip_prefix("ahead ") {
+                        ahead = value.parse().unwrap_or(0);
+                    } else if let Some(value) = part.strip_prefix("behind ") {
+                        behind = value.parse().unwrap_or(0);
+                    }
+                }
+            }
+            continue;
+        }
+        if line.len() < 4 {
+            continue;
+        }
+        let index = line.chars().next().unwrap_or(' ').to_string();
+        let worktree = line.chars().nth(1).unwrap_or(' ').to_string();
+        let raw_path = line[3..].trim();
+        let path = raw_path
+            .rsplit_once(" -> ")
+            .map(|(_, target)| target)
+            .unwrap_or(raw_path)
+            .to_string();
+        files.push(GitStatusFile {
+            path,
+            index,
+            worktree,
+        });
+    }
+
+    let staged = files
+        .iter()
+        .filter(|file| file.index != " " && file.index != "?")
+        .count();
+    let unstaged = files
+        .iter()
+        .filter(|file| file.worktree != " " && file.worktree != "?")
+        .count();
+    let untracked = files.iter().filter(|file| file.index == "?").count();
+
+    GitStatusResponse {
+        is_repository: true,
+        branch,
+        ahead,
+        behind,
+        staged,
+        unstaged,
+        untracked,
+        files,
+    }
+}
+
+#[tauri::command]
+fn git_status(root: String) -> Result<GitStatusResponse, String> {
+    let root = validate_workspace_path(&root)?;
+    let output = Command::new("git")
+        .args(["-C", &root, "status", "--short", "--branch"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|err| format!("Could not run git status: {err}"))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if stderr.contains("not a git repository") {
+            return Ok(GitStatusResponse {
+                is_repository: false,
+                branch: None,
+                ahead: 0,
+                behind: 0,
+                staged: 0,
+                unstaged: 0,
+                untracked: 0,
+                files: Vec::new(),
+            });
+        }
+        return Err(format!("Could not read git status: {}", stderr.trim()));
+    }
+
+    Ok(parse_git_status_output(&String::from_utf8_lossy(
+        &output.stdout,
+    )))
+}
+
 /// Frontend -> filesystem: start or replace the live watcher for the current
 /// workspace. The watcher only emits a refresh signal; `list_workspace_tree` stays
 /// the single source of truth for rail data.
@@ -1653,7 +1776,8 @@ pub fn run() {
             create_workspace_folder,
             rename_workspace_path,
             delete_workspace_path,
-            duplicate_workspace_path
+            duplicate_workspace_path,
+            git_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -2165,6 +2289,29 @@ mod tests {
 
         let _ = fs::remove_dir_all(root);
         let _ = fs::remove_file(outside);
+    }
+
+    #[test]
+    fn parses_git_status_summary_and_files() {
+        let parsed = parse_git_status_output(
+            "## main...origin/main [ahead 1, behind 2]\n M src/app.ts\nM  README.md\n?? docs/new.md\nR  old.txt -> new.txt\n",
+        );
+
+        assert!(parsed.is_repository);
+        assert_eq!(parsed.branch.as_deref(), Some("main"));
+        assert_eq!(parsed.ahead, 1);
+        assert_eq!(parsed.behind, 2);
+        assert_eq!(parsed.staged, 2);
+        assert_eq!(parsed.unstaged, 1);
+        assert_eq!(parsed.untracked, 1);
+        assert_eq!(
+            parsed
+                .files
+                .iter()
+                .map(|file| file.path.as_str())
+                .collect::<Vec<_>>(),
+            vec!["src/app.ts", "README.md", "docs/new.md", "new.txt"],
+        );
     }
 
     #[test]
