@@ -30,6 +30,9 @@ assert(appCss.includes("--steel-cyan-500: #67c3d1;"), "App CSS must define steel
 assert(appCss.includes("--steel-cyan-400: #9bd9e3;"), "App CSS must define steel-cyan strong accent #9bd9e3");
 assert(appCss.includes("--steel-cyan-900: #162c33;"), "App CSS must define steel-cyan muted surface #162c33");
 assert(appCss.includes("--color-accent-border: var(--blue-500);"), "App accent border must flow through the semantic accent token");
+assert(appCss.includes(".agent-thread-event"), "App CSS must include thread-style agent event cards");
+assert(appTsx.includes("agent-thread-event"), "App surface must render thread-style agent event cards");
+assert(appTsx.includes("agent-activity-log__title\">Thread"), "Agent activity surface must label the center feed as Thread");
 assert(demo.includes("--accent: #67c3d1;"), "Accepted chrome demo must use steel-cyan #67c3d1");
 assert(demo.includes("--accent-strong: #9bd9e3;"), "Accepted chrome demo must use steel-cyan strong #9bd9e3");
 assert(demo.includes("--accent-soft: #162c33;"), "Accepted chrome demo must use steel-cyan soft #162c33");

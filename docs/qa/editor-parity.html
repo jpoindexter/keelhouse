@@ -391,7 +391,7 @@
               </div>
               <section class="agent-activity-log" aria-label="Agent activity timeline">
                 <div class="agent-activity-log__toolbar" role="toolbar" aria-label="Filter agent activity timeline">
-                  <span class="agent-activity-log__title">Timeline</span>
+                  <span class="agent-activity-log__title">Thread</span>
                   <div class="agent-activity-log__filters">
                     <button class="agent-activity-log__filter agent-activity-log__filter--active" type="button" aria-pressed="true">All</button>
                     <button class="agent-activity-log__filter" type="button" aria-pressed="false">Prompts</button>
@@ -401,10 +401,10 @@
                   </div>
                 </div>
                 <div class="agent-activity-log__list">
-                  <div class="agent-activity-log__item agent-activity-log__item--thinking"><svg class="app-icon"><use href="#i-thinking" /></svg><span class="agent-activity-log__time">08:32</span><span class="agent-activity-log__label">Prompt sent</span><span class="agent-activity-log__detail">API fix</span><span class="agent-activity-log__meta">terminal</span><span class="agent-activity-log__kind">Prompts</span></div>
-                  <div class="agent-activity-log__item agent-activity-log__item--complete"><svg class="app-icon"><use href="#i-check" /></svg><span class="agent-activity-log__time">08:32</span><span class="agent-activity-log__label">Action approved</span><span class="agent-activity-log__detail">Save file</span><span class="agent-activity-log__meta">review diff</span><span class="agent-activity-log__kind">Approvals</span></div>
-                  <div class="agent-activity-log__item agent-activity-log__item--complete"><svg class="app-icon"><use href="#i-check" /></svg><span class="agent-activity-log__time">08:33</span><span class="agent-activity-log__label">Edited a file</span><span class="agent-activity-log__detail">App.tsx</span><span class="agent-activity-log__meta">review diff</span><span class="agent-activity-log__kind">Files</span></div>
-                  <div class="agent-activity-log__item agent-activity-log__item--error"><svg class="app-icon"><use href="#i-error" /></svg><span class="agent-activity-log__time">08:35</span><span class="agent-activity-log__label">Command failed</span><span class="agent-activity-log__detail">npm test</span><span class="agent-activity-log__meta">exit 1 · terminal</span><span class="agent-activity-log__kind">Errors</span></div>
+                  <article class="agent-thread-event agent-thread-event--thinking"><div class="agent-thread-event__icon"><svg class="app-icon"><use href="#i-thinking" /></svg></div><div class="agent-thread-event__body"><div class="agent-thread-event__header"><strong>Prompt sent</strong><span>08:32</span><span>Prompts</span></div><div class="agent-thread-event__detail">API fix</div><div class="agent-thread-event__meta">terminal</div></div></article>
+                  <article class="agent-thread-event agent-thread-event--complete"><div class="agent-thread-event__icon"><svg class="app-icon"><use href="#i-check" /></svg></div><div class="agent-thread-event__body"><div class="agent-thread-event__header"><strong>Action approved</strong><span>08:32</span><span>Approvals</span></div><div class="agent-thread-event__detail">Save file</div><div class="agent-thread-event__meta">review diff</div></div></article>
+                  <article class="agent-thread-event agent-thread-event--complete"><div class="agent-thread-event__icon"><svg class="app-icon"><use href="#i-check" /></svg></div><div class="agent-thread-event__body"><div class="agent-thread-event__header"><strong>Edited a file</strong><span>08:33</span><span>Files</span></div><div class="agent-thread-event__detail">App.tsx</div><div class="agent-thread-event__meta">review diff</div></div></article>
+                  <article class="agent-thread-event agent-thread-event--error"><div class="agent-thread-event__icon"><svg class="app-icon"><use href="#i-error" /></svg></div><div class="agent-thread-event__body"><div class="agent-thread-event__header"><strong>Command failed</strong><span>08:35</span><span>Errors</span></div><div class="agent-thread-event__detail">npm test</div><div class="agent-thread-event__meta">exit 1 · terminal</div></div></article>
                 </div>
               </section>
               <div class="agent-chat-terminal-hint">

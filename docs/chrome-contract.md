@@ -20,6 +20,13 @@ Keelhouse chrome follows the accepted `demo/keelhouse-chrome-demo.html` directio
 - Chat/avatar identity blocks such as `You ·` or `Keelhouse ·`.
 - Pill-heavy active rows and obvious rounded-rectangle action chrome.
 
+## Agent Thread Surface
+
+- Chat/activity is the default surface; raw terminal remains available as an escape hatch.
+- Activity renders as a thread of prompt, approval, file, command, error, browser, git, and app events.
+- Event rows use `agent-thread-event` cards with status icons and compact metadata, not a spreadsheet-like log table.
+- The composer stays pinned below the thread.
+
 ## Verification
 
 Run from `app/`:

@@ -190,6 +190,14 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">GIT-ACTIONS-LITE &middot; Lightweight git review actions</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Add only the git actions needed to review/clean agent work, not a full git client.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: diff review and Git-marked file context menus expose Stage, Unstage, Discard Unstaged Changes, and Copy shown diff. The blind audit findings were folded into the card: discard is blocked when the same file has an unsaved editor draft; mixed staged/unstaged files use explicit labels (Copy shown diff, whole-file Stage/Unstage); backend git_file_action validates repository-relative paths and re-reads target status before mutation; staged new files, tracked discard, and untracked discard use separate Git command paths; real temp-repo Git tests cover stage/unstage/discard; the slice stops at per-file actions, not branch/commit/push/PR; screenshot QA includes diff-review.png. Covered by npm run build, npm test, cargo test git_file_actions, npm run qa:editor, and git diff --check.</p></details></div>
+<div class="card" data-track="ui" data-id="CHROME-DEMO-CONTRACT" data-size="S" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">CHROME-DEMO-CONTRACT &middot; Accepted chrome demo contract</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Treat demo/keelhouse-chrome-demo.html as the visual contract for the app pass.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: the accepted demo contract is documented in docs/chrome-contract.md, enforced by npm run qa:chrome-contract, and tied to accepted demo plus real app shell checks.</p></details></div>
+<div class="card" data-track="ui" data-id="AGENT-THREAD-SURFACE" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-THREAD-SURFACE &middot; Agent thread as main surface</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Chat/activity is the working surface; raw terminal is available but not the default screen.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: chat remains the default surface, raw terminal remains available as an escape hatch, activity renders as thread-style event cards instead of a table, filters remain available, and refreshed QA screenshots show prompt, approval, file, command, and error events above the bottom composer.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="workspace" data-id="LAST-WORKSPACE" data-size="S" data-tier="pebble" data-launch="v0">
@@ -306,18 +314,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="ui" data-id="CHROME-DEMO-CONTRACT" data-size="S" data-tier="rock" data-launch="v1">
-<div class="hd"><span class="sz">S</span><span class="ttl">CHROME-DEMO-CONTRACT &middot; Accepted chrome demo contract</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Treat demo/keelhouse-chrome-demo.html as the visual contract for the app pass.</p>
-<details><summary>Done criteria</summary><p class="done">The real app matches the accepted demo direction: graphite shell, steel-cyan accent, direct thread/project sidebar, agent-first center, right/bottom trays, flat toolbar icons, and no orange accents, fake browser chrome, decorative activity rail, or pill-heavy controls.</p></details></div>
 <div class="card" data-track="ui" data-id="APP-CHROME-PORT" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">APP-CHROME-PORT &middot; Port accepted chrome into app</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Port the accepted demo into the real Tauri app shell without losing current v1 functionality.</p>
 <details><summary>Done criteria</summary><p class="done">Projects/Files/Search/Git/Browser/Settings drawers, multi-pane sessions, browser preview, editor tray, git diff actions, composer harness, activity log, and process lifecycle still work after the chrome port; screenshots prove the default shell no longer resembles stacked panes.</p></details></div>
-<div class="card" data-track="ui" data-id="AGENT-THREAD-SURFACE" data-size="M" data-tier="rock" data-launch="v1">
-<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-THREAD-SURFACE &middot; Agent thread as main surface</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Chat/activity is the working surface; raw terminal is available but not the default screen.</p>
-<details><summary>Done criteria</summary><p class="done">The main surface shows prompt, thinking/status, tool/file/action rows, inline approvals, and a bottom composer. It does not show Jason/Keelhouse avatar blocks, duplicate chat identities, or a raw terminal as the primary default view.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>

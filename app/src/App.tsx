@@ -4428,7 +4428,7 @@ function App() {
               </div>
               <section className="agent-activity-log" aria-label="Agent activity timeline">
                 <div className="agent-activity-log__toolbar" role="toolbar" aria-label="Filter agent activity timeline">
-                  <span className="agent-activity-log__title">Timeline</span>
+                  <span className="agent-activity-log__title">Thread</span>
                   <div className="agent-activity-log__filters">
                     {AGENT_ACTIVITY_LOG_FILTERS.map((filter) => (
                       <button
@@ -4446,17 +4446,23 @@ function App() {
                 <div className="agent-activity-log__list">
                   {selectedAgentActivityLog.length > 0 ? (
                     selectedAgentActivityLog.map((event) => (
-                      <div className={`agent-activity-log__item agent-activity-log__item--${event.status}`} key={event.id}>
-                        <AppIcon
-                          name={agentActivityIconName(event.status)}
-                          label={agentActivityAccessibleLabel(event.status, event.label)}
-                        />
-                        <span className="agent-activity-log__time">{agentActivityTimeLabel(event.timestamp)}</span>
-                        <span className="agent-activity-log__label">{event.label}</span>
-                        <span className="agent-activity-log__detail">{event.detail ?? ""}</span>
-                        <span className="agent-activity-log__meta">{agentActivityMetaLabel(event)}</span>
-                        <span className="agent-activity-log__kind">{agentActivityFilterLabel(event.kind)}</span>
-                      </div>
+                      <article className={`agent-thread-event agent-thread-event--${event.status}`} key={event.id}>
+                        <div className="agent-thread-event__icon">
+                          <AppIcon
+                            name={agentActivityIconName(event.status)}
+                            label={agentActivityAccessibleLabel(event.status, event.label)}
+                          />
+                        </div>
+                        <div className="agent-thread-event__body">
+                          <div className="agent-thread-event__header">
+                            <strong>{event.label}</strong>
+                            <span>{agentActivityTimeLabel(event.timestamp)}</span>
+                            <span>{agentActivityFilterLabel(event.kind)}</span>
+                          </div>
+                          {event.detail ? <div className="agent-thread-event__detail">{event.detail}</div> : null}
+                          {agentActivityMetaLabel(event) ? <div className="agent-thread-event__meta">{agentActivityMetaLabel(event)}</div> : null}
+                        </div>
+                      </article>
                     ))
                   ) : (
                     <div className="agent-activity-log__empty">

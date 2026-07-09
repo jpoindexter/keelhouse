@@ -717,14 +717,14 @@
     {
       "id": "CHROME-DEMO-CONTRACT",
       "title": "Accepted chrome demo contract",
-      "column": "now",
+      "column": "done",
       "tier": "rock",
       "track": "ui",
       "size": "S",
       "launch": "v1",
       "blocker": true,
       "summary": "Treat demo/keelhouse-chrome-demo.html as the visual contract for the app pass.",
-      "done": "The real app matches the accepted demo direction: graphite shell, steel-cyan accent, direct thread/project sidebar, agent-first center, right/bottom trays, flat toolbar icons, and no orange accents, fake browser chrome, decorative activity rail, or pill-heavy controls."
+      "done": "Verified 2026-07-09: the accepted demo contract is documented in docs/chrome-contract.md, enforced by npm run qa:chrome-contract, and tied to accepted demo plus real app shell checks."
     },
     {
       "id": "CHROME-QA-GATE",
@@ -763,14 +763,14 @@
     {
       "id": "AGENT-THREAD-SURFACE",
       "title": "Agent thread as main surface",
-      "column": "now",
+      "column": "done",
       "tier": "rock",
       "track": "ui",
       "size": "M",
       "launch": "v1",
       "blocker": true,
       "summary": "Chat/activity is the working surface; raw terminal is available but not the default screen.",
-      "done": "The main surface shows prompt, thinking/status, tool/file/action rows, inline approvals, and a bottom composer. It does not show Jason/Keelhouse avatar blocks, duplicate chat identities, or a raw terminal as the primary default view."
+      "done": "Verified 2026-07-09: chat remains the default surface, raw terminal remains available as an escape hatch, activity renders as thread-style event cards instead of a table, filters remain available, and refreshed QA screenshots show prompt, approval, file, command, and error events above the bottom composer."
     },
     {
       "id": "TRAY-DOCKING-UX",
