@@ -55,6 +55,22 @@ Current schema:
       }
     ]
   },
+  "composerHarnessBySession": {
+    "/absolute/path/to/workspace\nsession-lt72gs": {
+      "approvalMode": "ask",
+      "goal": "Fix API flow",
+      "selectedProfileId": "codex",
+      "attachments": [
+        {
+          "id": "file:1783530000000:/absolute/path/to/workspace/src/App.tsx",
+          "kind": "file",
+          "label": "App.tsx",
+          "target": "/absolute/path/to/workspace/src/App.tsx",
+          "createdAt": 1783530000000
+        }
+      ]
+    }
+  },
   "agentActivityEvents": [
     {
       "id": "pane:4:command:1783530000000",
@@ -79,6 +95,7 @@ Current schema:
 `activeFileByWorkspace` stores the last active editor file per canonical workspace root; stale paths are ignored instead of being opened.
 `openProjects` stores the project rail. `projectSessions` stores named task/workbench session rows under each project, and `activeSessionByProject` stores the selected session id per project. `browserPreviewByProject` and `browserPreviewBySession` remember the lightweight preview URL for project/session context.
 `paneLabelsBySession` stores user-edited terminal pane names by project-session key and pane slot. It restores labels when the same session/slot is recreated. It does not restore live processes, pane layout, or transcripts; those belong to `SESSION-RESTORE`, `PROCESS-LIFECYCLE`, and `TRANSCRIPTS`.
+`composerHarnessBySession` stores composer permission mode, goal text, selected profile id, and attachment references by project-session key. Attachments are references only; file contents and screenshots are not copied into local state.
 `agentActivityEvents` stores up to 200 user-safe activity rows across projects, sessions, and panes. Rows are normalized on startup; unknown kinds/statuses, malformed ids, and invalid timestamps are dropped. Current event kinds are `prompt`, `process`, `command`, `file`, `tool`, `git`, `approval`, `browser`, `app`, `error`, and `complete`.
 
 ## Reset Path

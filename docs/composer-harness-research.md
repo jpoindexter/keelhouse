@@ -48,7 +48,7 @@ Reject the Vanta defaults that do not fit this product: tmux as the pane backend
 
 ## Implementation Implications
 
-- Composer state belongs to the selected project session: target pane, permission mode, goal, draft text, attachments, and model/profile.
+- Composer state belongs to the selected project session: target pane, permission mode, goal, draft text, attachments, and model/profile. The current implementation persists permission mode, goal, selected profile, and attachment references in `composerHarnessBySession`.
 - Permission changes must be visible and logged.
 - App-owned tools must route through the same approval policy as the UI.
 - CLI-specific permission modes should be passed to Claude/Codex only when the CLI supports them; otherwise the app enforces its own actions and labels the limitation.

@@ -588,19 +588,18 @@
       "size": "M",
       "launch": "v1",
       "summary": "Permission controls need real enforcement behind them. Add the small action gate for app-owned actions before showing Codex-style approval modes.",
-      "done": "Verified 2026-07-09: app/src/appActions.ts defines app-owned action descriptors with kind, target, risk class, requester, reason, and undo hint; resolves each action to an audit event with approval mode, decision, prompt state, timestamp, and reason. Existing app-owned paths for focus pane, open file, open browser preview, interrupt process, create pane, close pane, and composer commands route through the gate. Prompted, denied, blocked, and composer-originated decisions log approval audit rows to the activity timeline. Open diff and attach-reference remain typed but blocked until their real surfaces land."
+      "done": "Verified 2026-07-09: app/src/appActions.ts defines app-owned action descriptors with kind, target, risk class, requester, reason, and undo hint; resolves each action to an audit event with approval mode, decision, prompt state, timestamp, and reason. Existing app-owned paths for focus pane, open file, open browser preview, attach reference, interrupt process, create pane, close pane, and composer commands route through the gate. Prompted, denied, blocked, and composer-originated decisions log approval audit rows to the activity timeline. Open diff remains typed but blocked until the real diff surface lands."
     },
     {
       "id": "COMPOSER-HARNESS",
       "title": "Composer harness controls",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "core",
       "size": "M",
       "launch": "v1",
-      "blocker": true,
       "summary": "Grow the bottom composer into a Codex-style app-owned harness around real terminal panes: permission mode, goal state, target pane, model/profile, attachments, and stop/send controls.",
-      "done": "Composer supports Ask for approval, Approve safe actions, and Full access modes for app-owned actions; shows goal chip, target project/session/pane, model/profile selector, attachments/screenshot references with remove controls, stop/send state, and logs prompt/permission/attachment/action events to the activity timeline."
+      "done": "Verified 2026-07-09: composer state is scoped by project/session in composerHarnessBySession; the bottom harness shows target project/session/pane, permission mode, profile selector, goal, attachment controls, and send/stop state. Ask, Approve safe, and Full access drive the app-owned action gate. Local file, current editor file, and browser preview/screenshot references can be attached and removed. Prompt sends transparently include goal/attachment context when present, and permission, goal, profile, attachment, prompt, and app-action events log to the activity timeline."
     },
     {
       "id": "PROCESS-LIFECYCLE",

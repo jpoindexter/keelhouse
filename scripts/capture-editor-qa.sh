@@ -38,6 +38,7 @@ capture find-replace 1440,900
 capture missing 1440,900
 capture no-file 1440,900
 capture narrow 1024,640
+capture narrow-composer 900,900
 capture dirty-modal 1440,900 "$DIRTY_OUT_DIR/modal.png"
 
 echo "Captured editor QA screenshots in $OUT_DIR"

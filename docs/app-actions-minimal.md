@@ -14,11 +14,11 @@ APP-ACTIONS-MINIMAL adds a small enforcement layer for deterministic actions own
 
 | Action | Risk | Undo/rollback |
 |---|---:|---|
-| Focus pane, open file, find, browser preview | Low | Navigation is reversible by selecting the previous target. |
+| Focus pane, open file, find, browser preview, attach reference | Low | Navigation is reversible by selecting the previous target; attachments can be removed. |
 | Create pane, open folder, clear terminal | Medium | Close pane or switch back; terminal clear is not restored by the app. |
 | Save file, interrupt process | High | Use editor/source-control undo; restart or create a pane if needed. |
 | Close pane | Destructive | Create a new pane; live process state is not recoverable. |
-| Open diff, attach reference | Blocked until real surfaces exist | Implement with `DIFF-VIEW` and `COMPOSER-HARNESS`. |
+| Open diff | Blocked until the real diff surface exists | Implement with `DIFF-VIEW`. |
 
 ## Boundaries
 

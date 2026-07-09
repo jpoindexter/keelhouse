@@ -47,6 +47,8 @@ The composer targets a handle, not a React component. The handle is also the bou
 
 Current read-tail behavior returns text from the latest rendered terminal snapshot. Full scrollback/transcript readback belongs to TRANSCRIPTS and TERMINAL-FIND.
 
+The composer harness adds per-session state on top of the handle: permission mode, goal, selected profile, and attachment references. Prompt sends still target the real pane handle; the harness only prepends transparent goal/attachment context when present.
+
 ## App Action Gate
 
 Permission modes apply to app-owned actions before they apply to external CLIs.

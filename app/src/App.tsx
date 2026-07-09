@@ -92,13 +92,21 @@ import {
 } from "./agentComposer";
 import type { ComposerAppCommand } from "./agentComposer";
 import {
+  composerPromptPayload,
+  createComposerAttachment,
+  defaultComposerHarnessState,
+  normalizeComposerHarnessRecords,
+  removeComposerAttachment,
+  upsertComposerAttachment,
+} from "./composerHarness";
+import type { ComposerAttachment, ComposerHarnessRecords, ComposerHarnessState } from "./composerHarness";
+import {
   appActionAuditLabel,
   createAppAction,
   resolveAppAction,
 } from "./appActions";
 import type { AppActionAuditEvent, AppActionDescriptor } from "./appActions";
 import {
-  DEFAULT_AGENT_APPROVAL_MODE,
   buildAgentSessionHandleDescriptor,
   readTailFromSnapshot,
 } from "./agentSessionHandle";
@@ -293,6 +301,7 @@ function App() {
   const activeSessionByProjectRef = useRef<ActiveSessionByProject>({});
   const browserPreviewByProjectRef = useRef<BrowserPreviewRecords>({});
   const browserPreviewBySessionRef = useRef<BrowserPreviewRecords>({});
+  const composerHarnessBySessionRef = useRef<ComposerHarnessRecords>({});
   const browserUrlRef = useRef(DEFAULT_BROWSER_PREVIEW_URL);
   const launchProfileRef = useRef<LaunchProfile>(defaultLaunchProfile());
   const terminalPanesRef = useRef<ManagedTerminalPane[]>([]);
@@ -353,6 +362,7 @@ function App() {
   const [expandedSessionProjects, setExpandedSessionProjects] = useState<Record<string, boolean>>({});
   const [browserPreviewByProject, setBrowserPreviewByProject] = useState<BrowserPreviewRecords>({});
   const [browserPreviewBySession, setBrowserPreviewBySession] = useState<BrowserPreviewRecords>({});
+  const [composerHarnessBySession, setComposerHarnessBySession] = useState<ComposerHarnessRecords>({});
   const [browserUrl, setBrowserUrl] = useState(DEFAULT_BROWSER_PREVIEW_URL);
   const [browserAddress, setBrowserAddress] = useState(DEFAULT_BROWSER_PREVIEW_URL);
   const [browserHistory, setBrowserHistory] = useState([DEFAULT_BROWSER_PREVIEW_URL]);
@@ -393,11 +403,21 @@ function App() {
     () => activeProjectSessionId(activeSessionByProject, projectSessions, workspacePath),
     [activeSessionByProject, projectSessions, workspacePath],
   );
+  const activeComposerHarnessKey = useMemo(
+    () => (workspacePath && activeSessionId ? `${workspacePath}\n${activeSessionId}` : null),
+    [activeSessionId, workspacePath],
+  );
+  const activeComposerHarness = useMemo<ComposerHarnessState>(
+    () => activeComposerHarnessKey
+      ? composerHarnessBySession[activeComposerHarnessKey] ?? defaultComposerHarnessState(launchProfile.id)
+      : defaultComposerHarnessState(launchProfile.id),
+    [activeComposerHarnessKey, composerHarnessBySession, launchProfile.id],
+  );
   const activeTerminalPane = useMemo(
     () => terminalPanes.find((pane) => pane.id === activeTerminalPaneId) ?? null,
     [activeTerminalPaneId, terminalPanes],
   );
-  const agentApprovalMode: AgentApprovalMode = DEFAULT_AGENT_APPROVAL_MODE;
+  const agentApprovalMode: AgentApprovalMode = activeComposerHarness.approvalMode;
   const agentSessionDescriptors = useMemo<AgentSessionHandleDescriptor[]>(() => {
     if (!workspacePath || !activeSessionId) return [];
     return terminalPanes.map((pane, index) =>
@@ -478,6 +498,10 @@ function App() {
   useEffect(() => {
     browserPreviewBySessionRef.current = browserPreviewBySession;
   }, [browserPreviewBySession]);
+
+  useEffect(() => {
+    composerHarnessBySessionRef.current = composerHarnessBySession;
+  }, [composerHarnessBySession]);
 
   useEffect(() => {
     browserUrlRef.current = browserUrl;
@@ -641,6 +665,37 @@ function App() {
   };
 
   const browserPreviewSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
+  const composerHarnessSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
+
+  const persistComposerHarnessRecords = async (records: ComposerHarnessRecords) => {
+    composerHarnessBySessionRef.current = records;
+    setComposerHarnessBySession(records);
+    await storeRef.current?.set("composerHarnessBySession", records);
+    await storeRef.current?.save();
+  };
+
+  const updateActiveComposerHarness = async (updater: (state: ComposerHarnessState) => ComposerHarnessState) => {
+    const key = activeComposerHarnessKey;
+    if (!key) return null;
+    const previous = composerHarnessBySessionRef.current[key] ?? defaultComposerHarnessState(launchProfileRef.current.id);
+    const nextState = updater(previous);
+    const next = { ...composerHarnessBySessionRef.current, [key]: nextState };
+    await persistComposerHarnessRecords(next);
+    return nextState;
+  };
+
+  const logComposerHarnessEvent = (
+    label: string,
+    detail: string,
+    status: Parameters<typeof createAgentActivityEvent>[1]["status"] = "complete",
+  ) => {
+    recordAgentActivity(activeAgentSessionDescriptor, {
+      kind: "app",
+      label,
+      detail,
+      status,
+    });
+  };
 
   const setBrowserLocation = (url: string, options: { pushHistory?: boolean } = {}) => {
     browserUrlRef.current = url;
@@ -947,6 +1002,9 @@ function App() {
         const nextBrowserSessions = Object.fromEntries(
           Object.entries(browserPreviewBySessionRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
         );
+        const nextComposerHarness = Object.fromEntries(
+          Object.entries(composerHarnessBySessionRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
+        );
         recentProjectsRef.current = nextRecent;
         openProjectsRef.current = nextOpen;
         projectSessionsRef.current = nextSessions;
@@ -955,18 +1013,21 @@ function App() {
         activeTerminalPaneByProjectRef.current = nextActivePanesByProject;
         browserPreviewByProjectRef.current = nextBrowserProjects;
         browserPreviewBySessionRef.current = nextBrowserSessions;
+        composerHarnessBySessionRef.current = nextComposerHarness;
         setRecentProjects(nextRecent);
         setOpenProjects(nextOpen);
         setProjectSessions(nextSessions);
         setActiveSessionByProjectState(nextActiveSessions);
         setBrowserPreviewByProject(nextBrowserProjects);
         setBrowserPreviewBySession(nextBrowserSessions);
+        setComposerHarnessBySession(nextComposerHarness);
         await store?.set("recentFolders", nextRecent);
         await store?.set("openProjects", nextOpen);
         await store?.set("projectSessions", nextSessions);
         await store?.set("activeSessionByProject", nextActiveSessions);
         await store?.set("browserPreviewByProject", nextBrowserProjects);
         await store?.set("browserPreviewBySession", nextBrowserSessions);
+        await store?.set("composerHarnessBySession", nextComposerHarness);
         if (workspacePathRef.current === path) {
           setManagedTerminalPanes([]);
           setFocusedTerminalPane(null);
@@ -1088,9 +1149,12 @@ function App() {
     delete sessionEditorSnapshotsRef.current[sessionSnapshotKey(projectPath, session.id)];
     const nextBrowserSessions = { ...browserPreviewBySessionRef.current };
     delete nextBrowserSessions[browserPreviewSessionKey(projectPath, session.id)];
+    const nextComposerHarness = { ...composerHarnessBySessionRef.current };
+    delete nextComposerHarness[composerHarnessSessionKey(projectPath, session.id)];
     browserPreviewBySessionRef.current = nextBrowserSessions;
     setBrowserPreviewBySession(nextBrowserSessions);
     await storeRef.current?.set("browserPreviewBySession", nextBrowserSessions);
+    await persistComposerHarnessRecords(nextComposerHarness);
     await persistProjectSessions(nextSessions, nextActiveSessions);
     if (workspacePathRef.current === projectPath && activeSessionId === session.id) {
       restoreSessionEditorSnapshot(projectPath, fallbackSessionId);
@@ -1231,11 +1295,15 @@ function App() {
           setComposerError("Create or select a terminal pane before sending.");
           return;
         }
-        await activeAgentSessionHandle.send(route.text);
+        const payload = composerPromptPayload(route.text, activeComposerHarness);
+        await activeAgentSessionHandle.send(payload);
         recordAgentActivity(activeAgentSessionHandle, {
           kind: "prompt",
           label: "Prompt sent",
-          detail: activeAgentSessionHandle.label,
+          detail: activeComposerHarness.attachments.length > 0
+            ? `${activeAgentSessionHandle.label} · ${activeComposerHarness.attachments.length} attachment${activeComposerHarness.attachments.length === 1 ? "" : "s"}`
+            : activeAgentSessionHandle.label,
+          target: activeComposerHarness.goal || undefined,
           status: "thinking",
         });
       } else {
@@ -1286,6 +1354,82 @@ function App() {
     setLaunchProfile(profile);
     await store?.set("launchProfile", profile);
     await store?.save();
+  };
+
+  const setComposerApprovalMode = async (approvalMode: AgentApprovalMode) => {
+    const next = await updateActiveComposerHarness((state) => ({ ...state, approvalMode }));
+    if (!next) return;
+    logComposerHarnessEvent("Permission mode changed", approvalMode);
+  };
+
+  const setComposerProfile = async (profileId: string) => {
+    const profile = launchProfileById(profileId);
+    const next = await updateActiveComposerHarness((state) => ({ ...state, selectedProfileId: profile.id }));
+    if (!next) return;
+    await switchLaunchProfile(profile);
+    logComposerHarnessEvent("Profile selected", profile.label);
+  };
+
+  const setComposerGoal = async (goal: string, options: { log?: boolean } = {}) => {
+    const next = await updateActiveComposerHarness((state) => ({ ...state, goal: goal.slice(0, 160) }));
+    if (options.log && next?.goal) logComposerHarnessEvent("Goal updated", next.goal);
+  };
+
+  const addComposerAttachment = async (attachment: ComposerAttachment) => {
+    const audit = await gateAppAction(createAppAction({
+      kind: "attach-reference",
+      label: "Attach reference",
+      target: attachment.target,
+      risk: "low",
+      requestedBy: "user",
+      undoHint: "Remove the attachment chip.",
+    }));
+    if (audit.decision !== "approved") return;
+    await updateActiveComposerHarness((state) => ({
+      ...state,
+      attachments: upsertComposerAttachment(state.attachments, attachment),
+    }));
+    logComposerHarnessEvent("Attachment added", attachment.label);
+  };
+
+  const attachSelectedFileToComposer = async () => {
+    if (!selectedFile) {
+      setComposerError("Open a file before attaching the current file.");
+      return;
+    }
+    await addComposerAttachment(createComposerAttachment({
+      kind: "file",
+      label: selectedFile.name,
+      target: selectedFile.path,
+    }));
+  };
+
+  const attachPreviewToComposer = async () => {
+    await addComposerAttachment(createComposerAttachment({
+      kind: "screenshot",
+      label: "Browser preview",
+      target: browserUrlRef.current,
+    }));
+  };
+
+  const attachLocalFileToComposer = async () => {
+    const picked = await open({ multiple: true });
+    const paths = Array.isArray(picked) ? picked : typeof picked === "string" ? [picked] : [];
+    for (const path of paths.slice(0, 6)) {
+      await addComposerAttachment(createComposerAttachment({
+        kind: "file",
+        label: basename(path),
+        target: path,
+      }));
+    }
+  };
+
+  const removeComposerAttachmentById = async (attachment: ComposerAttachment) => {
+    await updateActiveComposerHarness((state) => ({
+      ...state,
+      attachments: removeComposerAttachment(state.attachments, attachment.id),
+    }));
+    logComposerHarnessEvent("Attachment removed", attachment.label);
   };
 
   const focusTerminalPane = async (paneId: number) => {
@@ -2055,6 +2199,12 @@ function App() {
       disabled: composerSending || !composerDraft.trim(),
     }),
     menuItem("composer.clear", "Clear Draft", () => setComposerDraft(""), { icon: "close", disabled: !composerDraft }),
+    menuItem("composer.attach-file", "Attach Local File", () => void attachLocalFileToComposer(), { icon: "filePlus" }),
+    menuItem("composer.attach-current", "Attach Current File", () => void attachSelectedFileToComposer(), {
+      icon: "file",
+      disabled: !selectedFile,
+    }),
+    menuItem("composer.attach-preview", "Attach Browser Preview", () => void attachPreviewToComposer(), { icon: "browser" }),
     menuItem("composer.stop", "Stop Selected Pane", () => void interruptActivePane(), {
       icon: "stop",
       danger: true,
@@ -2326,9 +2476,10 @@ function App() {
       const savedActiveSessions = normalizeActiveSessionByProject(await store.get<unknown>("activeSessionByProject"));
       const savedBrowserProjects = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewByProject"));
       const savedBrowserSessions = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewBySession"));
+      const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
+      const savedComposerHarness = normalizeComposerHarnessRecords(await store.get<unknown>("composerHarnessBySession"), savedProfile.id);
       const savedPaneLabels = normalizePaneLabelsBySession(await store.get<unknown>("paneLabelsBySession"));
       const savedAgentActivity = normalizeAgentActivityEvents(await store.get<unknown>("agentActivityEvents"));
-      const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
       activeFilesByWorkspaceRef.current = normalizeActiveFileByWorkspace(await store.get<unknown>("activeFileByWorkspace"));
       const initialOpenProjects = savedOpenProjects.length > 0 ? savedOpenProjects : openProjectsFromRecent(savedRecent);
       const initialProjectSessions = initialOpenProjects.reduce(
@@ -2341,6 +2492,7 @@ function App() {
       activeSessionByProjectRef.current = savedActiveSessions;
       browserPreviewByProjectRef.current = savedBrowserProjects;
       browserPreviewBySessionRef.current = savedBrowserSessions;
+      composerHarnessBySessionRef.current = savedComposerHarness;
       paneLabelsBySessionRef.current = savedPaneLabels;
       launchProfileRef.current = savedProfile;
       setLaunchProfile(savedProfile);
@@ -2350,6 +2502,7 @@ function App() {
       setActiveSessionByProjectState(savedActiveSessions);
       setBrowserPreviewByProject(savedBrowserProjects);
       setBrowserPreviewBySession(savedBrowserSessions);
+      setComposerHarnessBySession(savedComposerHarness);
       setPaneLabelsBySession(savedPaneLabels);
       setAgentActivityEvents(savedAgentActivity);
       const last = await store.get<string>("folder");
@@ -3100,14 +3253,98 @@ function App() {
             </div>
           </section>
           <div className="agent-composer" aria-label="Agent composer" onContextMenu={(event) => openContextMenu(event, composerContextMenuItems())}>
-            <div className="agent-composer__target" title={workspacePath ?? ""}>
-              <span>Target</span>
-              <strong>
-                <AppIcon name="agent" />
-                <span>{activeTerminalProfile.label}</span>
-              </strong>
-              <span>{workspacePath ? basename(workspacePath) : "No workspace"}</span>
-              <span>{activeTerminalPaneLabel ?? "No pane"}</span>
+            <div className="agent-composer__harness">
+              <div className="agent-composer__target" title={workspacePath ?? ""}>
+                <span>Target</span>
+                <strong>
+                  <AppIcon name="agent" />
+                  <span>{activeTerminalProfile.label}</span>
+                </strong>
+                <span>{workspacePath ? basename(workspacePath) : "No workspace"}</span>
+                <span>{activeSessionId ?? "No session"}</span>
+                <span>{activeTerminalPaneLabel ?? "No pane"}</span>
+              </div>
+              <label className="agent-composer__field">
+                <span>Permission</span>
+                <select
+                  aria-label="Composer permission mode"
+                  value={activeComposerHarness.approvalMode}
+                  disabled={!activeComposerHarnessKey}
+                  onChange={(event) => void setComposerApprovalMode(event.currentTarget.value as AgentApprovalMode)}
+                >
+                  <option value="ask">Ask</option>
+                  <option value="approveSafe">Approve safe</option>
+                  <option value="fullAccess">Full access</option>
+                </select>
+              </label>
+              <label className="agent-composer__field">
+                <span>Profile</span>
+                <select
+                  aria-label="Composer profile"
+                  value={activeComposerHarness.selectedProfileId}
+                  disabled={!activeComposerHarnessKey || launchProfileChanging}
+                  onChange={(event) => void setComposerProfile(event.currentTarget.value)}
+                >
+                  {LAUNCH_PROFILES.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profile.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="agent-composer__field agent-composer__field--goal">
+                <span>Goal</span>
+                <input
+                  aria-label="Composer goal"
+                  value={activeComposerHarness.goal}
+                  maxLength={160}
+                  placeholder="No goal"
+                  disabled={!activeComposerHarnessKey}
+                  onChange={(event) => void setComposerGoal(event.currentTarget.value)}
+                  onBlur={() => void setComposerGoal(activeComposerHarness.goal, { log: true })}
+                />
+              </label>
+            </div>
+            <div className="agent-composer__attachments" aria-label="Composer attachments">
+              <button
+                className="agent-composer__attachment-button"
+                type="button"
+                disabled={!activeComposerHarnessKey}
+                onClick={() => void attachLocalFileToComposer()}
+              >
+                <AppIcon name="filePlus" />
+                <span>File</span>
+              </button>
+              <button
+                className="agent-composer__attachment-button"
+                type="button"
+                disabled={!activeComposerHarnessKey || !selectedFile}
+                onClick={() => void attachSelectedFileToComposer()}
+              >
+                <AppIcon name="file" />
+                <span>Current</span>
+              </button>
+              <button
+                className="agent-composer__attachment-button"
+                type="button"
+                disabled={!activeComposerHarnessKey}
+                onClick={() => void attachPreviewToComposer()}
+              >
+                <AppIcon name="browser" />
+                <span>Preview</span>
+              </button>
+              {activeComposerHarness.attachments.map((attachment) => (
+                <span className="agent-composer__attachment" key={attachment.id} title={attachment.target}>
+                  <span>{attachment.label}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove attachment ${attachment.label}`}
+                    onClick={() => void removeComposerAttachmentById(attachment)}
+                  >
+                    <AppIcon name="close" />
+                  </button>
+                </span>
+              ))}
             </div>
             <textarea
               className="agent-composer__input"

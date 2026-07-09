@@ -118,7 +118,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [ ] Agent activity rows show recent thinking/planning summaries, file edits, commands, tool/app actions, approvals, errors, and completion per pane/session.
 - [x] Each pane/session exposes an app-owned agent session handle with send, interrupt, readTail, close, state, cwd, profile, approval mode, and activity metadata.
 - [x] App-owned actions use a minimal action gate with risk class, approval decision, audit event, and undo/rollback hint where possible.
-- [ ] Composer harness supports permission mode, goal state, model/profile selector, attachments, and approval logging for app-owned actions.
+- [x] Composer harness supports permission mode, goal state, model/profile selector, attachments, and approval logging for app-owned actions.
 - [ ] Session restore brings back projects, file tabs, pane layout, and enough metadata to resume intentionally.
 - [ ] Daily-driver workflows are measured against the equivalent VS Code habit: one-project edit+agent, two-agent same-project, and three-project switching after quit/relaunch.
 - [ ] Resource use is measured against the equivalent VS Code workflow.

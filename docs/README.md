@@ -28,6 +28,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `pane-names.md`: v1 editable terminal pane names/task labels.
 - `integrations-scope.md`: Git, GitHub, GitLab, and adapter-lane boundaries.
 - `composer-harness-research.md`: bottom composer and future harness scope.
+- `composer-harness.md`: v1 implemented composer permission, goal, profile, and attachment controls.
 - `harness-contract.md`: app-owned pane/session handle contract.
 - `app-actions-minimal.md`: v1 app-owned action gate and audit contract.
 - `agent-session-handle.md`: v1 implemented pane/session handle layer.

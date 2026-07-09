@@ -396,11 +396,24 @@
             </div>
           </section>
           <div class="agent-composer" aria-label="Agent composer">
-            <div class="agent-composer__target" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli">
-              <span>Target</span>
-              <strong><svg class="app-icon"><use href="#i-agent" /></svg><span>Codex</span></strong>
-              <span>agent cli</span>
-              <span>API fix</span>
+            <div class="agent-composer__harness">
+              <div class="agent-composer__target" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli">
+                <span>Target</span>
+                <strong><svg class="app-icon"><use href="#i-agent" /></svg><span>Codex</span></strong>
+                <span>agent cli</span>
+                <span>session-lt72gs</span>
+                <span>API fix</span>
+              </div>
+              <label class="agent-composer__field"><span>Permission</span><select aria-label="Composer permission mode"><option>Ask</option><option>Approve safe</option><option>Full access</option></select></label>
+              <label class="agent-composer__field"><span>Profile</span><select aria-label="Composer profile"><option>Codex</option><option>Gemini</option><option>Claude</option><option>Shell</option></select></label>
+              <label class="agent-composer__field agent-composer__field--goal"><span>Goal</span><input aria-label="Composer goal" value="Fix API flow" /></label>
+            </div>
+            <div class="agent-composer__attachments" aria-label="Composer attachments">
+              <button class="agent-composer__attachment-button" type="button"><svg class="app-icon"><use href="#i-file-plus" /></svg><span>File</span></button>
+              <button class="agent-composer__attachment-button" type="button"><svg class="app-icon"><use href="#i-file" /></svg><span>Current</span></button>
+              <button class="agent-composer__attachment-button" type="button"><svg class="app-icon"><use href="#i-browser" /></svg><span>Preview</span></button>
+              <span class="agent-composer__attachment" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli/app/src/App.tsx"><span>App.tsx</span><button type="button" aria-label="Remove attachment App.tsx"><svg class="app-icon"><use href="#i-close" /></svg></button></span>
+              <span class="agent-composer__attachment" title="http://localhost:5173/"><span>Browser preview</span><button type="button" aria-label="Remove attachment Browser preview"><svg class="app-icon"><use href="#i-close" /></svg></button></span>
             </div>
             <textarea class="agent-composer__input" rows="2" aria-label="Agent composer draft" placeholder="Send to selected agent. Use >save, >find, >open, or >clear for app actions.">Summarize the selected file and propose the next edit.</textarea>
             <div class="agent-composer__actions">
