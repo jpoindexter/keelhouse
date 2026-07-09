@@ -8,6 +8,8 @@ node rockmap/build-roadmap.mjs roadmap.json roadmap.html
 
 Sequential where risk gates the next step; parallel only when cards are independent. Ship ugly first, but do not lose the actual product shape: Keelhouse replaces Jason's VS Code workflow with an agent-first cockpit: real CLI agents and composer are primary; file explorer, editor, and browser/web preview are resizable trays around them.
 
+Remaining cards are ordered highest product value to lowest: prove the app can replace the VS Code habit, close daily workflow gaps, add agent/workflow leverage, then add personalization, distribution, and speculative expansion.
+
 ## Execution discipline (governs every phase)
 
 Added 2026-07-08. The roadmap is now detailed enough to invite building breadth before a slice is real — resist that. The failure mode is over-engineering ahead of proven need.
@@ -95,32 +97,32 @@ This is where the clarified product point lands: not "terminal app with optional
 - ~~**GIT-STATUS:** dirty/new/deleted markers in the file rail.~~ **DONE 2026-07-09** — file nodes now show compact Git tokens for modified, untracked/new, added, deleted, renamed, and staged files. Deleted files are inserted as virtual rows when they no longer exist on disk, while unsaved editor draft dots remain separate from Git status. Verified with `npm run build`, `npm test -- fileGitStatus.test.ts`, and `npm run qa:editor`.
 - ~~**DIFF-VIEW:** inspect agent-created changes without VS Code.~~ **DONE 2026-07-09** — Source Control rows and file-rail Git context menus now open a read-only unified diff review in the editor tray. The review shows source/status, additions/deletions, old/new line numbers, metadata, synthetic untracked text diffs, and hunk-to-editor jumps for files that still exist. Verified with `npm run build`, `npm test -- diffView.test.ts`, `cargo test git_`, and `cargo test synthesizes_untracked_text_diff`.
 - ~~**GIT-ACTIONS-LITE:** stage/unstage/discard/copy diff; v1 must-have after DIFF-VIEW, not a full git client.~~ **DONE 2026-07-09** — diff review and Git-marked file context menus now expose Stage, Unstage, Discard Unstaged Changes, and Copy shown diff. The `$blind` audit findings were folded into the card: discard is blocked when the same file has an unsaved editor draft; mixed staged/unstaged files use explicit labels (`Copy shown diff`, whole-file Stage/Unstage); backend `git_file_action` validates repository-relative paths and re-reads target status before mutation; staged new files, tracked discard, and untracked discard use separate Git command paths; real temp-repo Git tests cover stage/unstage/discard; the slice stops at per-file actions, not branch/commit/push/PR; screenshot QA includes `diff-review.png`. Verified with `npm run build`, `npm test`, `cargo test git_file_actions`, `npm run qa:editor`, and `git diff --check`.
-- **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
-- **PERF-BUDGET:** prove this is lighter than the VS Code workflow it replaces across 1-project, 2-agent, and 3-project task runs.
 - **DAILY-DRIVER-METRICS:** prove the app can replace the current workflow with scripted one-project edit+agent, two-agent same-project, and three-project switch/relaunch runs.
+- **PERF-BUDGET:** prove this is lighter than the VS Code workflow it replaces across 1-project, 2-agent, and 3-project task runs.
+- **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
 
 ## v2 — Workflow leverage
 
-- **WORKTREE:** create disposable worktree + agent pane from a project.
 - **SEARCH:** file quick-open and ripgrep-backed text search.
 - **TERMINAL-FIND:** search active terminal output/scrollback.
 - **COMMAND-PALETTE:** VS Code-style compact action access without adding IDE chrome; uses the same command registry as shortcuts and context menus.
-- **AI-CONNECTIONS:** settings for providers, API keys, MCP servers, CLI auth, env vars, model defaults, and permission policy.
-- **SOURCE-CONTROL-CONNECTIONS:** GitHub/GitLab/source-host auth, repo links, PR/MR status, CI/pipeline status, and health checks.
-- **INTEGRATIONS-POLICY:** define which other integrations are allowed, parked, or explicitly out of scope.
 - **SETTINGS-PARITY:** Codex-style searchable settings shell, keeping only useful workbench categories and dropping account/chat novelty categories.
 - **SETTINGS:** inspectable config for agent commands, ignored folders, font/theme, layout, AI connections, and shortcut overrides.
-- **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost and preserve the chrome token contract.
+- **AI-CONNECTIONS:** settings for providers, API keys, MCP servers, CLI auth, env vars, model defaults, and permission policy.
 - **AGENT-HOOKS:** built-in MCP/API surface so agents can inspect app state and request app-owned actions.
-- **DIRECT-AGENT-HARNESS:** optional direct API/MCP agent path for app-owned orchestration, after real terminal panes and approvals are solid.
-- **NOTIFICATIONS:** background agent exit/attention badges and optional macOS notifications.
+- **WORKTREE:** create disposable worktree + agent pane from a project.
+- **SOURCE-CONTROL-CONNECTIONS:** GitHub/GitLab/source-host auth, repo links, PR/MR status, CI/pipeline status, and health checks.
+- **PACKAGING:** local macOS `.app` packaging.
 - **TRANSCRIPTS:** save/review completed pane output.
-- **SESSION-ARCHIVE:** archive old project sessions only after sessions and transcripts are real.
+- **NOTIFICATIONS:** background agent exit/attention badges and optional macOS notifications.
+- **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost and preserve the chrome token contract.
 - **KEYBINDINGS-CONFIG:** configurable app shortcut overrides after defaults stabilize, including conflict detection and a visible shortcut reference.
+- **SESSION-ARCHIVE:** archive old project sessions only after sessions and transcripts are real.
+- **DIRECT-AGENT-HARNESS:** optional direct API/MCP agent path for app-owned orchestration, after real terminal panes and approvals are solid.
+- **INTEGRATIONS-POLICY:** define which other integrations are allowed, parked, or explicitly out of scope.
 
 ## v3 — Polish and shipping
 
-- **PACKAGING:** local macOS `.app` packaging.
 - **REUSE-AUDIT:** mine Hallmark/hashmark/brutal/indx for reusable Tauri shell, persistence, editor, or design patterns without inheriting the wrong product shape.
 
 ## Research-backed stack per phase (2026-07-08)

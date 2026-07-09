@@ -715,31 +715,9 @@
       "done": "Verified 2026-07-09: diff review and Git-marked file context menus expose Stage, Unstage, Discard Unstaged Changes, and Copy shown diff. The blind audit findings were folded into the card: discard is blocked when the same file has an unsaved editor draft; mixed staged/unstaged files use explicit labels (Copy shown diff, whole-file Stage/Unstage); backend git_file_action validates repository-relative paths and re-reads target status before mutation; staged new files, tracked discard, and untracked discard use separate Git command paths; real temp-repo Git tests cover stage/unstage/discard; the slice stops at per-file actions, not branch/commit/push/PR; screenshot QA includes diff-review.png. Covered by npm run build, npm test, cargo test git_file_actions, npm run qa:editor, and git diff --check."
     },
     {
-      "id": "DEV-SERVER-DETECT",
-      "title": "Local dev server detection",
-      "column": "next",
-      "tier": "pebble",
-      "track": "ui",
-      "size": "S",
-      "launch": "v1",
-      "summary": "When Claude/Codex starts Vite, Next, Astro, or another dev server, the app should make the local preview obvious without acting like a full browser.",
-      "done": "Detected localhost URLs from terminal output can be opened in the browser preview; the preview remembers the latest URL per project and offers reload/open-external."
-    },
-    {
-      "id": "PERF-BUDGET",
-      "title": "Resource and jank budget",
-      "column": "next",
-      "tier": "pebble",
-      "track": "quality",
-      "size": "M",
-      "launch": "v1",
-      "summary": "The product exists to avoid VS Code resource bloat. Measure the thing the product promises: memory, CPU, and responsiveness with several projects/panes.",
-      "done": "Document baseline memory/CPU/jank for one-project edit+agent, two-agent same-project, three-project switch/relaunch, and fast terminal output runs; compare against the equivalent VS Code workflow and make regressions visible before release."
-    },
-    {
       "id": "DAILY-DRIVER-METRICS",
       "title": "Daily-driver success metrics",
-      "column": "next",
+      "column": "now",
       "tier": "pebble",
       "track": "quality",
       "size": "S",
@@ -748,21 +726,32 @@
       "done": "Script and record three workflow runs: one-project edit+agent, two-agent same-project, and three-project switch/relaunch. Track steps, elapsed time, project opens, pane starts/stops, editor saves, crashes, memory/CPU snapshots, and whether VS Code was needed."
     },
     {
-      "id": "WORKTREE",
-      "title": "Worktree helper",
-      "column": "later",
-      "tier": "pebble",
-      "track": "core",
+      "id": "PERF-BUDGET",
+      "title": "Resource and jank budget",
+      "column": "next",
+      "tier": "rock",
+      "track": "quality",
       "size": "M",
-      "launch": "v2",
-      "summary": "One keystroke: new pane = git worktree add + agent launched inside it, named and disposable. The 'multiple agents on one repo, parallel' workflow.",
-      "done": "From a project tab: new-worktree-agent in <5s; cleanup removes the worktree + branch."
+      "launch": "v1",
+      "summary": "The product exists to avoid VS Code resource bloat. Measure the thing the product promises: memory, CPU, and responsiveness with several projects/panes.",
+      "done": "Document baseline memory/CPU/jank for one-project edit+agent, two-agent same-project, three-project switch/relaunch, and fast terminal output runs; compare against the equivalent VS Code workflow and make regressions visible before release."
+    },
+    {
+      "id": "DEV-SERVER-DETECT",
+      "title": "Local dev server detection",
+      "column": "next",
+      "tier": "rock",
+      "track": "ui",
+      "size": "S",
+      "launch": "v1",
+      "summary": "When Claude/Codex starts Vite, Next, Astro, or another dev server, the app should make the local preview obvious without acting like a full browser.",
+      "done": "Detected localhost URLs from terminal output can be opened in the browser preview; the preview remembers the latest URL per project and offers reload/open-external."
     },
     {
       "id": "SEARCH",
       "title": "Find files and text",
-      "column": "later",
-      "tier": "pebble",
+      "column": "next",
+      "tier": "rock",
       "track": "files",
       "size": "M",
       "launch": "v2",
@@ -772,8 +761,8 @@
     {
       "id": "TERMINAL-FIND",
       "title": "Find in terminal scrollback",
-      "column": "later",
-      "tier": "pebble",
+      "column": "next",
+      "tier": "rock",
       "track": "core",
       "size": "M",
       "launch": "v2",
@@ -783,8 +772,8 @@
     {
       "id": "COMMAND-PALETTE",
       "title": "VS Code-style command palette",
-      "column": "later",
-      "tier": "sand",
+      "column": "next",
+      "tier": "pebble",
       "track": "ui",
       "size": "S",
       "launch": "v2",
@@ -792,42 +781,9 @@
       "done": "A keyboard palette can run core app actions, shows shortcuts where assigned, and stays consistent with menu/context-menu labels."
     },
     {
-      "id": "AI-CONNECTIONS",
-      "title": "AI connections and credentials settings",
-      "column": "later",
-      "tier": "rock",
-      "track": "core",
-      "size": "M",
-      "launch": "v2",
-      "summary": "Users need to hook up real AI tooling: Claude/Codex CLI auth, provider API keys, model defaults, MCP servers, environment variables, permission defaults, and health checks.",
-      "done": "Settings can configure Claude/Codex command profiles, provider/API credentials via OS-safe storage, MCP server entries, env vars, default models, permission policy, and validation checks that explain missing auth or broken connections."
-    },
-    {
-      "id": "SOURCE-CONTROL-CONNECTIONS",
-      "title": "GitHub and GitLab connections",
-      "column": "later",
-      "tier": "rock",
-      "track": "files",
-      "size": "M",
-      "launch": "v2",
-      "summary": "Local Git is not enough once agent work needs to move through PR/MR review. Add first-class source-hosting connections without becoming a full forge client.",
-      "done": "Settings detects `git`, `gh`, and `glab` auth health; supports GitHub, GitLab.com, and self-hosted GitLab remotes; opens repo/PR/MR/issue/pipeline links in browser preview or external browser; shows source-host status for the active repo; credentials are stored only through OS-safe storage."
-    },
-    {
-      "id": "INTEGRATIONS-POLICY",
-      "title": "Integration adapter policy",
-      "column": "later",
-      "tier": "sand",
-      "track": "quality",
-      "size": "S",
-      "launch": "v2",
-      "summary": "Define the allowed lane for other integrations so Bitbucket, Azure DevOps, Linear, Jira, Slack, or Discord do not turn the app into a plugin hub.",
-      "done": "Documented integration policy classifies integrations as core, first-class, adapter-lane, parked, or out-of-scope; every integration requires a concrete workflow, health check, credential boundary, and app-owned command surface."
-    },
-    {
       "id": "SETTINGS-PARITY",
       "title": "Codex-style settings parity",
-      "column": "later",
+      "column": "next",
       "tier": "pebble",
       "track": "ui",
       "size": "M",
@@ -838,8 +794,8 @@
     {
       "id": "SETTINGS",
       "title": "Settings for commands, themes, and shortcuts",
-      "column": "later",
-      "tier": "sand",
+      "column": "next",
+      "tier": "pebble",
       "track": "ui",
       "size": "M",
       "launch": "v2",
@@ -847,15 +803,59 @@
       "done": "A local config file controls agent profiles, AI connections, source-control connections, font/theme, ignored folders, default pane layout, browser preview, hooks, Git/worktree behavior, environments, and app-level keybindings; bad config reports actionable errors and plugins/extensions are not supported."
     },
     {
-      "id": "NOTIFICATIONS",
-      "title": "Background agent notifications",
-      "column": "later",
-      "tier": "sand",
-      "track": "ui",
-      "size": "S",
+      "id": "AI-CONNECTIONS",
+      "title": "AI connections and credentials settings",
+      "column": "next",
+      "tier": "pebble",
+      "track": "core",
+      "size": "M",
       "launch": "v2",
-      "summary": "When an agent in another project or pane stops or needs input, Jason should not have to manually inspect every pane.",
-      "done": "Background panes can surface in-app badges and optional macOS notifications for exit/attention events."
+      "summary": "Users need to hook up real AI tooling: Claude/Codex CLI auth, provider API keys, model defaults, MCP servers, environment variables, permission defaults, and health checks.",
+      "done": "Settings can configure Claude/Codex command profiles, provider/API credentials via OS-safe storage, MCP server entries, env vars, default models, permission policy, and validation checks that explain missing auth or broken connections."
+    },
+    {
+      "id": "AGENT-HOOKS",
+      "title": "Built-in agent MCP/API hooks",
+      "column": "next",
+      "tier": "pebble",
+      "track": "core",
+      "size": "M",
+      "launch": "v2",
+      "summary": "Give Claude/Codex-style agents a first-class way to cooperate with the app without making a plugin platform: inspect projects/panes/open files, request focus/split/new-pane actions, open diffs, and report task status through app-owned commands.",
+      "done": "A local permissioned MCP/API endpoint exposes documented app-owned commands; actions that mutate files, git state, panes, or project layout require visible approval/undo where appropriate; every agent action is attributed in the UI/log."
+    },
+    {
+      "id": "WORKTREE",
+      "title": "Worktree helper",
+      "column": "next",
+      "tier": "pebble",
+      "track": "core",
+      "size": "M",
+      "launch": "v2",
+      "summary": "One keystroke: new pane = git worktree add + agent launched inside it, named and disposable. The 'multiple agents on one repo, parallel' workflow.",
+      "done": "From a project tab: new-worktree-agent in <5s; cleanup removes the worktree + branch."
+    },
+    {
+      "id": "SOURCE-CONTROL-CONNECTIONS",
+      "title": "GitHub and GitLab connections",
+      "column": "next",
+      "tier": "pebble",
+      "track": "files",
+      "size": "M",
+      "launch": "v2",
+      "summary": "Local Git is not enough once agent work needs to move through PR/MR review. Add first-class source-hosting connections without becoming a full forge client.",
+      "done": "Settings detects `git`, `gh`, and `glab` auth health; supports GitHub, GitLab.com, and self-hosted GitLab remotes; opens repo/PR/MR/issue/pipeline links in browser preview or external browser; shows source-host status for the active repo; credentials are stored only through OS-safe storage."
+    },
+    {
+      "id": "PACKAGING",
+      "title": "Local app packaging",
+      "column": "next",
+      "tier": "pebble",
+      "track": "quality",
+      "size": "M",
+      "launch": "v2",
+      "summary": "Make it launch like a real macOS app, not only from `npm run tauri dev`.",
+      "done": "A local signed or ad-hoc packaged .app launches, opens folders, and runs agents with documented setup requirements."
     },
     {
       "id": "TRANSCRIPTS",
@@ -869,26 +869,15 @@
       "done": "A pane can save a plain-text transcript/log path for later review, with clear retention/reset behavior."
     },
     {
-      "id": "SESSION-ARCHIVE",
-      "title": "Session archive",
-      "column": "later",
-      "tier": "sand",
-      "track": "workspace",
-      "size": "S",
-      "launch": "v2",
-      "summary": "Only after project sessions and transcripts exist, add a way to hide old sessions without turning the product into archived chats.",
-      "done": "A completed project session can be archived/restored; archived sessions retain transcript references and metadata, stay out of the main rail, and are labeled as work sessions rather than chats."
-    },
-    {
-      "id": "KEYBINDINGS-CONFIG",
-      "title": "Configurable keybindings",
+      "id": "NOTIFICATIONS",
+      "title": "Background agent notifications",
       "column": "later",
       "tier": "sand",
       "track": "ui",
       "size": "S",
       "launch": "v2",
-      "summary": "After the VS Code-compatible default shortcut map stabilizes, allow focused overrides without hardcoding personal preferences into the app.",
-      "done": "A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference."
+      "summary": "When an agent in another project or pane stops or needs input, Jason should not have to manually inspect every pane.",
+      "done": "Background panes can surface in-app badges and optional macOS notifications for exit/attention events."
     },
     {
       "id": "THEME",
@@ -902,21 +891,32 @@
       "done": "App chrome, terminal canvas, file rail, and editor can switch between built-in color themes with readable contrast while preserving semantic token roles and component states."
     },
     {
-      "id": "AGENT-HOOKS",
-      "title": "Built-in agent MCP/API hooks",
+      "id": "KEYBINDINGS-CONFIG",
+      "title": "Configurable keybindings",
       "column": "later",
-      "tier": "rock",
-      "track": "core",
-      "size": "M",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
       "launch": "v2",
-      "summary": "Give Claude/Codex-style agents a first-class way to cooperate with the app without making a plugin platform: inspect projects/panes/open files, request focus/split/new-pane actions, open diffs, and report task status through app-owned commands.",
-      "done": "A local permissioned MCP/API endpoint exposes documented app-owned commands; actions that mutate files, git state, panes, or project layout require visible approval/undo where appropriate; every agent action is attributed in the UI/log."
+      "summary": "After the VS Code-compatible default shortcut map stabilizes, allow focused overrides without hardcoding personal preferences into the app.",
+      "done": "A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference."
+    },
+    {
+      "id": "SESSION-ARCHIVE",
+      "title": "Session archive",
+      "column": "later",
+      "tier": "sand",
+      "track": "workspace",
+      "size": "S",
+      "launch": "v2",
+      "summary": "Only after project sessions and transcripts exist, add a way to hide old sessions without turning the product into archived chats.",
+      "done": "A completed project session can be archived/restored; archived sessions retain transcript references and metadata, stay out of the main rail, and are labeled as work sessions rather than chats."
     },
     {
       "id": "DIRECT-AGENT-HARNESS",
       "title": "Optional direct API agent harness",
       "column": "later",
-      "tier": "rock",
+      "tier": "sand",
       "track": "core",
       "size": "M",
       "launch": "v2",
@@ -924,15 +924,15 @@
       "done": "A feature-flagged direct agent can run app-owned tools/MCP with approval gates, state restore/resume, tracing/activity log entries, and clear separation from terminal-backed Claude/Codex panes."
     },
     {
-      "id": "PACKAGING",
-      "title": "Local app packaging",
+      "id": "INTEGRATIONS-POLICY",
+      "title": "Integration adapter policy",
       "column": "later",
-      "tier": "pebble",
+      "tier": "sand",
       "track": "quality",
-      "size": "M",
-      "launch": "v3",
-      "summary": "Make it launch like a real macOS app, not only from `npm run tauri dev`.",
-      "done": "A local signed or ad-hoc packaged .app launches, opens folders, and runs agents with documented setup requirements."
+      "size": "S",
+      "launch": "v2",
+      "summary": "Define the allowed lane for other integrations so Bitbucket, Azure DevOps, Linear, Jira, Slack, or Discord do not turn the app into a plugin hub.",
+      "done": "Documented integration policy classifies integrations as core, first-class, adapter-lane, parked, or out-of-scope; every integration requires a concrete workflow, health check, credential boundary, and app-owned command surface."
     },
     {
       "id": "REUSE-AUDIT",

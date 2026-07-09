@@ -297,97 +297,97 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </div>
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
-</div>
-<div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
-<div class="card" data-track="ui" data-id="DEV-SERVER-DETECT" data-size="S" data-tier="pebble" data-launch="v1">
-<div class="hd"><span class="sz">S</span><span class="ttl">DEV-SERVER-DETECT &middot; Local dev server detection</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v1</span></div><p class="sum">When Claude/Codex starts Vite, Next, Astro, or another dev server, the app should make the local preview obvious without acting like a full browser.</p>
-<details><summary>Done criteria</summary><p class="done">Detected localhost URLs from terminal output can be opened in the browser preview; the preview remembers the latest URL per project and offers reload/open-external.</p></details></div>
-<div class="card" data-track="quality" data-id="PERF-BUDGET" data-size="M" data-tier="pebble" data-launch="v1">
-<div class="hd"><span class="sz">M</span><span class="ttl">PERF-BUDGET &middot; Resource and jank budget</span><span class="lens l-quality">Quality + shipping</span></div>
-<div class="badges"><span class="me ver">v1</span></div><p class="sum">The product exists to avoid VS Code resource bloat. Measure the thing the product promises: memory, CPU, and responsiveness with several projects/panes.</p>
-<details><summary>Done criteria</summary><p class="done">Document baseline memory/CPU/jank for one-project edit+agent, two-agent same-project, three-project switch/relaunch, and fast terminal output runs; compare against the equivalent VS Code workflow and make regressions visible before release.</p></details></div>
 <div class="card" data-track="quality" data-id="DAILY-DRIVER-METRICS" data-size="S" data-tier="pebble" data-launch="v1">
 <div class="hd"><span class="sz">S</span><span class="ttl">DAILY-DRIVER-METRICS &middot; Daily-driver success metrics</span><span class="lens l-quality">Quality + shipping</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">Define how to know the app is actually replacing the VS Code workflow instead of just existing.</p>
 <details><summary>Done criteria</summary><p class="done">Script and record three workflow runs: one-project edit+agent, two-agent same-project, and three-project switch/relaunch. Track steps, elapsed time, project opens, pane starts/stops, editor saves, crashes, memory/CPU snapshots, and whether VS Code was needed.</p></details></div>
 </div>
 </div>
-<div class="col" data-status="later"><h2 class="s-later">Later</h2>
+<div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="core" data-id="AI-CONNECTIONS" data-size="M" data-tier="rock" data-launch="v2">
-<div class="hd"><span class="sz">M</span><span class="ttl">AI-CONNECTIONS &middot; AI connections and credentials settings</span><span class="lens l-core">Terminal + process</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">Users need to hook up real AI tooling: Claude/Codex CLI auth, provider API keys, model defaults, MCP servers, environment variables, permission defaults, and health checks.</p>
-<details><summary>Done criteria</summary><p class="done">Settings can configure Claude/Codex command profiles, provider/API credentials via OS-safe storage, MCP server entries, env vars, default models, permission policy, and validation checks that explain missing auth or broken connections.</p></details></div>
-<div class="card" data-track="files" data-id="SOURCE-CONTROL-CONNECTIONS" data-size="M" data-tier="rock" data-launch="v2">
-<div class="hd"><span class="sz">M</span><span class="ttl">SOURCE-CONTROL-CONNECTIONS &middot; GitHub and GitLab connections</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">Local Git is not enough once agent work needs to move through PR/MR review. Add first-class source-hosting connections without becoming a full forge client.</p>
-<details><summary>Done criteria</summary><p class="done">Settings detects `git`, `gh`, and `glab` auth health; supports GitHub, GitLab.com, and self-hosted GitLab remotes; opens repo/PR/MR/issue/pipeline links in browser preview or external browser; shows source-host status for the active repo; credentials are stored only through OS-safe storage.</p></details></div>
-<div class="card" data-track="core" data-id="AGENT-HOOKS" data-size="M" data-tier="rock" data-launch="v2">
-<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-HOOKS &middot; Built-in agent MCP/API hooks</span><span class="lens l-core">Terminal + process</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">Give Claude/Codex-style agents a first-class way to cooperate with the app without making a plugin platform: inspect projects/panes/open files, request focus/split/new-pane actions, open diffs, and report task status through app-owned commands.</p>
-<details><summary>Done criteria</summary><p class="done">A local permissioned MCP/API endpoint exposes documented app-owned commands; actions that mutate files, git state, panes, or project layout require visible approval/undo where appropriate; every agent action is attributed in the UI/log.</p></details></div>
-<div class="card" data-track="core" data-id="DIRECT-AGENT-HARNESS" data-size="M" data-tier="rock" data-launch="v2">
-<div class="hd"><span class="sz">M</span><span class="ttl">DIRECT-AGENT-HARNESS &middot; Optional direct API agent harness</span><span class="lens l-core">Terminal + process</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">Research-backed future lane: app-owned direct API/MCP agent workflows using human review, resumable state, and tracing, without replacing real Claude/Codex terminal panes.</p>
-<details><summary>Done criteria</summary><p class="done">A feature-flagged direct agent can run app-owned tools/MCP with approval gates, state restore/resume, tracing/activity log entries, and clear separation from terminal-backed Claude/Codex panes.</p></details></div>
-</div>
-<div class="tg t-pebble"><h3>Pebbles · features</h3>
-<div class="card" data-track="core" data-id="WORKTREE" data-size="M" data-tier="pebble" data-launch="v2">
-<div class="hd"><span class="sz">M</span><span class="ttl">WORKTREE &middot; Worktree helper</span><span class="lens l-core">Terminal + process</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">One keystroke: new pane = git worktree add + agent launched inside it, named and disposable. The 'multiple agents on one repo, parallel' workflow.</p>
-<details><summary>Done criteria</summary><p class="done">From a project tab: new-worktree-agent in &lt;5s; cleanup removes the worktree + branch.</p></details></div>
-<div class="card" data-track="files" data-id="SEARCH" data-size="M" data-tier="pebble" data-launch="v2">
+<div class="card" data-track="quality" data-id="PERF-BUDGET" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">PERF-BUDGET &middot; Resource and jank budget</span><span class="lens l-quality">Quality + shipping</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">The product exists to avoid VS Code resource bloat. Measure the thing the product promises: memory, CPU, and responsiveness with several projects/panes.</p>
+<details><summary>Done criteria</summary><p class="done">Document baseline memory/CPU/jank for one-project edit+agent, two-agent same-project, three-project switch/relaunch, and fast terminal output runs; compare against the equivalent VS Code workflow and make regressions visible before release.</p></details></div>
+<div class="card" data-track="ui" data-id="DEV-SERVER-DETECT" data-size="S" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">DEV-SERVER-DETECT &middot; Local dev server detection</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">When Claude/Codex starts Vite, Next, Astro, or another dev server, the app should make the local preview obvious without acting like a full browser.</p>
+<details><summary>Done criteria</summary><p class="done">Detected localhost URLs from terminal output can be opened in the browser preview; the preview remembers the latest URL per project and offers reload/open-external.</p></details></div>
+<div class="card" data-track="files" data-id="SEARCH" data-size="M" data-tier="rock" data-launch="v2">
 <div class="hd"><span class="sz">M</span><span class="ttl">SEARCH &middot; Find files and text</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">A lightweight replacement for the VS Code search/file-jump behaviors that matter while supervising agents.</p>
 <details><summary>Done criteria</summary><p class="done">Keyboard-driven file quick-open and ripgrep-backed text search work inside the selected project.</p></details></div>
-<div class="card" data-track="core" data-id="TERMINAL-FIND" data-size="M" data-tier="pebble" data-launch="v2">
+<div class="card" data-track="core" data-id="TERMINAL-FIND" data-size="M" data-tier="rock" data-launch="v2">
 <div class="hd"><span class="sz">M</span><span class="ttl">TERMINAL-FIND &middot; Find in terminal scrollback</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">Agent output can be long. Search inside terminal scrollback is necessary for reviewing logs and prior agent output.</p>
 <details><summary>Done criteria</summary><p class="done">Find text in the active pane scrollback, jump next/previous, and preserve terminal focus behavior.</p></details></div>
+</div>
+<div class="tg t-pebble"><h3>Pebbles · features</h3>
+<div class="card" data-track="ui" data-id="COMMAND-PALETTE" data-size="S" data-tier="pebble" data-launch="v2">
+<div class="hd"><span class="sz">S</span><span class="ttl">COMMAND-PALETTE &middot; VS Code-style command palette</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">A compact VS Code-style way to expose actions without adding IDE chrome: open folder, quick open, new agent pane, split, restart, kill, save, search, settings. It should share the same command registry as shortcuts and context menus.</p>
+<details><summary>Done criteria</summary><p class="done">A keyboard palette can run core app actions, shows shortcuts where assigned, and stays consistent with menu/context-menu labels.</p></details></div>
 <div class="card" data-track="ui" data-id="SETTINGS-PARITY" data-size="M" data-tier="pebble" data-launch="v2">
 <div class="hd"><span class="sz">M</span><span class="ttl">SETTINGS-PARITY &middot; Codex-style settings parity</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">Borrow Codex's searchable left-nav settings shape and icon density, but keep only categories that serve the lean VS Code replacement workflow.</p>
 <details><summary>Done criteria</summary><p class="done">Settings has searchable grouped sections for General, Appearance, App configuration, Behavior, Keyboard shortcuts, MCP servers, Browser preview, Agent hooks, Connections, Git, Environments, and Worktrees; Profile, Pets, Usage &amp; billing, Archived chats, and Chat Settings are absent; Appshots and Computer use remain parked.</p></details></div>
-<div class="card" data-track="quality" data-id="PACKAGING" data-size="M" data-tier="pebble" data-launch="v3">
-<div class="hd"><span class="sz">M</span><span class="ttl">PACKAGING &middot; Local app packaging</span><span class="lens l-quality">Quality + shipping</span></div>
-<div class="badges"><span class="me ver">v3</span></div><p class="sum">Make it launch like a real macOS app, not only from `npm run tauri dev`.</p>
-<details><summary>Done criteria</summary><p class="done">A local signed or ad-hoc packaged .app launches, opens folders, and runs agents with documented setup requirements.</p></details></div>
-</div>
-<div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
-<div class="card" data-track="ui" data-id="COMMAND-PALETTE" data-size="S" data-tier="sand" data-launch="v2">
-<div class="hd"><span class="sz">S</span><span class="ttl">COMMAND-PALETTE &middot; VS Code-style command palette</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">A compact VS Code-style way to expose actions without adding IDE chrome: open folder, quick open, new agent pane, split, restart, kill, save, search, settings. It should share the same command registry as shortcuts and context menus.</p>
-<details><summary>Done criteria</summary><p class="done">A keyboard palette can run core app actions, shows shortcuts where assigned, and stays consistent with menu/context-menu labels.</p></details></div>
-<div class="card" data-track="quality" data-id="INTEGRATIONS-POLICY" data-size="S" data-tier="sand" data-launch="v2">
-<div class="hd"><span class="sz">S</span><span class="ttl">INTEGRATIONS-POLICY &middot; Integration adapter policy</span><span class="lens l-quality">Quality + shipping</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">Define the allowed lane for other integrations so Bitbucket, Azure DevOps, Linear, Jira, Slack, or Discord do not turn the app into a plugin hub.</p>
-<details><summary>Done criteria</summary><p class="done">Documented integration policy classifies integrations as core, first-class, adapter-lane, parked, or out-of-scope; every integration requires a concrete workflow, health check, credential boundary, and app-owned command surface.</p></details></div>
-<div class="card" data-track="ui" data-id="SETTINGS" data-size="M" data-tier="sand" data-launch="v2">
+<div class="card" data-track="ui" data-id="SETTINGS" data-size="M" data-tier="pebble" data-launch="v2">
 <div class="hd"><span class="sz">M</span><span class="ttl">SETTINGS &middot; Settings for commands, themes, and shortcuts</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">Keep settings boring and inspectable: agent commands, AI connections, source-control connections, ignored folders, font, color theme, default layout, browser preview, hooks, git/worktree defaults, environments, and shortcut overrides. This is not a plugin platform.</p>
 <details><summary>Done criteria</summary><p class="done">A local config file controls agent profiles, AI connections, source-control connections, font/theme, ignored folders, default pane layout, browser preview, hooks, Git/worktree behavior, environments, and app-level keybindings; bad config reports actionable errors and plugins/extensions are not supported.</p></details></div>
-<div class="card" data-track="ui" data-id="NOTIFICATIONS" data-size="S" data-tier="sand" data-launch="v2">
-<div class="hd"><span class="sz">S</span><span class="ttl">NOTIFICATIONS &middot; Background agent notifications</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">When an agent in another project or pane stops or needs input, Jason should not have to manually inspect every pane.</p>
-<details><summary>Done criteria</summary><p class="done">Background panes can surface in-app badges and optional macOS notifications for exit/attention events.</p></details></div>
+<div class="card" data-track="core" data-id="AI-CONNECTIONS" data-size="M" data-tier="pebble" data-launch="v2">
+<div class="hd"><span class="sz">M</span><span class="ttl">AI-CONNECTIONS &middot; AI connections and credentials settings</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">Users need to hook up real AI tooling: Claude/Codex CLI auth, provider API keys, model defaults, MCP servers, environment variables, permission defaults, and health checks.</p>
+<details><summary>Done criteria</summary><p class="done">Settings can configure Claude/Codex command profiles, provider/API credentials via OS-safe storage, MCP server entries, env vars, default models, permission policy, and validation checks that explain missing auth or broken connections.</p></details></div>
+<div class="card" data-track="core" data-id="AGENT-HOOKS" data-size="M" data-tier="pebble" data-launch="v2">
+<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-HOOKS &middot; Built-in agent MCP/API hooks</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">Give Claude/Codex-style agents a first-class way to cooperate with the app without making a plugin platform: inspect projects/panes/open files, request focus/split/new-pane actions, open diffs, and report task status through app-owned commands.</p>
+<details><summary>Done criteria</summary><p class="done">A local permissioned MCP/API endpoint exposes documented app-owned commands; actions that mutate files, git state, panes, or project layout require visible approval/undo where appropriate; every agent action is attributed in the UI/log.</p></details></div>
+<div class="card" data-track="core" data-id="WORKTREE" data-size="M" data-tier="pebble" data-launch="v2">
+<div class="hd"><span class="sz">M</span><span class="ttl">WORKTREE &middot; Worktree helper</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">One keystroke: new pane = git worktree add + agent launched inside it, named and disposable. The 'multiple agents on one repo, parallel' workflow.</p>
+<details><summary>Done criteria</summary><p class="done">From a project tab: new-worktree-agent in &lt;5s; cleanup removes the worktree + branch.</p></details></div>
+<div class="card" data-track="files" data-id="SOURCE-CONTROL-CONNECTIONS" data-size="M" data-tier="pebble" data-launch="v2">
+<div class="hd"><span class="sz">M</span><span class="ttl">SOURCE-CONTROL-CONNECTIONS &middot; GitHub and GitLab connections</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">Local Git is not enough once agent work needs to move through PR/MR review. Add first-class source-hosting connections without becoming a full forge client.</p>
+<details><summary>Done criteria</summary><p class="done">Settings detects `git`, `gh`, and `glab` auth health; supports GitHub, GitLab.com, and self-hosted GitLab remotes; opens repo/PR/MR/issue/pipeline links in browser preview or external browser; shows source-host status for the active repo; credentials are stored only through OS-safe storage.</p></details></div>
+<div class="card" data-track="quality" data-id="PACKAGING" data-size="M" data-tier="pebble" data-launch="v2">
+<div class="hd"><span class="sz">M</span><span class="ttl">PACKAGING &middot; Local app packaging</span><span class="lens l-quality">Quality + shipping</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">Make it launch like a real macOS app, not only from `npm run tauri dev`.</p>
+<details><summary>Done criteria</summary><p class="done">A local signed or ad-hoc packaged .app launches, opens folders, and runs agents with documented setup requirements.</p></details></div>
+</div>
+</div>
+<div class="col" data-status="later"><h2 class="s-later">Later</h2>
+<div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
 <div class="card" data-track="core" data-id="TRANSCRIPTS" data-size="S" data-tier="sand" data-launch="v2">
 <div class="hd"><span class="sz">S</span><span class="ttl">TRANSCRIPTS &middot; Pane transcript capture</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">Completed agent sessions should be reviewable after the process exits without keeping panes open forever.</p>
 <details><summary>Done criteria</summary><p class="done">A pane can save a plain-text transcript/log path for later review, with clear retention/reset behavior.</p></details></div>
-<div class="card" data-track="workspace" data-id="SESSION-ARCHIVE" data-size="S" data-tier="sand" data-launch="v2">
-<div class="hd"><span class="sz">S</span><span class="ttl">SESSION-ARCHIVE &middot; Session archive</span><span class="lens l-workspace">Projects + sessions</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">Only after project sessions and transcripts exist, add a way to hide old sessions without turning the product into archived chats.</p>
-<details><summary>Done criteria</summary><p class="done">A completed project session can be archived/restored; archived sessions retain transcript references and metadata, stay out of the main rail, and are labeled as work sessions rather than chats.</p></details></div>
-<div class="card" data-track="ui" data-id="KEYBINDINGS-CONFIG" data-size="S" data-tier="sand" data-launch="v2">
-<div class="hd"><span class="sz">S</span><span class="ttl">KEYBINDINGS-CONFIG &middot; Configurable keybindings</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v2</span></div><p class="sum">After the VS Code-compatible default shortcut map stabilizes, allow focused overrides without hardcoding personal preferences into the app.</p>
-<details><summary>Done criteria</summary><p class="done">A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference.</p></details></div>
+<div class="card" data-track="ui" data-id="NOTIFICATIONS" data-size="S" data-tier="sand" data-launch="v2">
+<div class="hd"><span class="sz">S</span><span class="ttl">NOTIFICATIONS &middot; Background agent notifications</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">When an agent in another project or pane stops or needs input, Jason should not have to manually inspect every pane.</p>
+<details><summary>Done criteria</summary><p class="done">Background panes can surface in-app badges and optional macOS notifications for exit/attention events.</p></details></div>
 <div class="card" data-track="ui" data-id="THEME" data-size="S" data-tier="sand" data-launch="v2">
 <div class="hd"><span class="sz">S</span><span class="ttl">THEME &middot; Color themes</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">Support practical color themes across chrome, terminal, rail, and editor. Start with the approved mono-ghost theme; do not expand into plugin theming or break the chrome token contract.</p>
 <details><summary>Done criteria</summary><p class="done">App chrome, terminal canvas, file rail, and editor can switch between built-in color themes with readable contrast while preserving semantic token roles and component states.</p></details></div>
+<div class="card" data-track="ui" data-id="KEYBINDINGS-CONFIG" data-size="S" data-tier="sand" data-launch="v2">
+<div class="hd"><span class="sz">S</span><span class="ttl">KEYBINDINGS-CONFIG &middot; Configurable keybindings</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">After the VS Code-compatible default shortcut map stabilizes, allow focused overrides without hardcoding personal preferences into the app.</p>
+<details><summary>Done criteria</summary><p class="done">A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference.</p></details></div>
+<div class="card" data-track="workspace" data-id="SESSION-ARCHIVE" data-size="S" data-tier="sand" data-launch="v2">
+<div class="hd"><span class="sz">S</span><span class="ttl">SESSION-ARCHIVE &middot; Session archive</span><span class="lens l-workspace">Projects + sessions</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">Only after project sessions and transcripts exist, add a way to hide old sessions without turning the product into archived chats.</p>
+<details><summary>Done criteria</summary><p class="done">A completed project session can be archived/restored; archived sessions retain transcript references and metadata, stay out of the main rail, and are labeled as work sessions rather than chats.</p></details></div>
+<div class="card" data-track="core" data-id="DIRECT-AGENT-HARNESS" data-size="M" data-tier="sand" data-launch="v2">
+<div class="hd"><span class="sz">M</span><span class="ttl">DIRECT-AGENT-HARNESS &middot; Optional direct API agent harness</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">Research-backed future lane: app-owned direct API/MCP agent workflows using human review, resumable state, and tracing, without replacing real Claude/Codex terminal panes.</p>
+<details><summary>Done criteria</summary><p class="done">A feature-flagged direct agent can run app-owned tools/MCP with approval gates, state restore/resume, tracing/activity log entries, and clear separation from terminal-backed Claude/Codex panes.</p></details></div>
+<div class="card" data-track="quality" data-id="INTEGRATIONS-POLICY" data-size="S" data-tier="sand" data-launch="v2">
+<div class="hd"><span class="sz">S</span><span class="ttl">INTEGRATIONS-POLICY &middot; Integration adapter policy</span><span class="lens l-quality">Quality + shipping</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">Define the allowed lane for other integrations so Bitbucket, Azure DevOps, Linear, Jira, Slack, or Discord do not turn the app into a plugin hub.</p>
+<details><summary>Done criteria</summary><p class="done">Documented integration policy classifies integrations as core, first-class, adapter-lane, parked, or out-of-scope; every integration requires a concrete workflow, health check, credential boundary, and app-owned command surface.</p></details></div>
 <div class="card" data-track="research" data-id="REUSE-AUDIT" data-size="S" data-tier="sand" data-launch="v3">
 <div class="hd"><span class="sz">S</span><span class="ttl">REUSE-AUDIT &middot; Mine old projects for reusable pieces</span><span class="lens l-research">Research &amp; spikes</span></div>
 <div class="badges"><span class="me ver">v3</span></div><p class="sum">Re-check Hallmark/hashmark/brutal/indx for reusable Tauri shell, persistence, editor, or design patterns without adopting their product shape.</p>
