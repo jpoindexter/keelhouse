@@ -17,7 +17,7 @@ PROJECT-SESSIONS translates Codex chat rows into task-scoped workbench sessions 
 ## Deferred
 
 - Browser preview URL memory is implemented by BROWSER-PREVIEW.
-- Multiple live panes are implemented by PANE-MANAGER. Pane layout restore, pane labels, and richer background process state belong to SESSION-RESTORE, PANE-NAMES, and PROCESS-LIFECYCLE.
+- Multiple live panes are implemented by PANE-MANAGER. Pane labels are implemented by PANE-NAMES and persist by project session plus pane slot. Pane layout/process restore and richer background process state belong to SESSION-RESTORE and PROCESS-LIFECYCLE.
 - Transcript references and full activity history belong to TRANSCRIPTS and AGENT-ACTIVITY-LOG.
 - Cross-relaunch restoration of editor/session snapshots belongs to SESSION-RESTORE.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { terminalPaneCwdLabel, terminalPaneDisplayName, terminalPaneProjectStatus, terminalPaneStateLabel } from "./terminalPane";
+import { normalizeTerminalPaneLabel, terminalPaneCwdLabel, terminalPaneDisplayName, terminalPaneLabelForDisplay, terminalPaneProjectStatus, terminalPaneStateLabel } from "./terminalPane";
 
 describe("terminal pane metadata", () => {
   it("formats lifecycle state for the terminal header", () => {
@@ -18,6 +18,13 @@ describe("terminal pane metadata", () => {
   it("labels panes by profile and one-based index", () => {
     expect(terminalPaneDisplayName("Claude", 0)).toBe("Claude 1");
     expect(terminalPaneDisplayName("Shell", 2)).toBe("Shell 3");
+  });
+
+  it("normalizes custom pane labels and falls back to profile labels", () => {
+    expect(normalizeTerminalPaneLabel("  docs   agent  ")).toBe("docs agent");
+    expect(normalizeTerminalPaneLabel("")).toBeNull();
+    expect(terminalPaneLabelForDisplay("review pass", "Claude", 0)).toBe("review pass");
+    expect(terminalPaneLabelForDisplay(" ", "Claude", 0)).toBe("Claude 1");
   });
 
   it("aggregates project status from all panes", () => {

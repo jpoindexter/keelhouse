@@ -21,7 +21,7 @@ Read the product language guide in `docs/product-positioning.md`.
 
 Direction is locked: build our own app using open-source components, not a fork of cmux, Superconductor, hashmark, or zellij. The terminal foundation is verified: real pty -> `libghostty-vt` in Rust -> Tauri IPC -> Canvas 2D.
 
-Already working: keyboard input, paste, selection/copy, scrollback, folder picker, persisted workspace, agent launch profiles, file rail, watcher, recent projects, CodeMirror editing, tabs, save protection, context menus, composer routing, shortcut docs, and chrome token polish.
+Already working: keyboard input, paste, selection/copy, scrollback, folder picker, persisted workspace, project/session rail, browser preview, agent launch profiles, named terminal panes, file rail, watcher, recent projects, CodeMirror editing, tabs, save protection, context menus, composer routing, shortcut docs, and chrome token polish.
 
 Current active slice: see `STATE.md`. The roadmap source is `roadmap.json`, rendered to `roadmap.html`; `ROADMAP.md` is the readable companion.
 

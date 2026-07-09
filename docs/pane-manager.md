@@ -15,7 +15,7 @@ PANE-MANAGER adds real multi-pane terminal support without turning the terminal 
 
 ## Deliberate Boundaries
 
-- Pane names and task labels belong to `PANE-NAMES`.
+- Pane names and task labels are implemented by `PANE-NAMES`.
 - Restart, kill-all, and richer lifecycle controls belong to `PROCESS-LIFECYCLE`.
 - Cross-relaunch pane layout restore belongs to `SESSION-RESTORE`.
 - App-owned send/readTail/session APIs belong to `AGENT-SESSION-HANDLE`.

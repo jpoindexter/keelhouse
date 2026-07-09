@@ -1095,16 +1095,23 @@ body,
   max-width: min(38vw, 440px);
   align-items: center;
   gap: 4px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.terminal-pane-strip::-webkit-scrollbar {
+  display: none;
 }
 
 .terminal-pane-button {
   display: inline-flex;
   height: 22px;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  min-width: 0;
-  max-width: 118px;
+  min-width: 72px;
+  max-width: 132px;
   gap: 5px;
   padding: 0 7px;
   font-size: 11px;

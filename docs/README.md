@@ -25,6 +25,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `project-sessions.md`: v1 named workbench session rows under projects.
 - `browser-preview.md`: v1 lightweight browser/web preview pane.
 - `pane-manager.md`: v1 real multi-pane terminal manager.
+- `pane-names.md`: v1 editable terminal pane names/task labels.
 - `integrations-scope.md`: Git, GitHub, GitLab, and adapter-lane boundaries.
 - `composer-harness-research.md`: bottom composer and future harness scope.
 - `harness-contract.md`: app-owned pane/session handle contract.

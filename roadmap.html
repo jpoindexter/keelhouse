@@ -224,6 +224,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">ACCESSIBILITY-BASICS &middot; Keyboard and focus accessibility baseline</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">A dense tool still needs visible focus, keyboard reachability, and labelled controls so it can be used without pointer precision.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: current v0.5 chrome has explicit labels for rail actions, workspace root, agent profile picker, terminal canvas, composer draft, and browser preview controls; editor tabs put tab semantics on the actual focusable buttons; the terminal canvas is tabbable and has a visible focus ring; context menus focus the first enabled item, support Arrow Up/Down, and close with Escape. Full modal trapping, canvas transcript screen-reader review, and future git/settings/multi-pane surfaces remain deferred.</p></details></div>
+<div class="card" data-track="core" data-id="PANE-NAMES" data-size="S" data-tier="pebble" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">PANE-NAMES &middot; Pane names and task labels</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">When several agents run in one project, each pane needs a human label so Jason can remember what it is doing.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: terminal panes have editable task labels shown in the pane strip and composer target. Labels normalize input, fall back to profile/index names when blank, persist in workspace.json by project-session plus pane slot, and can be edited by double-clicking the pane pill or using Rename Selected Pane in the terminal context menu.</p></details></div>
 </div>
 <div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
 <div class="card" data-track="quality" data-id="PRODUCT-NAME-README" data-size="S" data-tier="sand" data-launch="v0_5">
@@ -270,10 +274,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
-<div class="card" data-track="core" data-id="PANE-NAMES" data-size="S" data-tier="pebble" data-launch="v1">
-<div class="hd"><span class="sz">S</span><span class="ttl">PANE-NAMES &middot; Pane names and task labels</span><span class="lens l-core">Terminal + process</span></div>
-<div class="badges"><span class="me ver">v1</span></div><p class="sum">When several agents run in one project, each pane needs a human label so Jason can remember what it is doing.</p>
-<details><summary>Done criteria</summary><p class="done">Each pane has an editable name/task label shown in the pane header and restored across relaunch.</p></details></div>
 <div class="card" data-track="core" data-id="PROCESS-LIFECYCLE" data-size="M" data-tier="pebble" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">PROCESS-LIFECYCLE &middot; Agent process lifecycle controls</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">A cockpit needs basic process affordances: restart, kill, status, exited state, and command/cwd visibility.</p>

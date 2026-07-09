@@ -94,7 +94,13 @@ import type { ComposerAppCommand } from "./agentComposer";
 import { AppIcon, paneStateAccessibleLabel, paneStateIconName } from "./icons";
 import type { AppIconName } from "./icons";
 import { shortcutKeys, shortcutTitle } from "./shortcuts";
-import { terminalPaneCwdLabel, terminalPaneDisplayName, terminalPaneProjectStatus as projectStatusFromTerminalPanes, terminalPaneStateLabel } from "./terminalPane";
+import {
+  normalizeTerminalPaneLabel,
+  terminalPaneCwdLabel,
+  terminalPaneLabelForDisplay,
+  terminalPaneProjectStatus as projectStatusFromTerminalPanes,
+  terminalPaneStateLabel,
+} from "./terminalPane";
 import type { TerminalPaneState } from "./terminalPane";
 import "./App.css";
 
@@ -112,12 +118,16 @@ type ManagedTerminalPane = {
   id: number;
   profile: LaunchProfile;
   cwd: string;
+  slot: number;
+  label: string | null;
   state: TerminalPaneState;
   exitCode: number | null;
   createdAt: number;
 };
 type TerminalPanesByProject = Record<string, ManagedTerminalPane[]>;
 type ActiveTerminalPaneByProject = Record<string, number>;
+type PaneLabelRecord = { slot: number; label: string; updatedAt: number };
+type PaneLabelsBySession = Record<string, PaneLabelRecord[]>;
 type FileTreeNode = {
   id: string;
   name: string;
@@ -169,6 +179,25 @@ const formatBytes = (bytes: number | null) => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+const normalizePaneLabelsBySession = (value: unknown): PaneLabelsBySession => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([key, rawRecords]) => {
+        if (!Array.isArray(rawRecords)) return [key, []] as const;
+        const records = rawRecords.flatMap((record): PaneLabelRecord[] => {
+          if (!record || typeof record !== "object") return [];
+          const data = record as { slot?: unknown; label?: unknown; updatedAt?: unknown };
+          const slot = typeof data.slot === "number" && Number.isInteger(data.slot) && data.slot >= 0 ? data.slot : null;
+          const label = normalizeTerminalPaneLabel(data.label);
+          if (slot == null || !label) return [];
+          return [{ slot, label, updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0 }];
+        });
+        return [key, records] as const;
+      })
+      .filter(([, records]) => records.length > 0),
+  );
 };
 
 const menuItem = (
@@ -245,6 +274,7 @@ function App() {
   const terminalPanesRef = useRef<ManagedTerminalPane[]>([]);
   const terminalPanesByProjectRef = useRef<TerminalPanesByProject>({});
   const activeTerminalPaneByProjectRef = useRef<ActiveTerminalPaneByProject>({});
+  const paneLabelsBySessionRef = useRef<PaneLabelsBySession>({});
   const activeTerminalPaneIdRef = useRef<number | null>(null);
   const terminalSnapshotsRef = useRef<Record<number, Snapshot>>({});
   const requestTerminalPaintRef = useRef<() => void>(() => {});
@@ -271,6 +301,7 @@ function App() {
   const [launchProfileChanging, setLaunchProfileChanging] = useState(false);
   const [terminalPanes, setTerminalPanes] = useState<ManagedTerminalPane[]>([]);
   const [activeTerminalPaneId, setActiveTerminalPaneId] = useState<number | null>(null);
+  const [paneLabelsBySession, setPaneLabelsBySession] = useState<PaneLabelsBySession>({});
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
   const [fileTreeError, setFileTreeError] = useState<string | null>(null);
@@ -364,6 +395,10 @@ function App() {
   useEffect(() => {
     activeSessionByProjectRef.current = activeSessionByProject;
   }, [activeSessionByProject]);
+
+  useEffect(() => {
+    paneLabelsBySessionRef.current = paneLabelsBySession;
+  }, [paneLabelsBySession]);
 
   useEffect(() => {
     browserPreviewByProjectRef.current = browserPreviewByProject;
@@ -505,6 +540,35 @@ function App() {
     await storeRef.current?.save();
   };
 
+  const paneLabelSessionKey = (root: string | null, sessionId = activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, root)) =>
+    root && sessionId ? `${root}\n${sessionId}` : null;
+
+  const savedPaneLabelForSlot = (root: string | null, slot: number) => {
+    const key = paneLabelSessionKey(root);
+    if (!key) return null;
+    return paneLabelsBySessionRef.current[key]?.find((record) => record.slot === slot)?.label ?? null;
+  };
+
+  const persistPaneLabel = async (root: string, slot: number, label: string | null) => {
+    const key = paneLabelSessionKey(root);
+    if (!key) return;
+    const existing = paneLabelsBySessionRef.current[key] ?? [];
+    const normalized = normalizeTerminalPaneLabel(label);
+    const nextRecords = normalized
+      ? [
+          ...existing.filter((record) => record.slot !== slot),
+          { slot, label: normalized, updatedAt: Date.now() },
+        ].sort((a, b) => a.slot - b.slot)
+      : existing.filter((record) => record.slot !== slot);
+    const next = { ...paneLabelsBySessionRef.current };
+    if (nextRecords.length > 0) next[key] = nextRecords;
+    else delete next[key];
+    paneLabelsBySessionRef.current = next;
+    setPaneLabelsBySession(next);
+    await storeRef.current?.set("paneLabelsBySession", next);
+    await storeRef.current?.save();
+  };
+
   const browserPreviewSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
 
   const setBrowserLocation = (url: string, options: { pushHistory?: boolean } = {}) => {
@@ -637,7 +701,7 @@ function App() {
     return next;
   };
 
-  const terminalPaneLabel = (pane: ManagedTerminalPane, index: number) => terminalPaneDisplayName(pane.profile.label, index);
+  const terminalPaneLabel = (pane: ManagedTerminalPane, index: number) => terminalPaneLabelForDisplay(pane.label, pane.profile.label, index);
 
   const sessionSnapshotKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
 
@@ -693,6 +757,8 @@ function App() {
           id: result.paneId,
           profile,
           cwd: root,
+          slot: 0,
+          label: savedPaneLabelForSlot(root, 0),
           state: "running" as TerminalPaneState,
           exitCode: null,
           createdAt: Date.now(),
@@ -1046,15 +1112,19 @@ function App() {
     setLaunchProfileChanging(true);
     try {
       const result = await invoke<OpenPaneResponse>("create_pane", { path: root, profile });
+      const existingPanes = terminalPanesForProject(root);
+      const slot = existingPanes.length;
       const pane = {
         id: result.paneId,
         profile,
         cwd: root,
+        slot,
+        label: savedPaneLabelForSlot(root, slot),
         state: "running" as TerminalPaneState,
         exitCode: null,
         createdAt: Date.now(),
       };
-      const nextPanes = [...terminalPanesForProject(root), pane];
+      const nextPanes = [...existingPanes, pane];
       setProjectTerminalPanes(root, nextPanes, result.paneId);
       launchProfileRef.current = profile;
       setLaunchProfile(profile);
@@ -1101,6 +1171,21 @@ function App() {
       await updateOpenProjectStatus(root, "attention");
       await updateActiveSessionStatus(root, "attention");
     }
+  };
+
+  const renameTerminalPane = async (pane: ManagedTerminalPane) => {
+    const root = workspacePathRef.current;
+    if (!root) return;
+    const currentIndex = terminalPanesForProject(root).findIndex((item) => item.id === pane.id);
+    const current = terminalPaneLabelForDisplay(pane.label, pane.profile.label, currentIndex >= 0 ? currentIndex : pane.slot);
+    const value = window.prompt("Pane name or task label", current);
+    if (value == null) return;
+    const nextLabel = normalizeTerminalPaneLabel(value);
+    const nextPanes = terminalPanesForProject(root).map((item) =>
+      item.id === pane.id ? { ...item, label: nextLabel } : item,
+    );
+    setProjectTerminalPanes(root, nextPanes, pane.id);
+    await persistPaneLabel(root, pane.slot, nextLabel);
   };
 
   const terminalSize = () => {
@@ -1594,6 +1679,10 @@ function App() {
       icon: "terminal",
       disabled: !workspacePath || launchProfileChanging,
     }),
+    menuItem("terminal.rename-pane", "Rename Selected Pane", () => activeTerminalPane && void renameTerminalPane(activeTerminalPane), {
+      icon: "terminal",
+      disabled: !activeTerminalPane,
+    }),
     menuItem("terminal.close-pane", "Close Selected Pane", () => activeTerminalPane && void closeTerminalPane(activeTerminalPane.id), {
       icon: "stop",
       danger: true,
@@ -1901,6 +1990,7 @@ function App() {
       const savedActiveSessions = normalizeActiveSessionByProject(await store.get<unknown>("activeSessionByProject"));
       const savedBrowserProjects = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewByProject"));
       const savedBrowserSessions = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewBySession"));
+      const savedPaneLabels = normalizePaneLabelsBySession(await store.get<unknown>("paneLabelsBySession"));
       const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
       activeFilesByWorkspaceRef.current = normalizeActiveFileByWorkspace(await store.get<unknown>("activeFileByWorkspace"));
       const initialOpenProjects = savedOpenProjects.length > 0 ? savedOpenProjects : openProjectsFromRecent(savedRecent);
@@ -1914,6 +2004,7 @@ function App() {
       activeSessionByProjectRef.current = savedActiveSessions;
       browserPreviewByProjectRef.current = savedBrowserProjects;
       browserPreviewBySessionRef.current = savedBrowserSessions;
+      paneLabelsBySessionRef.current = savedPaneLabels;
       launchProfileRef.current = savedProfile;
       setLaunchProfile(savedProfile);
       setRecentProjects(savedRecent);
@@ -1922,6 +2013,7 @@ function App() {
       setActiveSessionByProjectState(savedActiveSessions);
       setBrowserPreviewByProject(savedBrowserProjects);
       setBrowserPreviewBySession(savedBrowserSessions);
+      setPaneLabelsBySession(savedPaneLabels);
       const last = await store.get<string>("folder");
       if (last) await openWorkspaceDirect(last, savedProfile);
       else await pickWorkspace();
@@ -2074,6 +2166,11 @@ function App() {
       if (frame.current != null) cancelAnimationFrame(frame.current);
     };
   }, []);
+
+  const activeTerminalPaneIndex = activeTerminalPane ? terminalPanes.findIndex((pane) => pane.id === activeTerminalPane.id) : -1;
+  const activeTerminalPaneLabel = activeTerminalPane
+    ? terminalPaneLabel(activeTerminalPane, activeTerminalPaneIndex >= 0 ? activeTerminalPaneIndex : activeTerminalPane.slot)
+    : null;
 
   return (
     <div className="app-shell">
@@ -2515,10 +2612,11 @@ function App() {
                       key={pane.id}
                       className={`terminal-pane-button ${pane.id === activeTerminalPaneId ? "terminal-pane-button--active" : ""}`}
                       type="button"
-                      title={`${label} — ${terminalPaneStateLabel(pane.state, pane.exitCode)}`}
-                      aria-label={`Focus ${label}`}
+                      title={`${label} - ${terminalPaneStateLabel(pane.state, pane.exitCode)}. Double-click to rename.`}
+                      aria-label={`Focus ${label}. Double-click to rename.`}
                       aria-pressed={pane.id === activeTerminalPaneId}
                       onClick={() => void focusTerminalPane(pane.id)}
+                      onDoubleClick={() => void renameTerminalPane(pane)}
                     >
                       <AppIcon name={paneStateIconName(pane.state)} />
                       <span>{label}</span>
@@ -2585,7 +2683,7 @@ function App() {
                 <span>{activeTerminalProfile.label}</span>
               </strong>
               <span>{workspacePath ? basename(workspacePath) : "No workspace"}</span>
-              <span>{activeTerminalPane ? `pane ${terminalPanes.findIndex((pane) => pane.id === activeTerminalPane.id) + 1}` : "No pane"}</span>
+              <span>{activeTerminalPaneLabel ?? "No pane"}</span>
             </div>
             <textarea
               className="agent-composer__input"

@@ -537,13 +537,13 @@
     {
       "id": "PANE-NAMES",
       "title": "Pane names and task labels",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "core",
       "size": "S",
       "launch": "v1",
       "summary": "When several agents run in one project, each pane needs a human label so Jason can remember what it is doing.",
-      "done": "Each pane has an editable name/task label shown in the pane header and restored across relaunch."
+      "done": "Verified 2026-07-09: terminal panes have editable task labels shown in the pane strip and composer target. Labels normalize input, fall back to profile/index names when blank, persist in workspace.json by project-session plus pane slot, and can be edited by double-clicking the pane pill or using Rename Selected Pane in the terminal context menu."
     },
     {
       "id": "AGENT-SESSION-HANDLE",
