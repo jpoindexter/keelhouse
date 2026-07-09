@@ -2956,27 +2956,6 @@ function App() {
           </button>
         </div>
       </header>
-      <nav className="activity-bar" aria-label="Primary activity">
-        <button className="activity-button activity-button--active" type="button" title="Explorer" aria-label="Explorer">
-          <AppIcon name="file" />
-        </button>
-        <button className="activity-button" type="button" title="Agent chat" aria-label="Agent chat" onClick={() => setAgentSurfaceMode("chat")}>
-          <AppIcon name="agent" />
-        </button>
-        <button className="activity-button" type="button" title="Raw terminal" aria-label="Raw terminal" onClick={() => setAgentSurfaceMode("terminal")}>
-          <AppIcon name="terminal" />
-        </button>
-        <button className="activity-button" type="button" title="Browser preview" aria-label="Browser preview" onClick={() => setWorkbenchLayout(workbenchLayout === "hidden" ? "right" : workbenchLayout)}>
-          <AppIcon name="browser" />
-        </button>
-        <button className="activity-button" type="button" title="Search" aria-label="Search">
-          <AppIcon name="search" />
-        </button>
-        <span className="activity-spacer" />
-        <button className="activity-button" type="button" title="Open folder" aria-label="Open folder" onClick={pickWorkspace}>
-          <AppIcon name="folderOpen" />
-        </button>
-      </nav>
       <aside className="file-rail" aria-label="Project files">
         <div className="panel-title panel-title--with-action">
           <span>Files</span>

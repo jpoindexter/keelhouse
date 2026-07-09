@@ -173,7 +173,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="card" data-track="ui" data-id="VSCODE-CHROME-SHELL" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">VSCODE-CHROME-SHELL &middot; Keelhouse shell chrome</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Correct the outer application chrome toward the useful VS Code/Codex structure without copying controls that do not fit Keelhouse.</p>
-<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: the app shell now uses titlebar/activity/sidebar/main/status grid geometry. The header shows real Keelhouse state and actions: workspace, session, selected agent/pane, process status, Open Folder, and Reload Preview. Fake traffic lights, fake back/forward, and the search-shaped folder picker were removed. Activity rail buttons still need real switchable drawer content in ACTIVITY-DRAWERS.</p></details></div>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: the app shell now uses titlebar/sidebar/main/status grid geometry. The header shows real Keelhouse state and actions: workspace, session, selected agent/pane, process status, Open Folder, and Reload Preview. Fake traffic lights, fake back/forward, the search-shaped folder picker, and the nonfunctional activity rail were removed. Activity drawer navigation remains parked until it switches real drawer content.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="workspace" data-id="LAST-WORKSPACE" data-size="S" data-tier="pebble" data-launch="v0">
@@ -274,8 +274,8 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
 <div class="card" data-track="ui" data-id="ACTIVITY-DRAWERS" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">ACTIVITY-DRAWERS &middot; Switchable activity drawers</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Make the activity rail functional, not decorative. Explorer, project sessions, search, source control, browser/tools, and settings need real side-drawer content with pinned/resizable state.</p>
-<details><summary>Done criteria</summary><p class="done">Activity rail buttons switch side-drawer content; drawer width persists; pinned/collapsed state is keyboard reachable; Explorer/project sessions/search/source-control/browser-tools/settings are represented without adding VS Code extension bloat.</p></details></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Add activity rail navigation only when it is functional, not decorative. Explorer, project sessions, search, source control, browser/tools, and settings need real side-drawer content with pinned/resizable state.</p>
+<details><summary>Done criteria</summary><p class="done">Activity rail buttons switch real side-drawer content; drawer width persists; pinned/collapsed state is keyboard reachable; Explorer/project sessions/search/source-control/browser-tools/settings are represented without adding VS Code extension bloat.</p></details></div>
 <div class="card" data-track="workspace" data-id="SESSION-RESTORE" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">SESSION-RESTORE &middot; Restore projects, files, panes</span><span class="lens l-workspace">Projects + sessions</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">After quit/relaunch, the cockpit should come back as the same working context, without pretending to preserve live agent process state.</p>

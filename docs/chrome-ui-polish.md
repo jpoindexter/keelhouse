@@ -7,7 +7,7 @@ Implementation baseline: `docs/chrome-polish-system.md` records the current v0.5
 ## Surfaces
 
 - Left project/session rail, file rail, editor tabs, terminal pane headers, browser preview toolbar, settings shell, command palette, context menus, dialogs, toasts, badges, and status strips.
-- Outer shell chrome: compact Keelhouse status/action bar, VS Code-like activity rail, switchable side drawers, main workbench, and bottom status bar. Borrow structure, not fake controls.
+- Outer shell chrome: compact Keelhouse status/action bar, persistent side drawer, main workbench, and bottom status bar. Borrow structure, not fake controls; add an activity rail only when it switches real drawers.
 - Use a compact macOS desktop density: dense rows, clear hit targets, hover/focus states, and no oversized landing-page treatment.
 
 ## Visual System
@@ -34,6 +34,6 @@ Implementation baseline: `docs/chrome-polish-system.md` records the current v0.5
 ## Visual QA
 
 - Verify key screens with screenshots before calling chrome done: one-project workbench, multi-project rail, settings, context menu, command palette, browser preview, diff/review, and agent attention state.
-- For shell layout changes, verify the titlebar/activity/sidebar/main/status geometry in both selected and narrow screenshots; avoid stacked panes that make the editor or terminal look like the primary screen by accident.
+- For shell layout changes, verify the titlebar/sidebar/main/status geometry in both selected and narrow screenshots; avoid stacked panes that make the editor or terminal look like the primary screen by accident.
 - Check 1280px desktop and a narrow minimum window.
 - Check light/dark or all built-in themes, keyboard focus traversal, and contrast for body text, icons, badges, and focus rings.

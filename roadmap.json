@@ -633,7 +633,7 @@
       "launch": "v1",
       "blocker": true,
       "summary": "Correct the outer application chrome toward the useful VS Code/Codex structure without copying controls that do not fit Keelhouse.",
-      "done": "Verified 2026-07-09: the app shell now uses titlebar/activity/sidebar/main/status grid geometry. The header shows real Keelhouse state and actions: workspace, session, selected agent/pane, process status, Open Folder, and Reload Preview. Fake traffic lights, fake back/forward, and the search-shaped folder picker were removed. Activity rail buttons still need real switchable drawer content in ACTIVITY-DRAWERS."
+      "done": "Verified 2026-07-09: the app shell now uses titlebar/sidebar/main/status grid geometry. The header shows real Keelhouse state and actions: workspace, session, selected agent/pane, process status, Open Folder, and Reload Preview. Fake traffic lights, fake back/forward, the search-shaped folder picker, and the nonfunctional activity rail were removed. Activity drawer navigation remains parked until it switches real drawer content."
     },
     {
       "id": "ACTIVITY-DRAWERS",
@@ -644,8 +644,8 @@
       "size": "M",
       "launch": "v1",
       "blocker": true,
-      "summary": "Make the activity rail functional, not decorative. Explorer, project sessions, search, source control, browser/tools, and settings need real side-drawer content with pinned/resizable state.",
-      "done": "Activity rail buttons switch side-drawer content; drawer width persists; pinned/collapsed state is keyboard reachable; Explorer/project sessions/search/source-control/browser-tools/settings are represented without adding VS Code extension bloat."
+      "summary": "Add activity rail navigation only when it is functional, not decorative. Explorer, project sessions, search, source control, browser/tools, and settings need real side-drawer content with pinned/resizable state.",
+      "done": "Activity rail buttons switch real side-drawer content; drawer width persists; pinned/collapsed state is keyboard reachable; Explorer/project sessions/search/source-control/browser-tools/settings are represented without adding VS Code extension bloat."
     },
     {
       "id": "SESSION-RESTORE",

@@ -93,12 +93,12 @@ body,
   --text-strong: var(--color-text-strong);
 
   display: grid;
-  grid-template-columns: 48px minmax(190px, 260px) minmax(0, 1fr);
+  grid-template-columns: minmax(210px, 300px) minmax(0, 1fr);
   grid-template-rows: 38px minmax(0, 1fr) 24px;
   grid-template-areas:
-    "titlebar titlebar titlebar"
-    "activity sidebar main"
-    "status status status";
+    "titlebar titlebar"
+    "sidebar main"
+    "status status";
   width: 100%;
   height: 100%;
   background: var(--chrome-bg);
@@ -127,21 +127,6 @@ body,
 
 .titlebar-actions {
   justify-content: flex-end;
-}
-
-.activity-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: var(--color-text-subtle);
-  cursor: default;
-}
-
-.activity-button:hover {
-  background: var(--control-bg-hover);
-  color: var(--color-text);
 }
 
 .titlebar-product {
@@ -228,44 +213,6 @@ body,
   background: #1d73e8;
   color: #ffffff;
   font-weight: 750;
-}
-
-.activity-bar {
-  grid-area: activity;
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  border-right: 1px solid var(--panel-border);
-  background: #111820;
-  padding: 10px 6px;
-}
-
-.activity-button {
-  position: relative;
-  width: 34px;
-  height: 34px;
-  border-radius: 7px;
-}
-
-.activity-button--active {
-  color: var(--color-text-strong);
-}
-
-.activity-button--active::before {
-  position: absolute;
-  left: -6px;
-  width: 2px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--color-focus-ring);
-  content: "";
-}
-
-.activity-spacer {
-  flex: 1 1 auto;
 }
 
 .status-bar {
@@ -2195,7 +2142,7 @@ body,
 
 @media (max-width: 960px) {
   .app-shell {
-    grid-template-columns: 44px minmax(170px, 220px) minmax(0, 1fr);
+    grid-template-columns: minmax(190px, 250px) minmax(0, 1fr);
   }
 
   .app-titlebar {
@@ -2385,13 +2332,13 @@ body,
 
 @media (max-width: 720px) {
   .app-shell {
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 38px 120px minmax(0, 1fr) 24px;
     grid-template-areas:
-      "titlebar titlebar"
-      "activity sidebar"
-      "activity main"
-      "status status";
+      "titlebar"
+      "sidebar"
+      "main"
+      "status";
   }
 
   .app-titlebar {
@@ -2404,12 +2351,6 @@ body,
 
   .titlebar-actions .titlebar-action span {
     display: none;
-  }
-
-  .activity-bar {
-    border-right: 1px solid var(--panel-border);
-    border-bottom: 0;
-    padding: 8px 4px;
   }
 
   .file-rail {
