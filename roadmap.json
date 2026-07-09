@@ -1,8 +1,8 @@
 {
   "$schema": "./rockmap/roadmap.schema.json",
   "title": "Keelhouse",
-  "subtitle": "lean macOS agent cockpit for Jason's real workflow — real CLI agents first, with resizable explorer/editor/browser trays, without IDE bloat",
-  "loop": "Open project folder → talk to one or more real Claude/Codex/Gemini CLI agents in the main cockpit → resize or move trays to inspect/edit files or preview web output → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat. Product name: Keelhouse; repo/package slug: agent-cli.",
+  "subtitle": "lean macOS agent cockpit for Jason's real workflow — real CLI agents and composer first, with resizable explorer/editor/browser trays, without IDE bloat",
+  "loop": "Open project folder → talk to one or more real Claude/Codex/Gemini CLI agents in the main cockpit → resize or move trays to inspect/edit files or preview web output → switch projects without separate heavy VS Code windows. Build order: finish shell chrome and tray mechanics first, prove daily-driver replacement, then add search/command/settings leverage, agent hooks/integrations, and only then personalization/distribution.",
   "columns": [
     {
       "id": "done",
@@ -749,18 +749,6 @@
       "done": "Verified 2026-07-09: app chrome defines steel-cyan primitive tokens, routes semantic accent tokens through them, removes the old blue primary treatment, flattens shared badge/control radii, and the chrome contract gate rejects warm accent drift."
     },
     {
-      "id": "APP-CHROME-PORT",
-      "title": "Port accepted chrome into app",
-      "column": "now",
-      "tier": "rock",
-      "track": "ui",
-      "size": "M",
-      "launch": "v1",
-      "blocker": true,
-      "summary": "Port the accepted demo into the real Tauri app shell without losing current v1 functionality.",
-      "done": "Projects/Files/Search/Git/Browser/Settings drawers, multi-pane sessions, browser preview, editor tray, git diff actions, composer harness, activity log, and process lifecycle still work after the chrome port; screenshots prove the default shell no longer resembles stacked panes."
-    },
-    {
       "id": "AGENT-THREAD-SURFACE",
       "title": "Agent thread as main surface",
       "column": "done",
@@ -773,15 +761,16 @@
       "done": "Verified 2026-07-09: chat remains the default surface, raw terminal remains available as an escape hatch, activity renders as thread-style event cards instead of a table, filters remain available, and refreshed QA screenshots show prompt, approval, file, command, and error events above the bottom composer."
     },
     {
-      "id": "TRAY-DOCKING-UX",
-      "title": "Movable resizable tool trays",
-      "column": "next",
-      "tier": "pebble",
+      "id": "APP-CHROME-PORT",
+      "title": "Port accepted chrome into app",
+      "column": "now",
+      "tier": "rock",
       "track": "ui",
       "size": "M",
       "launch": "v1",
-      "summary": "Editor, files, browser, git, and raw terminal should feel like tool trays around the agent conversation, not stacked panels.",
-      "done": "Tool surfaces support left, right, bottom, and hidden states with clear splitters, compact tabs, persisted sizes, and no content overlap at narrow widths."
+      "blocker": true,
+      "summary": "Port the accepted demo into the real Tauri app shell without losing current v1 functionality.",
+      "done": "Projects/Files/Search/Git/Browser/Settings drawers, multi-pane sessions, browser preview, editor tray, git diff actions, composer harness, activity log, and process lifecycle still work after the chrome port; screenshots prove the default shell no longer resembles stacked panes."
     },
     {
       "id": "CHROME-CONTROL-POLISH",
@@ -795,6 +784,17 @@
       "done": "Toolbar buttons, menus, dropdowns, command palette rows, settings rows, and tray tabs use consistent outline iconography, subtle hover/focus/disabled states, and labels only where icons are ambiguous."
     },
     {
+      "id": "TRAY-DOCKING-UX",
+      "title": "Movable resizable tool trays",
+      "column": "next",
+      "tier": "pebble",
+      "track": "ui",
+      "size": "M",
+      "launch": "v1",
+      "summary": "Editor, files, browser, git, and raw terminal should feel like tool trays around the agent conversation, not stacked panels.",
+      "done": "Tool surfaces support left, right, bottom, and hidden states with clear splitters, compact tabs, persisted sizes, and no content overlap at narrow widths."
+    },
+    {
       "id": "CHROME-COHERENCE-PASS",
       "title": "Workbench chrome coherence pass",
       "column": "next",
@@ -805,17 +805,6 @@
       "blocker": true,
       "summary": "Fix the actual shell before measurement using VS Code/Zed-level chrome craft without copying either product, with demo/cockpit-demo.html as the graphite mood reference and Codex as the clean-composition reference: one large agent-first window, a direct thread/project sidebar on the left, no decorative left activity rail, flat toolbar icons, steel-cyan accent, minimal rounded button chrome, resizable splitters, and editor/browser/git/raw terminal as docked tool panes only when needed. Target walkthrough: demo/keelhouse-chrome-demo.html.",
       "done": "The default screen reads as one agent-first cockpit, not stacked panes or an editor-first IDE. Projects/sessions appear in a direct left sidebar, not a decorative activity rail; editor/browser/git/raw terminal are movable/resizable tool panes using a typed panel contract inspired by disciplined native workbench chrome; dropdowns/context menus use flat polished chrome; fake navigation/window controls and pill-heavy rounded controls are gone; screenshot QA covers full, narrow, menu, settings, and command-palette states, matching the demo/keelhouse-chrome-demo.html walkthrough."
-    },
-    {
-      "id": "DEV-SERVER-DETECT",
-      "title": "Local dev server detection",
-      "column": "next",
-      "tier": "rock",
-      "track": "ui",
-      "size": "S",
-      "launch": "v1",
-      "summary": "When Claude/Codex starts Vite, Next, Astro, or another dev server, the app should make the local preview obvious without acting like a full browser.",
-      "done": "Detected localhost URLs from terminal output can be opened in the browser preview; the preview remembers the latest URL per project and offers reload/open-external."
     },
     {
       "id": "DAILY-DRIVER-METRICS",
@@ -838,6 +827,17 @@
       "launch": "v1",
       "summary": "The product exists to avoid VS Code resource bloat. Measure the thing the product promises: memory, CPU, and responsiveness with several projects/panes.",
       "done": "Document baseline memory/CPU/jank for one-project edit+agent, two-agent same-project, three-project switch/relaunch, and fast terminal output runs; compare against the equivalent VS Code workflow and make regressions visible before release."
+    },
+    {
+      "id": "DEV-SERVER-DETECT",
+      "title": "Local dev server detection",
+      "column": "next",
+      "tier": "rock",
+      "track": "ui",
+      "size": "S",
+      "launch": "v1",
+      "summary": "When Claude/Codex starts Vite, Next, Astro, or another dev server, the app should make the local preview obvious without acting like a full browser.",
+      "done": "Detected localhost URLs from terminal output can be opened in the browser preview; the preview remembers the latest URL per project and offers reload/open-external."
     },
     {
       "id": "SEARCH",
@@ -917,6 +917,28 @@
       "done": "A local permissioned MCP/API endpoint exposes documented app-owned commands; actions that mutate files, git state, panes, or project layout require visible approval/undo where appropriate; every agent action is attributed in the UI/log."
     },
     {
+      "id": "TRANSCRIPTS",
+      "title": "Pane transcript capture",
+      "column": "next",
+      "tier": "sand",
+      "track": "core",
+      "size": "S",
+      "launch": "v2",
+      "summary": "Completed agent sessions should be reviewable after the process exits without keeping panes open forever.",
+      "done": "A pane can save a plain-text transcript/log path for later review, with clear retention/reset behavior."
+    },
+    {
+      "id": "NOTIFICATIONS",
+      "title": "Background agent notifications",
+      "column": "next",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
+      "launch": "v2",
+      "summary": "When an agent in another project or pane stops or needs input, Jason should not have to manually inspect every pane.",
+      "done": "Background panes can surface in-app badges and optional macOS notifications for exit/attention events."
+    },
+    {
       "id": "WORKTREE",
       "title": "Worktree helper",
       "column": "next",
@@ -926,6 +948,17 @@
       "launch": "v2",
       "summary": "One keystroke: new pane = git worktree add + agent launched inside it, named and disposable. The 'multiple agents on one repo, parallel' workflow.",
       "done": "From a project tab: new-worktree-agent in <5s; cleanup removes the worktree + branch."
+    },
+    {
+      "id": "INTEGRATIONS-POLICY",
+      "title": "Integration adapter policy",
+      "column": "next",
+      "tier": "sand",
+      "track": "quality",
+      "size": "S",
+      "launch": "v2",
+      "summary": "Define the allowed lane for other integrations so Bitbucket, Azure DevOps, Linear, Jira, Slack, or Discord do not turn the app into a plugin hub.",
+      "done": "Documented integration policy classifies integrations as core, first-class, adapter-lane, parked, or out-of-scope; every integration requires a concrete workflow, health check, credential boundary, and app-owned command surface."
     },
     {
       "id": "SOURCE-CONTROL-CONNECTIONS",
@@ -950,26 +983,15 @@
       "done": "A local signed or ad-hoc packaged .app launches, opens folders, and runs agents with documented setup requirements."
     },
     {
-      "id": "TRANSCRIPTS",
-      "title": "Pane transcript capture",
-      "column": "later",
-      "tier": "sand",
-      "track": "core",
-      "size": "S",
-      "launch": "v2",
-      "summary": "Completed agent sessions should be reviewable after the process exits without keeping panes open forever.",
-      "done": "A pane can save a plain-text transcript/log path for later review, with clear retention/reset behavior."
-    },
-    {
-      "id": "NOTIFICATIONS",
-      "title": "Background agent notifications",
+      "id": "KEYBINDINGS-CONFIG",
+      "title": "Configurable keybindings",
       "column": "later",
       "tier": "sand",
       "track": "ui",
       "size": "S",
       "launch": "v2",
-      "summary": "When an agent in another project or pane stops or needs input, Jason should not have to manually inspect every pane.",
-      "done": "Background panes can surface in-app badges and optional macOS notifications for exit/attention events."
+      "summary": "After the VS Code-compatible default shortcut map stabilizes, allow focused overrides without hardcoding personal preferences into the app.",
+      "done": "A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference."
     },
     {
       "id": "THEME",
@@ -981,17 +1003,6 @@
       "launch": "v2",
       "summary": "Support practical color themes across chrome, terminal, rail, and editor. Start with the approved mono-ghost theme; do not expand into plugin theming or break the chrome token contract.",
       "done": "App chrome, terminal canvas, file rail, and editor can switch between built-in color themes with readable contrast while preserving semantic token roles and component states."
-    },
-    {
-      "id": "KEYBINDINGS-CONFIG",
-      "title": "Configurable keybindings",
-      "column": "later",
-      "tier": "sand",
-      "track": "ui",
-      "size": "S",
-      "launch": "v2",
-      "summary": "After the VS Code-compatible default shortcut map stabilizes, allow focused overrides without hardcoding personal preferences into the app.",
-      "done": "A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference."
     },
     {
       "id": "SESSION-ARCHIVE",
@@ -1014,17 +1025,6 @@
       "launch": "v2",
       "summary": "Research-backed future lane: app-owned direct API/MCP agent workflows using human review, resumable state, and tracing, without replacing real Claude/Codex terminal panes.",
       "done": "A feature-flagged direct agent can run app-owned tools/MCP with approval gates, state restore/resume, tracing/activity log entries, and clear separation from terminal-backed Claude/Codex panes."
-    },
-    {
-      "id": "INTEGRATIONS-POLICY",
-      "title": "Integration adapter policy",
-      "column": "later",
-      "tier": "sand",
-      "track": "quality",
-      "size": "S",
-      "launch": "v2",
-      "summary": "Define the allowed lane for other integrations so Bitbucket, Azure DevOps, Linear, Jira, Slack, or Discord do not turn the app into a plugin hub.",
-      "done": "Documented integration policy classifies integrations as core, first-class, adapter-lane, parked, or out-of-scope; every integration requires a concrete workflow, health check, credential boundary, and app-owned command surface."
     },
     {
       "id": "REUSE-AUDIT",

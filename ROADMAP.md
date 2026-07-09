@@ -8,7 +8,9 @@ node rockmap/build-roadmap.mjs roadmap.json roadmap.html
 
 Sequential where risk gates the next step; parallel only when cards are independent. Ship ugly first, but do not lose the actual product shape: Keelhouse replaces Jason's VS Code workflow with an agent-first cockpit: real CLI agents and composer are primary; file explorer, editor, and browser/web preview are resizable trays around them.
 
-Remaining cards are ordered by efficient build dependency: lock the accepted chrome contract and QA gates, port the real app shell, prove the product can replace the VS Code habit, close daily workflow gaps, add agent/workflow leverage, then add personalization, distribution, and speculative expansion.
+Remaining cards are ordered by efficient build dependency: finish the accepted shell chrome, fix control/tray mechanics, pass a full chrome coherence gate, prove the app can replace the VS Code habit, add navigation/search/settings leverage, then add agent hooks, integrations, distribution, and speculative expansion.
+
+Current build order uses a Value-vs-Effort pass plus dependency gates: ship high-risk basics before more features, keep quick wins only when they unlock the next slice, and park personalization until the core cockpit works.
 
 ## Execution discipline (governs every phase)
 
@@ -100,14 +102,14 @@ This is where the clarified product point lands: not "terminal app with optional
 - ~~**CHROME-DEMO-CONTRACT:** treat the accepted `demo/keelhouse-chrome-demo.html` as the visual contract for the app pass: graphite shell, steel-cyan accent, direct thread/project sidebar, agent-first center, right/bottom trays, flat toolbar icons, and no orange accents, fake browser chrome, decorative activity rail, or pill-heavy controls.~~ **DONE 2026-07-09** — the contract is documented in `docs/chrome-contract.md`, enforced by `npm run qa:chrome-contract`, and tied to the accepted demo plus real app shell checks.
 - ~~**CHROME-QA-GATE:** every chrome implementation pass must refresh first-open, create-menu, settings, palette, and narrow screenshots, and must report overflow, avatar-label, active-row-radius, and accent-token checks before being called done.~~ **DONE 2026-07-09** — added `npm run qa:chrome-contract`, documented `docs/chrome-contract.md`, verified required chrome-demo screenshots exist, rejected avatar labels and orange/warm accent tokens, checked flat active-thread treatment, refreshed editor QA screenshots with `npm run qa:editor`, and visually spot-checked selected/narrow-composer states.
 - ~~**STEEL-CYAN-THEME-GATE:** lock the current graphite + steel-cyan palette into semantic tokens and QA checks; reject orange/warm accent drift, purple-heavy gradients, and one-note palettes.~~ **DONE 2026-07-09** — app chrome now defines `--steel-cyan-400`, `--steel-cyan-500`, and `--steel-cyan-900`, routes semantic accent tokens through them, removes the old blue primary button treatment, flattens shared badge/control radii, and the chrome contract gate rejects warm accent drift.
-- **APP-CHROME-PORT:** port the accepted demo into the real Tauri app shell without regressing existing v1 behavior: Projects/Files/Search/Git/Browser/Settings drawers, multi-pane sessions, browser preview, editor tray, git diff actions, composer harness, activity log, and process lifecycle must remain functional.
 - ~~**AGENT-THREAD-SURFACE:** make chat/activity the default working surface: no Jason/Keelhouse avatar blocks, no raw terminal as the main screen, visible prompt/thinking/tool/file/action rows, inline approvals, and a bottom composer anchored like a real agent conversation.~~ **DONE 2026-07-09** — chat remains the default surface, raw terminal stays as an escape hatch, activity now renders as thread-style event cards instead of a table, filters remain available, and refreshed QA screenshots show prompt, approval, file, command, and error events above the bottom composer.
-- **TRAY-DOCKING-UX:** make editor, files, browser, git, and raw terminal feel like movable/resizable trays rather than stacked panels; support left/right/bottom/hide states with clear splitters and compact tray tabs.
+- **APP-CHROME-PORT:** port the accepted demo into the real Tauri app shell without regressing existing v1 behavior: Projects/Files/Search/Git/Browser/Settings drawers, multi-pane sessions, browser preview, editor tray, git diff actions, composer harness, activity log, and process lifecycle must remain functional.
 - **CHROME-CONTROL-POLISH:** flatten obvious AI-looking rounded rectangles into native-feeling toolbar/menu/dropdown controls; keep labels only where icons are ambiguous; restore high-quality outline iconography and consistent hover/focus/disabled states.
+- **TRAY-DOCKING-UX:** make editor, files, browser, git, and raw terminal feel like movable/resizable trays rather than stacked panels; support left/right/bottom/hide states with clear splitters and compact tray tabs.
 - **CHROME-COHERENCE-PASS:** final integration gate for the shell before measurement: VS Code/Zed-level chrome craft without copying either product, `demo/cockpit-demo.html` as graphite mood reference, Codex as clean-composition reference, one large agent-first window, direct thread/project sidebar, steel-cyan accent, flat icons, minimal rounded button chrome, resizable splitters, and docked editor/browser/git/raw terminal. Target walkthrough: `demo/keelhouse-chrome-demo.html`; QA captures: `docs/qa/chrome-demo/`.
-- **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
 - **DAILY-DRIVER-METRICS:** prove the app can replace the current workflow with scripted one-project edit+agent, two-agent same-project, and three-project switch/relaunch runs.
 - **PERF-BUDGET:** prove this is lighter than the VS Code workflow it replaces across 1-project, 2-agent, and 3-project task runs.
+- **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
 
 ## v2 — Workflow leverage
 
@@ -118,16 +120,16 @@ This is where the clarified product point lands: not "terminal app with optional
 - **SETTINGS:** inspectable config for agent commands, ignored folders, font/theme, layout, AI connections, and shortcut overrides.
 - **AI-CONNECTIONS:** settings for providers, API keys, MCP servers, CLI auth, env vars, model defaults, and permission policy.
 - **AGENT-HOOKS:** built-in MCP/API surface so agents can inspect app state and request app-owned actions.
-- **WORKTREE:** create disposable worktree + agent pane from a project.
-- **SOURCE-CONTROL-CONNECTIONS:** GitHub/GitLab/source-host auth, repo links, PR/MR status, CI/pipeline status, and health checks.
-- **PACKAGING:** local macOS `.app` packaging.
 - **TRANSCRIPTS:** save/review completed pane output.
 - **NOTIFICATIONS:** background agent exit/attention badges and optional macOS notifications.
-- **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost and preserve the chrome token contract.
+- **WORKTREE:** create disposable worktree + agent pane from a project.
+- **INTEGRATIONS-POLICY:** define which other integrations are allowed, parked, or explicitly out of scope.
+- **SOURCE-CONTROL-CONNECTIONS:** GitHub/GitLab/source-host auth, repo links, PR/MR status, CI/pipeline status, and health checks.
+- **PACKAGING:** local macOS `.app` packaging.
 - **KEYBINDINGS-CONFIG:** configurable app shortcut overrides after defaults stabilize, including conflict detection and a visible shortcut reference.
+- **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost and preserve the chrome token contract.
 - **SESSION-ARCHIVE:** archive old project sessions only after sessions and transcripts are real.
 - **DIRECT-AGENT-HARNESS:** optional direct API/MCP agent path for app-owned orchestration, after real terminal panes and approvals are solid.
-- **INTEGRATIONS-POLICY:** define which other integrations are allowed, parked, or explicitly out of scope.
 
 ## v3 — Polish and shipping
 
