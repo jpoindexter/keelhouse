@@ -34,4 +34,4 @@ The app should show Codex-style visible agent activity: concise state and event 
 
 ## Current Implementation
 
-AGENT-ACTIVITY implements the compact current/recent activity strip above the composer. It is in-memory and pane-scoped. The durable, filterable per-pane/session timeline remains `AGENT-ACTIVITY-LOG`.
+AGENT-ACTIVITY implements the compact current/recent activity strip above the composer. AGENT-ACTIVITY-LOG adds the durable, filterable per-pane/session timeline below that strip and persists up to 200 user-safe events in local state. Git/source-control, approval, browser, diff, and undo producers are reserved in the event model and become populated as their real app-owned surfaces land.

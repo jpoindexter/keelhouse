@@ -16,7 +16,7 @@ AGENT-ACTIVITY adds visible, Codex-style current and recent activity rows for th
 
 ## Boundaries
 
-- Activity rows are in-memory and scoped to the selected pane/session. Durable retention belongs to AGENT-ACTIVITY-LOG.
+- Activity rows are persisted by AGENT-ACTIVITY-LOG and scoped by project/session/pane. The compact strip still shows only the current pane's latest rows.
 - Approval-specific rows become real when APP-ACTIONS-MINIMAL adds the action gate.
 - Command/file/git event detection is limited to app-owned actions already observable by Keelhouse. Parsing arbitrary terminal text is out of scope for this slice.
 - The row strip is provenance/status UI, not a transcript replacement.

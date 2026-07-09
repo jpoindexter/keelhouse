@@ -102,11 +102,16 @@ import { agentActivityAccessibleLabel, agentActivityIconName } from "./icons";
 import type { AppIconName } from "./icons";
 import { shortcutKeys, shortcutTitle } from "./shortcuts";
 import {
+  AGENT_ACTIVITY_LOG_FILTERS,
+  MAX_AGENT_ACTIVITY_LOG_EVENTS,
+  agentActivityTimeLabel,
   agentCurrentActivity,
   createAgentActivityEvent,
+  filterAgentActivityEvents,
+  normalizeAgentActivityEvents,
   pushAgentActivityEvent,
 } from "./agentActivity";
-import type { AgentActivityEvent } from "./agentActivity";
+import type { AgentActivityEvent, AgentActivityLogFilter } from "./agentActivity";
 import {
   normalizeTerminalPaneLabel,
   terminalPaneCwdLabel,
@@ -357,6 +362,7 @@ function App() {
   const [composerHistory, setComposerHistory] = useState<string[]>([]);
   const [composerHistoryIndex, setComposerHistoryIndex] = useState<number | null>(null);
   const [agentActivityEvents, setAgentActivityEvents] = useState<AgentActivityEvent[]>([]);
+  const [agentActivityFilter, setAgentActivityFilter] = useState<AgentActivityLogFilter>("all");
   const editorDirty = selectedFile != null && editorText !== savedEditorText;
   const dirtyTabPaths = useMemo(
     () => dirtyEditorTabPaths(editorTabs, editorBuffersRef.current, selectedFile?.path ?? null, editorDirty),
@@ -418,6 +424,18 @@ function App() {
       ? [currentAgentActivity, ...recent.filter((event) => event.id !== currentAgentActivity.id)].slice(0, 4)
       : recent.slice(0, 4);
   }, [activeAgentSessionDescriptor, agentActivityEvents, currentAgentActivity]);
+  const selectedAgentActivityLog = useMemo(() => {
+    if (!activeAgentSessionDescriptor) return [];
+    return filterAgentActivityEvents(
+      agentActivityEvents.filter(
+        (event) =>
+          event.projectId === activeAgentSessionDescriptor.projectId &&
+          event.projectSessionId === activeAgentSessionDescriptor.projectSessionId &&
+          event.paneId === activeAgentSessionDescriptor.id,
+      ),
+      agentActivityFilter,
+    );
+  }, [activeAgentSessionDescriptor, agentActivityEvents, agentActivityFilter]);
   const activeTerminalProfile = activeTerminalPane?.profile ?? launchProfile;
   const terminalPaneState = activeTerminalPane?.state ?? "idle";
   const terminalExitCode = activeTerminalPane?.exitCode ?? null;
@@ -755,7 +773,13 @@ function App() {
     event: Parameters<typeof createAgentActivityEvent>[1],
   ) => {
     if (!handle) return;
-    setAgentActivityEvents((events) => pushAgentActivityEvent(events, createAgentActivityEvent(handle, event)));
+    const nextEvent = createAgentActivityEvent(handle, event);
+    setAgentActivityEvents((events) => {
+      const next = pushAgentActivityEvent(events, nextEvent, MAX_AGENT_ACTIVITY_LOG_EVENTS);
+      void storeRef.current?.set("agentActivityEvents", next);
+      void storeRef.current?.save();
+      return next;
+    });
   };
 
   const sessionSnapshotKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
@@ -1356,6 +1380,26 @@ function App() {
 
   const projectSessionStatus = (projectPath: string, session: ProjectSession): ProjectRailStatus =>
     projectPath === workspacePath && session.id === activeSessionId ? activeProjectStatus() : session.status;
+
+  const agentActivityFilterLabel = (filter: AgentActivityLogFilter) => {
+    if (filter === "all") return "All";
+    if (filter === "prompt") return "Prompts";
+    if (filter === "process") return "Process";
+    if (filter === "command") return "Commands";
+    if (filter === "file") return "Files";
+    if (filter === "tool") return "Tools";
+    if (filter === "git") return "Git";
+    if (filter === "app") return "App";
+    if (filter === "approval") return "Approvals";
+    if (filter === "browser") return "Browser";
+    if (filter === "error") return "Errors";
+    return "Complete";
+  };
+
+  const agentActivityMetaLabel = (event: AgentActivityEvent) =>
+    [event.target, event.exitCode == null ? null : `exit ${event.exitCode}`, event.outputRef, event.undoHint]
+      .filter(Boolean)
+      .join(" · ");
 
   const visibleOpenProjects = openProjects.length > 0
     ? openProjects
@@ -2148,6 +2192,7 @@ function App() {
       const savedBrowserProjects = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewByProject"));
       const savedBrowserSessions = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewBySession"));
       const savedPaneLabels = normalizePaneLabelsBySession(await store.get<unknown>("paneLabelsBySession"));
+      const savedAgentActivity = normalizeAgentActivityEvents(await store.get<unknown>("agentActivityEvents"));
       const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
       activeFilesByWorkspaceRef.current = normalizeActiveFileByWorkspace(await store.get<unknown>("activeFileByWorkspace"));
       const initialOpenProjects = savedOpenProjects.length > 0 ? savedOpenProjects : openProjectsFromRecent(savedRecent);
@@ -2171,6 +2216,7 @@ function App() {
       setBrowserPreviewByProject(savedBrowserProjects);
       setBrowserPreviewBySession(savedBrowserSessions);
       setPaneLabelsBySession(savedPaneLabels);
+      setAgentActivityEvents(savedAgentActivity);
       const last = await store.get<string>("folder");
       if (last) await openWorkspaceDirect(last, savedProfile);
       else await pickWorkspace();
@@ -2305,9 +2351,12 @@ function App() {
             approvalMode: agentApprovalMode,
           }),
           {
-            kind: ev.payload.code === 0 ? "complete" : "error",
-            label: ev.payload.code === 0 ? "Complete" : "Command failed",
+            kind: "command",
+            label: ev.payload.code === 0 ? "Command finished" : "Command failed",
             detail: ev.payload.command,
+            target: root,
+            exitCode: ev.payload.code,
+            outputRef: "terminal",
             status: ev.payload.code === 0 ? "complete" : "error",
           },
         );
@@ -2876,6 +2925,45 @@ function App() {
               </div>
             )}
           </div>
+          <section className="agent-activity-log" aria-label="Agent activity timeline">
+            <div className="agent-activity-log__toolbar" role="toolbar" aria-label="Filter agent activity timeline">
+              <span className="agent-activity-log__title">Timeline</span>
+              <div className="agent-activity-log__filters">
+                {AGENT_ACTIVITY_LOG_FILTERS.map((filter) => (
+                  <button
+                    className={`agent-activity-log__filter ${agentActivityFilter === filter ? "agent-activity-log__filter--active" : ""}`}
+                    type="button"
+                    key={filter}
+                    aria-pressed={agentActivityFilter === filter}
+                    onClick={() => setAgentActivityFilter(filter)}
+                  >
+                    {agentActivityFilterLabel(filter)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="agent-activity-log__list">
+              {selectedAgentActivityLog.length > 0 ? (
+                selectedAgentActivityLog.map((event) => (
+                  <div className={`agent-activity-log__item agent-activity-log__item--${event.status}`} key={event.id}>
+                    <AppIcon
+                      name={agentActivityIconName(event.status)}
+                      label={agentActivityAccessibleLabel(event.status, event.label)}
+                    />
+                    <span className="agent-activity-log__time">{agentActivityTimeLabel(event.timestamp)}</span>
+                    <span className="agent-activity-log__label">{event.label}</span>
+                    <span className="agent-activity-log__detail">{event.detail ?? ""}</span>
+                    <span className="agent-activity-log__meta">{agentActivityMetaLabel(event)}</span>
+                    <span className="agent-activity-log__kind">{agentActivityFilterLabel(event.kind)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="agent-activity-log__empty">
+                  {activeAgentSessionDescriptor ? "No matching activity yet" : "No pane selected"}
+                </div>
+              )}
+            </div>
+          </section>
           <div className="agent-composer" aria-label="Agent composer" onContextMenu={(event) => openContextMenu(event, composerContextMenuItems())}>
             <div className="agent-composer__target" title={workspacePath ?? ""}>
               <span>Target</span>

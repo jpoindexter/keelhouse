@@ -54,7 +54,24 @@ Current schema:
         "updatedAt": 1783530000000
       }
     ]
-  }
+  },
+  "agentActivityEvents": [
+    {
+      "id": "pane:4:command:1783530000000",
+      "projectId": "/absolute/path/to/workspace",
+      "projectSessionId": "session-lt72gs",
+      "paneId": "pane:4",
+      "kind": "command",
+      "label": "Command failed",
+      "detail": "npm test",
+      "target": "/absolute/path/to/workspace",
+      "exitCode": 1,
+      "outputRef": "terminal",
+      "undoHint": "review diff",
+      "status": "error",
+      "timestamp": 1783530000000
+    }
+  ]
 }
 ```
 
@@ -62,6 +79,7 @@ Current schema:
 `activeFileByWorkspace` stores the last active editor file per canonical workspace root; stale paths are ignored instead of being opened.
 `openProjects` stores the project rail. `projectSessions` stores named task/workbench session rows under each project, and `activeSessionByProject` stores the selected session id per project. `browserPreviewByProject` and `browserPreviewBySession` remember the lightweight preview URL for project/session context.
 `paneLabelsBySession` stores user-edited terminal pane names by project-session key and pane slot. It restores labels when the same session/slot is recreated. It does not restore live processes, pane layout, or transcripts; those belong to `SESSION-RESTORE`, `PROCESS-LIFECYCLE`, and `TRANSCRIPTS`.
+`agentActivityEvents` stores up to 200 user-safe activity rows across projects, sessions, and panes. Rows are normalized on startup; unknown kinds/statuses, malformed ids, and invalid timestamps are dropped. Current event kinds are `prompt`, `process`, `command`, `file`, `tool`, `git`, `approval`, `browser`, `app`, `error`, and `complete`.
 
 ## Reset Path
 

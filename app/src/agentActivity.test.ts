@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   agentActivityStatusFromProcess,
+  agentActivityTimeLabel,
   agentCurrentActivity,
   createAgentActivityEvent,
+  filterAgentActivityEvents,
+  normalizeAgentActivityEvents,
   pushAgentActivityEvent,
 } from "./agentActivity";
 import type { AgentSessionHandleDescriptor } from "./agentSessionHandle";
@@ -61,5 +64,26 @@ describe("agent activity", () => {
     expect(event.id).toBe("pane:4:file:200");
     expect(pushAgentActivityEvent([event], event)).toEqual([event]);
     expect(pushAgentActivityEvent([], event, 0)).toEqual([]);
+  });
+
+  it("normalizes stored activity and drops malformed rows", () => {
+    const valid = createAgentActivityEvent(handle, {
+      kind: "prompt",
+      label: "Prompt sent",
+      status: "thinking",
+      timestamp: 300,
+    });
+    expect(normalizeAgentActivityEvents([valid, { id: 1 }, { ...valid, kind: "all" }])).toEqual([valid]);
+  });
+
+  it("filters activity rows by kind", () => {
+    const prompt = createAgentActivityEvent(handle, { kind: "prompt", label: "Prompt sent", status: "thinking", timestamp: 300 });
+    const file = createAgentActivityEvent(handle, { kind: "file", label: "Edited a file", status: "complete", timestamp: 301 });
+    expect(filterAgentActivityEvents([prompt, file], "all")).toEqual([prompt, file]);
+    expect(filterAgentActivityEvents([prompt, file], "file")).toEqual([file]);
+  });
+
+  it("formats invalid activity time defensively", () => {
+    expect(agentActivityTimeLabel(Number.NaN)).toBe("--:--");
   });
 });
