@@ -590,23 +590,35 @@ body,
 }
 
 .workbench {
+  --tool-tray-size: 30%;
+  --tool-primary-size: 58%;
+  position: relative;
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-columns: minmax(520px, 1fr) minmax(320px, 28vw);
-  grid-template-rows: minmax(0, 1fr) minmax(210px, 30vh);
+  grid-template-columns: minmax(360px, 1fr) minmax(240px, var(--tool-tray-size));
+  grid-template-rows: minmax(0, var(--tool-primary-size)) minmax(140px, calc(100% - var(--tool-primary-size)));
   grid-template-areas:
     "terminal editor"
     "terminal browser";
   gap: 1px;
   background: var(--panel-border);
+  overflow: hidden;
 }
 
 .workbench--drawer-left {
-  grid-template-columns: minmax(320px, 28vw) minmax(520px, 1fr);
+  grid-template-columns: minmax(240px, var(--tool-tray-size)) minmax(360px, 1fr);
   grid-template-areas:
     "editor terminal"
     "browser terminal";
+}
+
+.workbench--drawer-bottom {
+  grid-template-columns: minmax(280px, var(--tool-primary-size)) minmax(240px, calc(100% - var(--tool-primary-size)));
+  grid-template-rows: minmax(300px, 1fr) minmax(180px, var(--tool-tray-size));
+  grid-template-areas:
+    "terminal terminal"
+    "editor browser";
 }
 
 .workbench--drawer-hidden {
@@ -640,6 +652,129 @@ body,
   display: flex;
   flex-direction: column;
   background: var(--color-app-bg);
+}
+
+.workbench-resizer {
+  position: absolute;
+  z-index: 7;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: transparent;
+  padding: 0;
+}
+
+.workbench-resizer::before {
+  position: absolute;
+  content: "";
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.workbench-resizer::after {
+  position: absolute;
+  content: "";
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  opacity: 0.72;
+  transition: background 120ms ease, opacity 120ms ease;
+}
+
+.workbench-resizer:hover::before,
+.workbench-resizer:focus-visible::before,
+.is-resizing-workbench .workbench-resizer::before {
+  background: var(--color-accent-border);
+  box-shadow: 0 0 0 1px rgba(137, 180, 250, 0.24);
+}
+
+.workbench-resizer:hover::after,
+.workbench-resizer:focus-visible::after,
+.is-resizing-workbench .workbench-resizer::after {
+  background: var(--color-text-strong);
+  opacity: 0.95;
+}
+
+.workbench-resizer:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.workbench-resizer--tray.workbench-resizer--right {
+  top: 0;
+  bottom: 0;
+  left: calc(100% - var(--tool-tray-size) - 4px);
+  width: 8px;
+  cursor: col-resize;
+}
+
+.workbench-resizer--tray.workbench-resizer--left {
+  top: 0;
+  bottom: 0;
+  left: calc(var(--tool-tray-size) - 4px);
+  width: 8px;
+  cursor: col-resize;
+}
+
+.workbench-resizer--tray.workbench-resizer--bottom {
+  left: 0;
+  right: 0;
+  top: calc(100% - var(--tool-tray-size) - 4px);
+  height: 8px;
+  cursor: row-resize;
+}
+
+.workbench-resizer--tools.workbench-resizer--right {
+  right: 0;
+  top: calc(var(--tool-primary-size) - 4px);
+  width: var(--tool-tray-size);
+  height: 8px;
+  cursor: row-resize;
+}
+
+.workbench-resizer--tools.workbench-resizer--left {
+  left: 0;
+  top: calc(var(--tool-primary-size) - 4px);
+  width: var(--tool-tray-size);
+  height: 8px;
+  cursor: row-resize;
+}
+
+.workbench-resizer--tools.workbench-resizer--bottom {
+  bottom: 0;
+  left: calc(var(--tool-primary-size) - 4px);
+  width: 8px;
+  height: var(--tool-tray-size);
+  cursor: col-resize;
+}
+
+.workbench-resizer--tray.workbench-resizer--right::before,
+.workbench-resizer--tray.workbench-resizer--left::before,
+.workbench-resizer--tools.workbench-resizer--bottom::before {
+  inset: 0 3px;
+}
+
+.workbench-resizer--tray.workbench-resizer--bottom::before,
+.workbench-resizer--tools.workbench-resizer--right::before,
+.workbench-resizer--tools.workbench-resizer--left::before {
+  inset: 3px 0;
+}
+
+.workbench-resizer--tray.workbench-resizer--right::after,
+.workbench-resizer--tray.workbench-resizer--left::after,
+.workbench-resizer--tools.workbench-resizer--bottom::after {
+  top: calc(50% - 16px);
+  left: 3px;
+  width: 2px;
+  height: 32px;
+}
+
+.workbench-resizer--tray.workbench-resizer--bottom::after,
+.workbench-resizer--tools.workbench-resizer--right::after,
+.workbench-resizer--tools.workbench-resizer--left::after {
+  top: 3px;
+  left: calc(50% - 16px);
+  width: 32px;
+  height: 2px;
 }
 
 .editor-tabbar {
@@ -1749,12 +1884,17 @@ body,
 
 @media (max-width: 960px) {
   .workbench {
-    grid-template-columns: minmax(380px, 1fr) minmax(220px, 30vw);
-    grid-template-rows: minmax(0, 1fr) minmax(180px, 30vh);
+    grid-template-columns: minmax(320px, 1fr) minmax(200px, var(--tool-tray-size));
+    grid-template-rows: minmax(0, var(--tool-primary-size)) minmax(150px, calc(100% - var(--tool-primary-size)));
   }
 
   .workbench--drawer-left {
-    grid-template-columns: minmax(220px, 30vw) minmax(380px, 1fr);
+    grid-template-columns: minmax(200px, var(--tool-tray-size)) minmax(320px, 1fr);
+  }
+
+  .workbench--drawer-bottom {
+    grid-template-columns: minmax(240px, var(--tool-primary-size)) minmax(200px, calc(100% - var(--tool-primary-size)));
+    grid-template-rows: minmax(280px, 1fr) minmax(160px, var(--tool-tray-size));
   }
 
   .terminal-titlebar {
@@ -1777,7 +1917,7 @@ body,
 
   .terminal-mode,
   .terminal-cwd,
-    .terminal-profile-picker__label {
+  .terminal-profile-picker__label {
     display: none;
   }
 
@@ -1934,6 +2074,10 @@ body,
       "terminal"
       "editor"
       "browser";
+  }
+
+  .workbench-resizer {
+    display: none;
   }
 
   .browser-toolbar {

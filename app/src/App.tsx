@@ -1,4 +1,4 @@
-import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -174,7 +174,8 @@ type TextFileResponse = { path: string; content: string; bytes: number; modified
 type FileOpResponse = { path: string };
 type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
-type WorkbenchLayoutMode = "right" | "left" | "hidden";
+type WorkbenchLayoutMode = "right" | "left" | "bottom" | "hidden";
+type WorkbenchSizing = { trayPercent: number; toolSplitPercent: number };
 type EditorBuffer = EditorBufferSnapshot & {
   bytes: number | null;
   modifiedMs: number | null;
@@ -204,6 +205,33 @@ type ContextMenuState = { x: number; y: number; items: ContextMenuItem[] };
 const FONT_SIZE = 15;
 const FONT_FAMILY = "JetBrains Mono, monospace";
 const LINE_HEIGHT = 1.25;
+const clampWorkbenchPercent = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const WORKBENCH_LAYOUT_STORAGE_KEY = "keelhouse.workbench.layout";
+const WORKBENCH_SIZING_STORAGE_KEY = "keelhouse.workbench.sizing";
+const DEFAULT_WORKBENCH_SIZING: WorkbenchSizing = { trayPercent: 30, toolSplitPercent: 58 };
+const readStoredWorkbenchLayout = (): WorkbenchLayoutMode => {
+  if (typeof window === "undefined") return "right";
+  try {
+    const value = window.localStorage.getItem(WORKBENCH_LAYOUT_STORAGE_KEY);
+    return value === "left" || value === "right" || value === "bottom" || value === "hidden" ? value : "right";
+  } catch {
+    return "right";
+  }
+};
+const readStoredWorkbenchSizing = (): WorkbenchSizing => {
+  if (typeof window === "undefined") return DEFAULT_WORKBENCH_SIZING;
+  try {
+    const raw = window.localStorage.getItem(WORKBENCH_SIZING_STORAGE_KEY);
+    if (!raw) return DEFAULT_WORKBENCH_SIZING;
+    const value = JSON.parse(raw) as Partial<WorkbenchSizing>;
+    return {
+      trayPercent: clampWorkbenchPercent(typeof value.trayPercent === "number" ? value.trayPercent : DEFAULT_WORKBENCH_SIZING.trayPercent, 18, 54),
+      toolSplitPercent: clampWorkbenchPercent(typeof value.toolSplitPercent === "number" ? value.toolSplitPercent : DEFAULT_WORKBENCH_SIZING.toolSplitPercent, 25, 75),
+    };
+  } catch {
+    return DEFAULT_WORKBENCH_SIZING;
+  }
+};
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 const dirname = (path: string) => path.replace(/[\\/][^\\/]*$/, "") || path;
@@ -381,7 +409,83 @@ function App() {
   const [composerHistoryIndex, setComposerHistoryIndex] = useState<number | null>(null);
   const [agentActivityEvents, setAgentActivityEvents] = useState<AgentActivityEvent[]>([]);
   const [agentActivityFilter, setAgentActivityFilter] = useState<AgentActivityLogFilter>("all");
-  const [workbenchLayout, setWorkbenchLayout] = useState<WorkbenchLayoutMode>("right");
+  const [workbenchLayout, setWorkbenchLayout] = useState<WorkbenchLayoutMode>(readStoredWorkbenchLayout);
+  const [workbenchSizing, setWorkbenchSizing] = useState<WorkbenchSizing>(readStoredWorkbenchSizing);
+  const workbenchRef = useRef<HTMLElement | null>(null);
+  const workbenchStyle = {
+    "--tool-tray-size": `${workbenchSizing.trayPercent}%`,
+    "--tool-primary-size": `${workbenchSizing.toolSplitPercent}%`,
+  } as CSSProperties;
+  const resizeWorkbenchTray = (clientX: number, clientY: number) => {
+    const rect = workbenchRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setWorkbenchSizing((current) => {
+      let trayPercent = current.trayPercent;
+      if (workbenchLayout === "right") {
+        trayPercent = ((rect.right - clientX) / rect.width) * 100;
+      } else if (workbenchLayout === "left") {
+        trayPercent = ((clientX - rect.left) / rect.width) * 100;
+      } else if (workbenchLayout === "bottom") {
+        trayPercent = ((rect.bottom - clientY) / rect.height) * 100;
+      }
+      return { ...current, trayPercent: clampWorkbenchPercent(trayPercent, 18, 54) };
+    });
+  };
+  const resizeWorkbenchTools = (clientX: number, clientY: number) => {
+    const rect = workbenchRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setWorkbenchSizing((current) => {
+      const toolSplitPercent = workbenchLayout === "bottom"
+        ? ((clientX - rect.left) / rect.width) * 100
+        : ((clientY - rect.top) / rect.height) * 100;
+      return { ...current, toolSplitPercent: clampWorkbenchPercent(toolSplitPercent, 25, 75) };
+    });
+  };
+  const beginWorkbenchResize = (kind: "tray" | "tools", event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (workbenchLayout === "hidden") return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    document.body.classList.add("is-resizing-workbench");
+    const move = (pointerEvent: PointerEvent) => {
+      if (kind === "tray") {
+        resizeWorkbenchTray(pointerEvent.clientX, pointerEvent.clientY);
+      } else {
+        resizeWorkbenchTools(pointerEvent.clientX, pointerEvent.clientY);
+      }
+    };
+    const stop = () => {
+      document.body.classList.remove("is-resizing-workbench");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop, { once: true });
+    window.addEventListener("pointercancel", stop, { once: true });
+  };
+  const nudgeWorkbenchResize = (kind: "tray" | "tools", event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const key = event.key;
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(key)) return;
+    event.preventDefault();
+    const horizontal = workbenchLayout !== "bottom";
+    const delta = key === "ArrowRight" || key === "ArrowDown" ? 3 : -3;
+    setWorkbenchSizing((current) => {
+      if (kind === "tray") {
+        const direction = workbenchLayout === "left" || workbenchLayout === "bottom" ? delta : -delta;
+        return { ...current, trayPercent: clampWorkbenchPercent(current.trayPercent + direction, 18, 54) };
+      }
+      const direction = horizontal ? (key === "ArrowDown" ? 3 : key === "ArrowUp" ? -3 : 0) : (key === "ArrowRight" ? 3 : key === "ArrowLeft" ? -3 : 0);
+      return { ...current, toolSplitPercent: clampWorkbenchPercent(current.toolSplitPercent + direction, 25, 75) };
+    });
+  };
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(WORKBENCH_LAYOUT_STORAGE_KEY, workbenchLayout);
+      window.localStorage.setItem(WORKBENCH_SIZING_STORAGE_KEY, JSON.stringify(workbenchSizing));
+    } catch {
+      // Local layout persistence is best-effort; the workbench remains usable without it.
+    }
+  }, [workbenchLayout, workbenchSizing]);
   const editorDirty = selectedFile != null && editorText !== savedEditorText;
   const dirtyTabPaths = useMemo(
     () => dirtyEditorTabPaths(editorTabs, editorBuffersRef.current, selectedFile?.path ?? null, editorDirty),
@@ -2990,7 +3094,7 @@ function App() {
         </div>
       </aside>
 
-      <main className={`workbench workbench--drawer-${workbenchLayout}`}>
+      <main ref={workbenchRef} className={`workbench workbench--drawer-${workbenchLayout}`} style={workbenchStyle}>
         <section
           className="editor-area"
           aria-label="Editor"
@@ -3140,6 +3244,37 @@ function App() {
           )}
         </section>
 
+        {workbenchLayout !== "hidden" ? (
+          <>
+            <button
+              className={`workbench-resizer workbench-resizer--tray workbench-resizer--${workbenchLayout}`}
+              type="button"
+              role="separator"
+              aria-label="Resize tool tray"
+              aria-orientation={workbenchLayout === "bottom" ? "horizontal" : "vertical"}
+              aria-valuemin={18}
+              aria-valuemax={54}
+              aria-valuenow={Math.round(workbenchSizing.trayPercent)}
+              title="Drag to resize tool tray"
+              onPointerDown={(event) => beginWorkbenchResize("tray", event)}
+              onKeyDown={(event) => nudgeWorkbenchResize("tray", event)}
+            />
+            <button
+              className={`workbench-resizer workbench-resizer--tools workbench-resizer--${workbenchLayout}`}
+              type="button"
+              role="separator"
+              aria-label="Resize editor and browser trays"
+              aria-orientation={workbenchLayout === "bottom" ? "vertical" : "horizontal"}
+              aria-valuemin={25}
+              aria-valuemax={75}
+              aria-valuenow={Math.round(workbenchSizing.toolSplitPercent)}
+              title="Drag to resize editor and browser trays"
+              onPointerDown={(event) => beginWorkbenchResize("tools", event)}
+              onKeyDown={(event) => nudgeWorkbenchResize("tools", event)}
+            />
+          </>
+        ) : null}
+
         <section className="browser-preview" aria-label="Browser preview" onContextMenu={(event) => openContextMenu(event, browserContextMenuItems())}>
           <div className="browser-toolbar">
             <div className="browser-toolbar__nav" aria-label="Browser navigation">
@@ -3248,6 +3383,16 @@ function App() {
                 >
                   <AppIcon name="file" />
                   <span>Right</span>
+                </button>
+                <button
+                  className={`layout-switcher__button ${workbenchLayout === "bottom" ? "layout-switcher__button--active" : ""}`}
+                  type="button"
+                  title="Move tool tray bottom"
+                  aria-pressed={workbenchLayout === "bottom"}
+                  onClick={() => setWorkbenchLayout("bottom")}
+                >
+                  <AppIcon name="browser" />
+                  <span>Bottom</span>
                 </button>
                 <button
                   className={`layout-switcher__button ${workbenchLayout === "hidden" ? "layout-switcher__button--active" : ""}`}
