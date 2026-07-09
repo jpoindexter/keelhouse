@@ -158,6 +158,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">AGENT-ACTIVITY-LOG &middot; Agent activity timeline</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">Each pane/session needs an inspectable timeline of user-safe agent events so Jason can see what happened without reading every terminal line.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: agentActivityEvents now persists up to 200 user-safe events with project/session/pane attribution, kind, label, detail, status, timestamp, target, exit code, output reference, and undo hint fields. The selected pane shows a durable timeline below the activity strip with filters for prompts, process, commands, files, tools, git, app actions, approvals, browser, errors, and completion. Startup normalization drops malformed stored rows. Current producers cover prompts, app commands, file saves, pane lifecycle actions, copied output, and process exits; future git/approval/browser/diff producers populate the reserved event fields when those real surfaces land.</p></details></div>
+<div class="card" data-track="core" data-id="APP-ACTIONS-MINIMAL" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">APP-ACTIONS-MINIMAL &middot; Minimal app-owned action gate</span><span class="lens l-core">Terminal + process</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">Permission controls need real enforcement behind them. Add the small action gate for app-owned actions before showing Codex-style approval modes.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: app/src/appActions.ts defines app-owned action descriptors with kind, target, risk class, requester, reason, and undo hint; resolves each action to an audit event with approval mode, decision, prompt state, timestamp, and reason. Existing app-owned paths for focus pane, open file, open browser preview, interrupt process, create pane, close pane, and composer commands route through the gate. Prompted, denied, blocked, and composer-originated decisions log approval audit rows to the activity timeline. Open diff and attach-reference remain typed but blocked until their real surfaces land.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="workspace" data-id="LAST-WORKSPACE" data-size="S" data-tier="pebble" data-launch="v0">
@@ -252,10 +256,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="core" data-id="APP-ACTIONS-MINIMAL" data-size="M" data-tier="rock" data-launch="v1">
-<div class="hd"><span class="sz">M</span><span class="ttl">APP-ACTIONS-MINIMAL &middot; Minimal app-owned action gate</span><span class="lens l-core">Terminal + process</span></div>
-<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Permission controls need real enforcement behind them. Add the small action gate for app-owned actions before showing Codex-style approval modes.</p>
-<details><summary>Done criteria</summary><p class="done">Focus pane, open file, open diff, attach screenshot/file reference, interrupt process, create pane, close pane, and open browser preview route through action descriptors with risk class, approval decision, audit event, and undo/rollback hint where possible.</p></details></div>
 <div class="card" data-track="core" data-id="COMPOSER-HARNESS" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">COMPOSER-HARNESS &middot; Composer harness controls</span><span class="lens l-core">Terminal + process</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Grow the bottom composer into a Codex-style app-owned harness around real terminal panes: permission mode, goal state, target pane, model/profile, attachments, and stop/send controls.</p>

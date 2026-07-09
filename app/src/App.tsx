@@ -92,6 +92,12 @@ import {
 } from "./agentComposer";
 import type { ComposerAppCommand } from "./agentComposer";
 import {
+  appActionAuditLabel,
+  createAppAction,
+  resolveAppAction,
+} from "./appActions";
+import type { AppActionAuditEvent, AppActionDescriptor } from "./appActions";
+import {
   DEFAULT_AGENT_APPROVAL_MODE,
   buildAgentSessionHandleDescriptor,
   readTailFromSnapshot,
@@ -682,6 +688,14 @@ function App() {
       setBrowserError("Enter an http, https, or file URL.");
       return false;
     }
+    const audit = await gateAppAction(createAppAction({
+      kind: "open-browser-preview",
+      label: "Open browser preview",
+      target: normalized,
+      risk: "low",
+      requestedBy: "user",
+    }));
+    if (audit.decision !== "approved") return false;
     setBrowserLocation(normalized);
     await persistBrowserPreviewUrl(workspacePathRef.current, activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, workspacePathRef.current), normalized);
     return true;
@@ -780,6 +794,27 @@ function App() {
       void storeRef.current?.save();
       return next;
     });
+  };
+
+  const shouldLogAppActionAudit = (audit: AppActionAuditEvent) =>
+    audit.prompted || audit.decision !== "approved" || audit.requestedBy !== "user";
+
+  const gateAppAction = async (
+    action: AppActionDescriptor,
+    handle: AgentSessionHandleDescriptor | null = activeAgentSessionDescriptor,
+  ) => {
+    const audit = await resolveAppAction(action, agentApprovalMode, (_action, message) => window.confirm(message));
+    if (shouldLogAppActionAudit(audit)) {
+      recordAgentActivity(handle, {
+        kind: "approval",
+        label: appActionAuditLabel(audit),
+        detail: audit.label,
+        target: audit.target,
+        undoHint: audit.undoHint,
+        status: audit.decision === "approved" ? "complete" : "error",
+      });
+    }
+    return audit;
   };
 
   const sessionSnapshotKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
@@ -1071,6 +1106,15 @@ function App() {
 
   const interruptActivePane = async () => {
     if (!activeAgentSessionHandle) return;
+    const audit = await gateAppAction(createAppAction({
+      kind: "interrupt-process",
+      label: "Interrupt process",
+      target: activeAgentSessionHandle.label,
+      risk: "high",
+      requestedBy: "user",
+      undoHint: "Restart or create a pane from the same profile.",
+    }), activeAgentSessionHandle);
+    if (audit.decision !== "approved") return;
     setComposerError(null);
     await activeAgentSessionHandle.interrupt();
     recordAgentActivity(activeAgentSessionHandle, {
@@ -1081,10 +1125,53 @@ function App() {
     });
   };
 
+  const composerAppAction = (command: ComposerAppCommand): AppActionDescriptor => {
+    if (command === "save") {
+      return createAppAction({
+        kind: "save-file",
+        label: "Save file",
+        target: selectedFileRef.current?.path,
+        risk: "high",
+        requestedBy: "composer",
+        undoHint: "Use editor undo or revert the file from source control.",
+      });
+    }
+    if (command === "find") {
+      return createAppAction({
+        kind: "find-in-file",
+        label: "Find in file",
+        target: selectedFileRef.current?.path,
+        risk: "low",
+        requestedBy: "composer",
+      });
+    }
+    if (command === "open-folder") {
+      return createAppAction({
+        kind: "open-folder",
+        label: "Open folder picker",
+        risk: "medium",
+        requestedBy: "composer",
+      });
+    }
+    return createAppAction({
+      kind: "clear-terminal",
+      label: "Clear terminal",
+      target: activeTerminalPaneLabel ?? undefined,
+      risk: "medium",
+      requestedBy: "composer",
+      undoHint: "Terminal scrollback is not restored by the app.",
+    });
+  };
+
   const runComposerAppCommand = async (command: ComposerAppCommand): Promise<boolean> => {
     if (command === "save") {
       if (!selectedFile) {
         setComposerError("No editor file is selected.");
+        return false;
+      }
+      const audit = await gateAppAction(composerAppAction(command), activeAgentSessionHandle);
+      if (audit.decision !== "approved") {
+        setComposerError(`${audit.label} was ${audit.decision}.`);
         return false;
       }
       const ok = await saveEditorFile();
@@ -1099,14 +1186,29 @@ function App() {
         setComposerError("Open a file before using Find.");
         return false;
       }
+      const audit = await gateAppAction(composerAppAction(command), activeAgentSessionHandle);
+      if (audit.decision !== "approved") {
+        setComposerError(`${audit.label} was ${audit.decision}.`);
+        return false;
+      }
       openEditorSearch();
       return true;
     }
     if (command === "open-folder") {
+      const audit = await gateAppAction(composerAppAction(command), activeAgentSessionHandle);
+      if (audit.decision !== "approved") {
+        setComposerError(`${audit.label} was ${audit.decision}.`);
+        return false;
+      }
       await pickWorkspace();
       return true;
     }
     if (command === "clear-terminal") {
+      const audit = await gateAppAction(composerAppAction(command), activeAgentSessionHandle);
+      if (audit.decision !== "approved") {
+        setComposerError(`${audit.label} was ${audit.decision}.`);
+        return false;
+      }
       await clearActiveTerminal();
       return true;
     }
@@ -1188,6 +1290,15 @@ function App() {
 
   const focusTerminalPane = async (paneId: number) => {
     if (paneId === activeTerminalPaneIdRef.current) return;
+    const pane = terminalPanesRef.current.find((item) => item.id === paneId);
+    const audit = await gateAppAction(createAppAction({
+      kind: "focus-pane",
+      label: "Focus pane",
+      target: pane ? terminalPaneLabelForDisplay(pane.label, pane.profile.label, pane.slot) : `pane:${paneId}`,
+      risk: "low",
+      requestedBy: "user",
+    }));
+    if (audit.decision !== "approved") return;
     try {
       await invoke("focus_pane", { paneId });
       const root = workspacePathRef.current;
@@ -1208,6 +1319,15 @@ function App() {
   const createTerminalPane = async (profile: LaunchProfile = launchProfileRef.current) => {
     const root = workspacePathRef.current ?? workspacePath;
     if (!root || launchProfileChanging) return;
+    const audit = await gateAppAction(createAppAction({
+      kind: "create-pane",
+      label: "Create pane",
+      target: `${profile.label} in ${root}`,
+      risk: "medium",
+      requestedBy: "user",
+      undoHint: "Close the new pane.",
+    }));
+    if (audit.decision !== "approved") return;
     setLaunchProfileChanging(true);
     try {
       const result = await invoke<OpenPaneResponse>("create_pane", { path: root, profile });
@@ -1265,8 +1385,15 @@ function App() {
     if (!root) return false;
     const pane = terminalPanesForProject(root).find((item) => item.id === paneId);
     if (!pane) return false;
-    const ok = window.confirm(`Close ${pane.profile.label} pane? The running process will be terminated.`);
-    if (!ok) return false;
+    const audit = await gateAppAction(createAppAction({
+      kind: "close-pane",
+      label: "Close pane",
+      target: terminalPaneLabelForDisplay(pane.label, pane.profile.label, pane.slot),
+      risk: "destructive",
+      requestedBy: "user",
+      undoHint: "Create a new pane from the same profile; live process state is not recoverable.",
+    }), activeAgentSessionDescriptor);
+    if (audit.decision !== "approved") return false;
     try {
       const result = await invoke<ClosePaneResponse>("close_pane", { paneId });
       const remaining = terminalPanesForProject(root).filter((item) => item.id !== paneId);
@@ -1491,6 +1618,14 @@ function App() {
       if (options.focusEditor) requestAnimationFrame(() => editorViewRef.current?.focus());
       return true;
     }
+    const audit = await gateAppAction(createAppAction({
+      kind: "open-file",
+      label: "Open file",
+      target: file.path,
+      risk: "low",
+      requestedBy: "user",
+    }));
+    if (audit.decision !== "approved") return false;
     await openEditorFileDirect(file, options);
     return true;
   };

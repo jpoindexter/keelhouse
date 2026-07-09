@@ -27,7 +27,7 @@ The Codex-style bottom composer can be more than a text box, but it should not r
 - Goal state is session metadata and visible in the rail/activity log.
 - Attachments become file/screenshot references the selected agent can inspect through app-owned commands, not opaque prompt blobs.
 - Activity timeline records prompt submitted, approval changed, goal changed, attachment added, action approved/denied, and stop sent.
-- App-owned actions route through a minimal action gate before permission UI is exposed.
+- App-owned actions route through the minimal action gate in `app/src/appActions.ts` before permission UI is exposed.
 
 ### v2: Direct Agent Harness
 
@@ -54,4 +54,4 @@ Reject the Vanta defaults that do not fit this product: tmux as the pane backend
 - CLI-specific permission modes should be passed to Claude/Codex only when the CLI supports them; otherwise the app enforces its own actions and labels the limitation.
 - Attachments need size/type limits, temp storage, remove controls, and provenance in the activity timeline.
 - The composer should be keyboard-first and match VS Code/Codex expectations: Enter send, Shift+Enter newline, Escape blur/close menus, Cmd+K/command palette conflict documented.
-- Do not show Codex-style permission controls until app-owned actions have a real action gate and activity audit trail.
+- Do not show Codex-style permission controls until app-owned actions have a real action gate and activity audit trail. APP-ACTIONS-MINIMAL now provides that foundation; COMPOSER-HARNESS can expose the controls.

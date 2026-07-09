@@ -55,7 +55,7 @@ Permission modes apply to app-owned actions before they apply to external CLIs.
 - `approveSafe`: auto-approve low-risk local navigation/read actions; ask for mutation.
 - `fullAccess`: allow app-owned actions but still log them and keep hard blocks for destructive or out-of-scope actions.
 
-Each gated action records: `actionId`, `kind`, `target`, `risk`, `requestedBy`, `decision`, `reason`, `timestamp`, and optional `undoHint`.
+Each gated action records: `actionId`, `kind`, `target`, `risk`, `requestedBy`, `decision`, `reason`, `timestamp`, and optional `undoHint`. The current implementation lives in `app/src/appActions.ts`; `App.tsx` routes focus pane, open file, open browser preview, interrupt process, create pane, close pane, and composer app commands through it.
 
 ## Activity Events
 

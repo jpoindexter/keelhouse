@@ -383,11 +383,13 @@
                 <button class="agent-activity-log__filter agent-activity-log__filter--active" type="button" aria-pressed="true">All</button>
                 <button class="agent-activity-log__filter" type="button" aria-pressed="false">Prompts</button>
                 <button class="agent-activity-log__filter" type="button" aria-pressed="false">Files</button>
+                <button class="agent-activity-log__filter" type="button" aria-pressed="false">Approvals</button>
                 <button class="agent-activity-log__filter" type="button" aria-pressed="false">Errors</button>
               </div>
             </div>
             <div class="agent-activity-log__list">
               <div class="agent-activity-log__item agent-activity-log__item--thinking"><svg class="app-icon"><use href="#i-thinking" /></svg><span class="agent-activity-log__time">08:32</span><span class="agent-activity-log__label">Prompt sent</span><span class="agent-activity-log__detail">API fix</span><span class="agent-activity-log__meta">terminal</span><span class="agent-activity-log__kind">Prompts</span></div>
+              <div class="agent-activity-log__item agent-activity-log__item--complete"><svg class="app-icon"><use href="#i-check" /></svg><span class="agent-activity-log__time">08:32</span><span class="agent-activity-log__label">Action approved</span><span class="agent-activity-log__detail">Save file</span><span class="agent-activity-log__meta">review diff</span><span class="agent-activity-log__kind">Approvals</span></div>
               <div class="agent-activity-log__item agent-activity-log__item--complete"><svg class="app-icon"><use href="#i-check" /></svg><span class="agent-activity-log__time">08:33</span><span class="agent-activity-log__label">Edited a file</span><span class="agent-activity-log__detail">App.tsx</span><span class="agent-activity-log__meta">review diff</span><span class="agent-activity-log__kind">Files</span></div>
               <div class="agent-activity-log__item agent-activity-log__item--error"><svg class="app-icon"><use href="#i-error" /></svg><span class="agent-activity-log__time">08:35</span><span class="agent-activity-log__label">Command failed</span><span class="agent-activity-log__detail">npm test</span><span class="agent-activity-log__meta">exit 1 · terminal</span><span class="agent-activity-log__kind">Errors</span></div>
             </div>

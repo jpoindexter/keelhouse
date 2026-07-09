@@ -582,14 +582,13 @@
     {
       "id": "APP-ACTIONS-MINIMAL",
       "title": "Minimal app-owned action gate",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "core",
       "size": "M",
       "launch": "v1",
-      "blocker": true,
       "summary": "Permission controls need real enforcement behind them. Add the small action gate for app-owned actions before showing Codex-style approval modes.",
-      "done": "Focus pane, open file, open diff, attach screenshot/file reference, interrupt process, create pane, close pane, and open browser preview route through action descriptors with risk class, approval decision, audit event, and undo/rollback hint where possible."
+      "done": "Verified 2026-07-09: app/src/appActions.ts defines app-owned action descriptors with kind, target, risk class, requester, reason, and undo hint; resolves each action to an audit event with approval mode, decision, prompt state, timestamp, and reason. Existing app-owned paths for focus pane, open file, open browser preview, interrupt process, create pane, close pane, and composer commands route through the gate. Prompted, denied, blocked, and composer-originated decisions log approval audit rows to the activity timeline. Open diff and attach-reference remain typed but blocked until their real surfaces land."
     },
     {
       "id": "COMPOSER-HARNESS",
