@@ -3,930 +3,604 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Keelhouse Zed Chrome Walkthrough</title>
+  <title>Keelhouse Zed Agent Chrome</title>
   <style>
     :root {
-      /* Derived from Zed's fallback/Ayu token structure: title bar, tab bar, panel, editor, status bar. */
-      --title: #1f2127;
-      --tabbar: #1f2127;
-      --panel: #1f2127;
-      --panel-2: #24262d;
-      --editor: #0d1016;
-      --status: #313337;
-      --border: #333741;
-      --border-soft: #2a2d35;
-      --text: #d7dce6;
-      --muted: #8f98a8;
-      --dim: #636d7c;
-      --accent: #5ac1fe;
-      --green: #aad84c;
-      --yellow: #feb454;
-      --red: #ef7177;
-      --purple: #d2a6fe;
-      --shadow: rgba(0, 0, 0, .42);
+      --title: #d7d7d8;
+      --sidebar: #dedfe0;
+      --sidebar-2: #d3d4d5;
+      --center: #e9e9ea;
+      --surface: #f7f7f7;
+      --tab: #e1e1e2;
+      --tab-active: #f7f7f7;
+      --status: #d9d9da;
+      --border: #c6c7c8;
+      --border-soft: #d7d8d9;
+      --text: #3a3a3c;
+      --muted: #707174;
+      --dim: #989a9d;
+      --blue: #4f8df7;
+      --green: #62a94e;
+      --yellow: #b9821b;
+      --shadow: rgba(0, 0, 0, .16);
       --font-ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --font-mono: "SF Mono", Menlo, Monaco, Consolas, monospace;
-      --tab-h: 32px;
-      --title-h: 38px;
+      --title-h: 32px;
+      --tab-h: 38px;
       --status-h: 24px;
-      --rail-w: 42px;
-      --left-w: 250px;
-      --right-w: 340px;
-      --bottom-h: 208px;
+      --sidebar-w: 360px;
+      --right-w: 565px;
     }
 
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
     body {
-      background: #05070a;
+      background: #050505;
       color: var(--text);
       font-family: var(--font-ui);
       font-size: 13px;
       letter-spacing: 0;
     }
-
     button, input, textarea { font: inherit; color: inherit; }
     button { border: 0; background: none; padding: 0; cursor: default; }
-    kbd {
-      min-width: 21px;
-      height: 18px;
-      padding: 1px 6px;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      background: #171b22;
-      color: var(--muted);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      line-height: 15px;
-      text-align: center;
-    }
+    kbd { font-family: var(--font-ui); color: var(--muted); font-size: 12px; }
 
     .app {
       width: 100vw;
       height: 100vh;
       display: grid;
       grid-template-rows: var(--title-h) 1fr var(--status-h);
-      background: var(--editor);
+      background: var(--center);
     }
 
     .titlebar {
-      display: grid;
-      grid-template-columns: 176px 1fr 270px;
-      align-items: center;
-      min-width: 0;
       height: var(--title-h);
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr var(--right-w);
       border-bottom: 1px solid var(--border);
       background: var(--title);
       -webkit-app-region: drag;
     }
-
-    .traffic { display: flex; align-items: center; gap: 8px; padding-left: 13px; }
-    .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .dot.red { background: #ff5f57; }
-    .dot.yellow { background: #febc2e; }
-    .dot.green { background: #28c840; }
-
-    .nav { display: flex; align-items: center; gap: 8px; margin-left: 28px; color: var(--muted); }
-    .nav button { width: 24px; height: 24px; border-radius: 5px; color: var(--muted); }
-    .nav button:hover, .icon:hover, .tool:hover { background: #2b3039; color: var(--text); }
-
-    .center-title { display: flex; justify-content: center; min-width: 0; }
-    .crumb {
+    .thread-search {
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      align-items: center;
+      border-right: 1px solid var(--border);
+    }
+    .traffic { display: flex; gap: 8px; padding-left: 12px; align-items: center; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; background: #8f9092; }
+    .searchbox {
+      height: 100%;
       display: flex;
       align-items: center;
-      gap: 8px;
-      min-width: 360px;
-      max-width: 620px;
-      height: 28px;
-      padding: 0 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #181c23;
+      gap: 6px;
+      border-left: 1px solid var(--border);
+      padding: 0 10px;
       color: var(--muted);
+      background: #e5e5e6;
+    }
+    .searchbox input {
+      min-width: 0;
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+    }
+    .project-title {
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      border-right: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .window-tools {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 2px;
+      padding: 0 9px;
+    }
+    .dot-light { width: 18px; height: 18px; border-radius: 50%; background: #f2f2f3; }
+
+    .chrome {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr var(--right-w);
+      background: var(--center);
+    }
+    .threads {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 36px 1fr;
+      border-right: 1px solid var(--border);
+      background: var(--sidebar);
+    }
+    .thread-head {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding: 0 12px;
+      color: var(--text);
+    }
+    .thread-head .count { font-size: 13px; color: #636466; }
+    .thread-head .icons { margin-left: auto; display: flex; gap: 8px; color: var(--text); }
+    .flat-icon {
+      width: 18px;
+      height: 18px;
+      display: inline-grid;
+      place-items: center;
+      color: var(--text);
+      border-radius: 0;
+    }
+    .flat-icon:hover { color: #000; background: rgba(0,0,0,.06); }
+    .thread-list {
+      min-height: 0;
+      overflow: auto;
+      padding: 10px 0 24px;
+    }
+    .day {
+      margin: 8px 12px 7px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .thread {
+      min-height: 52px;
+      padding: 5px 14px 6px 12px;
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      column-gap: 8px;
+      color: #66686b;
+      overflow: hidden;
+    }
+    .thread:hover { background: rgba(255,255,255,.32); }
+    .thread.active { background: rgba(255,255,255,.45); color: var(--text); }
+    .thread .agent { padding-top: 2px; color: #8d8f92; }
+    .thread-title {
+      min-width: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      font-size: 15px;
+      line-height: 22px;
     }
-    .crumb strong { color: var(--text); font-weight: 600; }
-    .crumb .spark { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(90,193,254,.12); }
-
-    .title-actions { display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-right: 8px; }
-    .pill, .tool, .icon {
-      display: inline-flex;
+    .thread-meta {
+      display: flex;
       align-items: center;
-      justify-content: center;
       gap: 7px;
-      height: 28px;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      background: #181c23;
-      color: var(--text);
-      padding: 0 9px;
-      white-space: nowrap;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 18px;
     }
-    .tool, .icon { width: 28px; padding: 0; color: var(--muted); }
-    .pill.primary { border-color: #2e6fa6; background: #204466; color: #e4f4ff; }
 
-    .workspace {
+    .agent {
+      min-width: 0;
       min-height: 0;
       display: grid;
-      grid-template-columns: var(--rail-w) var(--left-w) 1fr var(--right-w);
-      grid-template-rows: 1fr;
-      background: var(--editor);
-    }
-    .workspace.bottom {
-      grid-template-columns: var(--rail-w) var(--left-w) 1fr;
-      grid-template-rows: 1fr var(--bottom-h);
-    }
-    .workspace.bottom .right-dock { grid-column: 3; grid-row: 2; border-left: 0; border-top: 1px solid var(--border); }
-    .workspace.left-tray { grid-template-columns: var(--rail-w) var(--right-w) var(--left-w) 1fr; }
-    .workspace.left-tray .right-dock { grid-column: 2; grid-row: 1; border-left: 0; border-right: 1px solid var(--border); }
-    .workspace.left-tray .left-panel { grid-column: 3; }
-    .workspace.left-tray .center { grid-column: 4; }
-    .workspace.hide-tray { grid-template-columns: var(--rail-w) var(--left-w) 1fr; }
-    .workspace.hide-tray .right-dock { display: none; }
-
-    .rail {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 7px 4px;
+      grid-template-rows: var(--tab-h) 1fr;
+      background: var(--center);
       border-right: 1px solid var(--border);
-      background: #151a20;
     }
-    .rail .spacer { flex: 1; }
-    .rail-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 7px;
+    .agent-tab {
+      height: var(--tab-h);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--tab);
+      color: var(--text);
+      font-size: 15px;
+    }
+    .agent-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+    }
+    .agent-body {
+      min-height: 0;
       display: grid;
       place-items: center;
       color: var(--muted);
-      position: relative;
+      text-align: center;
+      padding: 40px;
     }
-    .rail-btn.active { background: #2b3039; color: var(--text); }
-    .rail-btn.active::before {
-      content: "";
-      position: absolute;
-      left: -4px;
-      top: 7px;
-      bottom: 7px;
-      width: 2px;
-      border-radius: 2px;
-      background: var(--accent);
+    .agent-empty {
+      width: 320px;
+      line-height: 1.45;
     }
-    .glyph { font-family: var(--font-mono); font-size: 15px; line-height: 1; }
+    .link-button {
+      display: block;
+      width: 100%;
+      height: 32px;
+      margin-top: 12px;
+      border-radius: 0;
+      border-top: 1px solid var(--border-soft);
+      border-bottom: 1px solid var(--border-soft);
+      color: #38393b;
+      background: transparent;
+    }
+    .divider-label {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      margin: 10px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .divider-label::before, .divider-label::after { content: ""; height: 1px; background: var(--border-soft); }
 
-    .left-panel {
+    .right {
       min-width: 0;
       min-height: 0;
       display: grid;
       grid-template-rows: var(--tab-h) 1fr;
-      border-right: 1px solid var(--border);
-      background: var(--panel);
-    }
-    .panel-tabbar, .dock-tabbar {
-      height: var(--tab-h);
-      display: flex;
-      align-items: stretch;
-      border-bottom: 1px solid var(--border);
-      background: var(--tabbar);
-    }
-    .panel-tab {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      min-width: 0;
-      height: var(--tab-h);
-      padding: 0 9px;
-      border-right: 1px solid var(--border);
-      color: var(--muted);
-      background: var(--tabbar);
-    }
-    .panel-tab.active {
-      color: var(--text);
-      background: var(--panel);
-      border-bottom: 1px solid var(--panel);
-      margin-bottom: -1px;
-    }
-    .panel-tab.grow { flex: 1; }
-    .panel-title { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-    .panel-body { min-height: 0; overflow: auto; padding: 7px 0; }
-    .search {
-      margin: 0 8px 8px;
-      height: 28px;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      background: #171b22;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 0 9px;
-      color: var(--dim);
-    }
-    .search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); }
-    .tree-section { margin: 10px 8px 4px; color: var(--dim); font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
-    .tree-row {
-      height: 26px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 0 8px;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-    }
-    .tree-row:hover { background: #252a33; color: var(--text); }
-    .tree-row.active { background: #2a3342; color: var(--text); }
-    .tree-row .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    .indent-1 { padding-left: 20px; }
-    .indent-2 { padding-left: 35px; }
-    .indent-3 { padding-left: 50px; }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; margin-left: auto; background: var(--dim); }
-    .status-dot.green { background: var(--green); }
-    .status-dot.yellow { background: var(--yellow); }
-    .git { margin-left: auto; font-size: 11px; font-family: var(--font-mono); }
-    .git.mod { color: var(--yellow); }
-    .git.new { color: var(--green); }
-
-    .center {
-      min-width: 0;
-      min-height: 0;
-      display: grid;
-      grid-template-rows: var(--tab-h) 1fr;
-      background: var(--editor);
+      background: var(--surface);
     }
     .tabs {
       height: var(--tab-h);
       display: flex;
       align-items: stretch;
+      background: var(--tab);
       border-bottom: 1px solid var(--border);
-      background: var(--tabbar);
-      min-width: 0;
+    }
+    .nav-arrows {
+      width: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      color: var(--muted);
+      border-right: 1px solid var(--border);
     }
     .tab {
-      height: var(--tab-h);
-      min-width: 148px;
-      max-width: 238px;
+      min-width: 124px;
       display: flex;
       align-items: center;
-      gap: 7px;
-      padding: 0 9px;
+      padding: 0 20px;
       border-right: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      background: var(--tabbar);
+      background: var(--tab-active);
       color: var(--muted);
+      font-size: 15px;
     }
-    .tab.active {
-      background: var(--editor);
-      border-bottom-color: var(--editor);
-      color: var(--text);
-    }
-    .tab .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .tab .close { margin-left: auto; color: var(--dim); }
-    .tab-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; padding: 2px 6px; border-left: 1px solid var(--border); }
-
-    .agent-pane {
-      min-height: 0;
-      display: grid;
-      grid-template-rows: 1fr auto;
-      background: var(--editor);
-    }
-    .transcript {
+    .welcome {
       min-height: 0;
       overflow: auto;
-      padding: 22px 42px 28px;
-      font-family: var(--font-mono);
-      font-size: 13px;
-      line-height: 1.42;
+      display: grid;
+      place-items: center;
+      background: var(--surface);
+      padding: 42px;
     }
-    .line { max-width: 1060px; margin: 0 auto 13px; color: var(--text); }
-    .line.dim { color: var(--muted); font-style: italic; }
-    .line.meta { color: var(--dim); font-size: 12px; }
-    .line .bullet { color: #f3f4f6; margin-right: 6px; }
-    .line .path { color: #8dc7ff; }
-    .line .ok { color: var(--green); }
-    .line .bad { color: var(--red); }
-    .line .warn { color: var(--yellow); }
-    .codebox {
-      max-width: 1060px;
-      margin: 14px auto;
-      border: 1px solid var(--border);
-      background: #111720;
-      font-family: var(--font-mono);
-    }
-    .codebox .head {
-      height: 28px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 10px;
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-      background: #171b22;
-    }
-    .codebox pre { margin: 0; padding: 10px 12px; overflow: auto; color: #cbd6e6; }
-    .composer {
-      width: min(920px, calc(100% - 72px));
-      margin: 0 auto 18px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #141920;
-      box-shadow: 0 12px 36px var(--shadow);
-      overflow: hidden;
-    }
-    .composer textarea {
-      width: 100%;
-      min-height: 78px;
-      resize: none;
-      border: 0;
-      outline: 0;
-      padding: 12px 13px;
-      background: transparent;
+    .welcome-inner {
+      width: min(430px, 100%);
       color: var(--text);
     }
-    .composer-footer {
-      height: 38px;
+    .brand {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 0 10px;
-      border-top: 1px solid var(--border);
+      justify-content: center;
+      gap: 18px;
+      margin-bottom: 42px;
     }
-    .composer-footer .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-    .tiny {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      height: 24px;
-      padding: 0 8px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: #171b22;
-      color: var(--text);
-      white-space: nowrap;
-    }
-    .tiny.ghost { background: transparent; color: var(--muted); }
-    .tiny.warn { color: var(--yellow); border-color: #5b4526; background: #211a12; }
-    .send { width: 28px; height: 28px; border: 1px solid #385b78; border-radius: 50%; background: #204466; color: #e4f4ff; }
-
-    .right-dock {
-      min-width: 0;
-      min-height: 0;
+    .logo {
+      width: 52px;
+      height: 52px;
+      border: 3px solid var(--text);
       display: grid;
-      grid-template-rows: var(--tab-h) 1fr;
-      border-left: 1px solid var(--border);
-      background: var(--panel);
+      place-items: center;
+      font-size: 28px;
+      font-weight: 700;
     }
-    .dock-body { min-height: 0; overflow: hidden; background: var(--editor); }
-    .editor-lines {
-      height: 100%;
-      overflow: auto;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      line-height: 1.65;
-      color: #c8d3df;
-      padding: 8px 0 24px;
-      counter-reset: line;
-    }
-    .editor-line {
+    .brand h1 { margin: 0; font-size: 20px; font-weight: 600; }
+    .brand em { color: var(--muted); font-size: 12px; }
+    .section-title {
       display: grid;
-      grid-template-columns: 46px 1fr;
-      min-height: 20px;
-    }
-    .editor-line::before {
-      counter-increment: line;
-      content: counter(line);
-      color: #586273;
-      text-align: right;
-      padding-right: 12px;
-      user-select: none;
-    }
-    .editor-line span { white-space: pre; overflow: visible; }
-    .editor-line.active { background: rgba(255,255,255,.035); }
-    .kw { color: #d2a6fe; }
-    .str { color: #aad84c; }
-    .fn { color: #5ac1fe; }
-    .cm { color: #6f7888; font-style: italic; }
-    .browser-preview {
-      height: 100%;
-      display: grid;
-      grid-template-rows: 34px 1fr;
-      background: var(--editor);
-    }
-    .urlbar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 5px 8px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-    }
-    .url {
-      flex: 1;
-      min-width: 0;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      padding: 0 8px;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      color: var(--muted);
-      font-family: var(--font-mono);
-      background: #171b22;
-    }
-    .page {
-      margin: 22px;
-      border: 1px solid #cfd6e1;
-      background: #f7f9fc;
-      color: #182033;
-      padding: 18px;
-      font-size: 14px;
-    }
-    .page h1 { margin: 0 0 12px; font-size: 20px; }
-    .page-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .page-card { border: 1px solid #d8dee8; border-radius: 5px; background: white; padding: 12px; }
-
-    .statusbar {
-      height: var(--status-h);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      grid-template-columns: auto 1fr;
       gap: 12px;
-      padding: 0 8px;
-      border-top: 1px solid var(--status);
-      background: var(--status);
-      color: #c3cad6;
-      font-size: 12px;
+      align-items: center;
+      margin: 24px 0 12px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
     }
-    .statusbar .group { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .statusbar strong { color: #fff; font-weight: 600; }
-
-    .menu {
-      position: fixed;
-      z-index: 20;
-      min-width: 238px;
-      padding: 5px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #1f2127;
-      box-shadow: 0 18px 48px var(--shadow);
-      display: none;
-    }
-    .menu.open { display: block; }
-    .menu-label { padding: 7px 8px 5px; color: var(--dim); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-    .menu-row {
+    .section-title::after { content: ""; height: 1px; background: var(--border-soft); }
+    .action-row {
       height: 28px;
       display: grid;
       grid-template-columns: 22px 1fr auto;
       align-items: center;
       gap: 8px;
+      color: var(--text);
+      font-size: 15px;
+    }
+    .action-row .key { color: var(--muted); font-size: 13px; }
+    .promo {
+      margin-top: 28px;
+      padding: 14px;
+      border: 1px solid var(--border-soft);
+      background: #f0f0f1;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.6);
+      color: var(--muted);
+    }
+    .promo strong { display: block; margin-bottom: 5px; color: var(--text); font-size: 15px; }
+    .promo button {
       width: 100%;
-      padding: 0 7px;
-      border-radius: 5px;
+      height: 24px;
+      margin-top: 10px;
+      border: 1px solid var(--border-soft);
+      background: #e6e6e7;
+      color: var(--text);
+    }
+    .return { margin-top: 28px; text-align: center; color: var(--text); font-size: 12px; }
+
+    .status {
+      height: var(--status-h);
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr var(--right-w);
+      border-top: 1px solid var(--border);
+      background: var(--status);
+      color: var(--text);
+      font-size: 12px;
+    }
+    .status-left, .status-mid, .status-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      padding: 0 10px;
+    }
+    .status-left { border-right: 1px solid var(--border); }
+    .status-right { justify-content: flex-end; }
+    .status .active { color: var(--blue); }
+
+    .menu {
+      position: fixed;
+      z-index: 20;
+      display: none;
+      min-width: 236px;
+      padding: 4px 0;
+      border: 1px solid #aeb0b3;
+      background: #eeeeef;
+      box-shadow: 0 14px 36px var(--shadow);
+    }
+    .menu.open { display: block; }
+    .menu-row {
+      width: 100%;
+      height: 26px;
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
       color: var(--text);
       text-align: left;
     }
-    .menu-row:hover { background: #2b3340; }
-    .menu-row .note { color: var(--muted); font-size: 12px; }
-    .separator { height: 1px; margin: 5px 4px; background: var(--border-soft); }
+    .menu-row:hover { background: #d8d9db; }
+    .menu-label {
+      height: 24px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .sep { height: 1px; margin: 4px 0; background: #d2d3d4; }
 
     .overlay {
       position: fixed;
       inset: 0;
       z-index: 30;
       display: none;
-      background: rgba(4,7,11,.58);
-      backdrop-filter: blur(5px);
+      background: rgba(255,255,255,.35);
+      backdrop-filter: blur(3px);
     }
     .overlay.open { display: block; }
     .palette {
-      width: min(720px, calc(100vw - 80px));
+      width: min(620px, calc(100vw - 80px));
       margin: 72px auto 0;
-      border: 1px solid #485367;
-      border-radius: 9px;
-      background: #1f2127;
-      box-shadow: 0 20px 60px var(--shadow);
-      overflow: hidden;
+      border: 1px solid #aeb0b3;
+      background: #f0f0f1;
+      box-shadow: 0 18px 44px var(--shadow);
     }
     .palette input {
       width: 100%;
-      height: 42px;
-      padding: 0 13px;
+      height: 38px;
       border: 0;
       border-bottom: 1px solid var(--border);
       outline: 0;
-      background: #171b22;
-      color: var(--text);
-      font-size: 15px;
+      background: #f7f7f8;
+      padding: 0 12px;
     }
-    .command { height: 34px; display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 8px; padding: 0 10px; color: var(--muted); }
-    .command.active { background: #2a3342; color: var(--text); }
-    .settings {
-      width: min(920px, calc(100vw - 80px));
-      height: min(560px, calc(100vh - 96px));
-      margin: 48px auto 0;
+    .command {
+      height: 30px;
       display: grid;
-      grid-template-rows: 44px 1fr;
-      border: 1px solid #485367;
-      border-radius: 9px;
-      background: #1f2127;
-      box-shadow: 0 20px 60px var(--shadow);
-      overflow: hidden;
+      grid-template-columns: 24px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      color: var(--muted);
     }
-    .settings-head { display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1px solid var(--border); }
-    .settings-grid { min-height: 0; display: grid; grid-template-columns: 230px 1fr; }
-    .settings-nav { border-right: 1px solid var(--border); padding: 10px; }
-    .settings-nav button { width: 100%; height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 9px; border-radius: 6px; color: var(--muted); text-align: left; }
-    .settings-nav button.active { background: #2a3342; color: var(--text); }
-    .settings-content { padding: 18px; overflow: auto; }
-    .setting-row { min-height: 46px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; border-bottom: 1px solid var(--border-soft); }
-    .setting-row .hint { margin-top: 3px; color: var(--muted); }
+    .command.active { background: #d9e6ff; color: var(--text); }
 
-    .first {
-      width: min(760px, calc(100vw - 72px));
-      margin: 88px auto 0;
-      border: 1px solid #485367;
-      border-radius: 9px;
-      background: #1f2127;
-      box-shadow: 0 20px 60px var(--shadow);
-      overflow: hidden;
+    .settings {
+      width: min(860px, calc(100vw - 80px));
+      height: min(520px, calc(100vh - 90px));
+      margin: 52px auto 0;
+      display: grid;
+      grid-template-rows: 38px 1fr;
+      border: 1px solid #aeb0b3;
+      background: #eeeeef;
+      box-shadow: 0 18px 44px var(--shadow);
     }
-    .first-head { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1px solid var(--border); }
-    .first-body { padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .first-card { border: 1px solid var(--border); border-radius: 7px; background: #171b22; padding: 12px; color: var(--muted); }
-    .first-card h3 { margin: 0 0 8px; color: var(--text); font-size: 13px; }
-    .first-card button { margin-top: 12px; }
+    .settings-head { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--border); }
+    .settings-grid { display: grid; grid-template-columns: 220px 1fr; min-height: 0; }
+    .settings-nav { border-right: 1px solid var(--border); padding: 8px; }
+    .settings-nav button { width: 100%; height: 28px; text-align: left; padding: 0 8px; color: var(--muted); }
+    .settings-nav button.active { background: #d8d9db; color: var(--text); }
+    .settings-content { padding: 18px; }
+    .setting-row { min-height: 42px; display: grid; grid-template-columns: 1fr auto; align-items: center; border-bottom: 1px solid var(--border-soft); }
+    .hint { color: var(--muted); font-size: 12px; }
 
-    @media (max-width: 1100px) {
-      :root { --left-w: 252px; --right-w: 300px; }
-      .titlebar { grid-template-columns: 136px 1fr 160px; }
-      .crumb { min-width: 220px; }
-      .title-actions .label, .nav { display: none; }
-      .transcript { padding-inline: 22px; }
-      .composer { width: calc(100% - 32px); }
-      .workspace { grid-template-columns: var(--rail-w) var(--left-w) 1fr; }
-      .right-dock { grid-column: 3; grid-row: 1; align-self: end; height: var(--bottom-h); border-left: 0; border-top: 1px solid var(--border); }
+    @media (max-width: 1180px) {
+      :root { --sidebar-w: 300px; --right-w: 430px; }
+      .thread-title { font-size: 14px; }
+      .welcome { padding: 28px; }
     }
   </style>
 </head>
 <body>
   <main class="app">
     <header class="titlebar">
-      <div class="traffic">
-        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
-        <div class="nav"><button title="Back">‹</button><button title="Forward">›</button></div>
+      <div class="thread-search">
+        <div class="traffic"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <label class="searchbox"><span>⌕</span><input value="" placeholder="Search all threads..." autofocus></label>
       </div>
-      <div class="center-title">
-        <div class="crumb"><span class="spark"></span><strong>Keelhouse</strong><span>agent cli / Build chrome pass</span></div>
-      </div>
-      <div class="title-actions">
-        <button class="pill" data-action="palette"><span class="glyph">⌕</span><span class="label">Command</span><kbd>⌘K</kbd></button>
-        <button class="pill primary" data-menu="new"><span>+</span><span class="label">New</span></button>
-        <button class="icon" data-action="settings" title="Settings">⚙</button>
-      </div>
+      <div class="project-title">Open Recent Project</div>
+      <div class="window-tools"><span class="dot-light"></span></div>
     </header>
 
-    <section id="workspace" class="workspace">
-      <nav class="rail" aria-label="Panels">
-        <button class="rail-btn active" data-panel="project" title="Project Panel"><span class="glyph">▣</span></button>
-        <button class="rail-btn" data-panel="search" title="Search"><span class="glyph">⌕</span></button>
-        <button class="rail-btn" data-panel="git" title="Source Control"><span class="glyph">⑂</span></button>
-        <button class="rail-btn" data-panel="browser" title="Browser Preview"><span class="glyph">◎</span></button>
-        <button class="rail-btn" data-panel="agent" title="Agent Threads"><span class="glyph">✦</span></button>
-        <div class="spacer"></div>
-        <button class="rail-btn" data-action="settings" title="Settings"><span class="glyph">⚙</span></button>
-      </nav>
-
-      <aside class="left-panel">
-        <div class="panel-tabbar">
-          <button class="panel-tab active grow"><span class="glyph">▣</span><span class="panel-title" id="panelTitle">Project</span></button>
-          <button class="panel-tab" data-menu="panel">•••</button>
+    <section class="chrome">
+      <aside class="threads">
+        <div class="thread-head">
+          <span class="count">1098 threads</span>
+          <div class="icons"><button class="flat-icon" data-menu="new">+</button><button class="flat-icon">⇩</button><button class="flat-icon">▣</button></div>
         </div>
-        <div class="panel-body" id="panelBody"></div>
+        <div class="thread-list">
+          <div class="day">Today</div>
+          <div class="thread active"><span class="agent">◌</span><div><div class="thread-title">Add AGENTS.md guide</div><div class="thread-meta">▱ agent cli <span>•</span> 4h</div></div></div>
+          <div class="thread"><span class="agent">✳</span><div><div class="thread-title">Install extract-approach skill and verify layout</div><div class="thread-meta">▱ jasonpoindexter <span>•</span> 5h</div></div></div>
+          <div class="thread"><span class="agent">◌</span><div><div class="thread-title">Update init and agents docs</div><div class="thread-meta">▱ Vanta <span>•</span> 5h</div></div></div>
+          <div class="thread"><span class="agent">✳</span><div><div class="thread-title">Update roadmap with logging</div><div class="thread-meta">▱ Vanta <span>•</span> 5h</div></div></div>
+          <div class="thread"><span class="agent">✳</span><div><div class="thread-title">Identify remaining tasks for app</div><div class="thread-meta">▱ Greg <span>•</span> 5h</div></div></div>
+          <div class="thread"><span class="agent">✳</span><div><div class="thread-title">Create a new PRD</div><div class="thread-meta">▱ real temp <span>•</span> 5h</div></div></div>
+          <div class="thread"><span class="agent">✳</span><div><div class="thread-title">Find iOS violations bookmark or GitHub references</div><div class="thread-meta">▱ Greg <span>•</span> 5h</div></div></div>
+          <div class="thread"><span class="agent">✳</span><div><div class="thread-title">Redesign Theft as AI-first subscription page</div><div class="thread-meta">▱ THEFT <span>•</span> 5h</div></div></div>
+          <div class="thread"><span class="agent">✳</span><div><div class="thread-title">vision-roadmap-completion-plan</div><div class="thread-meta">▱ agent cli <span>•</span> 5h</div></div></div>
+          <div class="thread"><span class="agent">◌</span><div><div class="thread-title">Publish agentic OS privately</div><div class="thread-meta">▱ agentic-os <span>•</span> 5h</div></div></div>
+          <div class="thread"><span class="agent">◌</span><div><div class="thread-title">Run the agent-os:morning-watch skill</div><div class="thread-meta">▱ agent-os <span>•</span> 6h</div></div></div>
+          <div class="thread"><span class="agent">◌</span><div><div class="thread-title">Read reports/skill-prune.md in this repo</div><div class="thread-meta">▱ agentic-os <span>•</span> 6h</div></div></div>
+        </div>
       </aside>
 
-      <section class="center">
-        <div class="tabs">
-          <button class="tab active"><span class="glyph">✦</span><span class="label">Claude Code</span><span class="close">×</span></button>
-          <button class="tab"><span class="glyph">✦</span><span class="label">Codex High</span><span class="close">×</span></button>
-          <button class="tab"><span class="glyph">⌘</span><span class="label">roadmap.html</span><span class="close">×</span></button>
-          <div class="tab-actions">
-            <button class="tool" data-menu="session" title="Session options">•••</button>
-            <button class="tool" data-action="settings" title="Split layout">◧</button>
-          </div>
+      <section class="agent">
+        <div class="agent-tab">
+          New Zed Agent Thread
+          <div class="agent-actions"><button class="flat-icon">↗</button><button class="flat-icon" data-menu="agent">•••</button></div>
         </div>
-        <div class="agent-pane">
-          <div class="transcript">
-            <div class="line dim">* Sauteed for 3m 14s</div>
-            <div class="line"><span class="bullet">•</span>recap: You want the Zed workbench shape, but inverted around agent work. The code editor is a docked tool surface, not the primary screen.</div>
-            <div class="line meta">Ran 4 source inspections: <span class="path">workspace/src/dock.rs</span>, <span class="path">project_panel.rs</span>, <span class="path">agent_panel.rs</span>, <span class="path">ui/components/tab.rs</span></div>
-            <div class="line"><span class="bullet">•</span>Using Zed concepts: <span class="ok">Panel</span> position, <span class="ok">TabBar</span> 32px height, dense project rows, status bar tools, command palette overlays.</div>
-            <div class="codebox">
-              <div class="head"><span class="glyph">⑂</span><span>app/src/App.tsx</span><span class="tiny warn">needs approval</span></div>
-<pre><span class="ok">+ type WorkbenchPanel = { id, title, icon, positions, size, render }</span>
- editor/browser/raw-terminal become Zed-style docks
- project/search/git/browser/settings share one panel body
- agent transcript remains the active workspace item
- tabs represent agent sessions and open tools</pre>
-            </div>
-            <div class="line"><span class="bullet">•</span>Next implementation step: port this shell into React with real state, then run screenshot QA against selected, tray-left, tray-bottom, menu, settings, and narrow layouts.</div>
-            <div class="line dim">* Cooked for 28s</div>
-          </div>
-          <div class="composer">
-            <textarea spellcheck="false">Make the app shell match this Zed-style demo, but keep the agent transcript as the main pane.</textarea>
-            <div class="composer-footer">
-              <button class="tiny ghost" data-menu="context">+ Add context</button>
-              <button class="tiny warn" data-menu="approval">Full access</button>
-              <button class="tiny" data-menu="profile">Claude Code</button>
-              <button class="tiny ghost">Goal</button>
-              <div class="right"><span class="tiny ghost">auto mode on</span><button class="send">↑</button></div>
-            </div>
+        <div class="agent-body">
+          <div class="agent-empty">
+            <div>Choose one of the options below<br>to use the Agent Panel</div>
+            <button class="link-button">Open Project&nbsp;&nbsp;⌘ O</button>
+            <div class="divider-label">or</div>
+            <button class="link-button">Clone Repository</button>
           </div>
         </div>
       </section>
 
-      <aside class="right-dock" id="dock">
-        <div class="dock-tabbar">
-          <button class="panel-tab active" data-view="editor"><span class="glyph">⌘</span><span>App.tsx</span></button>
-          <button class="panel-tab" data-view="browser"><span class="glyph">◎</span><span>Browser</span></button>
-          <button class="panel-tab" data-view="terminal"><span class="glyph">⌁</span><span>Raw</span></button>
-          <div style="margin-left:auto;display:flex;gap:4px;padding:2px 5px;">
-            <button class="tool" data-menu="dock" title="Move Dock">◧</button>
-            <button class="tool" data-action="hideDock" title="Close Dock">×</button>
+      <section class="right">
+        <div class="tabs">
+          <div class="nav-arrows"><button>←</button><button>→</button></div>
+          <div class="tab">Welcome</div>
+        </div>
+        <div class="welcome">
+          <div class="welcome-inner">
+            <div class="brand">
+              <div class="logo">Z</div>
+              <div><h1>Welcome to Keelhouse</h1><em>The agent workbench for what is next</em></div>
+            </div>
+            <div class="section-title">Get Started</div>
+            <div class="action-row"><span>+</span><span>New Agent Thread</span><span class="key">⌘ N</span></div>
+            <div class="action-row"><span>▣</span><span>Open Project</span><span class="key">⌘ O</span></div>
+            <div class="action-row"><span>↘</span><span>Clone Repository</span><span></span></div>
+            <div class="action-row"><span>☷</span><span>Open Command Palette</span><span class="key">⌘ ⇧ P</span></div>
+            <div class="section-title">Configure</div>
+            <div class="action-row"><span>⚙</span><span>Open Settings</span><span class="key">⌘ ,</span></div>
+            <div class="action-row"><span>⌨</span><span>Customize Keymaps</span><span class="key">⌘ K&nbsp;&nbsp;⌘ S</span></div>
+            <div class="action-row"><span>▦</span><span>Agent Connections</span><span class="key">⌘ ⇧ X</span></div>
+            <div class="promo">
+              <strong>Collaborate with Agents</strong>
+              Run multiple threads at once, mix and match CLI/API agents, and keep work conflict-free with worktrees.
+              <button>Open Agent Panel&nbsp;&nbsp;⌘ ?</button>
+            </div>
+            <div class="return">Return to Onboarding</div>
           </div>
         </div>
-        <div class="dock-body" id="dockBody"></div>
-      </aside>
+      </section>
     </section>
 
-    <footer class="statusbar">
-      <div class="group"><strong>agent cli</strong><span>main</span><span>4 changes</span><span>Codex running</span></div>
-      <div class="group"><span>drawer: <strong id="statusPanel">Project</strong></span><span>dock: <strong id="statusDock">right</strong></span><span>⌘K command</span></div>
+    <footer class="status">
+      <div class="status-left"><span>◧</span><span class="active">◷</span><span style="margin-left:auto">▣+</span></div>
+      <div class="status-mid"><span class="active">✣</span><span>⌕</span><span>✓</span></div>
+      <div class="status-right"><span>Z⌁</span><span>▻</span><span>⌘</span><span>☰</span><span>♙</span><span>⑂</span><span>▦</span></div>
     </footer>
   </main>
 
   <div class="menu" id="menu"></div>
-
-  <div class="overlay open" id="firstRun">
-    <div class="first">
-      <div class="first-head"><strong>Open workspace</strong><button class="icon" data-close>×</button></div>
-      <div class="first-body">
-        <div class="first-card">
-          <h3>Recent workspaces</h3>
-          <div class="tree-row active"><span class="glyph">▣</span><span class="name">agent cli</span><span class="status-dot green"></span></div>
-          <div class="tree-row"><span class="glyph">▣</span><span class="name">Vanta</span><span>2h</span></div>
-          <div class="tree-row"><span class="glyph">▣</span><span class="name">postures</span><span>1d</span></div>
-        </div>
-        <div class="first-card">
-          <h3>First screen</h3>
-          <p>Open into the agent workspace. Files, browser, raw terminal, git, and settings are docked panels that can move left, right, or bottom.</p>
-          <button class="pill primary" data-close>Open selected workspace</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div class="overlay" id="paletteOverlay">
     <div class="palette">
-      <input value="move dock" aria-label="Command palette">
-      <div class="command active"><span>◧</span><span>Move Dock: Right</span><kbd>⌥⌘→</kbd></div>
-      <div class="command"><span>◧</span><span>Move Dock: Left</span><kbd>⌥⌘←</kbd></div>
-      <div class="command"><span>◧</span><span>Move Dock: Bottom</span><kbd>⌥⌘↓</kbd></div>
-      <div class="command"><span>⌁</span><span>Show Raw Terminal</span><kbd>⌘J</kbd></div>
-      <div class="command"><span>▣</span><span>Focus Project Panel</span><kbd>⌘B</kbd></div>
+      <input value="open project" aria-label="Command palette">
+      <div class="command active"><span>▣</span><span>Open Project</span><kbd>⌘O</kbd></div>
+      <div class="command"><span>+</span><span>New Agent Thread</span><kbd>⌘N</kbd></div>
+      <div class="command"><span>☷</span><span>Open Command Palette</span><kbd>⌘⇧P</kbd></div>
       <div class="command"><span>⚙</span><span>Open Settings</span><kbd>⌘,</kbd></div>
     </div>
   </div>
-
   <div class="overlay" id="settingsOverlay">
     <div class="settings">
-      <div class="settings-head"><strong>Settings</strong><button class="icon" data-close>×</button></div>
+      <div class="settings-head"><strong>Settings</strong><button class="flat-icon" data-close>×</button></div>
       <div class="settings-grid">
-        <nav class="settings-nav">
-          <button class="active">General</button>
-          <button>Appearance</button>
-          <button>Keyboard shortcuts</button>
-          <button>MCP servers</button>
-          <button>Browser preview</button>
-          <button>Git</button>
-          <button>Agents</button>
-        </nav>
+        <nav class="settings-nav"><button class="active">General</button><button>Appearance</button><button>Agents</button><button>MCP servers</button><button>Git</button></nav>
         <div class="settings-content">
           <h3>General</h3>
-          <div class="setting-row"><div><strong>Default agent</strong><div class="hint">Terminal harness command for new sessions.</div></div><button class="tiny">claude</button></div>
-          <div class="setting-row"><div><strong>Permission mode</strong><div class="hint">Approval policy for files, git, browser, and shell.</div></div><button class="tiny warn">Full access</button></div>
-          <div class="setting-row"><div><strong>Dock position</strong><div class="hint">Editor, browser, and terminal tool panel.</div></div><button class="tiny">Right</button></div>
-          <div class="setting-row"><div><strong>Theme</strong><div class="hint">Zed-inspired dark tokens, later switchable.</div></div><button class="tiny">Keelhouse Zed Dark</button></div>
+          <div class="setting-row"><div><strong>Default agent</strong><div class="hint">Terminal command for new threads.</div></div><button>claude</button></div>
+          <div class="setting-row"><div><strong>Permission mode</strong><div class="hint">Approval policy for files, git, browser, and shell.</div></div><button>Full access</button></div>
+          <div class="setting-row"><div><strong>Theme</strong><div class="hint">Zed-like light chrome for this prototype.</div></div><button>Light</button></div>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    const panelData = {
-      project: {
-        title: 'Project',
-        html: `
-          <div class="search"><span>⌕</span><input value="" placeholder="Search project"></div>
-          <div class="tree-section">agent cli</div>
-          <div class="tree-row active"><span>▾</span><span class="glyph">▣</span><span class="name">app</span><span class="status-dot green"></span></div>
-          <div class="tree-row indent-1"><span>▾</span><span class="glyph">▣</span><span class="name">src</span></div>
-          <div class="tree-row indent-2"><span class="glyph">⌘</span><span class="name">App.tsx</span><span class="git mod">M</span></div>
-          <div class="tree-row indent-2"><span class="glyph">⌘</span><span class="name">App.css</span><span class="git mod">M</span></div>
-          <div class="tree-row indent-1"><span>▸</span><span class="glyph">▣</span><span class="name">src-tauri</span></div>
-          <div class="tree-row"><span>▾</span><span class="glyph">▣</span><span class="name">docs</span></div>
-          <div class="tree-row indent-1"><span class="glyph">#</span><span class="name">zed-reference-framework.md</span></div>
-          <div class="tree-row indent-1"><span class="glyph">#</span><span class="name">chrome-ui-polish.md</span></div>
-          <div class="tree-row"><span class="glyph">#</span><span class="name">ROADMAP.md</span><span class="git mod">M</span></div>
-          <div class="tree-row"><span class="glyph">{}</span><span class="name">roadmap.json</span><span class="git mod">M</span></div>
-          <div class="tree-section">Sessions</div>
-          <div class="tree-row active"><span class="glyph">✦</span><span class="name">Build chrome pass</span><span>now</span></div>
-          <div class="tree-row"><span class="glyph">✦</span><span class="name">Diff review polish</span><span>1h</span></div>`
-      },
-      search: {
-        title: 'Search',
-        html: `<div class="search"><span>⌕</span><input value="dock panel" aria-label="Search"></div>
-          <div class="tree-section">6 results</div>
-          <div class="tree-row"><span class="glyph">⌘</span><span class="name">app/src/App.tsx</span><span>12</span></div>
-          <div class="tree-row"><span class="glyph">#</span><span class="name">docs/zed-reference-framework.md</span><span>8</span></div>
-          <div class="tree-row"><span class="glyph">#</span><span class="name">ROADMAP.md</span><span>2</span></div>`
-      },
-      git: {
-        title: 'Source Control',
-        html: `<div class="search"><span>⌕</span><input value="" placeholder="Filter changed files"></div>
-          <div class="tree-section">main - 4 changes</div>
-          <div class="tree-row"><span class="git mod">M</span><span class="name">app/src/App.tsx</span><span>+312 -88</span></div>
-          <div class="tree-row"><span class="git mod">M</span><span class="name">app/src/App.css</span><span>+94 -37</span></div>
-          <div class="tree-row"><span class="git new">A</span><span class="name">docs/qa/chrome.png</span></div>
-          <div class="tree-section">Review</div>
-          <button class="pill primary" style="margin-left:8px">Open all diffs</button>`
-      },
-      browser: {
-        title: 'Browser',
-        html: `<div class="tree-section">Preview targets</div>
-          <div class="tree-row active"><span class="glyph">◎</span><span class="name">localhost:5173</span><span class="status-dot green"></span></div>
-          <div class="tree-row"><span class="glyph">◎</span><span class="name">roadmap.html</span></div>
-          <div class="tree-section">Actions</div>
-          <div class="tree-row"><span class="glyph">↻</span><span class="name">Reload preview</span><kbd>⌘R</kbd></div>
-          <div class="tree-row"><span class="glyph">↗</span><span class="name">Open externally</span></div>`
-      },
-      agent: {
-        title: 'Agents',
-        html: `<div class="tree-section">Running</div>
-          <div class="tree-row active"><span class="glyph">✦</span><span class="name">Claude Code - chrome pass</span><span class="status-dot green"></span></div>
-          <div class="tree-row"><span class="glyph">✦</span><span class="name">Codex High - roadmap audit</span><span class="status-dot yellow"></span></div>
-          <div class="tree-section">Available</div>
-          <div class="tree-row"><span class="glyph">⌁</span><span class="name">codex</span></div>
-          <div class="tree-row"><span class="glyph">⌁</span><span class="name">gemini</span></div>
-          <div class="tree-row"><span class="glyph">⌁</span><span class="name">claude</span></div>`
-      }
-    };
-
-    const dockViews = {
-      editor: `
-        <div class="editor-lines">
-          <div class="editor-line"><span><span class="kw">type</span> WorkbenchPanel = {</span></div>
-          <div class="editor-line"><span>  id: PanelId</span></div>
-          <div class="editor-line"><span>  title: string</span></div>
-          <div class="editor-line"><span>  positions: Array&lt;<span class="str">"left"</span> | <span class="str">"right"</span> | <span class="str">"bottom"</span>&gt;</span></div>
-          <div class="editor-line active"><span>  defaultSize: number</span></div>
-          <div class="editor-line"><span>  render: () =&gt; ReactNode</span></div>
-          <div class="editor-line"><span>}</span></div>
-          <div class="editor-line"><span></span></div>
-          <div class="editor-line"><span><span class="kw">const</span> panels = [editorPanel, browserPanel, rawTerminalPanel]</span></div>
-          <div class="editor-line"><span></span></div>
-          <div class="editor-line"><span><span class="cm">// Agent transcript remains the active item.</span></span></div>
-          <div class="editor-line"><span><span class="kw">return</span> &lt;WorkbenchShell center=&lt;AgentSession /&gt; panels={panels} /&gt;</span></div>
-        </div>`,
-      browser: `
-        <div class="browser-preview">
-          <div class="urlbar"><button class="tool">↻</button><div class="url">http://localhost:5173/chrome-pass</div><button class="tool">↗</button></div>
-          <div class="page"><h1>Keelhouse chrome pass</h1><div class="page-grid"><div class="page-card"><strong>Agent workspace</strong><br>Transcript and composer stay primary.</div><div class="page-card"><strong>Zed docks</strong><br>Tools move left, right, or bottom.</div></div></div>
-        </div>`,
-      terminal: `<div class="editor-lines"><div class="editor-line"><span>$ claude</span></div><div class="editor-line"><span>* Sauteed for 3m 14s</span></div><div class="editor-line"><span>Need approval to edit app/src/App.tsx</span></div><div class="editor-line active"><span>› </span></div></div>`
-    };
-
-    function renderPanel(name) {
-      const data = panelData[name] || panelData.project;
-      document.getElementById('panelTitle').textContent = data.title;
-      document.getElementById('panelBody').innerHTML = data.html;
-      document.getElementById('statusPanel').textContent = data.title;
-      document.querySelectorAll('[data-panel]').forEach(btn => btn.classList.toggle('active', btn.dataset.panel === name));
+    const menu = document.getElementById('menu');
+    function rows(type) {
+      const row = (icon, label, key = '') => `<button class="menu-row"><span>${icon}</span><span>${label}</span><span>${key}</span></button>`;
+      if (type === 'new') return `<div class="menu-label">Create</div>${row('+','New Agent Thread','⌘N')}${row('▣','Open Project','⌘O')}${row('↘','Clone Repository','')}`;
+      return `<div class="menu-label">Agent Thread</div>${row('↗','Open in New Window','')}${row('☷','Show Transcript','')}${row('□','Stop Agent','')}`;
     }
-
-    function renderDock(view) {
-      document.getElementById('dockBody').innerHTML = dockViews[view] || dockViews.editor;
-      document.querySelectorAll('[data-view]').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
-    }
-
-    function setDock(position) {
-      const workspace = document.getElementById('workspace');
-      workspace.classList.remove('bottom', 'left-tray', 'hide-tray');
-      if (position === 'bottom') workspace.classList.add('bottom');
-      if (position === 'left') workspace.classList.add('left-tray');
-      if (position === 'hidden') workspace.classList.add('hide-tray');
-      document.getElementById('statusDock').textContent = position;
-    }
-
-    function menuRows(type) {
-      const row = (icon, label, key, attr = '') => `<button class="menu-row" ${attr}><span>${icon}</span><span>${label}</span><span class="note">${key || ''}</span></button>`;
-      if (type === 'dock') return `
-        <div class="menu-label">Move Dock</div>
-        ${row('◧', 'Right', '⌥⌘→', 'data-dock-pos="right"')}
-        ${row('◧', 'Left', '⌥⌘←', 'data-dock-pos="left"')}
-        ${row('◧', 'Bottom', '⌥⌘↓', 'data-dock-pos="bottom"')}
-        ${row('×', 'Hide Dock', '⌥⌘H', 'data-dock-pos="hidden"')}
-        <div class="separator"></div>
-        ${row('⌘', 'Show Editor', '', 'data-dock-view="editor"')}
-        ${row('◎', 'Show Browser', '', 'data-dock-view="browser"')}
-        ${row('⌁', 'Show Raw Terminal', '', 'data-dock-view="terminal"')}`;
-      if (type === 'panel') return `
-        <div class="menu-label">Project Panel</div>
-        ${row('↔', 'Move Panel Right', '')}
-        ${row('↕', 'Reset Width', 'dbl')}
-        ${row('×', 'Hide Panel', '⌘B')}`;
-      if (type === 'session') return `
-        <div class="menu-label">Session</div>
-        ${row('⑂', 'Review Changes', '⌘⇧G')}
-        ${row('⌁', 'Open Raw Terminal', '⌘J')}
-        ${row('□', 'Stop Agent', '')}`;
-      if (type === 'approval') return `
-        <div class="menu-label">Action Approval</div>
-        ${row('!', 'Ask for approval', '')}
-        ${row('✓', 'Approve safe actions', '')}
-        ${row('⚡', 'Full access', 'selected')}`;
-      if (type === 'profile') return `
-        <div class="menu-label">Agent Profile</div>
-        ${row('✦', 'Claude Code', 'active')}
-        ${row('✦', 'Codex High', '')}
-        ${row('⌁', 'Gemini CLI', '')}`;
-      if (type === 'new') return `
-        <div class="menu-label">Create</div>
-        ${row('✦', 'New Agent Session', '⌘N')}
-        ${row('⌁', 'New Raw Terminal', '⌘J')}
-        ${row('▣', 'Open Workspace', '⌘O')}`;
-      return `${row('+', 'Current file', '')}${row('⑂', 'Current diff', '')}${row('◎', 'Browser screenshot', '')}`;
-    }
-
     function openMenu(type, anchor) {
-      const menu = document.getElementById('menu');
-      menu.innerHTML = menuRows(type);
+      menu.innerHTML = rows(type);
       const rect = anchor.getBoundingClientRect();
-      menu.style.left = Math.min(rect.left, window.innerWidth - 260) + 'px';
-      menu.style.top = Math.min(rect.bottom + 6, window.innerHeight - 310) + 'px';
+      menu.style.left = Math.min(rect.left, innerWidth - 250) + 'px';
+      menu.style.top = rect.bottom + 4 + 'px';
       menu.classList.add('open');
-      bind(menu);
     }
-
-    function closeMenu() { document.getElementById('menu').classList.remove('open'); }
-    function openOverlay(id) { document.getElementById(id).classList.add('open'); closeMenu(); }
-
-    function bind(root = document) {
-      root.querySelectorAll('[data-panel]').forEach(btn => btn.onclick = () => renderPanel(btn.dataset.panel));
-      root.querySelectorAll('[data-view]').forEach(btn => btn.onclick = () => renderDock(btn.dataset.view));
-      root.querySelectorAll('[data-menu]').forEach(btn => btn.onclick = e => { e.stopPropagation(); openMenu(btn.dataset.menu, btn); });
-      root.querySelectorAll('[data-dock-pos]').forEach(btn => btn.onclick = () => { setDock(btn.dataset.dockPos); closeMenu(); });
-      root.querySelectorAll('[data-dock-view]').forEach(btn => btn.onclick = () => { renderDock(btn.dataset.dockView); closeMenu(); });
-      root.querySelectorAll('[data-action="palette"]').forEach(btn => btn.onclick = () => openOverlay('paletteOverlay'));
-      root.querySelectorAll('[data-action="settings"]').forEach(btn => btn.onclick = () => openOverlay('settingsOverlay'));
-      root.querySelectorAll('[data-action="hideDock"]').forEach(btn => btn.onclick = () => setDock('hidden'));
-      root.querySelectorAll('[data-close]').forEach(btn => btn.onclick = () => btn.closest('.overlay').classList.remove('open'));
-    }
-
-    function applyParams() {
-      const params = new URLSearchParams(location.search);
-      if (params.get('state') === 'workbench') document.getElementById('firstRun').classList.remove('open');
-      if (params.get('panel')) renderPanel(params.get('panel'));
-      if (params.get('view')) renderDock(params.get('view'));
-      if (params.get('dock')) setDock(params.get('dock'));
-      if (params.get('overlay') === 'settings') openOverlay('settingsOverlay');
-      if (params.get('overlay') === 'palette') openOverlay('paletteOverlay');
-      if (params.get('menu')) {
-        const anchor = document.querySelector(`[data-menu="${params.get('menu')}"]`) || document.querySelector('[data-menu="dock"]');
-        if (anchor) openMenu(params.get('menu'), anchor);
-      }
-    }
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.menu') && !e.target.closest('[data-menu]')) closeMenu();
-    });
+    document.querySelectorAll('[data-menu]').forEach(btn => btn.onclick = e => { e.stopPropagation(); openMenu(btn.dataset.menu, btn); });
+    document.querySelectorAll('[data-close]').forEach(btn => btn.onclick = () => btn.closest('.overlay').classList.remove('open'));
+    document.addEventListener('click', e => { if (!e.target.closest('.menu')) menu.classList.remove('open'); });
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        closeMenu();
-        document.querySelectorAll('.overlay.open').forEach(el => el.classList.remove('open'));
-      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        openOverlay('paletteOverlay');
+        document.getElementById('paletteOverlay').classList.add('open');
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault();
+        document.getElementById('settingsOverlay').classList.add('open');
+      }
+      if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(el => el.classList.remove('open'));
     });
-
-    renderPanel('project');
-    renderDock('editor');
-    bind(document);
-    applyParams();
+    const params = new URLSearchParams(location.search);
+    if (params.get('overlay') === 'palette') document.getElementById('paletteOverlay').classList.add('open');
+    if (params.get('overlay') === 'settings') document.getElementById('settingsOverlay').classList.add('open');
+    if (params.get('menu')) openMenu(params.get('menu'), document.querySelector('[data-menu="new"]'));
   </script>
 </body>
 </html>
