@@ -54,6 +54,10 @@ assert(appTsx.includes("TOOL_TRAY_MODE_STORAGE_KEY"), "Tool tray tab mode must p
 assert(appTsx.includes("workbench--tools-${toolTrayMode}"), "Workbench must render the active tool tray mode class");
 assert(appTsx.includes("toolTrayMode === \"split\" ? ("), "Editor/browser splitter must render only in split tray mode");
 assert(appTsx.includes("tool-tray-switcher"), "App chrome must expose compact tool tray tabs");
+assert(appTsx.includes("commandPaletteOpen"), "App chrome must expose a command palette state");
+assert(appTsx.includes("shortcutKeys(\"chrome.command-palette\")"), "Command palette must show its shortcut label");
+assert(appCss.includes(".command-palette"), "App CSS must style the command palette surface");
+assert(appCss.includes(".command-palette__row--active"), "Command palette must have a visible active row state");
 assert(editorQaFixture.includes("Project threads drawer"), "Editor QA fixture must reflect the project-thread drawer");
 assert(!editorQaFixture.includes(">Drawer<"), "Editor QA fixture must not show a generic Drawer label");
 assert(editorQaFixture.includes("Agent thread and raw terminal"), "Editor QA fixture must reflect the agent-thread surface label");

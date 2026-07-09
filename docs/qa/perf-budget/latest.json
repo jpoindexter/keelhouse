@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-09T17:54:06.768Z",
-  "commit": "c7741ee+dirty",
+  "generatedAt": "2026-07-09T18:04:56.982Z",
+  "commit": "7531bc1+dirty",
   "branch": "main",
   "status": "baseline-ready",
   "northStar": "daily-driver workflow runs completed without opening VS Code",
@@ -8,14 +8,14 @@
     {
       "id": "total-js-assets",
       "label": "Total built JS assets",
-      "actualBytes": 1166899,
+      "actualBytes": 1172413,
       "limitBytes": 1400000,
       "pass": true
     },
     {
       "id": "total-css-assets",
       "label": "Total built CSS assets",
-      "actualBytes": 52715,
+      "actualBytes": 54687,
       "limitBytes": 90000,
       "pass": true
     }
@@ -24,7 +24,7 @@
     {
       "id": "largest-js-vite-warning",
       "label": "Largest JS chunk stays below Vite warning size",
-      "actualBytes": 1166899,
+      "actualBytes": 1172413,
       "limitBytes": 500000,
       "pass": false,
       "note": "Warning only for now because CodeMirror language packages already exceed Vite's default chunk warning."
@@ -111,20 +111,20 @@
   "metrics": {
     "assets": [
       {
-        "file": "app/dist/assets/index-B2jnOYLV.js",
-        "bytes": 1166899,
-        "ext": ".js"
+        "file": "app/dist/assets/index-3BSHjO5A.css",
+        "bytes": 54687,
+        "ext": ".css"
       },
       {
-        "file": "app/dist/assets/index-fBQw2pQu.css",
-        "bytes": 52715,
-        "ext": ".css"
+        "file": "app/dist/assets/index-B1tTCpL0.js",
+        "bytes": 1172413,
+        "ext": ".js"
       }
     ],
     "totals": {
-      "totalJsBytes": 1166899,
-      "totalCssBytes": 52715,
-      "largestJsBytes": 1166899
+      "totalJsBytes": 1172413,
+      "totalCssBytes": 54687,
+      "largestJsBytes": 1172413
     }
   },
   "nextLiveMeasurements": [

@@ -116,6 +116,7 @@ import { AppIcon, paneStateAccessibleLabel, paneStateIconName } from "./icons";
 import { agentActivityAccessibleLabel, agentActivityIconName } from "./icons";
 import type { AppIconName } from "./icons";
 import { shortcutKeys, shortcutTitle } from "./shortcuts";
+import { filterCommandPaletteCommands, type CommandPaletteCommand as CommandPaletteCommandBase } from "./commandPalette";
 import {
   AGENT_ACTIVITY_LOG_FILTERS,
   MAX_AGENT_ACTIVITY_LOG_EVENTS,
@@ -246,6 +247,10 @@ type ContextMenuItem = {
   onSelect: () => void;
 };
 type ContextMenuState = { x: number; y: number; items: ContextMenuItem[] };
+type CommandPaletteCommand = CommandPaletteCommandBase & {
+  icon: AppIconName;
+  run: () => void;
+};
 
 const FONT_SIZE = 15;
 const FONT_FAMILY = "JetBrains Mono, monospace";
@@ -326,6 +331,14 @@ const formatBytes = (bytes: number | null) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+const DRAWER_MODES: { id: SideDrawerMode; label: string; icon: AppIconName }[] = [
+  { id: "projects", label: "Projects", icon: "workspace" },
+  { id: "files", label: "Files", icon: "file" },
+  { id: "search", label: "Search", icon: "search" },
+  { id: "git", label: "Git", icon: "git" },
+  { id: "browser", label: "Browser", icon: "browser" },
+  { id: "settings", label: "Settings", icon: "settings" },
+];
 const normalizePaneLabelsBySession = (value: unknown): PaneLabelsBySession => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return Object.fromEntries(
@@ -466,6 +479,7 @@ function App() {
   const editorBuffersRef = useRef<Record<string, EditorBuffer>>({});
   const sessionEditorSnapshotsRef = useRef<Record<string, ProjectEditorSnapshot>>({});
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const commandPaletteInputRef = useRef<HTMLInputElement | null>(null);
   const pendingEditorFocusRef = useRef(false);
   const editorLoadSeq = useRef(0);
   const latest = useRef<Snapshot | null>(null);
@@ -517,6 +531,9 @@ function App() {
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
   const [draftDialogError, setDraftDialogError] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
+  const [commandPaletteActiveIndex, setCommandPaletteActiveIndex] = useState(0);
   const [composerDraft, setComposerDraft] = useState("");
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
@@ -2752,6 +2769,19 @@ function App() {
     if (!item.disabled) item.onSelect();
   };
 
+  const openCommandPalette = () => {
+    setContextMenu(null);
+    setCommandPaletteQuery("");
+    setCommandPaletteActiveIndex(0);
+    setCommandPaletteOpen(true);
+  };
+
+  const closeCommandPalette = () => {
+    setCommandPaletteOpen(false);
+    setCommandPaletteQuery("");
+    setCommandPaletteActiveIndex(0);
+  };
+
   const moveContextMenuFocus = (event: ReactKeyboardEvent<HTMLDivElement>, direction: 1 | -1) => {
     const buttons = Array.from(contextMenuRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
     if (buttons.length === 0) return;
@@ -2959,6 +2989,202 @@ function App() {
       disabled: !workspacePath,
     }),
   ];
+
+  const activeTerminalPaneCommandIndex = activeTerminalPane ? terminalPanes.findIndex((pane) => pane.id === activeTerminalPane.id) : -1;
+  const activeTerminalPaneLabelForCommands = activeTerminalPane
+    ? terminalPaneLabel(activeTerminalPane, activeTerminalPaneCommandIndex >= 0 ? activeTerminalPaneCommandIndex : activeTerminalPane.slot)
+    : null;
+  const commandPaletteCommands: CommandPaletteCommand[] = [
+    {
+      id: "workspace.open",
+      label: "Open Folder",
+      detail: "Choose a project folder",
+      shortcut: shortcutKeys("workspace.open"),
+      icon: "folderOpen",
+      keywords: ["project", "workspace"],
+      run: () => void pickWorkspace(),
+    },
+    {
+      id: "editor.save",
+      label: "Save",
+      detail: selectedFile ? selectedFile.path : "Save the active editor file",
+      shortcut: shortcutKeys("editor.save"),
+      icon: "save",
+      disabled: !editorDirty || editorSaving || editorLoading,
+      keywords: ["file", "write"],
+      run: () => void saveEditorFile(),
+    },
+    {
+      id: "editor.find",
+      label: "Find and Replace",
+      detail: selectedFile ? selectedFile.name : "Open a file to search inside it",
+      shortcut: shortcutKeys("editor.find"),
+      icon: "search",
+      disabled: !selectedFile || editorLoading,
+      keywords: ["search", "editor"],
+      run: openEditorSearch,
+    },
+    {
+      id: "editor.close-tab",
+      label: "Close Tab",
+      detail: selectedFile ? selectedFile.name : "No editor tab selected",
+      shortcut: shortcutKeys("editor.close-tab"),
+      icon: "close",
+      disabled: !selectedFile,
+      keywords: ["editor"],
+      run: () => selectedFile && void closeEditorTab(selectedFile),
+    },
+    {
+      id: "terminal.new-pane",
+      label: `New ${launchProfile.label} Pane`,
+      detail: workspacePath ? basename(workspacePath) : "Open a folder before creating a pane",
+      icon: "terminal",
+      disabled: !workspacePath || launchProfileChanging,
+      keywords: ["agent", "terminal", "claude", "codex"],
+      run: () => void createTerminalPane(launchProfile),
+    },
+    {
+      id: "terminal.restart-pane",
+      label: "Restart Selected Process",
+      detail: activeTerminalPaneLabelForCommands ?? "No pane selected",
+      icon: "reload",
+      disabled: !activeTerminalPane || launchProfileChanging,
+      keywords: ["agent", "terminal"],
+      run: () => activeTerminalPane && void restartTerminalPane(activeTerminalPane),
+    },
+    {
+      id: "terminal.kill-pane",
+      label: "Kill Selected Process",
+      detail: activeTerminalPaneLabelForCommands ?? "No pane selected",
+      icon: "stop",
+      disabled: !activeTerminalPane || activeTerminalPane.state === "exited",
+      keywords: ["agent", "terminal", "stop"],
+      run: () => activeTerminalPane && void terminateTerminalPane(activeTerminalPane),
+    },
+    {
+      id: "terminal.close-pane",
+      label: "Close Selected Pane",
+      detail: activeTerminalPaneLabelForCommands ?? "No pane selected",
+      icon: "close",
+      disabled: !activeAgentSessionHandle,
+      keywords: ["agent", "terminal"],
+      run: () => activeAgentSessionHandle && void activeAgentSessionHandle.close(),
+    },
+    {
+      id: "terminal.clear",
+      label: "Clear Terminal",
+      detail: activeTerminalPaneLabelForCommands ?? "No pane selected",
+      shortcut: shortcutKeys("terminal.clear"),
+      icon: "terminal",
+      disabled: !activeTerminalPane,
+      keywords: ["agent", "screen"],
+      run: () => void clearActiveTerminal(),
+    },
+    {
+      id: "browser.reload",
+      label: "Reload Preview",
+      detail: browserUrl,
+      icon: "reload",
+      keywords: ["browser", "preview"],
+      run: reloadBrowserPreview,
+    },
+    {
+      id: "browser.open-detected",
+      label: "Open Detected Dev Server",
+      detail: activeDetectedLocalDevServer?.url ?? "No detected local server",
+      icon: "browser",
+      disabled: !activeDetectedLocalDevServer,
+      keywords: ["localhost", "preview", "vite", "next"],
+      run: () => void openDetectedLocalDevServer(),
+    },
+    ...DRAWER_MODES.map((mode): CommandPaletteCommand => ({
+      id: `drawer.${mode.id}`,
+      label: `Show ${mode.label}`,
+      detail: "Switch side drawer",
+      icon: mode.icon,
+      keywords: ["drawer", "sidebar", mode.id],
+      run: () => {
+        setSideDrawerCollapsed(false);
+        setSideDrawerMode(mode.id);
+      },
+    })),
+    ...([
+      ["right", "Dock Tools Right"],
+      ["left", "Dock Tools Left"],
+      ["bottom", "Dock Tools Bottom"],
+      ["hidden", "Hide Tool Tray"],
+    ] as const).map(([mode, label]): CommandPaletteCommand => ({
+      id: `layout.${mode}`,
+      label,
+      detail: "Move or hide the editor/browser tray",
+      icon: mode === "hidden" ? "close" : "browser",
+      keywords: ["layout", "tray", "dock"],
+      run: () => setWorkbenchLayout(mode),
+    })),
+    ...([
+      ["split", "Show Split Tools"],
+      ["editor", "Show Editor Tray"],
+      ["browser", "Show Browser Tray"],
+    ] as const).map(([mode, label]): CommandPaletteCommand => ({
+      id: `tool-tray.${mode}`,
+      label,
+      detail: "Choose visible tool tray content",
+      icon: mode === "browser" ? "browser" : mode === "editor" ? "file" : "workspace",
+      keywords: ["tray", "editor", "browser"],
+      run: () => {
+        if (workbenchLayout === "hidden") setWorkbenchLayout("right");
+        setToolTrayMode(mode);
+      },
+    })),
+    {
+      id: "composer.attach-current",
+      label: "Attach Current File",
+      detail: selectedFile ? selectedFile.path : "Open a file first",
+      icon: "file",
+      disabled: !selectedFile || !activeComposerHarnessKey,
+      keywords: ["composer", "context"],
+      run: () => void attachSelectedFileToComposer(),
+    },
+    {
+      id: "composer.attach-preview",
+      label: "Attach Browser Preview",
+      detail: browserUrl,
+      icon: "browser",
+      disabled: !activeComposerHarnessKey,
+      keywords: ["composer", "context", "browser"],
+      run: () => void attachPreviewToComposer(),
+    },
+  ];
+  const visibleCommandPaletteCommands = filterCommandPaletteCommands(commandPaletteCommands, commandPaletteQuery);
+  const activeCommandPaletteCommand = visibleCommandPaletteCommands[commandPaletteActiveIndex] ?? visibleCommandPaletteCommands[0] ?? null;
+
+  const runCommandPaletteCommand = (command: CommandPaletteCommand | null) => {
+    if (!command || command.disabled) return;
+    closeCommandPalette();
+    command.run();
+  };
+
+  const handleCommandPaletteKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCommandPalette();
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setCommandPaletteActiveIndex((index) => visibleCommandPaletteCommands.length === 0 ? 0 : (index + 1) % visibleCommandPaletteCommands.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setCommandPaletteActiveIndex((index) => visibleCommandPaletteCommands.length === 0 ? 0 : (index - 1 + visibleCommandPaletteCommands.length) % visibleCommandPaletteCommands.length);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      runCommandPaletteCommand(activeCommandPaletteCommand);
+    }
+  };
+
+  useEffect(() => {
+    if (!commandPaletteOpen) return;
+    setCommandPaletteActiveIndex(0);
+    requestAnimationFrame(() => commandPaletteInputRef.current?.focus());
+  }, [commandPaletteOpen, commandPaletteQuery]);
 
   const tabIsDirty = (path: string) => dirtyTabPathSet.has(path);
 
@@ -3262,8 +3488,13 @@ function App() {
 
     const onKey = (e: KeyboardEvent) => {
       const target = e.target instanceof HTMLElement ? e.target : null;
-      if (target?.closest(".file-rail, .editor-area, .browser-preview, .terminal-titlebar, .agent-composer")) return;
       if (e.isComposing) return;
+      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        openCommandPalette();
+        return;
+      }
+      if (target?.closest(".file-rail, .editor-area, .browser-preview, .terminal-titlebar, .agent-composer, .command-palette")) return;
       if (activeTerminalPaneIdRef.current == null) return;
       // Cmd (meta) combos are app-level, not pty input. Let them through so the
       // native copy/paste clipboard events fire; handle the few we own explicitly.
@@ -3441,15 +3672,7 @@ function App() {
   const activeSessionTitle = activeSessionId
     ? projectSessionsFor(workspacePath ?? "").find((session) => session.id === activeSessionId)?.title ?? "New session"
     : "No session";
-  const drawerModes: { id: SideDrawerMode; label: string; icon: AppIconName }[] = [
-    { id: "projects", label: "Projects", icon: "workspace" },
-    { id: "files", label: "Files", icon: "file" },
-    { id: "search", label: "Search", icon: "search" },
-    { id: "git", label: "Git", icon: "git" },
-    { id: "browser", label: "Browser", icon: "browser" },
-    { id: "settings", label: "Settings", icon: "settings" },
-  ];
-  const activeDrawerMode = drawerModes.find((mode) => mode.id === sideDrawerMode) ?? drawerModes[0];
+  const activeDrawerMode = DRAWER_MODES.find((mode) => mode.id === sideDrawerMode) ?? DRAWER_MODES[0];
   const drawerActiveTitle = sideDrawerMode === "projects" ? "Project threads" : activeDrawerMode.label;
 
   return (
@@ -3475,6 +3698,10 @@ function App() {
           </span>
         </div>
         <div className="titlebar-actions">
+          <button className="titlebar-action" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Command palette")}>
+            <AppIcon name="search" />
+            <span>Commands</span>
+          </button>
           <button className="titlebar-action" type="button" onClick={pickWorkspace}>
             <AppIcon name="folderOpen" />
             <span>Open Folder</span>
@@ -3500,7 +3727,7 @@ function App() {
           </button>
         </div>
         <div className="drawer-mode-switcher" role="tablist" aria-label="Side drawer">
-          {drawerModes.map((mode) => (
+          {DRAWER_MODES.map((mode) => (
             <button
               className={`drawer-mode-switcher__button ${sideDrawerMode === mode.id ? "drawer-mode-switcher__button--active" : ""}`}
               type="button"
@@ -4822,6 +5049,60 @@ function App() {
               {item.shortcut ? <span className="context-menu__shortcut">{item.shortcut}</span> : null}
             </button>
           ))}
+        </div>
+      ) : null}
+      {commandPaletteOpen ? (
+        <div className="command-palette-backdrop" role="presentation" onPointerDown={closeCommandPalette}>
+          <section
+            className="command-palette"
+            aria-label="Command palette"
+            role="dialog"
+            aria-modal="true"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <div className="command-palette__field">
+              <AppIcon name="search" />
+              <input
+                ref={commandPaletteInputRef}
+                value={commandPaletteQuery}
+                aria-label="Search commands"
+                placeholder="Run a command..."
+                onChange={(event) => {
+                  setCommandPaletteQuery(event.currentTarget.value);
+                  setCommandPaletteActiveIndex(0);
+                }}
+                onKeyDown={handleCommandPaletteKeyDown}
+              />
+              <span>{shortcutKeys("chrome.command-palette")}</span>
+            </div>
+            <div className="command-palette__list" role="listbox" aria-label="Commands">
+              {visibleCommandPaletteCommands.length > 0 ? (
+                visibleCommandPaletteCommands.map((command, index) => (
+                  <button
+                    className={`command-palette__row ${index === commandPaletteActiveIndex ? "command-palette__row--active" : ""}`}
+                    type="button"
+                    role="option"
+                    aria-selected={index === commandPaletteActiveIndex}
+                    disabled={command.disabled}
+                    key={command.id}
+                    onPointerMove={() => setCommandPaletteActiveIndex(index)}
+                    onClick={() => runCommandPaletteCommand(command)}
+                  >
+                    <span className="command-palette__icon">
+                      <AppIcon name={command.icon} />
+                    </span>
+                    <span className="command-palette__copy">
+                      <strong>{command.label}</strong>
+                      <span>{command.detail}</span>
+                    </span>
+                    {command.shortcut ? <span className="command-palette__shortcut">{command.shortcut}</span> : null}
+                  </button>
+                ))
+              ) : (
+                <div className="command-palette__empty">No commands match</div>
+              )}
+            </div>
+          </section>
         </div>
       ) : null}
       {pendingNavigation && selectedFile ? (

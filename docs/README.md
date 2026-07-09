@@ -45,6 +45,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `chrome-polish-system.md`: current token/state system and deferred chrome surfaces.
 - `icon-system.md`: SVG icon family, status mapping, and QA fixture coverage.
 - `accessibility-basics.md`: v0.5 keyboard, focus, and accessible-name baseline.
+- `command-palette.md`: keyboard-first app action surface and current command scope.
 
 ## Quality References
 

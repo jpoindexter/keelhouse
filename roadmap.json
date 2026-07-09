@@ -847,8 +847,8 @@
       "track": "ui",
       "size": "S",
       "launch": "v2",
-      "summary": "A compact VS Code-style way to expose actions without adding IDE chrome: open folder, quick open, new agent pane, split, restart, kill, save, search, settings. It should share the same command registry as shortcuts and context menus.",
-      "done": "A keyboard palette can run core app actions, shows shortcuts where assigned, and stays consistent with menu/context-menu labels."
+      "summary": "A compact VS Code-style way to expose actions without adding IDE chrome. Current slice adds a real Shift+Cmd+P palette for existing app-owned actions: open folder, save/find/close tab, pane create/restart/kill/close/clear, browser reload/open detected, drawer switches, tray switches, and composer context attachments.",
+      "done": "A keyboard palette can run core app actions, shows shortcuts where assigned, and stays consistent with menu/context-menu labels. Current slice keeps Cmd+P quick-open, ripgrep text search, and terminal scrollback search with SEARCH and TERMINAL-FIND."
     },
     {
       "id": "SEARCH",

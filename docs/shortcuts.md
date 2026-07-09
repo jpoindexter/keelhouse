@@ -19,13 +19,13 @@ Keelhouse keeps VS Code/macOS muscle memory for the workflow it actually support
 | Composer | `Shift+Enter` | Newline | Keeps editing the draft. |
 | Composer | `Escape` | Blur Composer | Leaves the composer without discarding text. |
 | Composer | `Up` / `Down` | Draft History | Recalls previous submitted drafts. |
+| Chrome | `Shift+Cmd+P` | Command Palette | Opens app-owned actions; `Cmd+K` remains terminal clear. |
 
 ## Planned or Deferred
 
 | Shortcut | Planned Action | Current Exception |
 |---|---|---|
 | `Cmd+P` | Quick open / file search | Deferred until `SEARCH` / `COMMAND-PALETTE`. |
-| `Shift+Cmd+P` | Command palette | Deferred until `COMMAND-PALETTE`; `Cmd+K` remains terminal clear in v0.5. |
 | <code>Cmd+Shift+`</code> | New terminal pane | Pane UI exists; shortcut binding remains deferred until keybinding conflicts are settled. |
 | `Cmd+\` | Split terminal pane | Deferred; PANE-MANAGER uses a pane strip before split layout. |
 | `Cmd+Option+Left/Right` | Move between panes/projects | Deferred until multi-pane/project focus exists. |

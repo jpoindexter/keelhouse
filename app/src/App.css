@@ -598,6 +598,127 @@ body,
   font-size: 11px;
 }
 
+.command-palette-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.36);
+  padding-top: 9vh;
+}
+
+.command-palette {
+  display: grid;
+  width: min(680px, calc(100vw - 40px));
+  max-height: min(560px, calc(100vh - 96px));
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  background: var(--menu-bg);
+  box-shadow: var(--shadow-overlay);
+}
+
+.command-palette__field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--color-border);
+  background: #181c22;
+  color: var(--color-text-muted);
+  padding: 9px 12px;
+}
+
+.command-palette__field input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-strong);
+  font: 14px/20px var(--font-ui);
+}
+
+.command-palette__field span {
+  color: var(--color-text-subtle);
+  font-size: 11px;
+}
+
+.command-palette__list {
+  overflow: auto;
+  padding: 5px;
+}
+
+.command-palette__row {
+  display: grid;
+  width: 100%;
+  min-height: 42px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: default;
+  font: inherit;
+  padding: 5px 9px;
+  text-align: left;
+}
+
+.command-palette__row:hover:not(:disabled),
+.command-palette__row--active:not(:disabled) {
+  background: var(--menu-item-hover);
+}
+
+.command-palette__row:disabled {
+  color: var(--color-text-disabled);
+}
+
+.command-palette__icon {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: var(--color-text-muted);
+}
+
+.command-palette__copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.command-palette__copy strong,
+.command-palette__copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette__copy strong {
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.command-palette__copy span,
+.command-palette__shortcut,
+.command-palette__empty {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.command-palette__shortcut {
+  justify-self: end;
+}
+
+.command-palette__empty {
+  padding: 18px 12px;
+}
+
 .rail-root {
   display: flex;
   overflow: hidden;

@@ -131,9 +131,9 @@ export const SHORTCUTS: Shortcut[] = [
     label: "Command palette",
     scope: "Chrome",
     keys: ["Shift+Cmd+P"],
-    status: "planned",
-    behavior: "Planned compact action access using the shared command registry.",
-    exception: "Cmd+K remains terminal clear for v0.5.",
+    status: "active",
+    behavior: "Open the compact action palette backed by the shared command labels.",
+    exception: "Cmd+K remains terminal clear.",
   },
   {
     id: "terminal.new-pane",

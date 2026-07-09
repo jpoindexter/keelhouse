@@ -1,17 +1,17 @@
 # Performance Budget
 
-Generated: 2026-07-09T17:54:06.768Z
-Commit: c7741ee+dirty
+Generated: 2026-07-09T18:04:56.982Z
+Commit: 7531bc1+dirty
 Status: baseline-ready
 
 ## Hard Budgets
 
-- PASS Total built JS assets: 1139.5 KiB / 1367.2 KiB
-- PASS Total built CSS assets: 51.5 KiB / 87.9 KiB
+- PASS Total built JS assets: 1144.9 KiB / 1367.2 KiB
+- PASS Total built CSS assets: 53.4 KiB / 87.9 KiB
 
 ## Soft Budgets
 
-- WARN Largest JS chunk stays below Vite warning size: 1139.5 KiB / 488.3 KiB
+- WARN Largest JS chunk stays below Vite warning size: 1144.9 KiB / 488.3 KiB
   - Warning only for now because CodeMirror language packages already exceed Vite's default chunk warning.
 
 ## Source Checks

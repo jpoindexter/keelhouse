@@ -11,13 +11,13 @@ describe("shortcut baseline", () => {
     expect(shortcutKeys("terminal.paste")).toBe("Cmd+V");
     expect(shortcutKeys("terminal.clear")).toBe("Cmd+K");
     expect(shortcutKeys("composer.send")).toBe("Enter");
+    expect(shortcutKeys("chrome.command-palette")).toBe("Shift+Cmd+P");
   });
 
   it("documents planned shortcut exceptions instead of implying unsupported behavior", () => {
     const planned = SHORTCUTS.filter((shortcut) => shortcut.status === "planned");
     expect(planned.map((shortcut) => shortcut.id)).toEqual([
       "workspace.quick-open",
-      "chrome.command-palette",
       "terminal.new-pane",
       "terminal.split-pane",
       "terminal.focus-next-pane",

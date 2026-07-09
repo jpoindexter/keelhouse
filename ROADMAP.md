@@ -120,6 +120,7 @@ This is where the clarified product point lands: not "terminal app with optional
 ## v2 — Workflow leverage
 
 - **COMMAND-PALETTE:** VS Code-style compact action access without adding IDE chrome; uses the same command registry as shortcuts and context menus.
+  - 2026-07-09 slice: added a real `Shift+Cmd+P` command palette plus titlebar Commands entry. It filters command labels/details/shortcuts/keywords, runs existing app-owned actions for open/save/find/tabs/panes/browser/drawers/trays/composer attachments, shows shortcut labels where assigned, and keeps `Cmd+P` quick-open/search deferred to `SEARCH`.
 - **SEARCH:** file quick-open and ripgrep-backed text search.
 - **TERMINAL-FIND:** search active terminal output/scrollback.
 - **SETTINGS-PARITY:** Codex-style searchable settings shell, keeping only useful workbench categories and dropping account/chat novelty categories.
