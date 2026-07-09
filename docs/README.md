@@ -17,6 +17,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `../STATE.md`: current handoff, verified slices, and next execution step.
 - `product-positioning.md`: name decision, one-liner, and language rules.
 - `reference-products.md`: source-backed reference products and what Keelhouse should borrow or reject.
+- `zed-reference-framework.md`: local Zed source audit and Keelhouse workbench-shell translation.
 
 ## Product Scope
 
