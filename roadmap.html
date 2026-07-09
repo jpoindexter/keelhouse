@@ -66,7 +66,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>Keelhouse</h1>
-<p class="meta">lean macOS agent cockpit for Jason's real workflow — real CLI agents first, with resizable explorer/editor/browser trays, without IDE bloat &middot; 75 slices &middot; 6 shipped</p>
+<p class="meta">lean macOS agent cockpit for Jason's real workflow — real CLI agents first, with resizable explorer/editor/browser trays, without IDE bloat &middot; 82 slices &middot; 6 shipped</p>
 <p class="loop">Open project folder → talk to one or more real Claude/Codex/Gemini CLI agents in the main cockpit → resize or move trays to inspect/edit files or preview web output → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat. Product name: Keelhouse; repo/package slug: agent-cli.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Terminal + process</span><span><i style="border-color:#5a4315;background:#171104"></i>Projects + sessions</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Files + editor</span><span><i style="border-color:#4c1d6f;background:#15091f"></i>Chrome + interaction</span><span><i style="border-color:#5f1f2d;background:#1d0b10"></i>Quality + shipping</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research &amp; spikes</span><span style="color:#f87171">🔒 launch blocker</span></div>
 <div class="filters">
@@ -302,6 +302,18 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">CHROME-COHERENCE-PASS &middot; Workbench chrome coherence pass</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Fix the actual shell before measurement using VS Code/Zed-level chrome craft without copying either product, with demo/cockpit-demo.html as the graphite mood reference and Codex as the clean-composition reference: one large agent-first window, a direct thread/project sidebar on the left, no decorative left activity rail, flat toolbar icons, steel-cyan accent, minimal rounded button chrome, resizable splitters, and editor/browser/git/raw terminal as docked tool panes only when needed. Target walkthrough: demo/keelhouse-chrome-demo.html.</p>
 <details><summary>Done criteria</summary><p class="done">The default screen reads as one agent-first cockpit, not stacked panes or an editor-first IDE. Projects/sessions appear in a direct left sidebar, not a decorative activity rail; editor/browser/git/raw terminal are movable/resizable tool panes using a typed panel contract inspired by disciplined native workbench chrome; dropdowns/context menus use flat polished chrome; fake navigation/window controls and pill-heavy rounded controls are gone; screenshot QA covers full, narrow, menu, settings, and command-palette states, matching the demo/keelhouse-chrome-demo.html walkthrough.</p></details></div>
+<div class="card" data-track="ui" data-id="CHROME-DEMO-CONTRACT" data-size="S" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">CHROME-DEMO-CONTRACT &middot; Accepted chrome demo contract</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Treat demo/keelhouse-chrome-demo.html as the visual contract for the app pass.</p>
+<details><summary>Done criteria</summary><p class="done">The real app matches the accepted demo direction: graphite shell, steel-cyan accent, direct thread/project sidebar, agent-first center, right/bottom trays, flat toolbar icons, and no orange accents, fake browser chrome, decorative activity rail, or pill-heavy controls.</p></details></div>
+<div class="card" data-track="ui" data-id="APP-CHROME-PORT" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">APP-CHROME-PORT &middot; Port accepted chrome into app</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Port the accepted demo into the real Tauri app shell without losing current v1 functionality.</p>
+<details><summary>Done criteria</summary><p class="done">Projects/Files/Search/Git/Browser/Settings drawers, multi-pane sessions, browser preview, editor tray, git diff actions, composer harness, activity log, and process lifecycle still work after the chrome port; screenshots prove the default shell no longer resembles stacked panes.</p></details></div>
+<div class="card" data-track="ui" data-id="AGENT-THREAD-SURFACE" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">AGENT-THREAD-SURFACE &middot; Agent thread as main surface</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Chat/activity is the working surface; raw terminal is available but not the default screen.</p>
+<details><summary>Done criteria</summary><p class="done">The main surface shows prompt, thinking/status, tool/file/action rows, inline approvals, and a bottom composer. It does not show Jason/Keelhouse avatar blocks, duplicate chat identities, or a raw terminal as the primary default view.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
@@ -328,6 +340,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">Find text in the active pane scrollback, jump next/previous, and preserve terminal focus behavior.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
+<div class="card" data-track="ui" data-id="TRAY-DOCKING-UX" data-size="M" data-tier="pebble" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">TRAY-DOCKING-UX &middot; Movable resizable tool trays</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">Editor, files, browser, git, and raw terminal should feel like tool trays around the agent conversation, not stacked panels.</p>
+<details><summary>Done criteria</summary><p class="done">Tool surfaces support left, right, bottom, and hidden states with clear splitters, compact tabs, persisted sizes, and no content overlap at narrow widths.</p></details></div>
 <div class="card" data-track="ui" data-id="COMMAND-PALETTE" data-size="S" data-tier="pebble" data-launch="v2">
 <div class="hd"><span class="sz">S</span><span class="ttl">COMMAND-PALETTE &middot; VS Code-style command palette</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">A compact VS Code-style way to expose actions without adding IDE chrome: open folder, quick open, new agent pane, split, restart, kill, save, search, settings. It should share the same command registry as shortcuts and context menus.</p>
@@ -360,6 +376,20 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">PACKAGING &middot; Local app packaging</span><span class="lens l-quality">Quality + shipping</span></div>
 <div class="badges"><span class="me ver">v2</span></div><p class="sum">Make it launch like a real macOS app, not only from `npm run tauri dev`.</p>
 <details><summary>Done criteria</summary><p class="done">A local signed or ad-hoc packaged .app launches, opens folders, and runs agents with documented setup requirements.</p></details></div>
+</div>
+<div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
+<div class="card" data-track="ui" data-id="CHROME-CONTROL-POLISH" data-size="S" data-tier="sand" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">CHROME-CONTROL-POLISH &middot; Native-feeling controls and icons</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">Flatten obvious AI-looking rounded rectangles into native-feeling toolbar, menu, dropdown, and command controls.</p>
+<details><summary>Done criteria</summary><p class="done">Toolbar buttons, menus, dropdowns, command palette rows, settings rows, and tray tabs use consistent outline iconography, subtle hover/focus/disabled states, and labels only where icons are ambiguous.</p></details></div>
+<div class="card" data-track="ui" data-id="STEEL-CYAN-THEME-GATE" data-size="S" data-tier="sand" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">STEEL-CYAN-THEME-GATE &middot; Graphite and steel-cyan theme gate</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">Lock the accepted graphite shell and steel-cyan accent into semantic tokens and QA checks.</p>
+<details><summary>Done criteria</summary><p class="done">Chrome tokens use graphite surfaces and steel-cyan accents; QA or lint checks catch orange/warm accent drift, purple-heavy gradients, and one-note palette regressions.</p></details></div>
+<div class="card" data-track="quality" data-id="CHROME-QA-GATE" data-size="S" data-tier="sand" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">CHROME-QA-GATE &middot; Chrome screenshot QA gate</span><span class="lens l-quality">Quality + shipping</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">Every chrome pass must prove the accepted states still hold visually and mechanically.</p>
+<details><summary>Done criteria</summary><p class="done">First-open, create-menu, settings, palette, and narrow screenshots are refreshed; the report includes overflow checks, avatar-label checks, active-row-radius checks, and accent-token checks before the slice is called done.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="later"><h2 class="s-later">Later</h2>

@@ -727,6 +727,86 @@
       "done": "The default screen reads as one agent-first cockpit, not stacked panes or an editor-first IDE. Projects/sessions appear in a direct left sidebar, not a decorative activity rail; editor/browser/git/raw terminal are movable/resizable tool panes using a typed panel contract inspired by disciplined native workbench chrome; dropdowns/context menus use flat polished chrome; fake navigation/window controls and pill-heavy rounded controls are gone; screenshot QA covers full, narrow, menu, settings, and command-palette states, matching the demo/keelhouse-chrome-demo.html walkthrough."
     },
     {
+      "id": "CHROME-DEMO-CONTRACT",
+      "title": "Accepted chrome demo contract",
+      "column": "now",
+      "tier": "rock",
+      "track": "ui",
+      "size": "S",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "Treat demo/keelhouse-chrome-demo.html as the visual contract for the app pass.",
+      "done": "The real app matches the accepted demo direction: graphite shell, steel-cyan accent, direct thread/project sidebar, agent-first center, right/bottom trays, flat toolbar icons, and no orange accents, fake browser chrome, decorative activity rail, or pill-heavy controls."
+    },
+    {
+      "id": "APP-CHROME-PORT",
+      "title": "Port accepted chrome into app",
+      "column": "now",
+      "tier": "rock",
+      "track": "ui",
+      "size": "M",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "Port the accepted demo into the real Tauri app shell without losing current v1 functionality.",
+      "done": "Projects/Files/Search/Git/Browser/Settings drawers, multi-pane sessions, browser preview, editor tray, git diff actions, composer harness, activity log, and process lifecycle still work after the chrome port; screenshots prove the default shell no longer resembles stacked panes."
+    },
+    {
+      "id": "AGENT-THREAD-SURFACE",
+      "title": "Agent thread as main surface",
+      "column": "now",
+      "tier": "rock",
+      "track": "ui",
+      "size": "M",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "Chat/activity is the working surface; raw terminal is available but not the default screen.",
+      "done": "The main surface shows prompt, thinking/status, tool/file/action rows, inline approvals, and a bottom composer. It does not show Jason/Keelhouse avatar blocks, duplicate chat identities, or a raw terminal as the primary default view."
+    },
+    {
+      "id": "TRAY-DOCKING-UX",
+      "title": "Movable resizable tool trays",
+      "column": "next",
+      "tier": "pebble",
+      "track": "ui",
+      "size": "M",
+      "launch": "v1",
+      "summary": "Editor, files, browser, git, and raw terminal should feel like tool trays around the agent conversation, not stacked panels.",
+      "done": "Tool surfaces support left, right, bottom, and hidden states with clear splitters, compact tabs, persisted sizes, and no content overlap at narrow widths."
+    },
+    {
+      "id": "CHROME-CONTROL-POLISH",
+      "title": "Native-feeling controls and icons",
+      "column": "next",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
+      "launch": "v1",
+      "summary": "Flatten obvious AI-looking rounded rectangles into native-feeling toolbar, menu, dropdown, and command controls.",
+      "done": "Toolbar buttons, menus, dropdowns, command palette rows, settings rows, and tray tabs use consistent outline iconography, subtle hover/focus/disabled states, and labels only where icons are ambiguous."
+    },
+    {
+      "id": "STEEL-CYAN-THEME-GATE",
+      "title": "Graphite and steel-cyan theme gate",
+      "column": "next",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
+      "launch": "v1",
+      "summary": "Lock the accepted graphite shell and steel-cyan accent into semantic tokens and QA checks.",
+      "done": "Chrome tokens use graphite surfaces and steel-cyan accents; QA or lint checks catch orange/warm accent drift, purple-heavy gradients, and one-note palette regressions."
+    },
+    {
+      "id": "CHROME-QA-GATE",
+      "title": "Chrome screenshot QA gate",
+      "column": "next",
+      "tier": "sand",
+      "track": "quality",
+      "size": "S",
+      "launch": "v1",
+      "summary": "Every chrome pass must prove the accepted states still hold visually and mechanically.",
+      "done": "First-open, create-menu, settings, palette, and narrow screenshots are refreshed; the report includes overflow checks, avatar-label checks, active-row-radius checks, and accent-token checks before the slice is called done."
+    },
+    {
       "id": "DAILY-DRIVER-METRICS",
       "title": "Daily-driver success metrics",
       "column": "next",

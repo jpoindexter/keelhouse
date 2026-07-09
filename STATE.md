@@ -121,27 +121,34 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 ## Next (ordered)
 
 1. **CHROME-COHERENCE-PASS:** fix the actual workbench shell before measurement using VS Code/Zed-level chrome craft without copying either product, `demo/cockpit-demo.html` as the graphite mood reference, and Codex as the clean-composition reference: one large agent-first window, direct left thread/project sidebar, no decorative activity rail, steel-cyan accent, flat toolbar actions, minimal rounded controls, resizable splitters, and docked editor/browser/git/raw-terminal tool panes. Match the flow in `demo/keelhouse-chrome-demo.html`.
-2. **DAILY-DRIVER-METRICS:** prove the app can replace the current workflow with scripted one-project edit+agent, two-agent same-project, and three-project switch/relaunch runs.
-3. **PERF-BUDGET:** prove this is lighter than the VS Code workflow it replaces across 1-project, 2-agent, and 3-project task runs.
-4. **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
-5. **SEARCH:** file quick-open and ripgrep-backed text search.
-6. **TERMINAL-FIND:** search active terminal output/scrollback.
-7. **COMMAND-PALETTE:** VS Code-style compact action access without adding IDE chrome; uses the same command registry as shortcuts and context menus.
-8. **SETTINGS-PARITY:** Codex-style searchable settings shell, keeping only useful workbench categories and dropping account/chat novelty categories.
-9. **SETTINGS:** inspectable config for agent commands, ignored folders, font/theme, layout, AI connections, and shortcut overrides.
-10. **AI-CONNECTIONS:** settings for providers, API keys, MCP servers, CLI auth, env vars, model defaults, and permission policy.
-11. **AGENT-HOOKS:** built-in MCP/API surface so agents can inspect app state and request app-owned actions.
-12. **WORKTREE:** create disposable worktree + agent pane from a project.
-13. **SOURCE-CONTROL-CONNECTIONS:** GitHub/GitLab/source-host auth, repo links, PR/MR status, CI/pipeline status, and health checks.
-14. **PACKAGING:** local macOS `.app` packaging.
-15. **TRANSCRIPTS:** save/review completed pane output.
-16. **NOTIFICATIONS:** background agent exit/attention badges and optional macOS notifications.
-17. **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost and preserve the chrome token contract.
-18. **KEYBINDINGS-CONFIG:** configurable app shortcut overrides after defaults stabilize, including conflict detection and a visible shortcut reference.
-19. **SESSION-ARCHIVE:** archive old project sessions only after sessions and transcripts are real.
-20. **DIRECT-AGENT-HARNESS:** optional direct API/MCP agent path for app-owned orchestration, after real terminal panes and approvals are solid.
-21. **INTEGRATIONS-POLICY:** define which other integrations are allowed, parked, or explicitly out of scope.
-22. **REUSE-AUDIT:** mine Hallmark/hashmark/brutal/indx for reusable Tauri shell, persistence, editor, or design patterns without inheriting the wrong product shape.
+2. **CHROME-DEMO-CONTRACT:** treat the accepted `demo/keelhouse-chrome-demo.html` as the visual contract: graphite shell, steel-cyan accent, direct thread/project sidebar, agent-first center, right/bottom trays, flat toolbar icons, and no orange accents, fake browser chrome, decorative activity rail, or pill-heavy controls.
+3. **APP-CHROME-PORT:** port the accepted demo into the real Tauri app shell without regressing Projects/Files/Search/Git/Browser/Settings drawers, multi-pane sessions, browser preview, editor tray, git diff actions, composer harness, activity log, or process lifecycle.
+4. **AGENT-THREAD-SURFACE:** make chat/activity the main working surface: no Jason/Keelhouse avatar blocks, no raw terminal default, visible prompt/thinking/tool/file/action rows, inline approvals, and bottom composer.
+5. **TRAY-DOCKING-UX:** make editor, files, browser, git, and raw terminal movable/resizable trays with left/right/bottom/hide states.
+6. **CHROME-CONTROL-POLISH:** flatten obvious AI-looking rounded rectangles into native-feeling toolbar/menu/dropdown controls and restore consistent outline iconography.
+7. **STEEL-CYAN-THEME-GATE:** lock graphite + steel-cyan semantic tokens and reject orange/warm accent drift, purple-heavy gradients, and one-note palettes.
+8. **CHROME-QA-GATE:** refresh first-open, create-menu, settings, palette, and narrow screenshots with overflow/avatar-label/active-row/accent-token checks before calling chrome work done.
+9. **DAILY-DRIVER-METRICS:** prove the app can replace the current workflow with scripted one-project edit+agent, two-agent same-project, and three-project switch/relaunch runs.
+10. **PERF-BUDGET:** prove this is lighter than the VS Code workflow it replaces across 1-project, 2-agent, and 3-project task runs.
+11. **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
+12. **SEARCH:** file quick-open and ripgrep-backed text search.
+13. **TERMINAL-FIND:** search active terminal output/scrollback.
+14. **COMMAND-PALETTE:** VS Code-style compact action access without adding IDE chrome; uses the same command registry as shortcuts and context menus.
+15. **SETTINGS-PARITY:** Codex-style searchable settings shell, keeping only useful workbench categories and dropping account/chat novelty categories.
+16. **SETTINGS:** inspectable config for agent commands, ignored folders, font/theme, layout, AI connections, and shortcut overrides.
+17. **AI-CONNECTIONS:** settings for providers, API keys, MCP servers, CLI auth, env vars, model defaults, and permission policy.
+18. **AGENT-HOOKS:** built-in MCP/API surface so agents can inspect app state and request app-owned actions.
+19. **WORKTREE:** create disposable worktree + agent pane from a project.
+20. **SOURCE-CONTROL-CONNECTIONS:** GitHub/GitLab/source-host auth, repo links, PR/MR status, CI/pipeline status, and health checks.
+21. **PACKAGING:** local macOS `.app` packaging.
+22. **TRANSCRIPTS:** save/review completed pane output.
+23. **NOTIFICATIONS:** background agent exit/attention badges and optional macOS notifications.
+24. **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost and preserve the chrome token contract.
+25. **KEYBINDINGS-CONFIG:** configurable app shortcut overrides after defaults stabilize, including conflict detection and a visible shortcut reference.
+26. **SESSION-ARCHIVE:** archive old project sessions only after sessions and transcripts are real.
+27. **DIRECT-AGENT-HARNESS:** optional direct API/MCP agent path for app-owned orchestration, after real terminal panes and approvals are solid.
+28. **INTEGRATIONS-POLICY:** define which other integrations are allowed, parked, or explicitly out of scope.
+29. **REUSE-AUDIT:** mine Hallmark/hashmark/brutal/indx for reusable Tauri shell, persistence, editor, or design patterns without inheriting the wrong product shape.
 
 ## Gotchas
 
