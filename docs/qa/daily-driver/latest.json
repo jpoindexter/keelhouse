@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-09T18:04:56.923Z",
-  "commit": "7531bc1+dirty",
+  "generatedAt": "2026-07-09T19:31:59.266Z",
+  "commit": "3bab4d7+dirty",
   "branch": "main",
   "northStar": "daily-driver workflow runs completed without opening VS Code",
   "status": "ready-for-timed-runs",
@@ -44,7 +44,7 @@
           "label": "narrow composer screenshot",
           "file": "docs/qa/editor-parity/narrow-composer.png",
           "pass": true,
-          "bytes": 118816
+          "bytes": 118855
         }
       ],
       "passed": 6,
@@ -147,12 +147,12 @@
   "metrics": {
     "assetSizes": [
       {
-        "file": "app/dist/assets/index-3BSHjO5A.css",
-        "bytes": 54687
+        "file": "app/dist/assets/index-CjFoKLNO.js",
+        "bytes": 1177077
       },
       {
-        "file": "app/dist/assets/index-B1tTCpL0.js",
-        "bytes": 1172413
+        "file": "app/dist/assets/index-DpBqtRsg.css",
+        "bytes": 55684
       }
     ],
     "screenshotSizes": [
@@ -162,7 +162,7 @@
       },
       {
         "file": "docs/qa/editor-parity/narrow-composer.png",
-        "bytes": 118816
+        "bytes": 118855
       },
       {
         "file": "docs/qa/editor-parity/diff-review.png",

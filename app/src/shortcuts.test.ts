@@ -7,6 +7,7 @@ describe("shortcut baseline", () => {
     expect(shortcutKeys("editor.save")).toBe("Cmd+S");
     expect(shortcutKeys("editor.find")).toContain("Cmd+F");
     expect(shortcutKeys("editor.close-tab")).toBe("Cmd+W");
+    expect(shortcutKeys("workspace.quick-open")).toBe("Cmd+P");
     expect(shortcutKeys("terminal.copy-selection")).toBe("Cmd+C");
     expect(shortcutKeys("terminal.paste")).toBe("Cmd+V");
     expect(shortcutKeys("terminal.clear")).toBe("Cmd+K");
@@ -17,7 +18,6 @@ describe("shortcut baseline", () => {
   it("documents planned shortcut exceptions instead of implying unsupported behavior", () => {
     const planned = SHORTCUTS.filter((shortcut) => shortcut.status === "planned");
     expect(planned.map((shortcut) => shortcut.id)).toEqual([
-      "workspace.quick-open",
       "terminal.new-pane",
       "terminal.split-pane",
       "terminal.focus-next-pane",

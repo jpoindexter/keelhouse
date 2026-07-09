@@ -58,6 +58,9 @@ assert(appTsx.includes("commandPaletteOpen"), "App chrome must expose a command 
 assert(appTsx.includes("shortcutKeys(\"chrome.command-palette\")"), "Command palette must show its shortcut label");
 assert(appCss.includes(".command-palette"), "App CSS must style the command palette surface");
 assert(appCss.includes(".command-palette__row--active"), "Command palette must have a visible active row state");
+assert(appTsx.includes("quickOpenOpen"), "App chrome must expose a Cmd+P quick-open surface");
+assert(appTsx.includes("search_workspace_text"), "Search drawer must call the workspace text search command");
+assert(appTsx.includes("search-scope-tabs"), "Search drawer must expose Files/Text scopes");
 assert(editorQaFixture.includes("Project threads drawer"), "Editor QA fixture must reflect the project-thread drawer");
 assert(!editorQaFixture.includes(">Drawer<"), "Editor QA fixture must not show a generic Drawer label");
 assert(editorQaFixture.includes("Agent thread and raw terminal"), "Editor QA fixture must reflect the agent-thread surface label");

@@ -122,9 +122,8 @@ export const SHORTCUTS: Shortcut[] = [
     label: "Quick open",
     scope: "Workspace",
     keys: ["Cmd+P"],
-    status: "planned",
-    behavior: "Planned file quick-open/search entry point.",
-    exception: "Not active until SEARCH/COMMAND-PALETTE work lands.",
+    status: "active",
+    behavior: "Open the keyboard file picker for the selected workspace.",
   },
   {
     id: "chrome.command-palette",

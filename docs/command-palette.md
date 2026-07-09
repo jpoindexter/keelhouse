@@ -16,4 +16,4 @@ The first slice runs existing app-owned actions only: Open Folder, Save, Find an
 
 ## Boundaries
 
-This is not quick-open and does not search file contents. `Cmd+P`, ripgrep-backed text search, and terminal scrollback search stay with `SEARCH` and `TERMINAL-FIND`.
+This is not quick-open and does not search file contents. `Cmd+P` quick-open and project text search live in `SEARCH`; terminal scrollback search stays with `TERMINAL-FIND`.

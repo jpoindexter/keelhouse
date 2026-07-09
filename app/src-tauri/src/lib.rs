@@ -25,7 +25,7 @@ use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, PtySize};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc::{channel, Sender};
@@ -45,6 +45,8 @@ const MENU_OPEN: &str = "workspace.open";
 const MENU_SAVE: &str = "editor.save";
 const MAX_TREE_ENTRIES: usize = 8_000;
 const MAX_TEXT_FILE_BYTES: u64 = 2 * 1024 * 1024;
+const MAX_SEARCH_FILE_BYTES: u64 = 512 * 1024;
+const MAX_SEARCH_MATCHES: usize = 200;
 
 #[rustfmt::skip]
 const LETTER_KEYS: [Key; 26] = [
@@ -317,6 +319,16 @@ struct TextFileResponse {
     content: String,
     bytes: u64,
     modified_ms: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceTextSearchMatch {
+    path: String,
+    relative_path: String,
+    line: usize,
+    column: usize,
+    line_text: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -893,6 +905,212 @@ fn list_workspace_tree(path: String) -> Result<FileTreeResponse, String> {
         nodes: tree.into_children(),
         truncated,
     })
+}
+
+#[tauri::command]
+fn search_workspace_text(
+    root: String,
+    query: String,
+    max_matches: Option<usize>,
+) -> Result<Vec<WorkspaceTextSearchMatch>, String> {
+    let root = validate_workspace_path(&root)?;
+    let query = query.trim();
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+    let limit = max_matches.unwrap_or(80).clamp(1, MAX_SEARCH_MATCHES);
+    if let Some(matches) = ripgrep_workspace_text_search(&root, query, limit)? {
+        return Ok(matches);
+    }
+    walk_workspace_text_search(&root, query, limit)
+}
+
+fn ripgrep_workspace_text_search(
+    root: &str,
+    query: &str,
+    limit: usize,
+) -> Result<Option<Vec<WorkspaceTextSearchMatch>>, String> {
+    let output = match Command::new("rg")
+        .args([
+            "--json",
+            "--fixed-strings",
+            "--ignore-case",
+            "--line-number",
+            "--column",
+            "--max-filesize",
+            "512K",
+            "--glob",
+            "!**/node_modules/**",
+            "--glob",
+            "!**/target/**",
+            "--glob",
+            "!**/dist/**",
+            "--glob",
+            "!**/build/**",
+            "--glob",
+            "!**/coverage/**",
+            "--glob",
+            "!**/.next/**",
+            "--glob",
+            "!**/.turbo/**",
+            "--glob",
+            "!**/.vite/**",
+            query,
+            root,
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+    {
+        Ok(output) => output,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(format!("Could not run workspace text search: {err}")),
+    };
+
+    if !output.status.success() && output.status.code() != Some(1) {
+        return Err(format!(
+            "Could not search workspace text: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+
+    let root_path = Path::new(root);
+    let mut matches = Vec::new();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        if matches.len() >= limit {
+            break;
+        }
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        if value.get("type").and_then(|kind| kind.as_str()) != Some("match") {
+            continue;
+        }
+        let Some(data) = value.get("data") else {
+            continue;
+        };
+        let Some(path_text) = data
+            .get("path")
+            .and_then(|path| path.get("text"))
+            .and_then(|text| text.as_str())
+        else {
+            continue;
+        };
+        let line_number = data
+            .get("line_number")
+            .and_then(|line| line.as_u64())
+            .unwrap_or(1) as usize;
+        let line_text = data
+            .get("lines")
+            .and_then(|lines| lines.get("text"))
+            .and_then(|text| text.as_str())
+            .unwrap_or("")
+            .trim_end_matches(['\r', '\n'])
+            .trim()
+            .chars()
+            .take(240)
+            .collect::<String>();
+        let column = data
+            .get("submatches")
+            .and_then(|submatches| submatches.as_array())
+            .and_then(|submatches| submatches.first())
+            .and_then(|submatch| submatch.get("start"))
+            .and_then(|start| start.as_u64())
+            .map(|start| start as usize + 1)
+            .unwrap_or(1);
+        let path = PathBuf::from(path_text);
+        let relative_path = path
+            .strip_prefix(root_path)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        matches.push(WorkspaceTextSearchMatch {
+            path: path.to_string_lossy().into_owned(),
+            relative_path,
+            line: line_number,
+            column,
+            line_text,
+        });
+    }
+
+    Ok(Some(matches))
+}
+
+fn walk_workspace_text_search(
+    root: &str,
+    query: &str,
+    limit: usize,
+) -> Result<Vec<WorkspaceTextSearchMatch>, String> {
+    let root_path = Path::new(root);
+    let query_lower = query.to_lowercase();
+    let mut matches = Vec::new();
+
+    let walker = WalkBuilder::new(root)
+        .standard_filters(true)
+        .require_git(false)
+        .hidden(false)
+        .filter_entry(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .map(|name| !is_noisy_dir(name))
+                .unwrap_or(true)
+        })
+        .build();
+
+    for entry in walker {
+        let entry = entry.map_err(|err| format!("Could not search workspace text: {err}"))?;
+        if matches.len() >= limit {
+            break;
+        }
+        let path = entry.path();
+        if !entry
+            .file_type()
+            .map(|kind| kind.is_file())
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        let Ok(metadata) = fs::metadata(path) else {
+            continue;
+        };
+        if metadata.len() > MAX_SEARCH_FILE_BYTES {
+            continue;
+        }
+        let Ok(raw) = fs::read(path) else {
+            continue;
+        };
+        let Ok(content) = String::from_utf8(raw) else {
+            continue;
+        };
+        let relative_path = path
+            .strip_prefix(root_path)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        for (line_index, line) in content.lines().enumerate() {
+            if matches.len() >= limit {
+                break;
+            }
+            let line_lower = line.to_lowercase();
+            let Some(byte_index) = line_lower.find(&query_lower) else {
+                continue;
+            };
+            matches.push(WorkspaceTextSearchMatch {
+                path: path.to_string_lossy().into_owned(),
+                relative_path: relative_path.clone(),
+                line: line_index + 1,
+                column: line
+                    .char_indices()
+                    .take_while(|(index, _)| *index < byte_index)
+                    .count()
+                    + 1,
+                line_text: line.trim().chars().take(240).collect(),
+            });
+        }
+    }
+
+    Ok(matches)
 }
 
 /// Frontend -> filesystem: read a UTF-8 text file inside the selected workspace.
@@ -2000,6 +2218,7 @@ pub fn run() {
             terminate_pane,
             restart_pane,
             list_workspace_tree,
+            search_workspace_text,
             watch_workspace_tree,
             read_text_file,
             write_text_file,
@@ -2733,6 +2952,55 @@ mod tests {
         assert!(!tree_contains(&tree.nodes, "node_modules"));
         assert!(!tree_contains(&tree.nodes, "target"));
 
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn workspace_text_search_matches_text_and_skips_noisy_dirs() {
+        let root = temp_root("agent-cli-search-root");
+        fs::create_dir_all(root.join("src")).expect("create src");
+        fs::create_dir_all(root.join("node_modules/pkg")).expect("create node_modules");
+        fs::write(
+            root.join("src/app.ts"),
+            "const KeelhouseSearch = true;\nsecond line\n",
+        )
+        .expect("write source");
+        fs::write(
+            root.join("node_modules/pkg/index.js"),
+            "KeelhouseSearch should be ignored\n",
+        )
+        .expect("write noisy dependency");
+
+        let results = search_workspace_text(
+            root.to_string_lossy().into_owned(),
+            "keelhousesearch".into(),
+            Some(20),
+        )
+        .expect("search workspace text");
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].relative_path, "src/app.ts");
+        assert_eq!(results[0].line, 1);
+        assert_eq!(results[0].column, 7);
+        assert!(results[0].line_text.contains("KeelhouseSearch"));
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn workspace_text_search_caps_matches() {
+        let root = temp_root("agent-cli-search-cap-root");
+        fs::create_dir_all(&root).expect("create root");
+        fs::write(root.join("many.txt"), "needle\nneedle\nneedle\n").expect("write matches");
+
+        let results = search_workspace_text(
+            root.to_string_lossy().into_owned(),
+            "needle".into(),
+            Some(2),
+        )
+        .expect("search workspace text");
+
+        assert_eq!(results.len(), 2);
         let _ = fs::remove_dir_all(root);
     }
 

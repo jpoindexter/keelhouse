@@ -41,6 +41,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `diff-view.md`: v1 read-only Git diff review from Source Control and file rail Git markers.
 - `git-actions-lite.md`: v1 minimal stage, unstage, discard, and copy-diff actions.
 - `shortcuts.md`: active v0.5 shortcut map and planned exceptions.
+- `search.md`: Cmd+P quick-open plus project file/text search behavior.
 - `context-menus.md`: right-click/Control-click coverage and deferred Git mutation actions.
 - `chrome-polish-system.md`: current token/state system and deferred chrome surfaces.
 - `icon-system.md`: SVG icon family, status mapping, and QA fixture coverage.

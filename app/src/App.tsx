@@ -117,6 +117,7 @@ import { agentActivityAccessibleLabel, agentActivityIconName } from "./icons";
 import type { AppIconName } from "./icons";
 import { shortcutKeys, shortcutTitle } from "./shortcuts";
 import { filterCommandPaletteCommands, type CommandPaletteCommand as CommandPaletteCommandBase } from "./commandPalette";
+import { filterWorkspaceFiles } from "./workspaceSearch";
 import {
   AGENT_ACTIVITY_LOG_FILTERS,
   MAX_AGENT_ACTIVITY_LOG_EVENTS,
@@ -200,6 +201,13 @@ type GitStatusResponse = {
   files: GitStatusFile[];
 };
 type GitDiffResponse = { path: string; diff: string; source: string };
+type WorkspaceTextSearchMatch = {
+  path: string;
+  relativePath: string;
+  line: number;
+  column: number;
+  lineText: string;
+};
 type GitFileAction = "stage" | "unstage" | "discard";
 type ActiveDiffReview = {
   file: GitStatusFile;
@@ -214,6 +222,7 @@ type ToolTrayMode = "split" | "editor" | "browser";
 type WorkbenchSizing = { trayPercent: number; toolSplitPercent: number };
 type AgentSurfaceMode = "chat" | "terminal";
 type SideDrawerMode = "projects" | "files" | "search" | "git" | "browser" | "settings";
+type DrawerSearchScope = "files" | "text";
 type DetectedLocalDevServer = {
   url: string;
   paneId: number;
@@ -480,6 +489,7 @@ function App() {
   const sessionEditorSnapshotsRef = useRef<Record<string, ProjectEditorSnapshot>>({});
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const commandPaletteInputRef = useRef<HTMLInputElement | null>(null);
+  const quickOpenInputRef = useRef<HTMLInputElement | null>(null);
   const pendingEditorFocusRef = useRef(false);
   const editorLoadSeq = useRef(0);
   const latest = useRef<Snapshot | null>(null);
@@ -549,6 +559,13 @@ function App() {
   const [sideDrawerWidth, setSideDrawerWidth] = useState(readStoredSideDrawerWidth);
   const [sideDrawerCollapsed, setSideDrawerCollapsed] = useState(readStoredSideDrawerCollapsed);
   const [drawerSearchQuery, setDrawerSearchQuery] = useState("");
+  const [drawerSearchScope, setDrawerSearchScope] = useState<DrawerSearchScope>("files");
+  const [textSearchResults, setTextSearchResults] = useState<WorkspaceTextSearchMatch[]>([]);
+  const [textSearchLoading, setTextSearchLoading] = useState(false);
+  const [textSearchError, setTextSearchError] = useState<string | null>(null);
+  const [quickOpenOpen, setQuickOpenOpen] = useState(false);
+  const [quickOpenQuery, setQuickOpenQuery] = useState("");
+  const [quickOpenActiveIndex, setQuickOpenActiveIndex] = useState(0);
   const [gitStatus, setGitStatus] = useState<GitStatusResponse | null>(null);
   const [gitStatusRoot, setGitStatusRoot] = useState<string | null>(null);
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
@@ -714,12 +731,9 @@ function App() {
   );
   const searchableFiles = useMemo(() => flattenFiles(visibleFileTree), [visibleFileTree]);
   const drawerSearchResults = useMemo(() => {
-    const query = drawerSearchQuery.trim().toLowerCase();
-    if (!query) return searchableFiles.slice(0, 40);
-    return searchableFiles
-      .filter((file) => file.path.toLowerCase().includes(query) || file.name.toLowerCase().includes(query))
-      .slice(0, 80);
+    return filterWorkspaceFiles(searchableFiles, drawerSearchQuery, drawerSearchQuery.trim() ? 80 : 40);
   }, [drawerSearchQuery, searchableFiles]);
+  const quickOpenResults = useMemo(() => filterWorkspaceFiles(searchableFiles, quickOpenQuery, 80), [quickOpenQuery, searchableFiles]);
   const activeSessionId = useMemo(
     () => activeProjectSessionId(activeSessionByProject, projectSessions, workspacePath),
     [activeSessionByProject, projectSessions, workspacePath],
@@ -819,6 +833,40 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    if (drawerSearchScope !== "text") return;
+    const root = workspacePathRef.current ?? workspacePath;
+    const query = drawerSearchQuery.trim();
+    if (!root || query.length < 2) {
+      setTextSearchResults([]);
+      setTextSearchError(null);
+      setTextSearchLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setTextSearchLoading(true);
+    setTextSearchError(null);
+    const timer = window.setTimeout(() => {
+      invoke<WorkspaceTextSearchMatch[]>("search_workspace_text", { root, query, maxMatches: 80 })
+        .then((results) => {
+          if (!cancelled) setTextSearchResults(results);
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setTextSearchResults([]);
+            setTextSearchError(String(err));
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setTextSearchLoading(false);
+        });
+    }, 180);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [drawerSearchQuery, drawerSearchScope, workspacePath]);
+
   const focusEditorLine = (line: number) => {
     const targetLine = Math.max(1, line);
     window.setTimeout(() => {
@@ -831,6 +879,12 @@ function App() {
       });
       view.focus();
     }, 60);
+  };
+
+  const openTextSearchResult = (match: WorkspaceTextSearchMatch) => {
+    void requestOpenEditorFile(fileNodeFromPath(match.path, "file"), { focusEditor: true }).then(() => {
+      focusEditorLine(match.line);
+    });
   };
 
   const loadGitDiff = async (file: GitStatusFile, options: { gate?: boolean } = {}) => {
@@ -2782,6 +2836,19 @@ function App() {
     setCommandPaletteActiveIndex(0);
   };
 
+  const openQuickOpen = () => {
+    setContextMenu(null);
+    setQuickOpenQuery("");
+    setQuickOpenActiveIndex(0);
+    setQuickOpenOpen(true);
+  };
+
+  const closeQuickOpen = () => {
+    setQuickOpenOpen(false);
+    setQuickOpenQuery("");
+    setQuickOpenActiveIndex(0);
+  };
+
   const moveContextMenuFocus = (event: ReactKeyboardEvent<HTMLDivElement>, direction: 1 | -1) => {
     const buttons = Array.from(contextMenuRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
     if (buttons.length === 0) return;
@@ -3005,6 +3072,16 @@ function App() {
       run: () => void pickWorkspace(),
     },
     {
+      id: "workspace.quick-open",
+      label: "Quick Open",
+      detail: workspacePath ? "Open files by name or path" : "Open a folder before quick open",
+      shortcut: shortcutKeys("workspace.quick-open"),
+      icon: "search",
+      disabled: !workspacePath,
+      keywords: ["file", "jump", "cmd p"],
+      run: openQuickOpen,
+    },
+    {
       id: "editor.save",
       label: "Save",
       detail: selectedFile ? selectedFile.path : "Save the active editor file",
@@ -3185,6 +3262,34 @@ function App() {
     setCommandPaletteActiveIndex(0);
     requestAnimationFrame(() => commandPaletteInputRef.current?.focus());
   }, [commandPaletteOpen, commandPaletteQuery]);
+
+  const runQuickOpenFile = (file: FileTreeNode | null) => {
+    if (!file) return;
+    closeQuickOpen();
+    void requestOpenEditorFile(file, { focusEditor: true });
+  };
+
+  const handleQuickOpenKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeQuickOpen();
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setQuickOpenActiveIndex((index) => quickOpenResults.length === 0 ? 0 : (index + 1) % quickOpenResults.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setQuickOpenActiveIndex((index) => quickOpenResults.length === 0 ? 0 : (index - 1 + quickOpenResults.length) % quickOpenResults.length);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      runQuickOpenFile(quickOpenResults[quickOpenActiveIndex] ?? quickOpenResults[0] ?? null);
+    }
+  };
+
+  useEffect(() => {
+    if (!quickOpenOpen) return;
+    setQuickOpenActiveIndex(0);
+    requestAnimationFrame(() => quickOpenInputRef.current?.focus());
+  }, [quickOpenOpen, quickOpenQuery]);
 
   const tabIsDirty = (path: string) => dirtyTabPathSet.has(path);
 
@@ -3492,6 +3597,11 @@ function App() {
       if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "p") {
         e.preventDefault();
         openCommandPalette();
+        return;
+      }
+      if (e.metaKey && !e.shiftKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        openQuickOpen();
         return;
       }
       if (target?.closest(".file-rail, .editor-area, .browser-preview, .terminal-titlebar, .agent-composer, .command-palette")) return;
@@ -3899,27 +4009,49 @@ function App() {
         ) : null}
         {!sideDrawerCollapsed && sideDrawerMode === "projects" && visibleOpenProjects.length === 0 ? <div className="rail-status">Open a folder to start a project session</div> : null}
         {!sideDrawerCollapsed && sideDrawerMode === "search" ? (
-          <section className="drawer-panel" aria-label="Search files">
+          <section className="drawer-panel" aria-label="Search workspace">
             <div className="panel-title panel-title--with-action">
               <span>Search</span>
-              <button className="rail-open-button" type="button" onClick={() => setSideDrawerMode("files")}>
+              <button className="rail-open-button" type="button" onClick={openQuickOpen}>
+                <AppIcon name="search" />
+                <span>{shortcutKeys("workspace.quick-open") || "Quick Open"}</span>
+              </button>
+            </div>
+            <div className="search-scope-tabs" role="tablist" aria-label="Search scope">
+              <button
+                className={`search-scope-tabs__button ${drawerSearchScope === "files" ? "search-scope-tabs__button--active" : ""}`}
+                type="button"
+                role="tab"
+                aria-selected={drawerSearchScope === "files"}
+                onClick={() => setDrawerSearchScope("files")}
+              >
                 <AppIcon name="file" />
                 <span>Files</span>
               </button>
+              <button
+                className={`search-scope-tabs__button ${drawerSearchScope === "text" ? "search-scope-tabs__button--active" : ""}`}
+                type="button"
+                role="tab"
+                aria-selected={drawerSearchScope === "text"}
+                onClick={() => setDrawerSearchScope("text")}
+              >
+                <AppIcon name="search" />
+                <span>Text</span>
+              </button>
             </div>
             <label className="drawer-field">
-              <span>Filter files</span>
+              <span>{drawerSearchScope === "files" ? "Filter files" : "Search text"}</span>
               <input
                 value={drawerSearchQuery}
-                placeholder="Type a filename or path"
+                placeholder={drawerSearchScope === "files" ? "Type a filename or path" : "Type at least 2 characters"}
                 disabled={!workspacePath}
                 onChange={(event) => setDrawerSearchQuery(event.currentTarget.value)}
               />
             </label>
             <div className="drawer-list">
-              {!workspacePath ? <div className="rail-status">Open a folder to search files</div> : null}
-              {workspacePath && drawerSearchResults.length === 0 ? <div className="rail-status">No matching files</div> : null}
-              {workspacePath && drawerSearchResults.map((file) => (
+              {!workspacePath ? <div className="rail-status">Open a folder to search</div> : null}
+              {workspacePath && drawerSearchScope === "files" && drawerSearchResults.length === 0 ? <div className="rail-status">No matching files</div> : null}
+              {workspacePath && drawerSearchScope === "files" && drawerSearchResults.map((file) => (
                 <button
                   className="drawer-list-row"
                   type="button"
@@ -3930,6 +4062,26 @@ function App() {
                   <AppIcon name="file" />
                   <span className="drawer-list-row__main">{file.name}</span>
                   <span className="drawer-list-row__meta">{pathBreadcrumbs(workspacePath, file.path).join(" / ")}</span>
+                </button>
+              ))}
+              {workspacePath && drawerSearchScope === "text" && drawerSearchQuery.trim().length < 2 ? <div className="rail-status">Type at least 2 characters to search text</div> : null}
+              {workspacePath && drawerSearchScope === "text" && textSearchLoading ? <div className="rail-status">Searching text…</div> : null}
+              {workspacePath && drawerSearchScope === "text" && textSearchError ? <div className="rail-status rail-status--error">{textSearchError}</div> : null}
+              {workspacePath && drawerSearchScope === "text" && drawerSearchQuery.trim().length >= 2 && !textSearchLoading && !textSearchError && textSearchResults.length === 0 ? (
+                <div className="rail-status">No text matches. Try fewer words or switch to Files.</div>
+              ) : null}
+              {workspacePath && drawerSearchScope === "text" && textSearchResults.map((match) => (
+                <button
+                  className="drawer-list-row drawer-list-row--search-hit"
+                  type="button"
+                  key={`${match.path}:${match.line}:${match.column}`}
+                  title={`${match.relativePath}:${match.line}:${match.column}`}
+                  onClick={() => openTextSearchResult(match)}
+                >
+                  <AppIcon name="search" />
+                  <span className="drawer-list-row__main">{match.relativePath}</span>
+                  <span className="drawer-list-row__meta">{`Ln ${match.line}, Col ${match.column}`}</span>
+                  <span className="drawer-list-row__snippet">{match.lineText}</span>
                 </button>
               ))}
             </div>
@@ -5101,6 +5253,58 @@ function App() {
               ) : (
                 <div className="command-palette__empty">No commands match</div>
               )}
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {quickOpenOpen ? (
+        <div className="command-palette-backdrop" role="presentation" onPointerDown={closeQuickOpen}>
+          <section
+            className="command-palette quick-open"
+            aria-label="Quick open files"
+            role="dialog"
+            aria-modal="true"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <div className="command-palette__field">
+              <AppIcon name="file" />
+              <input
+                ref={quickOpenInputRef}
+                value={quickOpenQuery}
+                aria-label="Quick open file"
+                placeholder="Open file by name or path..."
+                onChange={(event) => {
+                  setQuickOpenQuery(event.currentTarget.value);
+                  setQuickOpenActiveIndex(0);
+                }}
+                onKeyDown={handleQuickOpenKeyDown}
+              />
+              <span>{shortcutKeys("workspace.quick-open")}</span>
+            </div>
+            <div className="command-palette__list" role="listbox" aria-label="Files">
+              {!workspacePath ? <div className="command-palette__empty">Open a folder before quick open</div> : null}
+              {workspacePath && quickOpenResults.length > 0 ? (
+                quickOpenResults.map((file, index) => (
+                  <button
+                    className={`command-palette__row ${index === quickOpenActiveIndex ? "command-palette__row--active" : ""}`}
+                    type="button"
+                    role="option"
+                    aria-selected={index === quickOpenActiveIndex}
+                    key={file.path}
+                    onPointerMove={() => setQuickOpenActiveIndex(index)}
+                    onClick={() => runQuickOpenFile(file)}
+                  >
+                    <span className="command-palette__icon">
+                      <AppIcon name="file" />
+                    </span>
+                    <span className="command-palette__copy">
+                      <strong>{file.name}</strong>
+                      <span>{pathBreadcrumbs(workspacePath, file.path).join(" / ")}</span>
+                    </span>
+                  </button>
+                ))
+              ) : null}
+              {workspacePath && quickOpenResults.length === 0 ? <div className="command-palette__empty">No files match</div> : null}
             </div>
           </section>
         </div>
