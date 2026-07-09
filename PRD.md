@@ -134,6 +134,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [x] Session restore brings back projects, file tabs, browser URL, pane layout, and enough metadata to resume intentionally without pretending old processes are still live.
 - [x] Git status is visible in the file rail for modified, untracked/new, staged, renamed, and deleted files without merging it with unsaved editor draft state.
 - [x] Changed files can be reviewed in-app through a read-only unified diff view with additions/deletions and hunk-to-editor jumps when the file exists.
+- [x] Lightweight Git actions support stage, unstage, discard with confirmation, and copy shown diff from file status/diff surfaces.
 - [ ] Daily-driver workflows are measured against the equivalent VS Code habit: one-project edit+agent, two-agent same-project, and three-project switching after quit/relaunch.
 - [ ] Resource use is measured against the equivalent VS Code workflow.
 

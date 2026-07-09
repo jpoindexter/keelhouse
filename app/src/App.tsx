@@ -198,6 +198,7 @@ type GitStatusResponse = {
   files: GitStatusFile[];
 };
 type GitDiffResponse = { path: string; diff: string; source: string };
+type GitFileAction = "stage" | "unstage" | "discard";
 type ActiveDiffReview = {
   file: GitStatusFile;
   absolutePath: string;
@@ -644,6 +645,9 @@ function App() {
     [diffReview, workspacePath],
   );
   const diffReviewCanOpenFile = Boolean(diffReview && diffReview.file.index !== "D" && diffReview.file.worktree !== "D");
+  const diffReviewCanStage = Boolean(diffReview && (diffReview.file.index === "?" || diffReview.file.worktree !== " "));
+  const diffReviewCanUnstage = Boolean(diffReview && diffReview.file.index !== " " && diffReview.file.index !== "?");
+  const diffReviewCanDiscard = Boolean(diffReview && (diffReview.file.index === "?" || diffReview.file.worktree !== " "));
   const visibleFileTree = useMemo(
     () => {
       const dirtyTree = markDirtyFile(fileTree, dirtyTabPathSet);
@@ -767,17 +771,19 @@ function App() {
     }, 60);
   };
 
-  const openGitDiff = async (file: GitStatusFile) => {
+  const loadGitDiff = async (file: GitStatusFile, options: { gate?: boolean } = {}) => {
     const root = workspacePathRef.current ?? workspacePath;
     if (!root) return false;
-    const audit = await gateAppAction(createAppAction({
-      kind: "open-diff",
-      label: "Open diff",
-      target: file.path,
-      risk: "low",
-      requestedBy: "user",
-    }));
-    if (audit.decision !== "approved") return false;
+    if (options.gate ?? true) {
+      const audit = await gateAppAction(createAppAction({
+        kind: "open-diff",
+        label: "Open diff",
+        target: file.path,
+        risk: "low",
+        requestedBy: "user",
+      }));
+      if (audit.decision !== "approved") return false;
+    }
     setDiffReviewLoading(true);
     setDiffReviewError(null);
     setDiffReview(null);
@@ -796,6 +802,79 @@ function App() {
     } finally {
       setDiffReviewLoading(false);
     }
+  };
+
+  const openGitDiff = (file: GitStatusFile) => loadGitDiff(file, { gate: true });
+
+  const gitActionLabel = (action: GitFileAction) => {
+    if (action === "stage") return "Stage file";
+    if (action === "unstage") return "Unstage file";
+    return "Discard unstaged changes";
+  };
+
+  const gitActionKind = (action: GitFileAction) => {
+    if (action === "stage") return "stage-file" as const;
+    if (action === "unstage") return "unstage-file" as const;
+    return "discard-file" as const;
+  };
+
+  const editorHasUnsavedBufferForPath = (path: string) => {
+    if (selectedFileRef.current?.path === path && editorText !== savedEditorText) return true;
+    const buffered = editorBuffersRef.current[path];
+    return Boolean(buffered && buffered.text !== buffered.savedText);
+  };
+
+  const runGitFileAction = async (action: GitFileAction, file: GitStatusFile) => {
+    const root = workspacePathRef.current ?? workspacePath;
+    if (!root) return false;
+    const absolutePath = absolutePathForGitFile(root, file.path);
+    if (action === "discard" && editorHasUnsavedBufferForPath(absolutePath)) {
+      setDiffReviewError("Save or close the unsaved editor draft before discarding Git changes.");
+      return false;
+    }
+    const audit = await gateAppAction(createAppAction({
+      kind: gitActionKind(action),
+      label: gitActionLabel(action),
+      target: file.path,
+      risk: action === "discard" ? "destructive" : "medium",
+      requestedBy: "user",
+      undoHint: action === "discard" ? "Use Git history or editor undo if available." : "Use the opposite Git action.",
+    }));
+    if (audit.decision !== "approved") return false;
+    setDiffReviewLoading(true);
+    setDiffReviewError(null);
+    try {
+      const nextStatus = await invoke<GitStatusResponse>("git_file_action", { root, path: file.path, action });
+      setGitStatus(nextStatus);
+      setGitStatusRoot(root);
+      refreshFileTree();
+      const nextFile = nextStatus.files.find((item) => item.path === file.path);
+      if (nextFile) {
+        await loadGitDiff(nextFile, { gate: false });
+      } else {
+        closeDiffReview();
+      }
+      return true;
+    } catch (err) {
+      setDiffReviewError(String(err));
+      return false;
+    } finally {
+      setDiffReviewLoading(false);
+    }
+  };
+
+  const copyShownDiff = async () => {
+    if (!diffReview) return false;
+    const audit = await gateAppAction(createAppAction({
+      kind: "copy-diff",
+      label: "Copy shown diff",
+      target: diffReview.response.path,
+      risk: "low",
+      requestedBy: "user",
+    }));
+    if (audit.decision !== "approved") return false;
+    await writeText(diffReview.response.diff);
+    return true;
   };
 
   const openDiffFile = async (line: number | null = null) => {
@@ -2601,11 +2680,29 @@ function App() {
   const fileNodeContextMenuItems = (node: FileTreeNode): ContextMenuItem[] => {
     const items: ContextMenuItem[] = [];
     if (node.gitStatus) {
+      const statusFile = {
+        path: node.gitStatus.relativePath,
+        index: node.gitStatus.index,
+        worktree: node.gitStatus.worktree,
+      };
       items.push(menuItem("git.diff", "Open Diff", () => void openGitDiff({
         path: node.gitStatus!.relativePath,
         index: node.gitStatus!.index,
         worktree: node.gitStatus!.worktree,
       }), { icon: "git" }));
+      items.push(menuItem("git.stage", "Stage File", () => void runGitFileAction("stage", statusFile), {
+        icon: "git",
+        disabled: !(node.gitStatus.index === "?" || node.gitStatus.worktree !== " "),
+      }));
+      items.push(menuItem("git.unstage", "Unstage File", () => void runGitFileAction("unstage", statusFile), {
+        icon: "git",
+        disabled: node.gitStatus.index === " " || node.gitStatus.index === "?",
+      }));
+      items.push(menuItem("git.discard", "Discard Unstaged Changes", () => void runGitFileAction("discard", statusFile), {
+        icon: "error",
+        danger: true,
+        disabled: !(node.gitStatus.index === "?" || node.gitStatus.worktree !== " "),
+      }));
     }
     return [
       ...items,
@@ -3828,10 +3925,47 @@ function App() {
               ) : null}
             </div>
             {diffReview || diffReviewLoading || diffReviewError ? (
-              <div className="editor-actions">
-                {diffReview ? <span className="editor-badge">{diffReview.response.source}</span> : null}
-                {diffReview ? <span className="editor-meta">+{diffReview.parsed.additions} / -{diffReview.parsed.deletions}</span> : null}
-                <span className="editor-status">{diffReviewLoading ? "Loading diff" : diffReviewError ? "Diff error" : "Review"}</span>
+              <div className="editor-actions editor-actions--diff">
+                <button
+                  className="editor-command"
+                  type="button"
+                  disabled={!diffReview || !diffReviewCanStage || diffReviewLoading}
+                  title="Stage file"
+                  onClick={() => diffReview && void runGitFileAction("stage", diffReview.file)}
+                >
+                  <AppIcon name="git" />
+                  <span>Stage</span>
+                </button>
+                <button
+                  className="editor-command"
+                  type="button"
+                  disabled={!diffReview || !diffReviewCanUnstage || diffReviewLoading}
+                  title="Unstage file"
+                  onClick={() => diffReview && void runGitFileAction("unstage", diffReview.file)}
+                >
+                  <AppIcon name="git" />
+                  <span>Unstage</span>
+                </button>
+                <button
+                  className="editor-command editor-command--danger"
+                  type="button"
+                  disabled={!diffReview || !diffReviewCanDiscard || diffReviewLoading}
+                  title="Discard unstaged changes"
+                  onClick={() => diffReview && void runGitFileAction("discard", diffReview.file)}
+                >
+                  <AppIcon name="error" />
+                  <span>Discard</span>
+                </button>
+                <button
+                  className="editor-command"
+                  type="button"
+                  disabled={!diffReview || diffReview.response.diff.length === 0}
+                  title="Copy shown diff"
+                  onClick={() => void copyShownDiff()}
+                >
+                  <AppIcon name="copy" />
+                  <span>Copy</span>
+                </button>
                 <button
                   className="editor-command"
                   type="button"
@@ -3840,11 +3974,9 @@ function App() {
                   onClick={() => void openDiffFile()}
                 >
                   <AppIcon name="file" />
-                  <span>Open file</span>
                 </button>
                 <button className="editor-command" type="button" title="Close diff review" onClick={closeDiffReview}>
                   <AppIcon name="close" />
-                  <span>Close</span>
                 </button>
               </div>
             ) : selectedFile ? (

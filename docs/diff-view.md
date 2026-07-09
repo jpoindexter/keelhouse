@@ -12,7 +12,7 @@ DIFF-VIEW lets Keelhouse inspect agent-created file changes without switching to
 
 ## Boundaries
 
-- This is review-only. Stage, unstage, discard, and copy-diff actions belong to `GIT-ACTIONS-LITE`.
+- Stage, unstage, discard, and copy-diff actions are implemented by `GIT-ACTIONS-LITE`; this document covers the review surface they attach to.
 - The backend validates relative Git paths and rejects absolute paths or parent-directory traversal.
 - Untracked text files get a synthetic unified diff. Large or binary untracked files return an explicit error instead of reading arbitrary bytes into the UI.
 - Deleted files can be reviewed from Git status, but cannot be opened as editor files.

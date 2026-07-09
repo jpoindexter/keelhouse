@@ -186,6 +186,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">DIFF-VIEW &middot; Diff view for agent changes</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">Jason supervises agents by reading what changed. A file status marker is not enough; he needs to inspect diffs without opening VS Code.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: Source Control rows and file-rail Git context menus open a read-only unified diff review in the editor tray. The review shows source/status, additions/deletions, old/new line numbers, diff metadata, synthetic untracked text diffs, and hunk-to-editor jumps for files that still exist. Covered by npm run build, npm test -- diffView.test.ts, cargo test git_, and cargo test synthesizes_untracked_text_diff.</p></details></div>
+<div class="card" data-track="files" data-id="GIT-ACTIONS-LITE" data-size="S" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">GIT-ACTIONS-LITE &middot; Lightweight git review actions</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Add only the git actions needed to review/clean agent work, not a full git client.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: diff review and Git-marked file context menus expose Stage, Unstage, Discard Unstaged Changes, and Copy shown diff. The blind audit findings were folded into the card: discard is blocked when the same file has an unsaved editor draft; mixed staged/unstaged files use explicit labels (Copy shown diff, whole-file Stage/Unstage); backend git_file_action validates repository-relative paths and re-reads target status before mutation; staged new files, tracked discard, and untracked discard use separate Git command paths; real temp-repo Git tests cover stage/unstage/discard; the slice stops at per-file actions, not branch/commit/push/PR; screenshot QA includes diff-review.png. Covered by npm run build, npm test, cargo test git_file_actions, npm run qa:editor, and git diff --check.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="workspace" data-id="LAST-WORKSPACE" data-size="S" data-tier="pebble" data-launch="v0">
@@ -251,7 +255,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="card" data-track="ui" data-id="CONTEXT-MENUS" data-size="M" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">CONTEXT-MENUS &middot; Right-click context menus</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">macOS pointer workflows need right-click/Control-click affordances, not only visible buttons. Context menus should expose the same command registry as menu bar, shortcuts, and command palette where possible.</p>
-<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: current surfaces expose right-click/Control-click menus for the workspace root, project/session rows, file explorer, editor tabs, editor text surface, browser preview, terminal pane, and composer/agent controls. Menus share shortcut labels where active, show disabled and danger states, reuse existing destructive confirmations/dirty guards, and are documented in docs/context-menus.md. Git-marked file rows can open read-only diffs; Git mutation context actions remain deferred to GIT-ACTIONS-LITE.</p></details></div>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: current surfaces expose right-click/Control-click menus for the workspace root, project/session rows, file explorer, editor tabs, editor text surface, browser preview, terminal pane, and composer/agent controls. Menus share shortcut labels where active, show disabled and danger states, reuse existing destructive confirmations/dirty guards, and are documented in docs/context-menus.md. Git-marked file rows can open read-only diffs, stage, unstage, and discard unstaged changes.</p></details></div>
 <div class="card" data-track="ui" data-id="CHROME-POLISH-SYSTEM" data-size="M" data-tier="pebble" data-launch="v0_5">
 <div class="hd"><span class="sz">M</span><span class="ttl">CHROME-POLISH-SYSTEM &middot; Codex-level chrome polish system</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Define the workbench chrome system before more surfaces drift: dense rails, calm dark surfaces, tokens, menus, badges, pane headers, settings/sidebar rhythm, command palette, toasts, and restrained motion.</p>
@@ -295,12 +299,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
-<div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
-<div class="card" data-track="files" data-id="GIT-ACTIONS-LITE" data-size="S" data-tier="rock" data-launch="v1">
-<div class="hd"><span class="sz">S</span><span class="ttl">GIT-ACTIONS-LITE &middot; Lightweight git review actions</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Add only the git actions needed to review/clean agent work, not a full git client.</p>
-<details><summary>Done criteria</summary><p class="done">Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces.</p></details></div>
-</div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="ui" data-id="DEV-SERVER-DETECT" data-size="S" data-tier="pebble" data-launch="v1">
 <div class="hd"><span class="sz">S</span><span class="ttl">DEV-SERVER-DETECT &middot; Local dev server detection</span><span class="lens l-ui">Chrome + interaction</span></div>

@@ -1400,6 +1400,16 @@ body,
   padding: 0 10px;
 }
 
+.editor-actions--diff {
+  gap: 5px;
+  overflow-x: auto;
+  padding: 0 8px;
+}
+
+.editor-actions--diff::-webkit-scrollbar {
+  height: 0;
+}
+
 .layout-switcher {
   display: inline-flex;
   flex: 0 0 auto;
@@ -1487,6 +1497,21 @@ body,
   font-weight: 650;
   line-height: 20px;
   padding: 0 8px;
+}
+
+.editor-actions--diff .editor-command {
+  min-width: 30px;
+  padding: 0 7px;
+}
+
+.editor-command--danger {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-bg);
+  color: #ffd6dd;
+}
+
+.editor-command--danger:hover:not(:disabled) {
+  background: #3b1720;
 }
 
 .cm-search {

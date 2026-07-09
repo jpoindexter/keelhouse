@@ -18,7 +18,7 @@
 
 ## Boundaries
 
-This slice only decorates the file rail and Git drawer list. Read-only review now belongs to `DIFF-VIEW`; stage, unstage, discard, and copy diff remain in `GIT-ACTIONS-LITE`.
+This slice only decorates the file rail and Git drawer list. Read-only review belongs to `DIFF-VIEW`; stage, unstage, discard, and copy diff belong to `GIT-ACTIONS-LITE`.
 
 ## Verification
 

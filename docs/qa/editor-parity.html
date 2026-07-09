@@ -84,6 +84,7 @@
       .qa-state-dirty .editor-empty,
       .qa-state-dirty-modal .editor-empty,
       .qa-state-context-menu .editor-empty,
+      .qa-state-diff-review .editor-empty,
       .qa-state-chrome-states .editor-empty,
       .qa-state-find-replace .editor-empty,
       .qa-state-save-conflict .editor-empty,
@@ -132,6 +133,7 @@
       <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><path d="M8 8h10v12H8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
       <symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5M12 11v6M9 14h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
@@ -499,6 +501,56 @@
             </button>
           </div>`,
         );
+      } else if (state === "diff-review") {
+        railDirty?.remove();
+        tabDirty.remove();
+        badge.remove();
+        error.remove();
+        document.querySelector(".editor-tabbar").innerHTML = `
+          <div class="editor-tabs" role="tablist" aria-label="Open files">
+            <div class="editor-tab editor-tab--active editor-tab--diff" title="app/src/App.tsx">
+              <button class="editor-tab__activate" type="button" role="tab" aria-selected="true" aria-label="Diff for app/src/App.tsx">
+                <span class="editor-tab__name">Diff: App.tsx</span>
+              </button>
+              <button class="editor-tab__close" type="button" aria-label="Close diff review"><svg class="app-icon"><use href="#i-close" /></svg></button>
+            </div>
+          </div>
+          <div class="editor-actions editor-actions--diff">
+            <button class="editor-command" type="button"><svg class="app-icon"><use href="#i-git" /></svg><span>Stage</span></button>
+            <button class="editor-command" type="button" disabled><svg class="app-icon"><use href="#i-git" /></svg><span>Unstage</span></button>
+            <button class="editor-command editor-command--danger" type="button"><svg class="app-icon"><use href="#i-error" /></svg><span>Discard</span></button>
+            <button class="editor-command" type="button"><svg class="app-icon"><use href="#i-copy" /></svg><span>Copy</span></button>
+            <button class="editor-command" type="button" aria-label="Open file"><svg class="app-icon"><use href="#i-file" /></svg></button>
+            <button class="editor-command" type="button" aria-label="Close diff review"><svg class="app-icon"><use href="#i-close" /></svg></button>
+          </div>`;
+        document.querySelector(".editor-pathbar").innerHTML = `
+          <span class="editor-crumb"><span>agent cli</span></span>
+          <span class="editor-crumb"><span class="editor-crumb__separator">/</span><span>app</span></span>
+          <span class="editor-crumb"><span class="editor-crumb__separator">/</span><span>src</span></span>
+          <span class="editor-crumb"><span class="editor-crumb__separator">/</span><span class="editor-crumb__current">App.tsx</span></span>`;
+        document.querySelector(".editor-code").outerHTML = `
+          <div class="diff-view" aria-label="Diff review">
+            <div class="diff-view__header">
+              <div>
+                <div class="diff-view__title">app/src/App.tsx</div>
+                <div class="diff-view__meta">Modified · working-tree</div>
+              </div>
+              <div class="diff-view__summary" aria-label="Diff summary">
+                <span class="diff-view__additions">+2</span>
+                <span class="diff-view__deletions">-1</span>
+              </div>
+            </div>
+            <div class="diff-view__body" role="table" aria-label="Diff for app/src/App.tsx">
+              <div class="diff-line diff-line--meta" role="row"><span class="diff-line__number"></span><span class="diff-line__number"></span><code class="diff-line__code">diff --git a/app/src/App.tsx b/app/src/App.tsx</code></div>
+              <div class="diff-line diff-line--meta" role="row"><span class="diff-line__number"></span><span class="diff-line__number"></span><code class="diff-line__code">--- a/app/src/App.tsx</code></div>
+              <div class="diff-line diff-line--meta" role="row"><span class="diff-line__number"></span><span class="diff-line__number"></span><code class="diff-line__code">+++ b/app/src/App.tsx</code></div>
+              <div class="diff-line diff-line--hunk" role="row"><span class="diff-line__number">771</span><span class="diff-line__number">771</span><button class="diff-line__jump" type="button">@@ -771,3 +771,4 @@</button></div>
+              <div class="diff-line diff-line--context" role="row"><span class="diff-line__number">771</span><span class="diff-line__number">771</span><code class="diff-line__code"> const audit = await gateAppAction(createAppAction({</code></div>
+              <div class="diff-line diff-line--delete" role="row"><span class="diff-line__number">772</span><span class="diff-line__number"></span><code class="diff-line__code">-  label: "Open diff",</code></div>
+              <div class="diff-line diff-line--add" role="row"><span class="diff-line__number"></span><span class="diff-line__number">772</span><code class="diff-line__code">+  label: "Stage file",</code></div>
+              <div class="diff-line diff-line--add" role="row"><span class="diff-line__number"></span><span class="diff-line__number">773</span><code class="diff-line__code">+  undoHint: "Use the opposite Git action.",</code></div>
+            </div>
+          </div>`;
       } else if (state === "chrome-states") {
         badge.remove();
         error.remove();

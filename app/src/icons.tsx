@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Circle,
   Clock3,
+  Copy,
   FilePlus2,
   FileText,
   Folder,
@@ -42,6 +43,7 @@ export type AppIconName =
   | "chevronRight"
   | "close"
   | "complete"
+  | "copy"
   | "error"
   | "file"
   | "filePlus"
@@ -73,6 +75,7 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   chevronRight: ChevronRight,
   close: X,
   complete: CheckCircle2,
+  copy: Copy,
   error: AlertCircle,
   file: FileText,
   filePlus: FilePlus2,

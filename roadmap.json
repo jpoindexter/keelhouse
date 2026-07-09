@@ -462,7 +462,7 @@
       "size": "M",
       "launch": "v0_5",
       "summary": "macOS pointer workflows need right-click/Control-click affordances, not only visible buttons. Context menus should expose the same command registry as menu bar, shortcuts, and command palette where possible.",
-      "done": "Verified 2026-07-09: current surfaces expose right-click/Control-click menus for the workspace root, project/session rows, file explorer, editor tabs, editor text surface, browser preview, terminal pane, and composer/agent controls. Menus share shortcut labels where active, show disabled and danger states, reuse existing destructive confirmations/dirty guards, and are documented in docs/context-menus.md. Git-marked file rows can open read-only diffs; Git mutation context actions remain deferred to GIT-ACTIONS-LITE."
+      "done": "Verified 2026-07-09: current surfaces expose right-click/Control-click menus for the workspace root, project/session rows, file explorer, editor tabs, editor text surface, browser preview, terminal pane, and composer/agent controls. Menus share shortcut labels where active, show disabled and danger states, reuse existing destructive confirmations/dirty guards, and are documented in docs/context-menus.md. Git-marked file rows can open read-only diffs, stage, unstage, and discard unstaged changes."
     },
     {
       "id": "CHROME-POLISH-SYSTEM",
@@ -705,14 +705,14 @@
     {
       "id": "GIT-ACTIONS-LITE",
       "title": "Lightweight git review actions",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "files",
       "size": "S",
       "launch": "v1",
       "blocker": true,
       "summary": "Add only the git actions needed to review/clean agent work, not a full git client.",
-      "done": "Stage file, unstage file, discard file with confirmation, and copy diff are available from file status/diff surfaces."
+      "done": "Verified 2026-07-09: diff review and Git-marked file context menus expose Stage, Unstage, Discard Unstaged Changes, and Copy shown diff. The blind audit findings were folded into the card: discard is blocked when the same file has an unsaved editor draft; mixed staged/unstaged files use explicit labels (Copy shown diff, whole-file Stage/Unstage); backend git_file_action validates repository-relative paths and re-reads target status before mutation; staged new files, tracked discard, and untracked discard use separate Git command paths; real temp-repo Git tests cover stage/unstage/discard; the slice stops at per-file actions, not branch/commit/push/PR; screenshot QA includes diff-review.png. Covered by npm run build, npm test, cargo test git_file_actions, npm run qa:editor, and git diff --check."
     },
     {
       "id": "DEV-SERVER-DETECT",

@@ -354,6 +354,14 @@ struct GitDiffResponse {
     source: String,
 }
 
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+enum GitFileAction {
+    Stage,
+    Unstage,
+    Discard,
+}
+
 struct FileTreeBuilder {
     name: String,
     path: String,
@@ -1176,6 +1184,52 @@ fn run_git_diff(root: &str, args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
+fn run_git_checked(root: &str, args: &[&str], label: &str) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["-C", root])
+        .args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|err| format!("Could not {label}: {err}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "Could not {label}: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    Ok(())
+}
+
+fn git_status_for_path(root: &str, relative_path: &str) -> Result<Option<GitStatusFile>, String> {
+    let output = Command::new("git")
+        .args([
+            "-C",
+            root,
+            "status",
+            "--short",
+            "--branch",
+            "--",
+            relative_path,
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|err| format!("Could not run git status: {err}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "Could not read git status: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    Ok(
+        parse_git_status_output(&String::from_utf8_lossy(&output.stdout))
+            .files
+            .into_iter()
+            .find(|file| file.path == relative_path),
+    )
+}
+
 fn synthetic_untracked_diff(
     root: &str,
     relative_path: &str,
@@ -1246,6 +1300,64 @@ fn git_file_diff(root: String, path: String) -> Result<GitDiffResponse, String> 
         diff: String::new(),
         source: "clean".into(),
     })
+}
+
+#[tauri::command]
+fn git_file_action(
+    root: String,
+    path: String,
+    action: GitFileAction,
+) -> Result<GitStatusResponse, String> {
+    let root = validate_workspace_path(&root)?;
+    let relative_path = validate_git_relative_path(&path)?;
+    let status = git_status_for_path(&root, &relative_path)?;
+    match action {
+        GitFileAction::Stage => {
+            run_git_checked(&root, &["add", "--", &relative_path], "stage file")?;
+        }
+        GitFileAction::Unstage => {
+            let Some(status) = status.as_ref() else {
+                return Err("File has no staged changes to unstage.".into());
+            };
+            if status.index == " " || status.index == "?" {
+                return Err("File has no staged changes to unstage.".into());
+            }
+            if status.index == "A" {
+                run_git_checked(
+                    &root,
+                    &["rm", "--cached", "--", &relative_path],
+                    "unstage file",
+                )?;
+            } else {
+                run_git_checked(
+                    &root,
+                    &["restore", "--staged", "--", &relative_path],
+                    "unstage file",
+                )?;
+            }
+        }
+        GitFileAction::Discard => {
+            let Some(status) = status.as_ref() else {
+                return Err("File has no unstaged changes to discard.".into());
+            };
+            if status.index == "?" {
+                run_git_checked(
+                    &root,
+                    &["clean", "-f", "--", &relative_path],
+                    "discard file",
+                )?;
+            } else if status.worktree != " " {
+                run_git_checked(
+                    &root,
+                    &["restore", "--worktree", "--", &relative_path],
+                    "discard file",
+                )?;
+            } else {
+                return Err("File has no unstaged changes to discard.".into());
+            }
+        }
+    }
+    git_status(root)
 }
 
 /// Frontend -> filesystem: start or replace the live watcher for the current
@@ -1897,7 +2009,8 @@ pub fn run() {
             delete_workspace_path,
             duplicate_workspace_path,
             git_status,
-            git_file_diff
+            git_file_diff,
+            git_file_action
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -2072,6 +2185,23 @@ mod tests {
             .expect("time")
             .as_nanos();
         std::env::temp_dir().join(format!("{prefix}-{suffix}"))
+    }
+
+    fn run_test_git(root: &Path, args: &[&str]) {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(root)
+            .args(args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .expect("run git");
+        assert!(
+            output.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 
     #[test]
@@ -2466,6 +2596,67 @@ mod tests {
         assert!(diff.diff.contains("--- /dev/null"));
         assert!(diff.diff.contains("+++ b/src/new.txt"));
         assert!(diff.diff.contains("+one\n+two\n"));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn git_file_actions_stage_unstage_and_discard_tracked_changes() {
+        let root = temp_root("git-actions-tracked");
+        fs::create_dir_all(root.join("src")).expect("create src");
+        run_test_git(&root, &["init"]);
+        fs::write(root.join("src/app.txt"), "base\n").expect("write base");
+        run_test_git(&root, &["add", "src/app.txt"]);
+        run_test_git(
+            &root,
+            &[
+                "-c",
+                "user.name=Keelhouse Test",
+                "-c",
+                "user.email=keelhouse@example.test",
+                "commit",
+                "-m",
+                "base",
+            ],
+        );
+        fs::write(root.join("src/app.txt"), "changed\n").expect("write changed");
+        let root_s = root.to_string_lossy().into_owned();
+        let staged = git_file_action(root_s.clone(), "src/app.txt".into(), GitFileAction::Stage)
+            .expect("stage file");
+        assert_eq!(staged.staged, 1);
+        assert_eq!(staged.unstaged, 0);
+        let unstaged =
+            git_file_action(root_s.clone(), "src/app.txt".into(), GitFileAction::Unstage)
+                .expect("unstage file");
+        assert_eq!(unstaged.staged, 0);
+        assert_eq!(unstaged.unstaged, 1);
+        let clean = git_file_action(root_s, "src/app.txt".into(), GitFileAction::Discard)
+            .expect("discard file");
+        assert!(clean.files.is_empty());
+        assert_eq!(
+            fs::read_to_string(root.join("src/app.txt")).expect("read restored"),
+            "base\n"
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn git_file_actions_stage_unstage_and_discard_untracked_file() {
+        let root = temp_root("git-actions-untracked");
+        fs::create_dir_all(root.join("src")).expect("create src");
+        run_test_git(&root, &["init"]);
+        fs::write(root.join("src/new.txt"), "new\n").expect("write new");
+        let root_s = root.to_string_lossy().into_owned();
+        let staged = git_file_action(root_s.clone(), "src/new.txt".into(), GitFileAction::Stage)
+            .expect("stage untracked file");
+        assert_eq!(staged.staged, 1);
+        let untracked =
+            git_file_action(root_s.clone(), "src/new.txt".into(), GitFileAction::Unstage)
+                .expect("unstage new file");
+        assert_eq!(untracked.untracked, 1);
+        let clean = git_file_action(root_s, "src/new.txt".into(), GitFileAction::Discard)
+            .expect("discard untracked file");
+        assert!(clean.files.is_empty());
+        assert!(!root.join("src/new.txt").exists());
         let _ = fs::remove_dir_all(root);
     }
 
