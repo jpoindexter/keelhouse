@@ -683,13 +683,13 @@
     {
       "id": "GIT-STATUS",
       "title": "Git status in file rail",
-      "column": "next",
+      "column": "done",
       "tier": "sand",
       "track": "files",
       "size": "S",
       "launch": "v1",
       "summary": "Small but high-signal replacement for a VS Code affordance Jason likely relies on: dirty/new/deleted markers in the file tree.",
-      "done": "Rail marks modified, untracked, deleted, and ignored files for git workspaces without blocking UI on large repos."
+      "done": "Verified 2026-07-09: file nodes show compact Git tokens for modified, untracked/new, added, deleted, renamed, and staged files. Deleted files that no longer exist on disk are inserted as virtual file rows under their parent folder and cannot be opened as real files. Unsaved editor draft dots remain separate from repository status. Covered by npm run build, npm test -- fileGitStatus.test.ts, and npm run qa:editor."
     },
     {
       "id": "DIFF-VIEW",

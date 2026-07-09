@@ -46,7 +46,7 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 ## In progress
 
-**Next active slice: SESSION-RESTORE, then GIT-STATUS.** PROJECT-RAIL, PROJECT-SESSIONS, BROWSER-PREVIEW, PANE-MANAGER, PANE-NAMES, AGENT-SESSION-HANDLE, AGENT-ACTIVITY, AGENT-ACTIVITY-LOG, APP-ACTIONS-MINIMAL, COMPOSER-HARNESS, PROCESS-LIFECYCLE, AGENT-FIRST-WORKBENCH, VSCODE-CHROME-SHELL, DRAWER-MODES-PROJECTS-FILES, REFERENCE-PRODUCT-AUDIT, and ACTIVITY-DRAWERS are verified for the first v1 navigation/session/preview/pane/activity/action/harness/lifecycle/layout/chrome layers.
+**Next active slice: DIFF-VIEW, then GIT-ACTIONS-LITE.** PROJECT-RAIL, PROJECT-SESSIONS, BROWSER-PREVIEW, PANE-MANAGER, PANE-NAMES, AGENT-SESSION-HANDLE, AGENT-ACTIVITY, AGENT-ACTIVITY-LOG, APP-ACTIONS-MINIMAL, COMPOSER-HARNESS, PROCESS-LIFECYCLE, AGENT-FIRST-WORKBENCH, VSCODE-CHROME-SHELL, DRAWER-MODES-PROJECTS-FILES, REFERENCE-PRODUCT-AUDIT, ACTIVITY-DRAWERS, SESSION-RESTORE, and GIT-STATUS are verified for the first v1 navigation/session/preview/pane/activity/action/harness/lifecycle/layout/chrome/files layers.
 
 **ACTIVE-FILE-SYNC (VERIFIED 2026-07-08):** active-file metadata persists per workspace in `activeFileByWorkspace`, using the backend-returned canonical workspace root from `open_workspace`. On workspace tree load, the frontend restores the saved active file only when that exact file exists in the current tree; stale persisted paths are cleared instead of opening the wrong file. Watcher/tree refresh now reconciles the selected file to the fresh tree node when the same path still exists, while preserving the missing-file warning when it disappears. Verified with `npm run build`, `npm test` (16 tests), `git diff --check`, and a native `npm run tauri dev` smoke that seeded a temporary workspace and captured the restored active file at `docs/qa/active-file-sync/restore.png`.
 
@@ -112,15 +112,13 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 **AGENT-FIRST-WORKBENCH (VERIFIED 2026-07-09):** the workbench hierarchy now matches the actual workflow: the agent panel defaults to Chat, showing activity strip/log and composer as the primary surface. The raw terminal canvas stays mounted for the real pty but is visible only through the Terminal tab or Raw terminal action. Editor and browser preview are trays that can move left, right, bottom, or hide. Draggable splitter rails resize the whole tray and the editor/browser split; layout mode, sizes, and agent surface mode persist in localStorage. Tray controls live in the agent header so tools can be hidden without losing recovery. Verified with `npm run build`, `npm test`, `npm run qa:editor`, selected/narrow screenshot inspection, and `git diff --check`.
 
-## Next (ordered)
-
-**SESSION-RESTORE (VERIFIED 2026-07-09):** `sessionEditorSnapshots` now persists per-session editor tabs, active file, dirty buffers, and CodeMirror view state. `paneLayoutsBySession` persists pane slots, launch profile ids, and labels. Startup normalizes both stores before reopening the last workspace, then creates fresh panes from the saved layout while staying honest that live process memory/transcripts are not restored. Missing workspace cleanup and session deletion prune both restore stores. `docs/session-restore.md` and `docs/local-state.md` record schema and boundaries. Verified with `npm run build` and `npm test -- sessionRestore.test.ts`.
+**GIT-STATUS (VERIFIED 2026-07-09):** `app/src/fileGitStatus.ts` maps `git status --short --branch` entries into file-rail markers for modified, untracked/new, added, deleted, renamed, and staged files. Existing nodes receive compact status tokens; deleted files that no longer exist on disk are inserted as virtual rows under their parent folder and cannot be opened as real files. Unsaved editor draft dots stay separate from Git status markers. `docs/git-status.md` records behavior and boundaries. Verified with `npm run build`, `npm test -- fileGitStatus.test.ts`, and `npm run qa:editor`.
 
 ## Next (ordered)
 
-1. **GIT-STATUS:** dirty/new/deleted markers in the file rail.
-2. **DIFF-VIEW:** inspect agent-created changes without VS Code.
-3. **GIT-ACTIONS-LITE:** stage/unstage/discard/copy diff after DIFF-VIEW.
+1. **DIFF-VIEW:** inspect agent-created changes without VS Code.
+2. **GIT-ACTIONS-LITE:** stage/unstage/discard/copy diff after DIFF-VIEW.
+3. **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
 
 ## Gotchas
 

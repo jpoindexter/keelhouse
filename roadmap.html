@@ -282,6 +282,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">PRODUCT-NAME-README &middot; Product name and README docs</span><span class="lens l-quality">Quality + shipping</span></div>
 <div class="badges"><span class="me ver">v0_5</span></div><p class="sum">Lock the user-facing product name and give contributors a clear README/doc map without renaming the repo/package slug prematurely.</p>
 <details><summary>Done criteria</summary><p class="done">Product name is Keelhouse across PRD, README, product positioning, app metadata, generated roadmap, and docs index; repo/package/storage slug remains agent-cli until an explicit migration.</p></details></div>
+<div class="card" data-track="files" data-id="GIT-STATUS" data-size="S" data-tier="sand" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">GIT-STATUS &middot; Git status in file rail</span><span class="lens l-files">Files + editor</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">Small but high-signal replacement for a VS Code affordance Jason likely relies on: dirty/new/deleted markers in the file tree.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: file nodes show compact Git tokens for modified, untracked/new, added, deleted, renamed, and staged files. Deleted files that no longer exist on disk are inserted as virtual file rows under their parent folder and cannot be opened as real files. Unsaved editor draft dots remain separate from repository status. Covered by npm run build, npm test -- fileGitStatus.test.ts, and npm run qa:editor.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
@@ -310,12 +314,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">DAILY-DRIVER-METRICS &middot; Daily-driver success metrics</span><span class="lens l-quality">Quality + shipping</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">Define how to know the app is actually replacing the VS Code workflow instead of just existing.</p>
 <details><summary>Done criteria</summary><p class="done">Script and record three workflow runs: one-project edit+agent, two-agent same-project, and three-project switch/relaunch. Track steps, elapsed time, project opens, pane starts/stops, editor saves, crashes, memory/CPU snapshots, and whether VS Code was needed.</p></details></div>
-</div>
-<div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
-<div class="card" data-track="files" data-id="GIT-STATUS" data-size="S" data-tier="sand" data-launch="v1">
-<div class="hd"><span class="sz">S</span><span class="ttl">GIT-STATUS &middot; Git status in file rail</span><span class="lens l-files">Files + editor</span></div>
-<div class="badges"><span class="me ver">v1</span></div><p class="sum">Small but high-signal replacement for a VS Code affordance Jason likely relies on: dirty/new/deleted markers in the file tree.</p>
-<details><summary>Done criteria</summary><p class="done">Rail marks modified, untracked, deleted, and ignored files for git workspaces without blocking UI on large repos.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="later"><h2 class="s-later">Later</h2>

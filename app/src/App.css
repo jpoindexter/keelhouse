@@ -1059,6 +1059,45 @@ body,
   background: var(--color-warning);
 }
 
+.file-node__git {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.file-node__git--modified {
+  color: #f0c674;
+}
+
+.file-node__git--untracked,
+.file-node__git--added {
+  color: #7bd88f;
+}
+
+.file-node__git--deleted {
+  color: #ff6b6b;
+}
+
+.file-node__git--renamed {
+  color: #7aa2f7;
+}
+
+.file-node__git--staged {
+  color: #b4f9f8;
+}
+
+.file-node--git-deleted .file-node__name {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
 .workbench {
   --tool-tray-size: 30%;
   --tool-primary-size: 58%;

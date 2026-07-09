@@ -135,6 +135,11 @@ import {
 } from "./terminalPane";
 import type { TerminalPaneState } from "./terminalPane";
 import {
+  decorateFileTreeWithGitStatus,
+  gitStatusLabel,
+} from "./fileGitStatus";
+import type { FileGitStatus, GitStatusFile } from "./fileGitStatus";
+import {
   normalizePaneLayoutsBySession,
   normalizeSessionEditorSnapshots,
   paneLayoutFromPanes,
@@ -172,13 +177,13 @@ type FileTreeNode = {
   path: string;
   kind: "directory" | "file";
   dirty?: boolean;
+  gitStatus?: FileGitStatus;
   children?: FileTreeNode[];
 };
 type FileTreeResponse = { root: string; nodes: FileTreeNode[]; truncated: boolean };
 type WorkspaceTreeChanged = { root: string; count: number };
 type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
 type FileOpResponse = { path: string };
-type GitStatusFile = { path: string; index: string; worktree: string };
 type GitStatusResponse = {
   isRepository: boolean;
   branch: string | null;
@@ -332,26 +337,25 @@ const flattenFiles = (nodes: FileTreeNode[]): FileTreeNode[] =>
     ...(node.children ? flattenFiles(node.children) : []),
   ]);
 
-const gitStatusLabel = (file: GitStatusFile) => {
-  if (file.index === "?") return "Untracked";
-  const parts = [];
-  if (file.index !== " ") parts.push("Staged");
-  if (file.worktree !== " ") parts.push("Modified");
-  return parts.join(" + ") || "Clean";
-};
-
 function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<FileTreeNode>) {
   const isDirectory = node.data.kind === "directory";
+  const gitStatus = node.data.gitStatus;
+  const isDeleted = gitStatus?.code === "deleted";
+  const title = [node.data.path, node.data.dirty ? "Unsaved changes" : null, gitStatus ? `Git: ${gitStatus.label}` : null]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <div
       ref={dragHandle}
       style={style}
-      className={`file-node ${node.isSelected ? "file-node--selected" : ""}`}
+      className={`file-node ${node.isSelected ? "file-node--selected" : ""} ${gitStatus ? `file-node--git-${gitStatus.code}` : ""}`}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
         event.preventDefault();
         if (isDirectory) {
           node.toggle();
+        } else if (isDeleted) {
+          node.select();
         } else {
           node.select();
           node.activate();
@@ -372,9 +376,14 @@ function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<FileTreeNode
       <span className={`file-node__icon file-node__icon--${node.data.kind}`} aria-hidden="true">
         <AppIcon name={isDirectory ? (node.isOpen ? "folderOpen" : "folder") : "file"} />
       </span>
-      <span className="file-node__name" title={node.data.path}>
+      <span className="file-node__name" title={title}>
         {node.data.name}
       </span>
+      {gitStatus ? (
+        <span className={`file-node__git file-node__git--${gitStatus.code}`} aria-label={`Git status: ${gitStatus.label}`}>
+          {gitStatus.token}
+        </span>
+      ) : null}
       {node.data.dirty ? <span className="file-node__dirty" aria-label="Unsaved changes" /> : null}
     </div>
   );
@@ -481,6 +490,7 @@ function App() {
   const [sideDrawerCollapsed, setSideDrawerCollapsed] = useState(readStoredSideDrawerCollapsed);
   const [drawerSearchQuery, setDrawerSearchQuery] = useState("");
   const [gitStatus, setGitStatus] = useState<GitStatusResponse | null>(null);
+  const [gitStatusRoot, setGitStatusRoot] = useState<string | null>(null);
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
   const [gitStatusError, setGitStatusError] = useState<string | null>(null);
   const workbenchRef = useRef<HTMLElement | null>(null);
@@ -617,8 +627,12 @@ function App() {
   );
   const editorLanguage = selectedFile ? languageLabelForPath(selectedFile.path) : "No file";
   const visibleFileTree = useMemo(
-    () => markDirtyFile(fileTree, dirtyTabPathSet),
-    [fileTree, dirtyTabPathSet],
+    () => {
+      const dirtyTree = markDirtyFile(fileTree, dirtyTabPathSet);
+      const files = workspacePath && gitStatusRoot === workspacePath && gitStatus?.isRepository ? gitStatus.files : [];
+      return decorateFileTreeWithGitStatus(workspacePath, dirtyTree, files);
+    },
+    [dirtyTabPathSet, fileTree, gitStatus, gitStatusRoot, workspacePath],
   );
   const searchableFiles = useMemo(() => flattenFiles(visibleFileTree), [visibleFileTree]);
   const drawerSearchResults = useMemo(() => {
@@ -703,6 +717,7 @@ function App() {
     const root = workspacePathRef.current ?? workspacePath;
     if (!root) {
       setGitStatus(null);
+      setGitStatusRoot(null);
       setGitStatusError(null);
       return;
     }
@@ -710,9 +725,11 @@ function App() {
     setGitStatusError(null);
     try {
       setGitStatus(await invoke<GitStatusResponse>("git_status", { root }));
+      setGitStatusRoot(root);
     } catch (err) {
       setGitStatusError(String(err));
       setGitStatus(null);
+      setGitStatusRoot(root);
     } finally {
       setGitStatusLoading(false);
     }
@@ -739,7 +756,7 @@ function App() {
   }, [paneLabelsBySession]);
 
   useEffect(() => {
-    if (sideDrawerMode === "git") {
+    if (sideDrawerMode === "files" || sideDrawerMode === "search" || sideDrawerMode === "git") {
       void refreshGitStatus();
     }
   }, [sideDrawerMode, workspacePath, treeRefreshNonce]);
@@ -3613,6 +3630,8 @@ function App() {
                 onActivate={(node) => {
                   if (node.data.kind === "directory") {
                     node.toggle();
+                  } else if (node.data.gitStatus?.code === "deleted") {
+                    node.select();
                   } else {
                     void requestOpenEditorFile(node.data, { focusEditor: true });
                   }
