@@ -125,6 +125,17 @@
     .agent-chip { color: var(--orange); font-weight: 700; }
     .icon { width: 18px; height: 18px; display: inline-grid; place-items: center; color: inherit; }
     .icon:hover { color: var(--ink); }
+    .svg-icon {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      flex: 0 0 auto;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
     .grow { flex: 1; min-width: 0; }
     .text-action {
       min-width: max-content;
@@ -257,22 +268,7 @@
       margin: 0 auto;
       padding: 28px 0 18px;
     }
-    .msg {
-      display: grid;
-      grid-template-columns: 28px 1fr;
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-    .msg-icon {
-      width: 24px;
-      height: 24px;
-      display: grid;
-      place-items: center;
-      border: 1px solid #343642;
-      background: #1d1e25;
-      color: var(--muted);
-      border-radius: 7px;
-    }
+    .msg { display: block; margin-bottom: 20px; }
     .bubble {
       padding: 10px 0;
       line-height: 1.45;
@@ -646,21 +642,36 @@
   </style>
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute;visibility:hidden" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16.5 16.5 4 4"></path></symbol>
+    <symbol id="i-project" viewBox="0 0 24 24"><path d="M7 3h7l3 3v15H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"></path><path d="M13 3v4h4"></path><path d="M8.5 11h7"></path><path d="M8.5 15h5"></path></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M5 7h14"></path><path d="M5 12h14"></path><path d="M5 17h14"></path></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"></path><path d="M5 12h14"></path></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 5h5v5"></path><path d="m19 5-9 9"></path><path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4"></path></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v5l3 2"></path></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"></path><path d="m14 7 3 3"></path></symbol>
+    <symbol id="i-files" viewBox="0 0 24 24"><path d="M7 7V5a2 2 0 0 1 2-2h8l3 3v11a2 2 0 0 1-2 2h-2"></path><path d="M4 9h8l3 3v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z"></path></symbol>
+    <symbol id="i-browser" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21"></path><path d="M12 3C9.5 5.6 8.2 8.6 8.2 12S9.5 18.4 12 21"></path></symbol>
+    <symbol id="i-git" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"></circle><circle cx="18" cy="18" r="2"></circle><circle cx="6" cy="18" r="2"></circle><path d="M6 8v8"></path><path d="M8 6c4.5 0 7.5 3 9 10"></path></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m6 8 4 4-4 4"></path><path d="M12 16h6"></path><rect x="3" y="4" width="18" height="16" rx="2"></rect></symbol>
+  </svg>
   <main class="app">
     <header class="titlebar">
       <div class="traffic">
         <div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
-        <div class="title-search"><span>⌕</span><span>Search threads...</span></div>
+        <div class="title-search"><svg class="svg-icon"><use href="#i-search"></use></svg><span>Search threads...</span></div>
       </div>
       <div class="title-splitter left-title-splitter"></div>
       <div class="workspace-crumb" data-menu="project"><strong>agent cli</strong><span>⎇ main</span><span class="branch">⑂ main</span></div>
       <div class="title-splitter right-title-splitter"></div>
       <div class="top-actions">
-        <button class="icon" title="Threads">☰</button>
-        <button class="icon" title="New thread">+</button>
-        <button class="icon" title="Open externally">↗</button>
+        <button class="icon" title="Threads"><svg class="svg-icon"><use href="#i-menu"></use></svg></button>
+        <button class="icon" title="New thread"><svg class="svg-icon"><use href="#i-plus"></use></svg></button>
+        <button class="icon" title="Open externally"><svg class="svg-icon"><use href="#i-external"></use></svg></button>
         <span class="agent-chip">Claude Code</span>
-        <button class="icon" data-menu="top">•••</button>
+        <button class="icon" data-menu="top"><svg class="svg-icon"><use href="#i-more"></use></svg></button>
       </div>
     </header>
 
@@ -669,24 +680,24 @@
         <div class="pane-head">
           <strong>Threads</strong>
           <span class="grow"></span>
-          <button class="icon" data-menu="new">+</button>
-          <button class="icon">⌄</button>
+          <button class="icon" data-menu="new"><svg class="svg-icon"><use href="#i-plus"></use></svg></button>
+          <button class="icon"><svg class="svg-icon"><use href="#i-chevron"></use></svg></button>
         </div>
         <div class="thread-scroll">
           <div class="section-label">Today</div>
-          <div class="project-row"><span>▣</span><span class="project-title">agent cli</span><span class="status-dot"></span></div>
+          <div class="project-row"><svg class="svg-icon"><use href="#i-project"></use></svg><span class="project-title">agent cli</span><span class="status-dot"></span></div>
           <div class="thread-row active"><span class="thread-title">Chrome quality pass</span><span class="thread-time">now</span></div>
           <div class="thread-row"><span class="thread-title">Add AGENTS.md guide</span><span class="thread-time">4h</span></div>
           <div class="thread-row"><span class="thread-title">Install design skills</span><span class="thread-time">5h</span></div>
-          <div class="project-row"><span>▣</span><span class="project-title">Vanta</span><span></span></div>
+          <div class="project-row"><svg class="svg-icon"><use href="#i-project"></use></svg><span class="project-title">Vanta</span><span></span></div>
           <div class="thread-row"><span class="thread-title">Update init and agents docs</span><span class="thread-time">5h</span></div>
           <div class="thread-row"><span class="thread-title">Custom harness research</span><span class="thread-time">1d</span></div>
           <div class="section-label">Projects</div>
-          <div class="project-row"><span>▣</span><span class="project-title">postures</span><span></span></div>
+          <div class="project-row"><svg class="svg-icon"><use href="#i-project"></use></svg><span class="project-title">postures</span><span></span></div>
           <div class="thread-row"><span class="thread-title">Build posture routine website</span><span class="thread-time">2d</span></div>
-          <div class="project-row"><span>▣</span><span class="project-title">mews-microsite</span><span></span></div>
+          <div class="project-row"><svg class="svg-icon"><use href="#i-project"></use></svg><span class="project-title">mews-microsite</span><span></span></div>
           <div class="thread-row"><span class="thread-title">Deploy presentation repo</span><span class="thread-time">3d</span></div>
-          <div class="project-row"><span>▣</span><span class="project-title">agentic-os</span><span></span></div>
+          <div class="project-row"><svg class="svg-icon"><use href="#i-project"></use></svg><span class="project-title">agentic-os</span><span></span></div>
           <div class="thread-row"><span class="thread-title">Publish privately</span><span class="thread-time">1w</span></div>
         </div>
       </aside>
@@ -705,26 +716,24 @@
         <div class="conversation">
           <div class="messages">
             <article class="msg">
-              <div class="msg-icon">JP</div>
               <div class="bubble">
-                <div class="meta">You · 11:28 AM</div>
+                <div class="meta">Prompt · 11:28 AM</div>
                 I want VS Code/Zed-level chrome quality without copying either. The agent thread is the work surface; files, editor, browser, git, and terminal are trays.
               </div>
             </article>
             <article class="msg">
-              <div class="msg-icon">⌘</div>
               <div class="bubble">
-                <div class="meta">Keelhouse · thinking</div>
+                <div class="meta">Thinking</div>
                 Translating the reference quality into this product model.
                 <div class="thinking">
                   Direct sidebar beats an activity rail here. Center stays chat/composer. Tooling docks right or bottom and can be resized, hidden, or moved without taking over the app.
                 </div>
                 <div class="card">
-                  <div class="card-head"><span>◷</span><span>Working plan</span><span class="grow"></span><button class="icon">⌄</button></div>
+                  <div class="card-head"><svg class="svg-icon"><use href="#i-clock"></use></svg><span>Working plan</span><span class="grow"></span><button class="icon"><svg class="svg-icon"><use href="#i-chevron"></use></svg></button></div>
                   <div class="card-body">Keep the thread visible, expose agent state, show file evidence inline, and keep raw terminal as an escape hatch rather than the default screen.</div>
                 </div>
                 <div class="card">
-                  <div class="card-head"><span>✎</span><span>Edited active chrome demo</span><span class="grow"></span><button class="text-action">Review</button></div>
+                  <div class="card-head"><svg class="svg-icon"><use href="#i-edit"></use></svg><span>Edited active chrome demo</span><span class="grow"></span><button class="text-action">Review</button></div>
                   <div class="card-body">
                     <div class="file-row"><span>demo/keelhouse-chrome-demo.html</span><span class="diff"><span class="add">+agent shell</span></span></div>
                     <div class="file-row"><span>Center surface</span><span class="diff">thread + composer</span></div>
@@ -739,7 +748,7 @@
             <div class="composer">
               <textarea aria-label="Message composer" placeholder="Ask Keelhouse to run agents, open files, inspect git, or use the browser..."></textarea>
               <div class="composer-bar">
-                <button class="icon">+</button>
+                <button class="icon"><svg class="svg-icon"><use href="#i-plus"></use></svg></button>
                 <span class="agent-chip">Full access</span>
                 <span>Goal</span>
                 <span>5.5 High</span>
@@ -756,14 +765,14 @@
 
       <aside class="dock">
         <div class="dock-tabs">
-          <button class="dock-tab active">▣ Files</button>
-          <button class="dock-tab">✎ Editor</button>
-          <button class="dock-tab">◎ Browser</button>
-          <button class="dock-tab">⑂ Git</button>
+          <button class="dock-tab active"><svg class="svg-icon"><use href="#i-files"></use></svg>Files</button>
+          <button class="dock-tab"><svg class="svg-icon"><use href="#i-edit"></use></svg>Editor</button>
+          <button class="dock-tab"><svg class="svg-icon"><use href="#i-browser"></use></svg>Browser</button>
+          <button class="dock-tab"><svg class="svg-icon"><use href="#i-git"></use></svg>Git</button>
           <button class="dock-tab close">×</button>
         </div>
         <div class="dock-body">
-          <div class="filter">⌕ Filter files...</div>
+          <div class="filter"><svg class="svg-icon"><use href="#i-search"></use></svg>Filter files...</div>
           <div class="tree-row"><span>▾</span><span>app</span><span></span></div>
           <div class="tree-row"><span></span><span>src/App.tsx</span><span class="badge">M</span></div>
           <div class="tree-row active"><span></span><span>demo/keelhouse-chrome-demo.html</span><span class="badge">M</span></div>
@@ -789,10 +798,10 @@
 
       <section class="tray collapsed">
         <div class="tray-tabs">
-          <button class="tray-tab active">▻ Terminal</button>
-          <button class="tray-tab">⟲ Processes</button>
-          <button class="tray-tab">☷ Logs</button>
-          <button class="tray-tab">◎ Browser Preview</button>
+          <button class="tray-tab active"><svg class="svg-icon"><use href="#i-terminal"></use></svg>Terminal</button>
+          <button class="tray-tab"><svg class="svg-icon"><use href="#i-clock"></use></svg>Processes</button>
+          <button class="tray-tab"><svg class="svg-icon"><use href="#i-menu"></use></svg>Logs</button>
+          <button class="tray-tab"><svg class="svg-icon"><use href="#i-browser"></use></svg>Browser Preview</button>
           <span class="grow"></span>
           <button class="icon">⌄</button>
           <button class="icon">×</button>
@@ -848,18 +857,19 @@
 
   <script>
     const menu = document.getElementById("menu");
-    const row = (icon, label, key = "") => `<button class="menu-row"><span>${icon}</span><span>${label}</span><span>${key}</span></button>`;
+    const ico = id => `<svg class="svg-icon"><use href="#${id}"></use></svg>`;
+    const row = (icon, label, key = "") => `<button class="menu-row"><span>${ico(icon)}</span><span>${label}</span><span>${key}</span></button>`;
     function rows(type) {
       if (type === "new") {
-        return `<div class="menu-label">Create</div>${row("+", "New Agent Thread", "⌘N")}${row("▣", "Open Project", "⌘O")}${row("↘", "Clone Repository", "")}<div class="sep"></div>${row("◎", "Open Browser", "⌘T")}${row("⑂", "Open Git Review", "⌘G")}`;
+        return `<div class="menu-label">Create</div>${row("i-plus", "New Agent Thread", "⌘N")}${row("i-project", "Open Project", "⌘O")}${row("i-external", "Clone Repository", "")}<div class="sep"></div>${row("i-browser", "Open Browser", "⌘T")}${row("i-git", "Open Git Review", "⌘G")}`;
       }
       if (type === "agent") {
-        return `<div class="menu-label">Thread</div>${row("↗", "Open in New Window", "")}${row("⟲", "Fork Thread", "")}${row("✎", "Rename", "")}<div class="sep"></div>${row("□", "Stop Agent", "Esc")}${row("☷", "Export Transcript", "")}`;
+        return `<div class="menu-label">Thread</div>${row("i-external", "Open in New Window", "")}${row("i-clock", "Fork Thread", "")}${row("i-edit", "Rename", "")}<div class="sep"></div>${row("i-terminal", "Stop Agent", "Esc")}${row("i-files", "Export Transcript", "")}`;
       }
       if (type === "project") {
-        return `<div class="menu-label">Project</div>${row("⌕", "Search files and threads", "⌘P")}${row("▣", "Switch project", "")}${row("⑂", "Open recent worktree", "")}`;
+        return `<div class="menu-label">Project</div>${row("i-search", "Search files and threads", "⌘P")}${row("i-project", "Switch project", "")}${row("i-git", "Open recent worktree", "")}`;
       }
-      return `<div class="menu-label">View</div>${row("▰", "Toggle Left Sidebar", "⌘B")}${row("▰", "Toggle Right Tray", "⌥⌘B")}${row("▱", "Toggle Terminal Tray", "⌘J")}${row("☷", "Command Palette", "⌘K")}`;
+      return `<div class="menu-label">View</div>${row("i-menu", "Toggle Left Sidebar", "⌘B")}${row("i-files", "Toggle Right Tray", "⌥⌘B")}${row("i-terminal", "Toggle Terminal Tray", "⌘J")}${row("i-search", "Command Palette", "⌘K")}`;
     }
     function openMenu(type, anchor) {
       menu.innerHTML = rows(type);
