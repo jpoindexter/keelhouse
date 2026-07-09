@@ -174,6 +174,7 @@ type TextFileResponse = { path: string; content: string; bytes: number; modified
 type FileOpResponse = { path: string };
 type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
+type WorkbenchLayoutMode = "right" | "left" | "hidden";
 type EditorBuffer = EditorBufferSnapshot & {
   bytes: number | null;
   modifiedMs: number | null;
@@ -380,6 +381,7 @@ function App() {
   const [composerHistoryIndex, setComposerHistoryIndex] = useState<number | null>(null);
   const [agentActivityEvents, setAgentActivityEvents] = useState<AgentActivityEvent[]>([]);
   const [agentActivityFilter, setAgentActivityFilter] = useState<AgentActivityLogFilter>("all");
+  const [workbenchLayout, setWorkbenchLayout] = useState<WorkbenchLayoutMode>("right");
   const editorDirty = selectedFile != null && editorText !== savedEditorText;
   const dirtyTabPaths = useMemo(
     () => dirtyEditorTabPaths(editorTabs, editorBuffersRef.current, selectedFile?.path ?? null, editorDirty),
@@ -2988,7 +2990,7 @@ function App() {
         </div>
       </aside>
 
-      <main className="workbench">
+      <main className={`workbench workbench--drawer-${workbenchLayout}`}>
         <section
           className="editor-area"
           aria-label="Editor"
@@ -3226,6 +3228,38 @@ function App() {
               </span>
             </div>
             <div className="terminal-actions">
+              <div className="layout-switcher" role="group" aria-label="Tool drawer layout">
+                <button
+                  className={`layout-switcher__button ${workbenchLayout === "left" ? "layout-switcher__button--active" : ""}`}
+                  type="button"
+                  title="Move tool drawer left"
+                  aria-pressed={workbenchLayout === "left"}
+                  onClick={() => setWorkbenchLayout("left")}
+                >
+                  <AppIcon name="file" />
+                  <span>Left</span>
+                </button>
+                <button
+                  className={`layout-switcher__button ${workbenchLayout === "right" ? "layout-switcher__button--active" : ""}`}
+                  type="button"
+                  title="Move tool drawer right"
+                  aria-pressed={workbenchLayout === "right"}
+                  onClick={() => setWorkbenchLayout("right")}
+                >
+                  <AppIcon name="file" />
+                  <span>Right</span>
+                </button>
+                <button
+                  className={`layout-switcher__button ${workbenchLayout === "hidden" ? "layout-switcher__button--active" : ""}`}
+                  type="button"
+                  title="Hide tool drawer"
+                  aria-pressed={workbenchLayout === "hidden"}
+                  onClick={() => setWorkbenchLayout("hidden")}
+                >
+                  <AppIcon name="close" />
+                  <span>Hide</span>
+                </button>
+              </div>
               <div className="terminal-pane-strip" aria-label="Terminal panes">
                 {terminalPanes.map((pane, index) => {
                   const label = terminalPaneLabel(pane, index);

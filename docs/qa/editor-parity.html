@@ -248,7 +248,7 @@
           </div>
         </div>
       </aside>
-      <main class="workbench">
+      <main class="workbench workbench--drawer-right">
         <section class="editor-area" aria-label="Editor">
           <div class="editor-tabbar">
             <div class="editor-tabs" role="tablist" aria-label="Open files">
@@ -349,6 +349,11 @@
               <span class="terminal-cwd" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli">agent cli</span>
             </div>
             <div class="terminal-actions">
+              <div class="layout-switcher" role="group" aria-label="Tool drawer layout">
+                <button class="layout-switcher__button" type="button"><svg class="app-icon"><use href="#i-file" /></svg><span>Left</span></button>
+                <button class="layout-switcher__button layout-switcher__button--active" type="button"><svg class="app-icon"><use href="#i-file" /></svg><span>Right</span></button>
+                <button class="layout-switcher__button" type="button"><svg class="app-icon"><use href="#i-close" /></svg><span>Hide</span></button>
+              </div>
               <div class="terminal-pane-strip" aria-label="Terminal panes">
                 <button class="terminal-pane-button terminal-pane-button--active" type="button" aria-label="Focus API fix. Double-click to rename." aria-pressed="true"><svg class="app-icon"><use href="#i-loading" /></svg><span>API fix</span></button>
                 <button class="terminal-pane-button" type="button" aria-label="Focus Codex review. Double-click to rename." aria-pressed="false"><svg class="app-icon"><use href="#i-loading" /></svg><span>Codex review</span></button>

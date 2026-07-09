@@ -1,6 +1,6 @@
 # PRD — Keelhouse
 
-**One-liner:** Keelhouse is a lean native macOS replacement for Jason's actual VS Code workflow: project/session rail, a file explorer, a real file editor, browser/web preview, and multiple real Codex/Gemini/Claude CLI terminals — built on Ghostty's terminal engine, without the IDE chrome he does not use.
+**One-liner:** Keelhouse is a lean native macOS agent cockpit for Jason's actual VS Code workflow: project/session rail, real Codex/Gemini/Claude CLI terminals with a composer/harness as the main surface, plus fast file explorer, editor, and browser tool drawers — built on Ghostty's terminal engine, without the IDE chrome he does not use.
 
 **Naming:** `agent-cli` remains the repo/package slug while the product name is Keelhouse.
 
@@ -10,7 +10,7 @@
 
 Jason works across 5-10 active projects. The real workflow is not "use VS Code as an IDE"; it is: open a project folder in VS Code, use the left file explorer, edit files in the editor, run one or more Codex/Gemini/Claude CLI sessions in integrated terminals pointed at that project, and preview local web work in a browser. When a second or third project is active, it becomes another VS Code window with its own folder and agent terminal(s).
 
-VS Code is useful here as a workbench: Explorer, editor, integrated terminal, shortcut muscle memory, theming/settings, and enough browser/web preview for local app work. Everything else is resource-heavy chrome around a workflow that is mostly real terminal agents. Existing tools each miss something: cmux (great reference, but someone else's app), zellij (static config, no native "open a folder"), Superconductor (closed source, chat UI not real terminal), hashmark/Hallmark-style approaches (reimplement chat UI or show one agent at a time instead of hosting real CLIs).
+VS Code is useful here as a workbench: Explorer, editor, integrated terminal, shortcut muscle memory, theming/settings, and enough browser/web preview for local app work. But the center of gravity is not the code editor; Jason spends most of the session talking to and supervising real terminal agents, then pulls code/browser surfaces in as needed. Everything else is resource-heavy chrome around that agent-first loop. Existing tools each miss something: cmux (great reference, but someone else's app), zellij (static config, no native "open a folder"), Superconductor (closed source, chat UI not real terminal), hashmark/Hallmark-style approaches (reimplement chat UI or show one agent at a time instead of hosting real CLIs).
 
 ## Core Job
 
@@ -29,6 +29,7 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 - Run real Codex/Gemini/Claude/shell sessions in real ptys, with correct env/PATH/auth handling.
 - Keep the terminal robust enough for daily agent work: Ghostty-backed VT fidelity, alternate-screen TUIs, ANSI/truecolor styling, resize, scrollback, selection/copy/paste, bracketed paste, common keyboard chords, fast-output responsiveness, and clear pane lifecycle state.
 - Keep terminal panes as the source-of-truth agent interface. Add a Codex-style composer/harness for routing prompts/instructions to the selected agent pane or app-level actions; do not replace Claude/Codex's real terminal UI with a custom chat clone.
+- Make the selected agent pane, composer, and visible activity timeline the primary workbench surface. The code editor and browser preview are first-class tools, but they should behave like movable/hideable drawers around the agent cockpit rather than the default main screen.
 - Run multiple agent panes per project, and allow different open projects to run different agents at the same time. Each pane needs a visible name/task label, status, cwd, command, restart, and kill controls.
 - Let agents hook into the app through a built-in, permissioned MCP/API surface for app-owned actions such as listing projects, reading open files, opening diffs, focusing panes, creating panes, and reporting task status.
 - Switch across multiple active projects without separate heavyweight VS Code windows.
@@ -119,6 +120,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [x] Each pane/session exposes an app-owned agent session handle with send, interrupt, readTail, close, state, cwd, profile, approval mode, and activity metadata.
 - [x] App-owned actions use a minimal action gate with risk class, approval decision, audit event, and undo/rollback hint where possible.
 - [x] Composer harness supports permission mode, goal state, model/profile selector, attachments, and approval logging for app-owned actions.
+- [x] The workbench hierarchy is agent-first: terminal/composer/activity owns the main surface, while editor and browser preview sit in a left/right/hideable tool drawer.
 - [ ] Session restore brings back projects, file tabs, pane layout, and enough metadata to resume intentionally.
 - [ ] Daily-driver workflows are measured against the equivalent VS Code habit: one-project edit+agent, two-agent same-project, and three-project switching after quit/relaunch.
 - [ ] Resource use is measured against the equivalent VS Code workflow.

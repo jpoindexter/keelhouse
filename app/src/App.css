@@ -593,8 +593,32 @@ body,
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: minmax(150px, 1fr) minmax(120px, 20vh) minmax(320px, 38vh);
-  background: var(--panel-bg);
+  grid-template-columns: minmax(520px, 1fr) minmax(320px, 28vw);
+  grid-template-rows: minmax(0, 1fr) minmax(210px, 30vh);
+  grid-template-areas:
+    "terminal editor"
+    "terminal browser";
+  gap: 1px;
+  background: var(--panel-border);
+}
+
+.workbench--drawer-left {
+  grid-template-columns: minmax(320px, 28vw) minmax(520px, 1fr);
+  grid-template-areas:
+    "editor terminal"
+    "browser terminal";
+}
+
+.workbench--drawer-hidden {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas:
+    "terminal";
+}
+
+.workbench--drawer-hidden .editor-area,
+.workbench--drawer-hidden .browser-preview {
+  display: none;
 }
 
 .editor-area,
@@ -605,15 +629,16 @@ body,
 }
 
 .editor-area {
+  grid-area: editor;
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid var(--panel-border);
+  background: var(--panel-bg);
 }
 
 .browser-preview {
+  grid-area: browser;
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid var(--panel-border);
   background: var(--color-app-bg);
 }
 
@@ -724,6 +749,53 @@ body,
   justify-content: flex-end;
   gap: 8px;
   padding: 0 10px;
+}
+
+.layout-switcher {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--control-border);
+  border-radius: 7px;
+  background: var(--control-bg);
+  padding: 2px;
+}
+
+.layout-switcher__button {
+  display: inline-flex;
+  height: 22px;
+  width: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-subtle);
+  cursor: default;
+  font: 11px/1 var(--font-ui);
+  font-weight: 700;
+  padding: 0;
+}
+
+.layout-switcher__button:hover {
+  background: var(--control-bg-hover);
+  color: var(--color-text);
+}
+
+.layout-switcher__button--active {
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-muted);
+  color: var(--color-text-strong);
+}
+
+.layout-switcher__button .app-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.layout-switcher__button span {
+  display: none;
 }
 
 .editor-meta,
@@ -1058,6 +1130,7 @@ body,
 }
 
 .terminal-panel {
+  grid-area: terminal;
   display: flex;
   flex-direction: column;
   background: var(--color-app-bg);
@@ -1065,11 +1138,12 @@ body,
 
 .terminal-titlebar {
   display: flex;
-  height: 32px;
+  min-height: 34px;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   padding: 0 10px;
+  border-bottom: 1px solid var(--gray-800);
   color: var(--color-text);
 }
 
@@ -1256,13 +1330,27 @@ body,
   height: 22px;
   font-size: 11px;
   font-weight: 650;
-  padding: 0 6px;
+  padding: 0 24px 0 8px;
+}
+
+.terminal-profile-picker select,
+.agent-composer__field select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-subtle) 50%),
+    linear-gradient(135deg, var(--color-text-subtle) 50%, transparent 50%);
+  background-position:
+    calc(100% - 12px) 50%,
+    calc(100% - 7px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .terminal-host {
   min-width: 0;
   min-height: 0;
-  flex: 1;
+  flex: 1 1 auto;
   overflow: hidden;
 }
 
@@ -1546,6 +1634,10 @@ body,
   padding: 0 7px;
 }
 
+.agent-composer__field select {
+  padding-right: 24px;
+}
+
 .agent-composer__field--goal {
   min-width: 140px;
 }
@@ -1656,6 +1748,15 @@ body,
 }
 
 @media (max-width: 960px) {
+  .workbench {
+    grid-template-columns: minmax(380px, 1fr) minmax(220px, 30vw);
+    grid-template-rows: minmax(0, 1fr) minmax(180px, 30vh);
+  }
+
+  .workbench--drawer-left {
+    grid-template-columns: minmax(220px, 30vw) minmax(380px, 1fr);
+  }
+
   .terminal-titlebar {
     gap: 6px;
     padding: 0 8px;
@@ -1667,7 +1768,7 @@ body,
   }
 
   .terminal-pane-strip {
-    max-width: min(25vw, 220px);
+    max-width: min(18vw, 160px);
   }
 
   .terminal-command {
@@ -1676,7 +1777,7 @@ body,
 
   .terminal-mode,
   .terminal-cwd,
-  .terminal-profile-picker__label {
+    .terminal-profile-picker__label {
     display: none;
   }
 
@@ -1827,7 +1928,12 @@ body,
   }
 
   .workbench {
-    grid-template-rows: minmax(120px, 0.9fr) minmax(110px, 0.45fr) minmax(170px, 0.9fr);
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(360px, 1fr) minmax(160px, 0.42fr) minmax(120px, 0.32fr);
+    grid-template-areas:
+      "terminal"
+      "editor"
+      "browser";
   }
 
   .browser-toolbar {

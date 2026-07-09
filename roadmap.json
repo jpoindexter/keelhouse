@@ -1,8 +1,8 @@
 {
   "$schema": "./rockmap/roadmap.schema.json",
   "title": "Keelhouse",
-  "subtitle": "lean macOS workbench for Jason's real workflow — explorer + editor + browser + real CLI agents, without IDE bloat",
-  "loop": "Open project folder → inspect/edit files → preview web output → run one or more real Claude/Codex CLI terminals in that project → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat. Product name: Keelhouse; repo/package slug: agent-cli.",
+  "subtitle": "lean macOS agent cockpit for Jason's real workflow — real CLI agents first, with explorer/editor/browser as fast tool surfaces, without IDE bloat",
+  "loop": "Open project folder → talk to one or more real Claude/Codex/Gemini CLI agents in the main cockpit → inspect/edit files or preview web output in tool drawers → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat. Product name: Keelhouse; repo/package slug: agent-cli.",
   "columns": [
     {
       "id": "done",
@@ -611,6 +611,17 @@
       "launch": "v1",
       "summary": "A cockpit needs basic process affordances: restart, kill, status, exited state, and command/cwd visibility.",
       "done": "Verified 2026-07-09: backend terminate_pane kills a pane child process while keeping the pane/transcript for exit state; backend restart_pane spawns and focuses a fresh process, then removes/kills the replaced process. The frontend preserves pane slot and label across restart, updates project/session status, clears stale snapshots, logs terminate/restart events, and routes both actions through the action gate. The terminal header shows command, mode, cwd, state, Restart, Kill, New, and Close, with narrow responsive icon controls."
+    },
+    {
+      "id": "AGENT-FIRST-WORKBENCH",
+      "title": "Agent-first workbench hierarchy",
+      "column": "done",
+      "tier": "rock",
+      "track": "ui",
+      "size": "M",
+      "launch": "v1",
+      "summary": "Correct the cockpit hierarchy: the main screen is the real agent terminal/composer/activity surface. Code editor and browser are movable tool drawers, not the primary canvas.",
+      "done": "Verified 2026-07-09: workbench grid now gives the selected agent pane and composer the primary surface, moves editor and browser into a right/left/hideable tool drawer, keeps the drawer switcher in the agent header, and refreshes screenshot QA for selected and narrow states. Verified with npm run build, npm test, npm run qa:editor, screenshot inspection, and git diff --check."
     },
     {
       "id": "SESSION-RESTORE",
