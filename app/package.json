@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "qa:editor": "../scripts/capture-editor-qa.sh",
+    "qa:chrome-contract": "node ../scripts/check-chrome-contract.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

@@ -294,6 +294,14 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">S</span><span class="ttl">GIT-STATUS &middot; Git status in file rail</span><span class="lens l-files">Files + editor</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">Small but high-signal replacement for a VS Code affordance Jason likely relies on: dirty/new/deleted markers in the file tree.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: file nodes show compact Git tokens for modified, untracked/new, added, deleted, renamed, and staged files. Deleted files that no longer exist on disk are inserted as virtual file rows under their parent folder and cannot be opened as real files. Unsaved editor draft dots remain separate from repository status. Covered by npm run build, npm test -- fileGitStatus.test.ts, and npm run qa:editor.</p></details></div>
+<div class="card" data-track="quality" data-id="CHROME-QA-GATE" data-size="S" data-tier="sand" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">CHROME-QA-GATE &middot; Chrome screenshot QA gate</span><span class="lens l-quality">Quality + shipping</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">Every chrome pass must prove the accepted states still hold visually and mechanically.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: added npm run qa:chrome-contract and docs/chrome-contract.md; the gate checks required chrome-demo screenshots, steel-cyan tokens, rejected orange/warm accent tokens, rejected chat avatar labels, and flat active-thread treatment. Refreshed editor QA screenshots with npm run qa:editor and spot-checked selected plus narrow-composer states.</p></details></div>
+<div class="card" data-track="ui" data-id="STEEL-CYAN-THEME-GATE" data-size="S" data-tier="sand" data-launch="v1">
+<div class="hd"><span class="sz">S</span><span class="ttl">STEEL-CYAN-THEME-GATE &middot; Graphite and steel-cyan theme gate</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span></div><p class="sum">Lock the accepted graphite shell and steel-cyan accent into semantic tokens and QA checks.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: app chrome defines steel-cyan primitive tokens, routes semantic accent tokens through them, removes the old blue primary treatment, flattens shared badge/control radii, and the chrome contract gate rejects warm accent drift.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
@@ -310,16 +318,6 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">AGENT-THREAD-SURFACE &middot; Agent thread as main surface</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Chat/activity is the working surface; raw terminal is available but not the default screen.</p>
 <details><summary>Done criteria</summary><p class="done">The main surface shows prompt, thinking/status, tool/file/action rows, inline approvals, and a bottom composer. It does not show Jason/Keelhouse avatar blocks, duplicate chat identities, or a raw terminal as the primary default view.</p></details></div>
-</div>
-<div class="tg t-sand"><h3>Sand · glue &amp; polish</h3>
-<div class="card" data-track="quality" data-id="CHROME-QA-GATE" data-size="S" data-tier="sand" data-launch="v1">
-<div class="hd"><span class="sz">S</span><span class="ttl">CHROME-QA-GATE &middot; Chrome screenshot QA gate</span><span class="lens l-quality">Quality + shipping</span></div>
-<div class="badges"><span class="me ver">v1</span></div><p class="sum">Every chrome pass must prove the accepted states still hold visually and mechanically.</p>
-<details><summary>Done criteria</summary><p class="done">First-open, create-menu, settings, palette, and narrow screenshots are refreshed; the report includes overflow checks, avatar-label checks, active-row-radius checks, and accent-token checks before the slice is called done.</p></details></div>
-<div class="card" data-track="ui" data-id="STEEL-CYAN-THEME-GATE" data-size="S" data-tier="sand" data-launch="v1">
-<div class="hd"><span class="sz">S</span><span class="ttl">STEEL-CYAN-THEME-GATE &middot; Graphite and steel-cyan theme gate</span><span class="lens l-ui">Chrome + interaction</span></div>
-<div class="badges"><span class="me ver">v1</span></div><p class="sum">Lock the accepted graphite shell and steel-cyan accent into semantic tokens and QA checks.</p>
-<details><summary>Done criteria</summary><p class="done">Chrome tokens use graphite surfaces and steel-cyan accents; QA or lint checks catch orange/warm accent drift, purple-heavy gradients, and one-note palette regressions.</p></details></div>
 </div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>

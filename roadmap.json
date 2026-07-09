@@ -729,24 +729,24 @@
     {
       "id": "CHROME-QA-GATE",
       "title": "Chrome screenshot QA gate",
-      "column": "now",
+      "column": "done",
       "tier": "sand",
       "track": "quality",
       "size": "S",
       "launch": "v1",
       "summary": "Every chrome pass must prove the accepted states still hold visually and mechanically.",
-      "done": "First-open, create-menu, settings, palette, and narrow screenshots are refreshed; the report includes overflow checks, avatar-label checks, active-row-radius checks, and accent-token checks before the slice is called done."
+      "done": "Verified 2026-07-09: added npm run qa:chrome-contract and docs/chrome-contract.md; the gate checks required chrome-demo screenshots, steel-cyan tokens, rejected orange/warm accent tokens, rejected chat avatar labels, and flat active-thread treatment. Refreshed editor QA screenshots with npm run qa:editor and spot-checked selected plus narrow-composer states."
     },
     {
       "id": "STEEL-CYAN-THEME-GATE",
       "title": "Graphite and steel-cyan theme gate",
-      "column": "now",
+      "column": "done",
       "tier": "sand",
       "track": "ui",
       "size": "S",
       "launch": "v1",
       "summary": "Lock the accepted graphite shell and steel-cyan accent into semantic tokens and QA checks.",
-      "done": "Chrome tokens use graphite surfaces and steel-cyan accents; QA or lint checks catch orange/warm accent drift, purple-heavy gradients, and one-note palette regressions."
+      "done": "Verified 2026-07-09: app chrome defines steel-cyan primitive tokens, routes semantic accent tokens through them, removes the old blue primary treatment, flattens shared badge/control radii, and the chrome contract gate rejects warm accent drift."
     },
     {
       "id": "APP-CHROME-PORT",
