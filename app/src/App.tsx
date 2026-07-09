@@ -2918,9 +2918,62 @@ function App() {
   const activeTerminalPaneLabel = activeTerminalPane
     ? terminalPaneLabel(activeTerminalPane, activeTerminalPaneIndex >= 0 ? activeTerminalPaneIndex : activeTerminalPane.slot)
     : null;
+  const activeWorkspaceName = workspacePath ? basename(workspacePath) : "Open workspace";
+  const activeSessionTitle = activeSessionId
+    ? projectSessionsFor(workspacePath ?? "").find((session) => session.id === activeSessionId)?.title ?? "New session"
+    : "No session";
 
   return (
     <div className="app-shell">
+      <header className="app-titlebar" aria-label="Application chrome">
+        <div className="window-controls" aria-hidden="true">
+          <span className="window-dot window-dot--close" />
+          <span className="window-dot window-dot--minimize" />
+          <span className="window-dot window-dot--zoom" />
+        </div>
+        <div className="titlebar-nav" aria-label="Navigation">
+          <button className="titlebar-icon-button" type="button" title="Back" aria-label="Back">
+            <AppIcon name="back" />
+          </button>
+          <button className="titlebar-icon-button" type="button" title="Forward" aria-label="Forward">
+            <AppIcon name="forward" />
+          </button>
+        </div>
+        <button className="command-center" type="button" title={workspacePath ?? ""} onClick={pickWorkspace}>
+          <AppIcon name="search" />
+          <span>{activeWorkspaceName}</span>
+        </button>
+        <div className="titlebar-status">
+          <span className={`titlebar-pill titlebar-pill--${terminalPaneState}`}>
+            <AppIcon name={paneStateIconName(terminalPaneState)} />
+            <span>{terminalStatusLabel}</span>
+          </span>
+          <button className="titlebar-primary" type="button" onClick={() => void reloadBrowserPreview()}>
+            Update
+          </button>
+        </div>
+      </header>
+      <nav className="activity-bar" aria-label="Primary activity">
+        <button className="activity-button activity-button--active" type="button" title="Explorer" aria-label="Explorer">
+          <AppIcon name="file" />
+        </button>
+        <button className="activity-button" type="button" title="Agent chat" aria-label="Agent chat" onClick={() => setAgentSurfaceMode("chat")}>
+          <AppIcon name="agent" />
+        </button>
+        <button className="activity-button" type="button" title="Raw terminal" aria-label="Raw terminal" onClick={() => setAgentSurfaceMode("terminal")}>
+          <AppIcon name="terminal" />
+        </button>
+        <button className="activity-button" type="button" title="Browser preview" aria-label="Browser preview" onClick={() => setWorkbenchLayout(workbenchLayout === "hidden" ? "right" : workbenchLayout)}>
+          <AppIcon name="browser" />
+        </button>
+        <button className="activity-button" type="button" title="Search" aria-label="Search">
+          <AppIcon name="search" />
+        </button>
+        <span className="activity-spacer" />
+        <button className="activity-button" type="button" title="Open folder" aria-label="Open folder" onClick={pickWorkspace}>
+          <AppIcon name="folderOpen" />
+        </button>
+      </nav>
       <aside className="file-rail" aria-label="Project files">
         <div className="panel-title panel-title--with-action">
           <span>Files</span>
@@ -3801,6 +3854,21 @@ function App() {
           onSave={() => void saveDraftAndContinue()}
         />
       ) : null}
+      <footer className="status-bar" aria-label="Workspace status">
+        <span className="status-bar__item">
+          <AppIcon name="workspace" />
+          <span>{activeWorkspaceName}</span>
+        </span>
+        <span className="status-bar__item">{activeSessionTitle}</span>
+        <span className="status-bar__item">
+          <AppIcon name={paneStateIconName(terminalPaneState)} />
+          <span>{activeTerminalProfile.label}</span>
+          <span>{terminalStatusLabel}</span>
+        </span>
+        <span className="status-bar__spacer" />
+        <span className="status-bar__item">{agentSurfaceMode === "chat" ? "Chat" : "Terminal"}</span>
+        <span className="status-bar__item">Prettier</span>
+      </footer>
     </div>
   );
 }

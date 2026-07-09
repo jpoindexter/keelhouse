@@ -624,6 +624,30 @@
       "done": "Verified 2026-07-09: agent panel now defaults to Chat, showing activity rows and timeline above the composer; raw terminal stays mounted for the real pty but is only visible through the Terminal tab or Raw terminal action. Editor and browser live in left/right/bottom/hideable trays with draggable splitters; layout position, sizes, and agent surface mode persist in localStorage. Screenshot QA was refreshed for selected and narrow states. Verified with npm run build, npm test, npm run qa:editor, screenshot inspection, and git diff --check."
     },
     {
+      "id": "VSCODE-CHROME-SHELL",
+      "title": "VS Code-style shell chrome",
+      "column": "done",
+      "tier": "rock",
+      "track": "ui",
+      "size": "M",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "Correct the outer application chrome toward the VS Code/Codex reference: compact top command/title bar, left activity rail, persistent side drawer, main agent workbench, and bottom status strip.",
+      "done": "Verified 2026-07-09: the app shell now uses titlebar/activity/sidebar/main/status grid geometry, and the QA fixture captures selected/narrow states with the new shell chrome instead of only stacked internal panes. Activity rail buttons still need real switchable drawer content in ACTIVITY-DRAWERS."
+    },
+    {
+      "id": "ACTIVITY-DRAWERS",
+      "title": "Switchable activity drawers",
+      "column": "next",
+      "tier": "rock",
+      "track": "ui",
+      "size": "M",
+      "launch": "v1",
+      "blocker": true,
+      "summary": "Make the activity rail functional, not decorative. Explorer, project sessions, search, source control, browser/tools, and settings need real side-drawer content with pinned/resizable state.",
+      "done": "Activity rail buttons switch side-drawer content; drawer width persists; pinned/collapsed state is keyboard reachable; Explorer/project sessions/search/source-control/browser-tools/settings are represented without adding VS Code extension bloat."
+    },
+    {
       "id": "SESSION-RESTORE",
       "title": "Restore projects, files, panes",
       "column": "next",

@@ -21,7 +21,7 @@ Read the product language guide in `docs/product-positioning.md`.
 
 Direction is locked: build our own app using open-source components, not a fork of cmux, Superconductor, hashmark, or zellij. The terminal foundation is verified: real pty -> `libghostty-vt` in Rust -> Tauri IPC -> Canvas 2D.
 
-Already working: keyboard input, paste, selection/copy, scrollback, folder picker, persisted workspace, project/session rail, browser preview, agent launch profiles, named terminal panes, file rail, watcher, recent projects, CodeMirror editing, tabs, save protection, context menus, composer routing, shortcut docs, and chrome token polish.
+Already working: keyboard input, paste, selection/copy, scrollback, folder picker, persisted workspace, project/session rail, browser preview, agent launch profiles, named terminal panes, file rail, watcher, recent projects, CodeMirror editing, tabs, save protection, context menus, composer routing, shortcut docs, chrome token polish, and VS Code-style title/activity/sidebar/status shell chrome.
 
 Current active slice: see `STATE.md`. The roadmap source is `roadmap.json`, rendered to `roadmap.html`; `ROADMAP.md` is the readable companion.
 
@@ -29,6 +29,7 @@ Current active slice: see `STATE.md`. The roadmap source is `roadmap.json`, rend
 
 - Agent-first workbench: chat/run activity, composer, and selected real agent pane own the main screen.
 - Project/session rail for multiple workspaces and task contexts.
+- VS Code/Codex-like shell chrome: compact command/title bar, left activity rail, side drawer, resizable trays, and bottom status strip.
 - Dense file explorer with ignores, watching, and git-aware state.
 - CodeMirror editor tray with VS Code-style shortcuts, tabs, dirty state, find/replace, file operations, and file safety.
 - Ghostty-backed terminal panes running real `codex`, `gemini`, `claude`, or shell processes.

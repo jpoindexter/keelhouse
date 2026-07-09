@@ -30,6 +30,7 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 - Keep the terminal robust enough for daily agent work: Ghostty-backed VT fidelity, alternate-screen TUIs, ANSI/truecolor styling, resize, scrollback, selection/copy/paste, bracketed paste, common keyboard chords, fast-output responsiveness, and clear pane lifecycle state.
 - Keep terminal panes as the source-of-truth agent interface. Add a Codex-style composer/harness for routing prompts/instructions to the selected agent pane or app-level actions; do not replace Claude/Codex's real terminal UI with a custom chat clone.
 - Make the selected agent pane, composer, and visible activity timeline the primary workbench surface. Default to a Codex-like chat/run view backed by the real pty; expose raw terminal as an explicit switchable view for exact TUI escape hatches. The code editor and browser preview are first-class tools, but they should behave like movable, resizable trays around the agent cockpit rather than the default main screen.
+- Use VS Code/Codex-like application chrome for the shell: compact top command/title bar, left activity rail, switchable side drawers, draggable workbench trays, and bottom status strip. The rail and drawers are structural navigation, not decoration.
 - Run multiple agent panes per project, and allow different open projects to run different agents at the same time. Each pane needs a visible name/task label, status, cwd, command, restart, and kill controls.
 - Let agents hook into the app through a built-in, permissioned MCP/API surface for app-owned actions such as listing projects, reading open files, opening diffs, focusing panes, creating panes, and reporting task status.
 - Switch across multiple active projects without separate heavyweight VS Code windows.
@@ -121,6 +122,8 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [x] App-owned actions use a minimal action gate with risk class, approval decision, audit event, and undo/rollback hint where possible.
 - [x] Composer harness supports permission mode, goal state, model/profile selector, attachments, and approval logging for app-owned actions.
 - [x] The workbench hierarchy is agent-first: chat/run activity plus composer owns the main surface, raw terminal is switchable, and editor/browser preview sit in left/right/bottom/hideable trays with draggable splitters.
+- [x] The app shell has VS Code/Codex-style chrome: top command/title bar, left activity rail, persistent side drawer, main agent surface, and bottom status strip.
+- [ ] Activity rail buttons switch real side-drawer content, with pinnable/resizable drawers for Explorer, project sessions, search, source control, browser/tools, and settings.
 - [ ] Session restore brings back projects, file tabs, pane layout, and enough metadata to resume intentionally.
 - [ ] Daily-driver workflows are measured against the equivalent VS Code habit: one-project edit+agent, two-agent same-project, and three-project switching after quit/relaunch.
 - [ ] Resource use is measured against the equivalent VS Code workflow.

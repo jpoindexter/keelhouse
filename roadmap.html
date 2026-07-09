@@ -66,7 +66,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>Keelhouse</h1>
-<p class="meta">lean macOS agent cockpit for Jason's real workflow — real CLI agents first, with resizable explorer/editor/browser trays, without IDE bloat &middot; 70 slices &middot; 6 shipped</p>
+<p class="meta">lean macOS agent cockpit for Jason's real workflow — real CLI agents first, with resizable explorer/editor/browser trays, without IDE bloat &middot; 72 slices &middot; 6 shipped</p>
 <p class="loop">Open project folder → talk to one or more real Claude/Codex/Gemini CLI agents in the main cockpit → resize or move trays to inspect/edit files or preview web output → switch projects without separate heavy VS Code windows. Preserve VS Code muscle memory for supported explorer/editor/browser/terminal workflows; skip plugins and IDE bloat. Product name: Keelhouse; repo/package slug: agent-cli.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Terminal + process</span><span><i style="border-color:#5a4315;background:#171104"></i>Projects + sessions</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Files + editor</span><span><i style="border-color:#4c1d6f;background:#15091f"></i>Chrome + interaction</span><span><i style="border-color:#5f1f2d;background:#1d0b10"></i>Quality + shipping</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research &amp; spikes</span><span style="color:#f87171">🔒 launch blocker</span></div>
 <div class="filters">
@@ -170,6 +170,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <div class="hd"><span class="sz">M</span><span class="ttl">AGENT-FIRST-WORKBENCH &middot; Agent-first resizable tray workbench</span><span class="lens l-ui">Chrome + interaction</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">Correct the cockpit hierarchy and interaction model: the default main screen is a Codex-like chat/run surface backed by real terminal agents, while raw terminal, editor, and browser are explicit switchable/resizable surfaces.</p>
 <details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: agent panel now defaults to Chat, showing activity rows and timeline above the composer; raw terminal stays mounted for the real pty but is only visible through the Terminal tab or Raw terminal action. Editor and browser live in left/right/bottom/hideable trays with draggable splitters; layout position, sizes, and agent surface mode persist in localStorage. Screenshot QA was refreshed for selected and narrow states. Verified with npm run build, npm test, npm run qa:editor, screenshot inspection, and git diff --check.</p></details></div>
+<div class="card" data-track="ui" data-id="VSCODE-CHROME-SHELL" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">VSCODE-CHROME-SHELL &middot; VS Code-style shell chrome</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Correct the outer application chrome toward the VS Code/Codex reference: compact top command/title bar, left activity rail, persistent side drawer, main agent workbench, and bottom status strip.</p>
+<details><summary>Done criteria</summary><p class="done">Verified 2026-07-09: the app shell now uses titlebar/activity/sidebar/main/status grid geometry, and the QA fixture captures selected/narrow states with the new shell chrome instead of only stacked internal panes. Activity rail buttons still need real switchable drawer content in ACTIVITY-DRAWERS.</p></details></div>
 </div>
 <div class="tg t-pebble"><h3>Pebbles · features</h3>
 <div class="card" data-track="workspace" data-id="LAST-WORKSPACE" data-size="S" data-tier="pebble" data-launch="v0">
@@ -268,6 +272,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="tg t-rock"><h3>Rocks · foundational &amp; risky</h3>
+<div class="card" data-track="ui" data-id="ACTIVITY-DRAWERS" data-size="M" data-tier="rock" data-launch="v1">
+<div class="hd"><span class="sz">M</span><span class="ttl">ACTIVITY-DRAWERS &middot; Switchable activity drawers</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v1</span><span class="me lock">🔒</span></div><p class="sum">Make the activity rail functional, not decorative. Explorer, project sessions, search, source control, browser/tools, and settings need real side-drawer content with pinned/resizable state.</p>
+<details><summary>Done criteria</summary><p class="done">Activity rail buttons switch side-drawer content; drawer width persists; pinned/collapsed state is keyboard reachable; Explorer/project sessions/search/source-control/browser-tools/settings are represented without adding VS Code extension bloat.</p></details></div>
 <div class="card" data-track="workspace" data-id="SESSION-RESTORE" data-size="M" data-tier="rock" data-launch="v1">
 <div class="hd"><span class="sz">M</span><span class="ttl">SESSION-RESTORE &middot; Restore projects, files, panes</span><span class="lens l-workspace">Projects + sessions</span></div>
 <div class="badges"><span class="me ver">v1</span></div><p class="sum">After quit/relaunch, the cockpit should come back as the same working context, without pretending to preserve live agent process state.</p>
