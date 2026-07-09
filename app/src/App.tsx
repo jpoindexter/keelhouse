@@ -17,6 +17,7 @@ import {
   browserHistoryCanGoBack,
   browserHistoryCanGoForward,
   DEFAULT_BROWSER_PREVIEW_URL,
+  detectLocalDevServerUrl,
   normalizeBrowserPreviewRecords,
   normalizeBrowserPreviewUrl,
   pushBrowserHistory,
@@ -212,6 +213,14 @@ type ToolTrayMode = "split" | "editor" | "browser";
 type WorkbenchSizing = { trayPercent: number; toolSplitPercent: number };
 type AgentSurfaceMode = "chat" | "terminal";
 type SideDrawerMode = "projects" | "files" | "search" | "git" | "browser" | "settings";
+type DetectedLocalDevServer = {
+  url: string;
+  paneId: number;
+  projectId: string;
+  projectSessionId: string;
+  paneLabel: string;
+  detectedAt: number;
+};
 type EditorBuffer = EditorBufferSnapshot & {
   bytes: number | null;
   modifiedMs: number | null;
@@ -359,6 +368,15 @@ const flattenFiles = (nodes: FileTreeNode[]): FileTreeNode[] =>
     ...(node.children ? flattenFiles(node.children) : []),
   ]);
 
+const snapshotVisibleText = (snapshot: Snapshot) =>
+  Array.from({ length: snapshot.rows }, (_row, y) =>
+    snapshot.cells
+      .slice(y * snapshot.cols, y * snapshot.cols + snapshot.cols)
+      .map((cell) => cell?.t ?? " ")
+      .join("")
+      .trimEnd(),
+  ).join("\n");
+
 function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<FileTreeNode>) {
   const isDirectory = node.data.kind === "directory";
   const gitStatus = node.data.gitStatus;
@@ -426,6 +444,7 @@ function App() {
   const browserPreviewBySessionRef = useRef<BrowserPreviewRecords>({});
   const composerHarnessBySessionRef = useRef<ComposerHarnessRecords>({});
   const browserUrlRef = useRef(DEFAULT_BROWSER_PREVIEW_URL);
+  const detectedLocalDevServerRef = useRef<DetectedLocalDevServer | null>(null);
   const launchProfileRef = useRef<LaunchProfile>(defaultLaunchProfile());
   const intentionallyTerminatedPaneIdsRef = useRef<Set<number>>(new Set());
   const terminalPanesRef = useRef<ManagedTerminalPane[]>([]);
@@ -494,6 +513,7 @@ function App() {
   const [browserHistoryIndex, setBrowserHistoryIndex] = useState(0);
   const [browserReloadNonce, setBrowserReloadNonce] = useState(0);
   const [browserError, setBrowserError] = useState<string | null>(null);
+  const [detectedLocalDevServer, setDetectedLocalDevServer] = useState<DetectedLocalDevServer | null>(null);
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
   const [draftDialogError, setDraftDialogError] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -752,6 +772,12 @@ function App() {
   const terminalStatusLabel = terminalPaneStateLabel(terminalPaneState, terminalExitCode);
   const browserCanGoBack = browserHistoryCanGoBack(browserHistoryIndex);
   const browserCanGoForward = browserHistoryCanGoForward(browserHistory, browserHistoryIndex);
+  const activeDetectedLocalDevServer =
+    detectedLocalDevServer &&
+    detectedLocalDevServer.projectId === workspacePath &&
+    detectedLocalDevServer.projectSessionId === activeSessionId
+      ? detectedLocalDevServer
+      : null;
 
   const refreshFileTree = () => setTreeRefreshNonce((value) => value + 1);
   const refreshGitStatus = async () => {
@@ -1248,6 +1274,13 @@ function App() {
     void navigateBrowserPreview(browserAddress);
   };
 
+  const openDetectedLocalDevServer = async () => {
+    if (!activeDetectedLocalDevServer) return;
+    if (workbenchLayout === "hidden") setWorkbenchLayout("right");
+    if (toolTrayMode === "editor") setToolTrayMode("browser");
+    await navigateBrowserPreview(activeDetectedLocalDevServer.url);
+  };
+
   const goBrowserHistory = (direction: -1 | 1) => {
     const nextIndex = browserHistoryIndex + direction;
     const nextUrl = browserHistory[nextIndex];
@@ -1338,6 +1371,50 @@ function App() {
       void storeRef.current?.save();
       return next;
     });
+  };
+
+  const detectLocalDevServerFromSnapshot = (paneId: number, snapshot: Snapshot) => {
+    const url = detectLocalDevServerUrl(snapshotVisibleText(snapshot));
+    if (!url) return;
+    const projectEntry = Object.entries(terminalPanesByProjectRef.current).find(([, panes]) => panes.some((pane) => pane.id === paneId));
+    const root = projectEntry?.[0] ?? workspacePathRef.current;
+    const panes = projectEntry?.[1] ?? terminalPanesRef.current;
+    const paneIndex = panes.findIndex((pane) => pane.id === paneId);
+    const pane = paneIndex >= 0 ? panes[paneIndex] : null;
+    const sessionId = activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, root);
+    if (!root || !sessionId || !pane) return;
+    const previous = detectedLocalDevServerRef.current;
+    if (previous?.url === url && previous.paneId === paneId && previous.projectId === root && previous.projectSessionId === sessionId) return;
+    const paneLabel = terminalPaneLabelForDisplay(pane.label, pane.profile.label, paneIndex >= 0 ? paneIndex : pane.slot);
+    const next: DetectedLocalDevServer = {
+      url,
+      paneId,
+      projectId: root,
+      projectSessionId: sessionId,
+      paneLabel,
+      detectedAt: Date.now(),
+    };
+    detectedLocalDevServerRef.current = next;
+    setDetectedLocalDevServer(next);
+    const harnessKey = composerHarnessSessionKey(root, sessionId);
+    const approvalMode = composerHarnessBySessionRef.current[harnessKey]?.approvalMode ?? "ask";
+    recordAgentActivity(
+      buildAgentSessionHandleDescriptor({
+        pane,
+        projectId: root,
+        projectSessionId: sessionId,
+        label: paneLabel,
+        approvalMode,
+      }),
+      {
+        kind: "browser",
+        label: "Detected dev server",
+        detail: url,
+        target: url,
+        outputRef: "terminal",
+        status: "complete",
+      },
+    );
   };
 
   const shouldLogAppActionAudit = (audit: AppActionAuditEvent) =>
@@ -3277,6 +3354,7 @@ function App() {
 
     const unlisten = listen<GridPayload>("grid", (ev) => {
       terminalSnapshotsRef.current[ev.payload.paneId] = ev.payload.snapshot;
+      detectLocalDevServerFromSnapshot(ev.payload.paneId, ev.payload.snapshot);
       if (ev.payload.paneId === activeTerminalPaneIdRef.current) {
         latest.current = ev.payload.snapshot;
         requestPaint();
@@ -3721,6 +3799,18 @@ function App() {
               </button>
             </form>
             {browserError ? <div className="rail-status rail-status--error">{browserError}</div> : null}
+            {activeDetectedLocalDevServer ? (
+              <div className="drawer-detected-server" title={activeDetectedLocalDevServer.url}>
+                <div>
+                  <span>Detected from {activeDetectedLocalDevServer.paneLabel}</span>
+                  <strong>{activeDetectedLocalDevServer.url}</strong>
+                </div>
+                <button className="rail-open-button" type="button" disabled={activeDetectedLocalDevServer.url === browserUrl} onClick={() => void openDetectedLocalDevServer()}>
+                  <AppIcon name="browser" />
+                  <span>{activeDetectedLocalDevServer.url === browserUrl ? "Current" : "Open detected"}</span>
+                </button>
+              </div>
+            ) : null}
             <div className="drawer-action-grid">
               <button className="rail-open-button" type="button" disabled={!browserCanGoBack} onClick={() => goBrowserHistory(-1)}>
                 <AppIcon name="back" />
@@ -4238,6 +4328,15 @@ function App() {
               <AppIcon name="openExternal" />
             </button>
           </div>
+          {activeDetectedLocalDevServer && activeDetectedLocalDevServer.url !== browserUrl ? (
+            <div className="browser-detected-banner" title={activeDetectedLocalDevServer.url}>
+              <AppIcon name="browser" />
+              <span>Detected dev server from {activeDetectedLocalDevServer.paneLabel}</span>
+              <button type="button" onClick={() => void openDetectedLocalDevServer()}>
+                Open detected
+              </button>
+            </div>
+          ) : null}
           <div className="browser-frame-wrap">
             {browserError ? <div className="browser-error" role="alert">{browserError}</div> : null}
             <iframe

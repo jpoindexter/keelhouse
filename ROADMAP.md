@@ -111,6 +111,7 @@ This is where the clarified product point lands: not "terminal app with optional
   - 2026-07-09 slice: added persisted Split/Editor/Browser tool tray tabs; single-tray modes hide the unused editor/browser surface and remove the secondary editor/browser splitter; `npm run qa:chrome-contract` guards this.
 - **CHROME-COHERENCE-PASS:** final integration gate for the shell before measurement: VS Code/Zed-level chrome craft without copying either product, `demo/cockpit-demo.html` as graphite mood reference, Codex as clean-composition reference, one large agent-first window, direct thread/project sidebar, steel-cyan accent, flat icons, minimal rounded button chrome, resizable splitters, and docked editor/browser/git/raw terminal. Target walkthrough: `demo/keelhouse-chrome-demo.html`; QA captures: `docs/qa/chrome-demo/`.
 - **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
+  - 2026-07-09 slice: terminal output is scanned for local dev-server URLs (`localhost`, `127.0.0.1`, `0.0.0.0`, `::1` with ports); detections are scoped to the emitting project session, logged as browser activity, and offered as explicit Open detected actions in the Browser drawer and preview pane.
 - **DAILY-DRIVER-METRICS:** prove the app can replace the current workflow with scripted one-project edit+agent, two-agent same-project, and three-project switch/relaunch runs.
 - **PERF-BUDGET:** prove this is lighter than the VS Code workflow it replaces across 1-project, 2-agent, and 3-project task runs.
 

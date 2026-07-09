@@ -1027,6 +1027,38 @@ body,
   white-space: nowrap;
 }
 
+.drawer-detected-server {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 12px 0;
+  border: 1px solid var(--color-accent-border);
+  border-radius: var(--control-radius);
+  background: var(--color-accent-muted);
+  padding: 8px;
+}
+
+.drawer-detected-server div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.drawer-detected-server span {
+  color: var(--color-text-subtle);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.drawer-detected-server strong {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .file-node {
   display: flex;
   height: 24px;
@@ -1984,6 +2016,41 @@ body,
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.browser-detected-banner {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--panel-border);
+  background: var(--color-accent-muted);
+  color: var(--color-text);
+  font-size: 11px;
+  padding: 6px 10px;
+}
+
+.browser-detected-banner span {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-detected-banner button {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-border);
+  cursor: default;
+  font: inherit;
+  font-weight: 750;
+  padding: 0;
+}
+
+.browser-detected-banner button:hover {
+  color: var(--steel-cyan-400);
 }
 
 .browser-button {

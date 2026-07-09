@@ -3,6 +3,8 @@ export const MAX_BROWSER_HISTORY = 25;
 
 export type BrowserPreviewRecords = Record<string, string>;
 
+const LOCAL_DEV_SERVER_PATTERN = /\b(?:https?:\/\/)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]):\d{2,5}(?:\/[^\s"'<>)]*)?/gi;
+
 export const normalizeBrowserPreviewUrl = (value: string): string | null => {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -16,6 +18,27 @@ export const normalizeBrowserPreviewUrl = (value: string): string | null => {
   } catch {
     return null;
   }
+};
+
+export const normalizeDetectedLocalDevServerUrl = (value: string): string | null => {
+  const trimmed = value.trim().replace(/[.,;:]+$/, "");
+  const normalized = normalizeBrowserPreviewUrl(trimmed);
+  if (!normalized) return null;
+  const url = new URL(normalized);
+  if (!["http:", "https:"].includes(url.protocol)) return null;
+  if (!["localhost", "127.0.0.1", "0.0.0.0", "[::1]"].includes(url.hostname)) return null;
+  if (!url.port) return null;
+  if (url.hostname === "0.0.0.0") url.hostname = "localhost";
+  return url.toString();
+};
+
+export const detectLocalDevServerUrl = (text: string): string | null => {
+  const matches = text.match(LOCAL_DEV_SERVER_PATTERN) ?? [];
+  for (const match of matches.reverse()) {
+    const normalized = normalizeDetectedLocalDevServerUrl(match);
+    if (normalized) return normalized;
+  }
+  return null;
 };
 
 export const normalizeBrowserPreviewRecords = (value: unknown): BrowserPreviewRecords => {

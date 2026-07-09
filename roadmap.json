@@ -814,8 +814,8 @@
       "track": "ui",
       "size": "S",
       "launch": "v1",
-      "summary": "When Claude/Codex starts Vite, Next, Astro, or another dev server, the app should make the local preview obvious without acting like a full browser.",
-      "done": "Detected localhost URLs from terminal output can be opened in the browser preview; the preview remembers the latest URL per project and offers reload/open-external."
+      "summary": "When Claude/Codex starts Vite, Next, Astro, or another dev server, the app should make the local preview obvious without acting like a full browser. Current slice detects local URLs from terminal output and offers an explicit browser-preview action.",
+      "done": "Detected localhost URLs from terminal output can be opened in the browser preview; the preview remembers the latest URL per project/session and offers reload/open-external. OS-level port discovery remains deferred until daily-driver metrics show it is needed."
     },
     {
       "id": "DAILY-DRIVER-METRICS",

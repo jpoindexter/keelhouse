@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   browserHistoryCanGoBack,
   browserHistoryCanGoForward,
+  detectLocalDevServerUrl,
+  normalizeDetectedLocalDevServerUrl,
   normalizeBrowserPreviewRecords,
   normalizeBrowserPreviewUrl,
   pushBrowserHistory,
@@ -14,6 +16,22 @@ describe("browser preview helpers", () => {
     expect(normalizeBrowserPreviewUrl("file:///tmp/demo.html")).toBe("file:///tmp/demo.html");
     expect(normalizeBrowserPreviewUrl("")).toBeNull();
     expect(normalizeBrowserPreviewUrl("javascript:alert(1)")).toBeNull();
+  });
+
+  it("normalizes detected local dev server URLs only", () => {
+    expect(normalizeDetectedLocalDevServerUrl("localhost:5173")).toBe("http://localhost:5173/");
+    expect(normalizeDetectedLocalDevServerUrl("http://127.0.0.1:3000/app")).toBe("http://127.0.0.1:3000/app");
+    expect(normalizeDetectedLocalDevServerUrl("http://[::1]:8080/")).toBe("http://[::1]:8080/");
+    expect(normalizeDetectedLocalDevServerUrl("http://0.0.0.0:4321,")).toBe("http://localhost:4321/");
+    expect(normalizeDetectedLocalDevServerUrl("https://example.com:443")).toBeNull();
+    expect(normalizeDetectedLocalDevServerUrl("file:///tmp/demo.html")).toBeNull();
+    expect(normalizeDetectedLocalDevServerUrl("localhost")).toBeNull();
+  });
+
+  it("detects the newest local dev server URL from terminal output", () => {
+    expect(detectLocalDevServerUrl("VITE ready in 120ms\nLocal: http://localhost:5173/\nNetwork: http://192.168.0.2:5173/")).toBe("http://localhost:5173/");
+    expect(detectLocalDevServerUrl("old http://localhost:3000/\nnew localhost:4173")).toBe("http://localhost:4173/");
+    expect(detectLocalDevServerUrl("docs at https://example.com:443")).toBeNull();
   });
 
   it("normalizes persisted preview records", () => {

@@ -11,11 +11,13 @@ BROWSER-PREVIEW adds the lightweight web surface needed for local app work witho
 - Preview URL state is remembered in `workspace.json` through `browserPreviewByProject` and `browserPreviewBySession`.
 - Switching projects or project sessions restores the remembered preview URL for that context.
 - Context menus on the preview surface expose Back, Forward, Reload, Open externally, and Copy URL.
+- Terminal output is scanned for local dev-server URLs such as `http://localhost:5173/`, `localhost:4173`, `127.0.0.1:3000`, and `0.0.0.0:4321`.
+- Detected local URLs are scoped to the emitting project session, logged as browser activity with terminal provenance, and offered as an explicit Open detected action in the Browser drawer and preview pane.
 - Screenshot QA covers the browser toolbar and rendered preview in desktop and narrow workbench captures.
 
 ## Deferred
 
-- Automatic localhost process discovery belongs to DEV-SERVER-DETECT.
+- OS-level process/port discovery remains deferred; current detection is terminal-output based.
 - Browser-controlled app actions and visual context attachment belong to AGENT-HOOKS and COMPOSER-HARNESS.
 - Full browser features, tabs, downloads, devtools, and general daily browsing stay out of scope.
 
