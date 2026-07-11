@@ -942,13 +942,13 @@
     {
       "id": "SETTINGS-PARITY",
       "title": "Codex-style settings parity",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "ui",
       "size": "M",
       "launch": "v2",
       "summary": "Borrow Codex's searchable left-nav settings shape and icon density, but keep only categories that serve the lean VS Code replacement workflow.",
-      "done": "Settings has searchable grouped sections for General, Appearance, App configuration, Behavior, Keyboard shortcuts, MCP servers, Browser preview, Agent hooks, Connections, Git, Environments, and Worktrees; Profile, Pets, Usage & billing, Archived chats, and Chat Settings are absent; Appshots and Computer use remain parked.",
+      "done": "Settings has searchable grouped sections for General, Appearance, App configuration, Behavior, Keyboard shortcuts, MCP servers, Browser preview, Agent hooks, Connections, Git, Environments, and Worktrees; Profile, Pets, Usage & billing, Archived chats, and Chat Settings are absent; Appshots and Computer use remain parked. Executed 2026-07-11: searchable settings modal per the docs/settings-parity.md chrome spec with only real categories (General agent/permission, Layout dock/tray/reset, Browser preview URL, Git health); opens via drawer Settings button, settings.open palette command, and Cmd+, (chrome.settings shortcut registered); dropped/deferred categories absent; helpers+component tested (132 vitest); visual proof captured in dev shell.",
       "buildOrder": 68
     },
     {

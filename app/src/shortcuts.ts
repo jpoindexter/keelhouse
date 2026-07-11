@@ -135,6 +135,14 @@ export const SHORTCUTS: Shortcut[] = [
     exception: "Cmd+K remains terminal clear.",
   },
   {
+    id: "chrome.settings",
+    label: "Settings",
+    scope: "Chrome",
+    keys: ["Cmd+,"],
+    status: "active",
+    behavior: "Open the settings modal for agent, layout, browser preview, and Git configuration.",
+  },
+  {
     id: "terminal.new-pane",
     label: "New terminal pane",
     scope: "Terminal",

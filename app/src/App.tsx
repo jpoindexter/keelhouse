@@ -154,6 +154,7 @@ import type { ToolTrayMode, WorkbenchLayoutMode } from "./workbenchLayout";
 import { useWorkbenchLayout } from "./useWorkbenchLayout";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { migrateWorkspaceStore } from "./workspaceMigrations";
+import { SettingsModal } from "./SettingsModal";
 import { nextTerminalFindIndex, terminalFindCountLabel, terminalFindHitLabel } from "./terminalFind";
 import type { TerminalFindHit } from "./terminalFind";
 import { AgentRunSurface } from "./AgentRunSurface";
@@ -494,6 +495,7 @@ function App() {
   const [terminalFindError, setTerminalFindError] = useState<string | null>(null);
   const [terminalFindLastQuery, setTerminalFindLastQuery] = useState("");
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [composerDraft, setComposerDraft] = useState("");
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
@@ -2947,6 +2949,15 @@ function App() {
       run: () => void runComposerAppCommand(info.command),
     })),
     {
+      id: "settings.open",
+      label: "Open Settings",
+      detail: "Agent, layout, browser preview, and Git settings",
+      shortcut: shortcutKeys("chrome.settings"),
+      icon: "settings",
+      keywords: ["preferences", "config", "permission", "profile"],
+      run: () => setSettingsOpen(true),
+    },
+    {
       id: "terminal.find",
       label: "Find in Terminal",
       detail: activeTerminalPane ? "Search the selected pane's scrollback" : "Start a pane to search its output",
@@ -3507,6 +3518,11 @@ function App() {
         openQuickOpen();
         return;
       }
+      if (e.metaKey && !e.shiftKey && e.key === ",") {
+        e.preventDefault();
+        setSettingsOpen(true);
+        return;
+      }
       if (target?.closest(".file-rail, .editor-area, .browser-preview, .terminal-titlebar, .agent-composer, .command-palette")) return;
       if (activeTerminalPaneIdRef.current == null) return;
       // Cmd (meta) combos are app-level, not pty input. Let them through so the
@@ -3753,7 +3769,13 @@ function App() {
               key={mode.id}
               aria-selected={sideDrawerMode === mode.id}
               title={mode.label}
-              onClick={() => setSideDrawerMode(mode.id)}
+              onClick={() => {
+                if (mode.id === "settings") {
+                  setSettingsOpen(true);
+                  return;
+                }
+                setSideDrawerMode(mode.id);
+              }}
             >
               <AppIcon name={mode.icon} />
               <span>{mode.label}</span>
@@ -5032,6 +5054,36 @@ function App() {
         </section>
       </main>
 
+      {settingsOpen ? (
+        <SettingsModal
+          approvalMode={activeComposerHarness.approvalMode}
+          browserUrl={browserUrl}
+          gitBranch={gitStatus?.branch ?? null}
+          gitChangeCount={gitStatus ? gitStatus.files.length : null}
+          layout={renderedWorkbenchLayout}
+          profileId={launchProfile.id}
+          profiles={LAUNCH_PROFILES.map((profile) => ({ id: profile.id, label: profile.label }))}
+          trayMode={toolTrayMode}
+          onApprovalModeChange={(mode) => void setComposerApprovalMode(mode)}
+          onBrowserUrlCommit={(url) => {
+            const normalized = normalizeBrowserPreviewUrl(url);
+            if (!normalized) return;
+            setBrowserLocation(normalized);
+            void persistBrowserPreviewUrl(workspacePathRef.current, activeSessionId, normalized);
+          }}
+          onClose={() => setSettingsOpen(false)}
+          onLayoutChange={setWorkbenchLayout}
+          onProfileChange={(profileId) => {
+            const profile = LAUNCH_PROFILES.find((entry) => entry.id === profileId);
+            if (profile) void switchLaunchProfile(profile);
+          }}
+          onResetLayout={() => {
+            setWorkbenchLayout("right");
+            setToolTrayMode("editor");
+          }}
+          onTrayModeChange={setToolTrayMode}
+        />
+      ) : null}
       {launchError ? (
         <div className="launch-error" role="alert">
           <span className="launch-error__message">{launchError}</span>
