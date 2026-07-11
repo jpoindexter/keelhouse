@@ -260,3 +260,13 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 **Why:** The shipped chrome passed `qa:chrome-contract` while visually diverging hard from the accepted demo: ~50 controls rendered as boxed rounded-rect buttons against the demo's three-control grammar, and the Run surface was a bare output dump instead of the centered card composition. The gate greps tokens/strings and cannot see visual weight — it verified structure, not taste. Jason confirmed the drift by eye ("looks wack") and re-affirmed the demo as the direction. Delta audit: `docs/chrome-delta-audit.md`. Execution: roadmap cards CHROME-CONTROL-GRAMMAR, RUN-SURFACE-COMPOSITION, COMPOSER-ELEVATION (slice 1, now), then SIDEBAR-RHYTHM, TITLEBAR-STATUSBAR-PARITY, TRAY-TAB-CHROME, FIRST-OPEN-LAYOUT, OVERLAY-PARITY, CHROME-CONTRACT-V2; structured run cards stay gated on AGENT-HOOKS (RUN-CARDS-ADAPTER, v2) — never inferred from terminal text.
 
 **Reversible?** Yes for the first-open default (one constant + re-baselined screenshots). The control grammar is a CSS/component-class change; reverting means re-pointing the shared button classes. CHROME-CONTRACT-V2 will make reintroducing boxed buttons a failing gate, so future reversal requires an explicit DECISIONS.md entry.
+
+## 2026-07-11 — Bundle Inter for the chrome UI font
+
+**Choice:** Bundle Inter locally via `@fontsource/inter` (v5.2.8, font under OFL-1.1, weights 400/500/600/700/800 imported in `app/src/main.tsx`). `--font-ui` keeps Inter first; the system stack remains the fallback.
+
+**Alternatives considered:** system-first stack (drop Inter) — rejected because the accepted demo and the re-converged chrome were designed against Inter's metrics, and an unbundled first-choice font makes the shipped look depend on what happens to be installed (blind-audit 2026-07-11 finding: every screenshot baseline silently inherited the build machine's fonts).
+
+**Why:** the chrome contract is only enforceable if the type it specifies actually ships. Local woff2 assets keep the no-CDN/offline posture; per-weight latin files are ~45KB each at runtime.
+
+**Reversible?** Yes — remove the five imports and the dependency; fallback stack takes over.

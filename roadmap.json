@@ -1291,14 +1291,14 @@
     {
       "id": "CHROME-FONT-LOCK",
       "title": "Lock the chrome font stack",
-      "column": "next",
+      "column": "done",
       "tier": "sand",
       "track": "ui",
       "size": "S",
       "launch": "v1",
       "buildOrder": 97,
       "summary": "Blind-audit 2026-07-11: --font-ui lists Inter first but Inter is not bundled (no font dep, no preload) — the shipped look silently depends on locally installed fonts and every screenshot baseline inherited the build machine's stack. Either bundle Inter (e.g. @fontsource/inter, weights 400/600/700) or deliberately reorder to a system-first stack; then re-baseline the QA screenshots against the shipped stack.",
-      "done": "Font decision recorded in DECISIONS.md; stack matches the decision in App.css; qa:shell and qa:editor re-captured; bundle size delta within PERF-BUDGET caps if bundling."
+      "done": "Font decision recorded in DECISIONS.md; stack matches the decision in App.css; qa:shell and qa:editor re-captured; bundle size delta within PERF-BUDGET caps if bundling. Executed 2026-07-11: bundled @fontsource/inter 5.2.8 (OFL-1.1) weights 400-800, DECISIONS.md entry appended, screenshots re-baselined, perf budget green."
     },
     {
       "id": "WORKBENCH-STATE-GUARDS",
