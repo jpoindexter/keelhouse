@@ -1,5 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { SHORTCUTS, shortcutKeys, shortcutTitle } from "./shortcuts";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  comboMatches,
+  eventToCombo,
+  findKeybindingConflicts,
+  normalizeKeybindingOverrides,
+  setActiveKeybindingOverrides,
+  SHORTCUTS,
+  shortcutKeys,
+  shortcutTitle,
+} from "./shortcuts";
 
 describe("shortcut baseline", () => {
   it("covers the v0.5 active workspace, editor, terminal, and composer shortcuts", () => {
@@ -28,5 +37,46 @@ describe("shortcut baseline", () => {
   it("formats visible shortcut labels for tooltips", () => {
     expect(shortcutTitle("editor.save", "Save")).toBe("Save (Cmd+S)");
     expect(shortcutTitle("missing", "Fallback")).toBe("Fallback");
+  });
+});
+
+describe("keybinding overrides", () => {
+  afterEach(() => setActiveKeybindingOverrides({}));
+
+  it("resolves overrides ahead of registry defaults and resets cleanly", () => {
+    expect(shortcutKeys("chrome.settings")).toBe("Cmd+,");
+    setActiveKeybindingOverrides({ "chrome.settings": ["Shift+Cmd+,"] });
+    expect(shortcutKeys("chrome.settings")).toBe("Shift+Cmd+,");
+    setActiveKeybindingOverrides({});
+    expect(shortcutKeys("chrome.settings")).toBe("Cmd+,");
+  });
+
+  it("normalizes only active known shortcuts with non-empty key lists", () => {
+    expect(
+      normalizeKeybindingOverrides({
+        "chrome.settings": ["Cmd+;"],
+        "editor.find": ["Cmd+F"],
+        "nope.missing": ["Cmd+X"],
+        "workspace.open": [],
+        "editor.save": [42],
+      }),
+    ).toEqual({ "chrome.settings": ["Cmd+;"] });
+    expect(normalizeKeybindingOverrides(null)).toEqual({});
+  });
+
+  it("formats and matches key events in registry style", () => {
+    expect(eventToCombo({ key: "p", metaKey: true, ctrlKey: false, altKey: false, shiftKey: true })).toBe("Shift+Cmd+P");
+    expect(eventToCombo({ key: ",", metaKey: true, ctrlKey: false, altKey: false, shiftKey: false })).toBe("Cmd+,");
+    expect(eventToCombo({ key: "Meta", metaKey: true, ctrlKey: false, altKey: false, shiftKey: false })).toBeNull();
+    expect(comboMatches({ key: ",", metaKey: true, ctrlKey: false, altKey: false, shiftKey: false }, "chrome.settings")).toBe(true);
+  });
+
+  it("detects conflicts between resolved active shortcuts", () => {
+    expect(findKeybindingConflicts()).toEqual([]);
+    setActiveKeybindingOverrides({ "chrome.settings": ["Shift+Cmd+P"] });
+    const conflicts = findKeybindingConflicts();
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].keys).toBe("Shift+Cmd+P");
+    expect(conflicts[0].ids.sort()).toEqual(["chrome.command-palette", "chrome.settings"]);
   });
 });

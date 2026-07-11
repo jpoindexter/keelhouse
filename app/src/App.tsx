@@ -117,7 +117,14 @@ import {
 import type { AgentApprovalMode, AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
 import { AppIcon, paneStateAccessibleLabel, paneStateIconName } from "./icons";
 import type { AppIconName } from "./icons";
-import { shortcutKeys, shortcutTitle } from "./shortcuts";
+import {
+  comboMatches,
+  normalizeKeybindingOverrides,
+  setActiveKeybindingOverrides,
+  shortcutKeys,
+  shortcutTitle,
+  type KeybindingOverrides,
+} from "./shortcuts";
 import { filterCommandPaletteCommands, type CommandPaletteCommand as CommandPaletteCommandBase } from "./commandPalette";
 import { filterWorkspaceFiles } from "./workspaceSearch";
 import {
@@ -496,6 +503,7 @@ function App() {
   const [terminalFindLastQuery, setTerminalFindLastQuery] = useState("");
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [keybindingOverrides, setKeybindingOverrides] = useState<KeybindingOverrides>({});
   const [composerDraft, setComposerDraft] = useState("");
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
@@ -3473,6 +3481,9 @@ function App() {
       const savedPaneLayouts = normalizePaneLayoutsBySession(await store.get<unknown>("paneLayoutsBySession"));
       const savedAgentActivity = normalizeAgentActivityEvents(await store.get<unknown>("agentActivityEvents"));
       activeFilesByWorkspaceRef.current = normalizeActiveFileByWorkspace(await store.get<unknown>("activeFileByWorkspace"));
+      const savedKeybindings = normalizeKeybindingOverrides(await store.get<unknown>("keybindingOverrides"));
+      setActiveKeybindingOverrides(savedKeybindings);
+      setKeybindingOverrides(savedKeybindings);
       const initialOpenProjects = savedOpenProjects.length > 0 ? savedOpenProjects : openProjectsFromRecent(savedRecent);
       const initialProjectSessions = initialOpenProjects.reduce(
         (sessions, project) => ensureProjectSessions(sessions, project.path, Date.now()),
@@ -3508,17 +3519,17 @@ function App() {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target instanceof HTMLElement ? e.target : null;
       if (e.isComposing) return;
-      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "p") {
+      if (comboMatches(e, "chrome.command-palette")) {
         e.preventDefault();
         openCommandPalette();
         return;
       }
-      if (e.metaKey && !e.shiftKey && e.key.toLowerCase() === "p") {
+      if (comboMatches(e, "workspace.quick-open")) {
         e.preventDefault();
         openQuickOpen();
         return;
       }
-      if (e.metaKey && !e.shiftKey && e.key === ",") {
+      if (comboMatches(e, "chrome.settings")) {
         e.preventDefault();
         setSettingsOpen(true);
         return;
@@ -5070,6 +5081,16 @@ function App() {
             if (!normalized) return;
             setBrowserLocation(normalized);
             void persistBrowserPreviewUrl(workspacePathRef.current, activeSessionId, normalized);
+          }}
+          keybindingOverrides={keybindingOverrides}
+          onKeybindingOverrideChange={(id, keys) => {
+            const next = { ...keybindingOverrides };
+            if (keys) next[id] = keys;
+            else delete next[id];
+            setActiveKeybindingOverrides(next);
+            setKeybindingOverrides(next);
+            void storeRef.current?.set("keybindingOverrides", next);
+            void storeRef.current?.save();
           }}
           onClose={() => setSettingsOpen(false)}
           onLayoutChange={setWorkbenchLayout}

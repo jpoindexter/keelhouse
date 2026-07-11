@@ -4013,6 +4013,46 @@ body,
   white-space: nowrap;
 }
 
+.settings-modal__conflict {
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--card-radius);
+  background: var(--color-danger-bg);
+  color: #ffd6dd;
+  font-size: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.settings-modal__capture {
+  width: 150px;
+  height: 24px;
+  border: 1px solid var(--color-accent-border);
+  border-radius: var(--control-radius);
+  background: #15161d;
+  color: var(--color-text-strong);
+  font: 12px var(--font-mono);
+  padding: 0 8px;
+}
+
+.settings-modal__overridden {
+  color: var(--steel-cyan-400);
+  font-size: 10px;
+}
+
+.settings-modal__shortcut-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.settings-modal__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .launch-error {
   position: fixed;
   left: 16px;

@@ -966,13 +966,13 @@
     {
       "id": "KEYBINDINGS-CONFIG",
       "title": "Configurable keybindings",
-      "column": "next",
+      "column": "done",
       "tier": "sand",
       "track": "ui",
       "size": "S",
       "launch": "v2",
       "summary": "After the VS Code-compatible default shortcut map stabilizes, allow focused overrides without hardcoding personal preferences into the app.",
-      "done": "A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference.",
+      "done": "A local config file can override app-level shortcuts, reports conflicts with terminal/editor reserved bindings, and generates a visible shortcut reference. Executed 2026-07-11: keybindingOverrides persist in workspace.json (normalized on load, active shortcuts only), chrome-scope key handling resolves through comboMatches/resolveShortcutKeys so overrides apply live and labels update everywhere via shortcutKeys, conflict detection warns inline in the settings Keyboard shortcuts category, per-row Rebind capture (single combo, Escape cancels) + Reset for active shortcuts; native-menu accelerators and CodeMirror keymaps stay registry-bound (documented boundary). 136 vitest incl. override/conflict/combo tests.",
       "buildOrder": 70
     },
     {

@@ -173,9 +173,76 @@ export const SHORTCUTS: Shortcut[] = [
 
 export const shortcutById = (id: string) => SHORTCUTS.find((shortcut) => shortcut.id === id);
 
-export const shortcutKeys = (id: string) => shortcutById(id)?.keys.join(" / ") ?? "";
+export type KeybindingOverrides = Record<string, string[]>;
+
+/* Module-level override store so the many shortcutKeys() call sites pick up
+   user overrides without threading a parameter through every surface. Set
+   once at startup and on every settings change. */
+let activeOverrides: KeybindingOverrides = {};
+
+export const setActiveKeybindingOverrides = (overrides: KeybindingOverrides) => {
+  activeOverrides = overrides;
+};
+
+export const resolveShortcutKeys = (id: string): string[] =>
+  activeOverrides[id] ?? shortcutById(id)?.keys ?? [];
+
+export const shortcutKeys = (id: string) => resolveShortcutKeys(id).join(" / ");
 
 export const shortcutTitle = (id: string, fallback: string) => {
   const keys = shortcutKeys(id);
   return keys ? `${fallback} (${keys})` : fallback;
+};
+
+export const normalizeKeybindingOverrides = (value: unknown): KeybindingOverrides => {
+  if (typeof value !== "object" || value == null || Array.isArray(value)) return {};
+  const overrides: KeybindingOverrides = {};
+  for (const [id, keys] of Object.entries(value as Record<string, unknown>)) {
+    const shortcut = shortcutById(id);
+    if (!shortcut || shortcut.status !== "active") continue;
+    if (!Array.isArray(keys)) continue;
+    const cleaned = keys.filter((key): key is string => typeof key === "string" && key.trim().length > 0);
+    if (cleaned.length > 0) overrides[id] = cleaned;
+  }
+  return overrides;
+};
+
+type ComboEvent = {
+  key: string;
+  metaKey: boolean;
+  ctrlKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+};
+
+/* Matches the registry's written style: modifiers as Ctrl/Alt/Shift/Cmd in
+   that order, letters uppercased, named keys (Enter, Escape, ",") as-is. */
+export const eventToCombo = (event: ComboEvent): string | null => {
+  const key = event.key;
+  if (key === "Meta" || key === "Control" || key === "Alt" || key === "Shift" || key === "Dead") return null;
+  const parts: string[] = [];
+  if (event.ctrlKey) parts.push("Ctrl");
+  if (event.altKey) parts.push("Alt");
+  if (event.shiftKey) parts.push("Shift");
+  if (event.metaKey) parts.push("Cmd");
+  parts.push(key.length === 1 ? (key === "," ? "," : key.toUpperCase()) : key);
+  return parts.join("+");
+};
+
+export const comboMatches = (event: ComboEvent, id: string): boolean => {
+  const combo = eventToCombo(event);
+  return combo != null && resolveShortcutKeys(id).includes(combo);
+};
+
+export const findKeybindingConflicts = (): { keys: string; ids: string[] }[] => {
+  const byCombo = new Map<string, string[]>();
+  for (const shortcut of SHORTCUTS) {
+    if (shortcut.status !== "active") continue;
+    for (const combo of resolveShortcutKeys(shortcut.id)) {
+      byCombo.set(combo, [...(byCombo.get(combo) ?? []), shortcut.id]);
+    }
+  }
+  return [...byCombo.entries()]
+    .filter(([, ids]) => ids.length > 1)
+    .map(([keys, ids]) => ({ keys, ids }));
 };

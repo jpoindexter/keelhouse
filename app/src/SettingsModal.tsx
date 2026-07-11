@@ -12,7 +12,13 @@ import {
   type SettingsCategoryId,
   type SettingsRowDef,
 } from "./settingsModalData";
-import { SHORTCUTS } from "./shortcuts";
+import {
+  eventToCombo,
+  findKeybindingConflicts,
+  resolveShortcutKeys,
+  SHORTCUTS,
+  type KeybindingOverrides,
+} from "./shortcuts";
 
 type SettingsProfileOption = { id: string; label: string };
 
@@ -23,6 +29,7 @@ type SettingsModalProps = {
   gitChangeCount: number | null;
   initialCategory?: SettingsCategoryId;
   initialQuery?: string;
+  keybindingOverrides?: KeybindingOverrides;
   layout: WorkbenchLayoutMode;
   profileId: string;
   profiles: SettingsProfileOption[];
@@ -30,6 +37,7 @@ type SettingsModalProps = {
   onApprovalModeChange: (mode: AgentApprovalMode) => void;
   onBrowserUrlCommit: (url: string) => void;
   onClose: () => void;
+  onKeybindingOverrideChange?: (id: string, keys: string[] | null) => void;
   onLayoutChange: (layout: WorkbenchLayoutMode) => void;
   onProfileChange: (profileId: string) => void;
   onResetLayout: () => void;
@@ -43,6 +51,7 @@ export function SettingsModal({
   gitChangeCount,
   initialCategory = "general",
   initialQuery = "",
+  keybindingOverrides = {},
   layout,
   profileId,
   profiles,
@@ -50,6 +59,7 @@ export function SettingsModal({
   onApprovalModeChange,
   onBrowserUrlCommit,
   onClose,
+  onKeybindingOverrideChange,
   onLayoutChange,
   onProfileChange,
   onResetLayout,
@@ -58,7 +68,9 @@ export function SettingsModal({
   const [category, setCategory] = useState<SettingsCategoryId>(initialCategory);
   const [query, setQuery] = useState(initialQuery);
   const [browserDraft, setBrowserDraft] = useState(browserUrl);
+  const [capturingId, setCapturingId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const conflicts = findKeybindingConflicts();
 
   useEffect(() => {
     searchRef.current?.focus();
@@ -175,24 +187,84 @@ export function SettingsModal({
   };
 
   const shortcutTable = (
-    <table className="settings-modal__shortcuts">
-      <thead>
-        <tr>
-          <th scope="col">Action</th>
-          <th scope="col">Keys</th>
-          <th scope="col">Scope</th>
-        </tr>
-      </thead>
-      <tbody>
-        {SHORTCUTS.filter((shortcut) => shortcut.status === "active" || shortcut.status === "native").map((shortcut) => (
-          <tr key={shortcut.id}>
-            <td>{shortcut.label}</td>
-            <td>{shortcut.keys.join(" / ")}</td>
-            <td>{shortcut.scope}</td>
+    <>
+      {conflicts.length > 0 ? (
+        <div className="settings-modal__conflict" role="alert">
+          {conflicts
+            .map((conflict) => `${conflict.keys} is bound to ${conflict.ids.join(" and ")}`)
+            .join("; ")}
+          . Rebind one of them.
+        </div>
+      ) : null}
+      <table className="settings-modal__shortcuts">
+        <thead>
+          <tr>
+            <th scope="col">Action</th>
+            <th scope="col">Keys</th>
+            <th scope="col">Scope</th>
+            <th scope="col"><span className="settings-modal__sr">Edit</span></th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {SHORTCUTS.filter((shortcut) => shortcut.status === "active" || shortcut.status === "native").map((shortcut) => {
+            const overridden = Boolean(keybindingOverrides[shortcut.id]);
+            const editable = shortcut.status === "active" && Boolean(onKeybindingOverrideChange);
+            return (
+              <tr key={shortcut.id}>
+                <td>{shortcut.label}</td>
+                <td>
+                  {capturingId === shortcut.id ? (
+                    <input
+                      className="settings-modal__capture"
+                      aria-label={`Press new keys for ${shortcut.label}`}
+                      placeholder="Press keys…"
+                      autoFocus
+                      readOnly
+                      onKeyDown={(event) => {
+                        event.preventDefault();
+                        if (event.key === "Escape") {
+                          setCapturingId(null);
+                          return;
+                        }
+                        const combo = eventToCombo(event);
+                        if (!combo) return;
+                        onKeybindingOverrideChange?.(shortcut.id, [combo]);
+                        setCapturingId(null);
+                      }}
+                      onBlur={() => setCapturingId(null)}
+                    />
+                  ) : (
+                    <>
+                      {resolveShortcutKeys(shortcut.id).join(" / ")}
+                      {overridden ? <span className="settings-modal__overridden"> (custom)</span> : null}
+                    </>
+                  )}
+                </td>
+                <td>{shortcut.scope}</td>
+                <td>
+                  {editable ? (
+                    <span className="settings-modal__shortcut-actions">
+                      <button className="settings-modal__action" type="button" onClick={() => setCapturingId(shortcut.id)}>
+                        Rebind
+                      </button>
+                      {overridden ? (
+                        <button
+                          className="settings-modal__action"
+                          type="button"
+                          onClick={() => onKeybindingOverrideChange?.(shortcut.id, null)}
+                        >
+                          Reset
+                        </button>
+                      ) : null}
+                    </span>
+                  ) : null}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </>
   );
 
   return (
