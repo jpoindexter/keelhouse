@@ -930,13 +930,13 @@
     {
       "id": "TERMINAL-FIND",
       "title": "Find in terminal scrollback",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "core",
       "size": "M",
       "launch": "v2",
       "summary": "Agent output can be long. Search inside terminal scrollback is necessary for reviewing logs and prior agent output.",
-      "done": "Find text in the active pane scrollback, jump next/previous, and preserve terminal focus behavior.",
+      "done": "Find text in the active pane scrollback, jump next/previous, and preserve terminal focus behavior. Executed 2026-07-11: backend Screen-space search + viewport jump with real-VT Rust test, find strip UI with prev/next/count/preview, palette command; docs/terminal-robustness.md records scope and deferred regex/cell-highlighting.",
       "buildOrder": 67
     },
     {

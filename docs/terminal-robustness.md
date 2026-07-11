@@ -47,3 +47,11 @@ cd app/src-tauri && PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH" cargo test
 cd app/src-tauri && PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH" cargo fmt --check
 git diff --check
 ```
+
+## Scrollback Find (TERMINAL-FIND, 2026-07-11)
+
+- Backend `search_terminal_scrollback(query)` searches the focused pane's full screen space (scrollback + active area) through `Point::Screen` grid reads on the real Ghostty terminal; case-insensitive substring, 200-hit cap, replies over a per-request channel with a 1.5s timeout guard.
+- `scroll_terminal_to_row(row)` jumps the viewport (Top + Delta) so a selected hit is visible; closing the find bar snaps back to the live tail.
+- UI: Find control in the terminal titlebar and a `Find in Terminal` palette command open a find strip (query, match count, prev/next with wraparound, current-hit preview, Escape closes). Enter re-runs on a changed query and steps to the next hit otherwise.
+- Tests: `terminal_search_finds_scrollback_and_active_rows_case_insensitive` feeds real VT bytes and asserts scrollback + active hits, case-insensitivity, and empty/blank-query behavior; `terminalFind.test.ts` covers label collapsing, wraparound navigation, and count labels.
+- Boundary: regex and highlight-in-canvas rendering are deferred; the jump positions the hit row at the viewport top rather than highlighting cells.

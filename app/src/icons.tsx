@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Circle,
   Clock3,
   Copy,
@@ -41,6 +42,7 @@ export type AppIconName =
   | "check"
   | "chevronDown"
   | "chevronRight"
+  | "chevronUp"
   | "close"
   | "complete"
   | "copy"
@@ -73,6 +75,7 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   check: CheckCircle2,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
+  chevronUp: ChevronUp,
   close: X,
   complete: CheckCircle2,
   copy: Copy,

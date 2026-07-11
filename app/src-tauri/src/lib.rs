@@ -76,6 +76,13 @@ enum Msg {
     Scroll {
         delta: isize,
     },
+    ScrollToRow {
+        row: u32,
+    },
+    SearchScrollback {
+        query: String,
+        reply: Sender<Vec<TerminalSearchHit>>,
+    },
     Resize {
         cols: u16,
         rows: u16,
@@ -228,6 +235,15 @@ struct Cell {
     f: [u8; 3], // resolved foreground rgb
     b: [u8; 3], // resolved background rgb
     bold: bool,
+}
+
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct TerminalSearchHit {
+    /// Absolute screen row (scrollback + active), 0 = oldest retained row.
+    row: u32,
+    col: u16,
+    text: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -660,6 +676,57 @@ fn snapshot(term: &Terminal) -> Snapshot {
     }
 }
 
+/// Read one full-screen-space row (scrollback + active area) as plain text.
+fn screen_row_text(term: &Terminal, y: u32, cols: u16) -> String {
+    let mut text = String::new();
+    let mut buf = [' '; 8];
+    for x in 0..cols {
+        let point = Point::Screen(PointCoordinate { x, y });
+        let mut pushed = false;
+        if let Ok(gr) = term.grid_ref(point) {
+            if let Ok(n) = gr.graphemes(&mut buf) {
+                for ch in buf.iter().take(n) {
+                    text.push(*ch);
+                    pushed = true;
+                }
+            }
+        }
+        if !pushed {
+            text.push(' ');
+        }
+    }
+    text
+}
+
+const TERMINAL_SEARCH_MAX_HITS: usize = 200;
+
+/// Case-insensitive substring search across scrollback + active screen rows.
+fn search_terminal_rows(term: &Terminal, query: &str) -> Vec<TerminalSearchHit> {
+    let needle = query.trim().to_lowercase();
+    if needle.is_empty() {
+        return Vec::new();
+    }
+    let cols = term.cols().unwrap_or(INIT_COLS);
+    let rows = term.rows().unwrap_or(INIT_ROWS) as u32;
+    let total = term.scrollback_rows().unwrap_or(0) as u32 + rows;
+    let mut hits = Vec::new();
+    for y in 0..total {
+        let text = screen_row_text(term, y, cols);
+        if let Some(byte_col) = text.to_lowercase().find(&needle) {
+            let col = text[..byte_col].chars().count().min(u16::MAX as usize) as u16;
+            hits.push(TerminalSearchHit {
+                row: y,
+                col,
+                text: text.trim_end().to_string(),
+            });
+            if hits.len() >= TERMINAL_SEARCH_MAX_HITS {
+                break;
+            }
+        }
+    }
+    hits
+}
+
 fn emit_grid(app: &AppHandle, pane_id: u64, term: &Terminal) {
     let _ = app.emit(
         "grid",
@@ -788,6 +855,23 @@ fn resize_pty(state: State<PtyState>, cols: u16, rows: u16) {
 #[tauri::command]
 fn scroll_pty(state: State<PtyState>, delta: isize) {
     state.send(Msg::Scroll { delta });
+}
+
+#[tauri::command]
+fn scroll_terminal_to_row(state: State<PtyState>, row: u32) {
+    state.send(Msg::ScrollToRow { row });
+}
+
+#[tauri::command]
+fn search_terminal_scrollback(
+    state: State<PtyState>,
+    query: String,
+) -> Result<Vec<TerminalSearchHit>, String> {
+    let (reply, receive) = channel();
+    state.send(Msg::SearchScrollback { query, reply });
+    receive
+        .recv_timeout(std::time::Duration::from_millis(1500))
+        .map_err(|_| "Terminal search timed out. Is a pane focused and running?".to_string())
 }
 
 fn is_noisy_dir(name: &str) -> bool {
@@ -2063,6 +2147,15 @@ fn spawn_pane(
                             Ok(Msg::Scroll { delta }) => {
                                 term.scroll_viewport(ScrollViewport::Delta(delta))
                             }
+                            Ok(Msg::ScrollToRow { row }) => {
+                                term.scroll_viewport(ScrollViewport::Top);
+                                if row > 0 {
+                                    term.scroll_viewport(ScrollViewport::Delta(row as isize));
+                                }
+                            }
+                            Ok(Msg::SearchScrollback { query, reply }) => {
+                                let _ = reply.send(search_terminal_rows(&term, &query));
+                            }
                             Ok(Msg::Resize { cols, rows }) => {
                                 do_resize(&master, &mut term, cols, rows)
                             }
@@ -2128,6 +2221,16 @@ fn spawn_pane(
                 Msg::Scroll { delta } => {
                     term.scroll_viewport(ScrollViewport::Delta(delta));
                     emit_grid(&app, pane_id, &term);
+                }
+                Msg::ScrollToRow { row } => {
+                    term.scroll_viewport(ScrollViewport::Top);
+                    if row > 0 {
+                        term.scroll_viewport(ScrollViewport::Delta(row as isize));
+                    }
+                    emit_grid(&app, pane_id, &term);
+                }
+                Msg::SearchScrollback { query, reply } => {
+                    let _ = reply.send(search_terminal_rows(&term, &query));
                 }
                 Msg::Resize { cols, rows } => {
                     do_resize(&master, &mut term, cols, rows);
@@ -2211,6 +2314,8 @@ pub fn run() {
             paste,
             resize_pty,
             scroll_pty,
+            scroll_terminal_to_row,
+            search_terminal_scrollback,
             open_workspace,
             create_pane,
             focus_pane,
@@ -2426,6 +2531,29 @@ mod tests {
     #[test]
     fn cmd_k_menu_clear_encodes_ctrl_l() {
         assert_eq!(encode_key("KeyL", false, false, true), vec![0x0c]);
+    }
+
+    #[test]
+    fn terminal_search_finds_scrollback_and_active_rows_case_insensitive() {
+        let mut term = test_terminal(20, 3);
+        for i in 0..8 {
+            term.vt_write(format!("line number {}\r\n", i).as_bytes());
+        }
+        term.vt_write(b"Needle HERE");
+
+        let hits = search_terminal_rows(&term, "needle");
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].text.contains("Needle HERE"));
+        assert_eq!(hits[0].col, 0);
+
+        let scrollback_hits = search_terminal_rows(&term, "NUMBER 0");
+        assert_eq!(scrollback_hits.len(), 1);
+        assert_eq!(scrollback_hits[0].row, 0);
+
+        let all = search_terminal_rows(&term, "line number");
+        assert_eq!(all.len(), 8);
+        assert!(search_terminal_rows(&term, "   ").is_empty());
+        assert!(search_terminal_rows(&term, "absent").is_empty());
     }
 
     #[test]
