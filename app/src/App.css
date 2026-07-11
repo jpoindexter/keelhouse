@@ -1388,8 +1388,9 @@ body,
   min-width: 0;
   min-height: 0;
   grid-template-columns: minmax(360px, 1fr) minmax(240px, var(--tool-tray-size));
-  grid-template-rows: minmax(0, var(--tool-primary-size)) minmax(140px, calc(100% - var(--tool-primary-size)));
+  grid-template-rows: 38px minmax(0, calc(var(--tool-primary-size) - 38px)) minmax(140px, calc(100% - var(--tool-primary-size)));
   grid-template-areas:
+    "terminal traytabs"
     "terminal editor"
     "terminal browser";
   gap: 1px;
@@ -1400,15 +1401,17 @@ body,
 .workbench--drawer-left {
   grid-template-columns: minmax(240px, var(--tool-tray-size)) minmax(360px, 1fr);
   grid-template-areas:
+    "traytabs terminal"
     "editor terminal"
     "browser terminal";
 }
 
 .workbench--drawer-bottom {
   grid-template-columns: minmax(280px, var(--tool-primary-size)) minmax(240px, calc(100% - var(--tool-primary-size)));
-  grid-template-rows: minmax(300px, 1fr) minmax(180px, var(--tool-tray-size));
+  grid-template-rows: minmax(300px, 1fr) 34px minmax(180px, calc(var(--tool-tray-size) - 34px));
   grid-template-areas:
     "terminal terminal"
+    "traytabs traytabs"
     "editor browser";
 }
 
@@ -1428,45 +1431,130 @@ body,
 .workbench--tools-editor.workbench--drawer-left,
 .workbench--tools-browser.workbench--drawer-right,
 .workbench--tools-browser.workbench--drawer-left {
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: 38px minmax(0, 1fr);
 }
 
 .workbench--tools-editor.workbench--drawer-right {
-  grid-template-areas: "terminal editor";
+  grid-template-areas:
+    "terminal traytabs"
+    "terminal editor";
 }
 
 .workbench--tools-editor.workbench--drawer-left {
-  grid-template-areas: "editor terminal";
+  grid-template-areas:
+    "traytabs terminal"
+    "editor terminal";
 }
 
 .workbench--tools-browser.workbench--drawer-right {
-  grid-template-areas: "terminal browser";
+  grid-template-areas:
+    "terminal traytabs"
+    "terminal browser";
 }
 
 .workbench--tools-browser.workbench--drawer-left {
-  grid-template-areas: "browser terminal";
+  grid-template-areas:
+    "traytabs terminal"
+    "browser terminal";
 }
 
 .workbench--tools-editor.workbench--drawer-bottom,
 .workbench--tools-browser.workbench--drawer-bottom {
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(300px, 1fr) 34px minmax(180px, calc(var(--tool-tray-size) - 34px));
 }
 
 .workbench--tools-editor.workbench--drawer-bottom {
   grid-template-areas:
     "terminal"
+    "traytabs"
     "editor";
 }
 
 .workbench--tools-browser.workbench--drawer-bottom {
   grid-template-areas:
     "terminal"
+    "traytabs"
     "browser";
 }
 
 .workbench--tools-editor .browser-preview,
 .workbench--tools-browser .editor-area {
   display: none;
+}
+
+.tool-tray-tabs {
+  grid-area: traytabs;
+  display: flex;
+  min-width: 0;
+  align-items: stretch;
+  gap: 1px;
+  background: #1d1e25;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.workbench--drawer-hidden .tool-tray-tabs {
+  display: none;
+}
+
+.tool-tray-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 0 1 auto;
+  border: 0;
+  border-right: 1px solid var(--line-soft, #232530);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: default;
+  font: 600 13px var(--font-ui);
+  padding: 0 14px;
+  transition: background var(--motion-fast), color var(--motion-fast);
+}
+
+.tool-tray-tabs__tab:hover {
+  background: var(--toolbar-control-bg-hover);
+  color: var(--color-text);
+}
+
+.tool-tray-tabs__tab--active {
+  background: var(--toolbar-control-active-bg);
+  box-shadow: inset 0 2px 0 var(--color-accent-border);
+  color: var(--color-text-strong);
+}
+
+.tool-tray-tabs__spacer {
+  flex: 1 1 auto;
+}
+
+.tool-tray-tabs__icon {
+  display: inline-grid;
+  width: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-subtle);
+  cursor: default;
+  transition: background var(--motion-fast), color var(--motion-fast);
+}
+
+.tool-tray-tabs__icon:hover {
+  background: var(--toolbar-control-bg-hover);
+  color: var(--color-text);
+}
+
+.tool-tray-tabs__icon--active {
+  box-shadow: inset 0 2px 0 var(--color-accent-border);
+  color: var(--color-text-strong);
+}
+
+.tool-tray-tabs__tab:focus-visible,
+.tool-tray-tabs__icon:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
 }
 
 .editor-area,

@@ -153,6 +153,7 @@ import { useWorkbenchLayout } from "./useWorkbenchLayout";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { AgentRunSurface } from "./AgentRunSurface";
 import { ToolDockMenu } from "./ToolDockMenu";
+import { ToolTrayTabs } from "./ToolTrayTabs";
 import "./App.css";
 
 // SPIKE-2 frontend: paint the grid snapshots from the Rust backend onto a canvas,
@@ -4141,6 +4142,13 @@ function App() {
       ) : null}
 
       <main ref={workbenchRef} className={`workbench workbench--drawer-${renderedWorkbenchLayout} workbench--tools-${toolTrayMode}`} style={workbenchStyle}>
+        {renderedWorkbenchLayout !== "hidden" ? (
+          <ToolTrayTabs
+            mode={toolTrayMode}
+            onModeChange={setToolTrayMode}
+            onClose={() => setWorkbenchLayout("hidden")}
+          />
+        ) : null}
         <section
           className="editor-area"
           aria-label="Editor"
