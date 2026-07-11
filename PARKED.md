@@ -61,3 +61,21 @@ Deferred ideas. Promote, never delete.
 **Captured:** 2026-07-08
 **Why parked:** Bitbucket/Azure DevOps, Linear/Jira, Slack/Discord, and similar tools may be useful, but Git/GitHub/GitLab cover the immediate code-review/shipping path. Broader integrations risk turning the app into another plugin hub.
 **Cost to revisit:** Medium — promote one integration only when a concrete workflow needs it; require a narrow app-owned adapter, health check, credentials boundary, and no chat/project-management clone.
+
+## Layout-usage telemetry (do layouts actually diverge?)
+
+**Captured:** 2026-07-11 (blind audit, steelman lens). If most sessions revert to the demo layout, the fixed-layout argument resurrects; if layouts stay diverse, movable trays are validated.
+**Why parked:** no-telemetry-before-users discipline; local-only counters are still instrumentation ahead of need.
+**Cost to revisit:** small — a local counter on layout changes plus a monthly eyeball.
+
+## Composer send-confirmation toast ("Sent to <pane>")
+
+**Captured:** 2026-07-11 (blind audit, red-team lens). Icon-only Send could silently route a prompt to an unexpected pane in fast loops.
+**Why parked:** no observed mis-route yet; activity timeline already logs prompt sends. Promote if DAILY-DRIVER-LIVE shows a real mis-route.
+**Cost to revisit:** small — transient toast wired to the existing prompt-sent activity event.
+
+## Second-model spot-check gate (codex re-reads critical diffs pre-merge)
+
+**Captured:** 2026-07-11 (blind audit, bias-blind-spot lens). Same-session diagnose-implement-verify loops shipped the chrome drift; codex-cli is installed and could re-read high-risk surfaces before "done".
+**Why parked:** process overhead for a solo flow; CHROME-EYEBALL-SIGNOFF + OUTSIDE-REVIEW cover the near-term need.
+**Cost to revisit:** small — a documented rule plus `codex exec` invocation per high-risk card.

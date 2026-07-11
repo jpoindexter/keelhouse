@@ -120,7 +120,28 @@ The shipped chrome drifted from the accepted `demo/keelhouse-chrome-demo.html` d
 - **TRAY-TAB-CHROME:** hybrid tray navigation — keep `useWorkbenchLayout` docking (left/right/bottom, resizable, persisted) while docked trays render the demo tab-strip chrome (38px dock strip Files/Editor/Browser/Git + ×, 34px bottom strip Terminal+, steel-cyan top-underline actives, collapsible). Tools popover shrinks to dock-position + hide.
 - **FIRST-OPEN-LAYOUT:** first open shows the demo layout (threads drawer, centered run+composer, right dock on Files, bottom tray strip, statusbar); returning users keep persisted layouts. Supersedes the 2026-07-10 hidden-first-open default via DECISIONS.md.
 - **OVERLAY-PARITY:** align context menus (6px radius, 252px min, uppercase mono section labels, 28px icon/label/kbd rows) and command palette (640px, 10px radius, 42px input, 32px left-stripe rows) to the demo spec; overlay scrim with blur; settings modal spec recorded for the v2 SETTINGS card.
-- **CHROME-CONTRACT-V2:** extend `qa:chrome-contract` so boxed-button drift cannot recur — forbid boxed control backgrounds on toolbar/composer/editor/browser buttons, require the grammar classes, assert composer/run/sidebar/tray spec values, and require `docs/qa/chrome-delta/` demo-vs-app side-by-side artifacts.
+- **CHROME-CONTRACT-V2:** extend `qa:chrome-contract` so boxed-button drift cannot recur — forbid boxed control backgrounds on toolbar/composer/editor/browser buttons, require the grammar classes, assert composer/run/sidebar/tray spec values, and require `docs/qa/chrome-delta/` demo-vs-app side-by-side artifacts. Blind-audit additions: refresh the stale editor fixture, titlebar-crumb overflow rules, overlay side-by-side captures, font-stack assertion; executes after CHROME-EYEBALL-SIGNOFF.
+
+### Blind-audit additions (2026-07-11 — see `docs/blind-audit-chrome-roadmap-2026-07-11.md`)
+
+A 16-framework blind-spot audit of the chrome re-convergence and roadmap coverage produced these cards. v1 additions close proof gaps before daily-driver claims; v2 additions are reference-class categories the roadmap had no row for.
+
+- **RUN-CONTENT-DENSITY-QA** (v1): populated-state visual proof — live PTY output in the run card (incl. the native tauri smoke), stacked activity rows, three-project sidebar, multi-pane, plus a ≥600px run-column legibility floor. All current proof is empty-state.
+- **DAILY-DRIVER-LIVE** (v1, rock): timed live runs of the three replacement workflows with thresholds, VS Code memory/CPU comparison, and a Gemini TUI render smoke. DAILY-DRIVER-METRICS is readiness-only and must not be cited as North-Star proof.
+- **A11Y-CHROME-AUDIT** (v1): computed WCAG ratios for the 2026-07-11 token retargets (never measured), pointer target-size verification, reduced-motion sweep (one guard block today), visible labels/tooltips for the icon-only drawer mode switcher.
+- **CHROME-EYEBALL-SIGNOFF** (v1): Jason formally signs off the converged shell side-by-side with the demo before CHROME-CONTRACT-V2 locks; grammar-scale exceptions (surfaces needing more density than the demo shows) get documented. Counterweight to the self-referential diagnose-implement-verify loop that produced the original drift.
+- **CHROME-FONT-LOCK** (v1): Inter is first in the font stack but not bundled — bundle it or go system-first, then re-baseline screenshots.
+- **WORKBENCH-STATE-GUARDS** (v2): pane aggregate-status atomicity, pane-cwd vs editor-project mismatch banner, titlebar project-ownership rule, activity-log overflow policy.
+- **STATE-MIGRATION** (v2): schemaVersion + migration path for `workspace.json` before post-adoption schema changes.
+- **CRASH-RESILIENCE** (v2): abnormal-exit detection, crash-recovery notice, local health log.
+- **TERMINAL-INTL-INPUT** (v2): IME composition, non-Latin input, glyph fallback on the canvas path.
+- **WINDOW-LIFECYCLE** (v2): window frame restore, off-screen recovery, mixed-DPI canvas checks.
+- **MOTION-POLISH** (v2): the micro-motion criteria from `docs/chrome-ui-polish.md`, reduced-motion-guarded.
+- **APP-COMMANDS-DISCOVERABLE** (v2): `>help`, palette rows for `>` commands.
+- **OUTSIDE-REVIEW** (v2): one targeted external pass on chrome quality / agent workflow before public daily-driver claims.
+- **UNINSTALL-RESET** (v3): on-disk artifact inventory, settings full-reset, uninstall cleanup docs.
+
+Amended by the same audit: FIRST-OPEN-LAYOUT (spawn-failure recovery banner, reset-to-demo, first-open-matches-demo check), RUN-CARDS-ADAPTER (mechanical provenance gate against terminal-text inference), PERF-BUDGET (render-perf gate: IPC payload, frame time at 1/2/4 panes, jank threshold), DAILY-DRIVER-METRICS (readiness-only wording).
 
 - **DEV-SERVER-DETECT:** detect common localhost dev servers and offer to open them in the browser preview.
   - 2026-07-09 slice: terminal output is scanned for local dev-server URLs (`localhost`, `127.0.0.1`, `0.0.0.0`, `::1` with ports); detections are scoped to the emitting project session, logged as browser activity, and offered as explicit Open detected actions in the Browser drawer and preview pane.
