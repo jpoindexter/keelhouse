@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  COMPOSER_APP_COMMANDS,
+  composerHelpText,
   composerHistoryAfterSubmit,
   composerHistoryAt,
   nextComposerHistoryIndex,
@@ -40,5 +42,25 @@ describe("agent composer routing", () => {
     expect(composerHistoryAt(history, 1)).toBe("two");
     expect(nextComposerHistoryIndex(history, 1)).toBe(2);
     expect(nextComposerHistoryIndex(history, 2)).toBeNull();
+  });
+});
+
+describe("app command discoverability", () => {
+  it("routes >help and its alias to the help command", () => {
+    expect(routeComposerDraft(">help")).toEqual({ kind: "app", command: "help" });
+    expect(routeComposerDraft(">?")).toEqual({ kind: "app", command: "help" });
+  });
+
+  it("flags unknown single-token > input instead of sending it to the pty", () => {
+    expect(routeComposerDraft(">sve")).toEqual({ kind: "unknown-app", input: ">sve" });
+    expect(routeComposerDraft("> please do this")).toEqual({ kind: "pty", text: "> please do this" });
+  });
+
+  it("lists every app command with aliases in the help text", () => {
+    const help = composerHelpText();
+    for (const info of COMPOSER_APP_COMMANDS) {
+      expect(help).toContain(info.aliases[0]);
+      expect(help).toContain(info.detail);
+    }
   });
 });

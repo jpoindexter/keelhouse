@@ -1375,14 +1375,14 @@
     {
       "id": "APP-COMMANDS-DISCOVERABLE",
       "title": "Discoverable app commands",
-      "column": "next",
+      "column": "done",
       "tier": "sand",
       "track": "ui",
       "size": "S",
       "launch": "v2",
       "buildOrder": 104,
       "summary": "Blind-audit 2026-07-11 (curse of knowledge): the >save/>find/>open/>clear composer commands are discoverable only from placeholder text. Add >help (lists commands inline in the run surface or a popover), surface the > commands in the command palette with their syntax, and show shortcut hints where controls have bindings.",
-      "done": ">help lists all app commands; palette rows exist for each > command; unknown > input suggests >help; tests cover the help path."
+      "done": ">help lists all app commands; palette rows exist for each > command; unknown > input suggests >help; tests cover the help path. Executed 2026-07-11: >help/>? lists all commands from the canonical COMPOSER_APP_COMMANDS table in a dismissible composer notice; unknown single-token > input suggests >help instead of reaching the pty; palette rows exist per app command; routing and help-text tests added (125 vitest)."
     },
     {
       "id": "OUTSIDE-REVIEW",

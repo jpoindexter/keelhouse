@@ -91,6 +91,8 @@ import {
   nextComposerHistoryIndex,
   previousComposerHistoryIndex,
   routeComposerDraft,
+  composerHelpText,
+  COMPOSER_APP_COMMANDS,
 } from "./agentComposer";
 import type { ComposerAppCommand } from "./agentComposer";
 import {
@@ -490,6 +492,7 @@ function App() {
   const [terminalFindBusy, setTerminalFindBusy] = useState(false);
   const [terminalFindError, setTerminalFindError] = useState<string | null>(null);
   const [terminalFindLastQuery, setTerminalFindLastQuery] = useState("");
+  const [composerNotice, setComposerNotice] = useState<string | null>(null);
   const [composerDraft, setComposerDraft] = useState("");
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
@@ -1886,6 +1889,10 @@ function App() {
       await clearActiveTerminal();
       return true;
     }
+    if (command === "help") {
+      setComposerNotice(composerHelpText());
+      return true;
+    }
     return false;
   };
 
@@ -1893,8 +1900,13 @@ function App() {
     if (composerSending) return;
     const route = routeComposerDraft(composerDraft);
     if (route.kind === "empty") return;
+    if (route.kind === "unknown-app") {
+      setComposerError(`Unknown app command ${route.input}. Try >help for the list.`);
+      return;
+    }
     setComposerSending(true);
     setComposerError(null);
+    setComposerNotice(null);
     try {
       if (route.kind === "pty") {
         if (!workspacePathRef.current) {
@@ -2925,6 +2937,14 @@ function App() {
       keywords: ["project", "workspace"],
       run: () => void pickWorkspace(),
     },
+    ...COMPOSER_APP_COMMANDS.map((info) => ({
+      id: `composer.${info.command}`,
+      label: `App Command ${info.label}`,
+      detail: info.detail,
+      icon: "send" as AppIconName,
+      keywords: ["composer", "app command", ...info.aliases],
+      run: () => void runComposerAppCommand(info.command),
+    })),
     {
       id: "terminal.find",
       label: "Find in Terminal",
@@ -4979,6 +4999,14 @@ function App() {
               </div>
             </div>
             {composerError ? <div className="agent-composer__error">{composerError}</div> : null}
+            {composerNotice ? (
+              <div className="agent-composer__notice" role="status">
+                <pre>{composerNotice}</pre>
+                <button className="agent-composer__button" type="button" aria-label="Dismiss app command help" onClick={() => setComposerNotice(null)}>
+                  <AppIcon name="close" />
+                </button>
+              </div>
+            ) : null}
           </div>
         </section>
       </main>

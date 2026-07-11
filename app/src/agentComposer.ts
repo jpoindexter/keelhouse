@@ -1,24 +1,40 @@
 export type ComposerRoute =
   | { kind: "empty" }
   | { kind: "pty"; text: string }
-  | { kind: "app"; command: ComposerAppCommand };
+  | { kind: "app"; command: ComposerAppCommand }
+  | { kind: "unknown-app"; input: string };
 
-export type ComposerAppCommand = "save" | "find" | "open-folder" | "clear-terminal";
+export type ComposerAppCommand = "save" | "find" | "open-folder" | "clear-terminal" | "help";
 
-const COMMAND_ALIASES: Record<string, ComposerAppCommand> = {
-  ">save": "save",
-  ">find": "find",
-  ">open-folder": "open-folder",
-  ">open": "open-folder",
-  ">clear-terminal": "clear-terminal",
-  ">clear": "clear-terminal",
+export type ComposerAppCommandInfo = {
+  command: ComposerAppCommand;
+  aliases: string[];
+  label: string;
+  detail: string;
 };
+
+export const COMPOSER_APP_COMMANDS: ComposerAppCommandInfo[] = [
+  { command: "save", aliases: [">save"], label: ">save", detail: "Save the active editor file" },
+  { command: "find", aliases: [">find"], label: ">find", detail: "Open find and replace in the active file" },
+  { command: "open-folder", aliases: [">open", ">open-folder"], label: ">open", detail: "Open or switch the project folder" },
+  { command: "clear-terminal", aliases: [">clear", ">clear-terminal"], label: ">clear", detail: "Clear the selected terminal pane" },
+  { command: "help", aliases: [">help", ">?"], label: ">help", detail: "List the available app commands" },
+];
+
+const COMMAND_ALIASES: Record<string, ComposerAppCommand> = Object.fromEntries(
+  COMPOSER_APP_COMMANDS.flatMap((info) => info.aliases.map((alias) => [alias, info.command])),
+);
+
+export const composerHelpText = (): string =>
+  COMPOSER_APP_COMMANDS.map((info) => `${info.aliases.join(", ")} — ${info.detail}`).join("\n");
 
 export const routeComposerDraft = (draft: string): ComposerRoute => {
   const text = draft.trim();
   if (!text) return { kind: "empty" };
   const command = COMMAND_ALIASES[text.toLowerCase()];
   if (command) return { kind: "app", command };
+  // A single ">"-prefixed token is an app-command attempt, not agent input.
+  if (text.startsWith(">") && !/\s/.test(text)) return { kind: "unknown-app", input: text };
   return { kind: "pty", text: draft };
 };
 
