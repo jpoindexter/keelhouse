@@ -82,6 +82,10 @@
   --control-height-md: 28px;
   --menu-bg: #1b1c23;
   --menu-item-hover: #252732;
+  --surface-strip: #1d1e25;
+  --overlay-border: #343642;
+  --field-bg: #15161d;
+  --titlebar-top: #22232b;
   --badge-radius: 4px;
   --shadow-overlay: 0 18px 40px rgba(0, 0, 0, 0.42);
   --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -130,7 +134,7 @@ body,
   gap: 10px;
   min-width: 0;
   border-bottom: 1px solid var(--panel-border);
-  background: linear-gradient(#22232b, #1b1c23);
+  background: linear-gradient(var(--titlebar-top), var(--menu-bg));
   padding: 0 10px 0 12px;
 }
 
@@ -249,7 +253,7 @@ body,
   align-items: center;
   gap: 14px;
   border-top: 1px solid var(--color-border);
-  background: #1d1e25;
+  background: var(--surface-strip);
   color: var(--color-text-muted);
   font-size: 12px;
   padding: 0 10px;
@@ -610,7 +614,7 @@ body,
   display: grid;
   min-width: 252px;
   padding: 5px 0;
-  border: 1px solid #343642;
+  border: 1px solid var(--overlay-border);
   border-radius: 6px;
   background: var(--menu-bg);
   box-shadow: var(--shadow-overlay);
@@ -678,7 +682,7 @@ body,
   max-height: min(560px, calc(100vh - 96px));
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid #343642;
+  border: 1px solid var(--overlay-border);
   border-radius: 10px;
   background: var(--menu-bg);
   box-shadow: var(--shadow-overlay);
@@ -691,7 +695,7 @@ body,
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid var(--color-border);
-  background: #15161d;
+  background: var(--field-bg);
   color: var(--color-text-muted);
   padding: 0 13px;
 }
@@ -1499,7 +1503,7 @@ body,
   min-width: 0;
   align-items: stretch;
   gap: 1px;
-  background: #1d1e25;
+  background: var(--surface-strip);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -3422,7 +3426,7 @@ body,
   width: var(--run-column-width);
   grid-template-rows: minmax(0, 1fr) 34px;
   overflow: hidden;
-  border: 1px solid #343642;
+  border: 1px solid var(--overlay-border);
   border-radius: 12px;
   background: var(--color-panel);
   box-shadow: var(--shadow-composer);
@@ -3814,7 +3818,7 @@ body,
   height: min(560px, calc(100vh - 96px));
   grid-template-rows: 42px minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid #343642;
+  border: 1px solid var(--overlay-border);
   border-radius: 10px;
   background: var(--menu-bg);
   box-shadow: var(--shadow-overlay);
@@ -3825,7 +3829,7 @@ body,
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid var(--color-border);
-  background: #1d1e25;
+  background: var(--surface-strip);
   color: var(--color-text-strong);
   font-size: 13px;
   padding: 0 13px;
@@ -3838,7 +3842,7 @@ body,
   height: 26px;
   border: 1px solid var(--control-border);
   border-radius: var(--control-radius);
-  background: #15161d;
+  background: var(--field-bg);
   color: var(--color-text-strong);
   font: 12px var(--font-ui);
   padding: 0 9px;
@@ -3943,7 +3947,7 @@ body,
   height: 28px;
   border: 1px solid var(--line-soft, #232530);
   border-radius: var(--control-radius);
-  background: #15161d;
+  background: var(--field-bg);
   color: var(--color-text-strong);
   font: 12px var(--font-ui);
   padding: 0 9px;
@@ -4028,7 +4032,7 @@ body,
   height: 24px;
   border: 1px solid var(--color-accent-border);
   border-radius: var(--control-radius);
-  background: #15161d;
+  background: var(--field-bg);
   color: var(--color-text-strong);
   font: 12px var(--font-mono);
   padding: 0 8px;
@@ -4253,4 +4257,39 @@ body,
   .terminal-new-pane span {
     display: none;
   }
+}
+
+
+/* THEME: mono-ghost — near-monochrome ghost palette from the cockpit demo
+   mood. Remaps primitive/semantic slots only; component rules stay intact
+   (chrome-polish token contract). Default graphite values above are the
+   chrome-contract reference. */
+[data-theme="mono-ghost"] {
+  --color-app-bg: #0b0b0c;
+  --color-rail-bg: #101012;
+  --color-surface: #121214;
+  --color-surface-raised: #16161a;
+  --color-surface-overlay: #16161a;
+  --color-border: #232326;
+  --color-border-strong: #2c2c30;
+  --color-row-hover: #1a1a1f;
+  --color-row-active: #202027;
+  --color-text: #e8e8ea;
+  --color-text-strong: #f4f4f6;
+  --color-text-muted: #9a9aa2;
+  --color-text-subtle: #8f8f9a;
+  --steel-cyan-400: #c2c8d6;
+  --steel-cyan-500: #9aa3b5;
+  --steel-cyan-900: #1c1f26;
+  --color-accent-muted: rgba(154, 163, 181, 0.14);
+  --menu-bg: #131316;
+  --menu-item-hover: #202027;
+  --surface-strip: #141417;
+  --overlay-border: #2c2c30;
+  --field-bg: #0f0f12;
+  --titlebar-top: #1a1a1e;
+  --surface-card: #111114;
+  --surface-card-border: #26262b;
+  --control-bg: #1c1c21;
+  --control-bg-hover: #26262c;
 }

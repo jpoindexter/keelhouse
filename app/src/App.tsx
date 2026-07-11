@@ -504,6 +504,15 @@ function App() {
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [keybindingOverrides, setKeybindingOverrides] = useState<KeybindingOverrides>({});
+  const [appTheme, setAppTheme] = useState<"graphite" | "mono-ghost">("graphite");
+
+  useEffect(() => {
+    if (appTheme === "mono-ghost") {
+      document.documentElement.dataset.theme = "mono-ghost";
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
+  }, [appTheme]);
   const [composerDraft, setComposerDraft] = useState("");
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
@@ -3484,6 +3493,8 @@ function App() {
       const savedKeybindings = normalizeKeybindingOverrides(await store.get<unknown>("keybindingOverrides"));
       setActiveKeybindingOverrides(savedKeybindings);
       setKeybindingOverrides(savedKeybindings);
+      const savedTheme = await store.get<unknown>("appTheme");
+      if (savedTheme === "mono-ghost") setAppTheme("mono-ghost");
       const initialOpenProjects = savedOpenProjects.length > 0 ? savedOpenProjects : openProjectsFromRecent(savedRecent);
       const initialProjectSessions = initialOpenProjects.reduce(
         (sessions, project) => ensureProjectSessions(sessions, project.path, Date.now()),
@@ -5083,6 +5094,12 @@ function App() {
             void persistBrowserPreviewUrl(workspacePathRef.current, activeSessionId, normalized);
           }}
           keybindingOverrides={keybindingOverrides}
+          theme={appTheme}
+          onThemeChange={(theme) => {
+            setAppTheme(theme);
+            void storeRef.current?.set("appTheme", theme);
+            void storeRef.current?.save();
+          }}
           onKeybindingOverrideChange={(id, keys) => {
             const next = { ...keybindingOverrides };
             if (keys) next[id] = keys;

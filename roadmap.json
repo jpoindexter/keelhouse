@@ -978,13 +978,13 @@
     {
       "id": "THEME",
       "title": "Color themes",
-      "column": "next",
+      "column": "done",
       "tier": "sand",
       "track": "ui",
       "size": "S",
       "launch": "v2",
       "summary": "Support practical color themes across chrome, terminal, rail, and editor. Start with the approved mono-ghost theme; do not expand into plugin theming or break the chrome token contract.",
-      "done": "App chrome, terminal canvas, file rail, and editor can switch between built-in color themes with readable contrast while preserving semantic token roles and component states.",
+      "done": "App chrome, terminal canvas, file rail, and editor can switch between built-in color themes with readable contrast while preserving semantic token roles and component states. Executed 2026-07-11: mono-ghost theme as a token-only [data-theme] remap (component contract preserved; recurring hexes promoted to tokens first), persisted appTheme setting with selector in Settings, contract gate green with graphite as reference, mono-ghost verified in the running shell.",
       "buildOrder": 71
     },
     {

@@ -31,6 +31,7 @@ type SettingsModalProps = {
   initialQuery?: string;
   keybindingOverrides?: KeybindingOverrides;
   layout: WorkbenchLayoutMode;
+  theme?: "graphite" | "mono-ghost";
   profileId: string;
   profiles: SettingsProfileOption[];
   trayMode: ToolTrayMode;
@@ -38,6 +39,7 @@ type SettingsModalProps = {
   onBrowserUrlCommit: (url: string) => void;
   onClose: () => void;
   onKeybindingOverrideChange?: (id: string, keys: string[] | null) => void;
+  onThemeChange?: (theme: "graphite" | "mono-ghost") => void;
   onLayoutChange: (layout: WorkbenchLayoutMode) => void;
   onProfileChange: (profileId: string) => void;
   onResetLayout: () => void;
@@ -53,6 +55,7 @@ export function SettingsModal({
   initialQuery = "",
   keybindingOverrides = {},
   layout,
+  theme = "graphite",
   profileId,
   profiles,
   trayMode,
@@ -61,6 +64,7 @@ export function SettingsModal({
   onClose,
   onKeybindingOverrideChange,
   onLayoutChange,
+  onThemeChange,
   onProfileChange,
   onResetLayout,
   onTrayModeChange,
@@ -181,7 +185,17 @@ export function SettingsModal({
       return <span className="settings-modal__value">{IGNORED_FOLDERS.join("  ")}</span>;
     }
     if (row.id === "app.theme") {
-      return <span className="settings-modal__value">Graphite · steel-cyan · Inter</span>;
+      return (
+        <select
+          className="settings-modal__select"
+          aria-label="Color theme"
+          value={theme}
+          onChange={(event) => onThemeChange?.(event.currentTarget.value as "graphite" | "mono-ghost")}
+        >
+          <option value="graphite">Graphite · steel-cyan</option>
+          <option value="mono-ghost">Mono ghost</option>
+        </select>
+      );
     }
     return null;
   };
