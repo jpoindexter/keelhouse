@@ -906,6 +906,30 @@ fn log_health_event(app: AppHandle, message: String) -> Result<(), String> {
         .map_err(|e| format!("Could not write health log: {e}"))
 }
 
+/// Delete the app's auxiliary local-state files. The Tauri Store (workspace.json)
+/// is cleared by the frontend before calling this; here we remove the files the
+/// store does not own. Confirmation is the frontend's responsibility.
+fn reset_local_state_in(dir: &Path) -> Result<Vec<String>, String> {
+    let mut removed = Vec::new();
+    for name in [".session-lock", "health.log", ".window-state.json"] {
+        let path = dir.join(name);
+        if path.exists() {
+            std::fs::remove_file(&path).map_err(|e| format!("Could not remove {name}: {e}"))?;
+            removed.push(name.to_string());
+        }
+    }
+    Ok(removed)
+}
+
+#[tauri::command]
+fn reset_local_state(app: AppHandle) -> Result<Vec<String>, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Could not resolve app data dir: {e}"))?;
+    reset_local_state_in(&dir)
+}
+
 #[tauri::command]
 fn scroll_terminal_to_row(state: State<PtyState>, row: u32) {
     state.send(Msg::ScrollToRow { row });
@@ -2370,6 +2394,7 @@ pub fn run() {
             begin_session,
             end_session_clean,
             log_health_event,
+            reset_local_state,
             open_workspace,
             create_pane,
             focus_pane,
@@ -2585,6 +2610,33 @@ mod tests {
     #[test]
     fn cmd_k_menu_clear_encodes_ctrl_l() {
         assert_eq!(encode_key("KeyL", false, false, true), vec![0x0c]);
+    }
+
+    #[test]
+    fn reset_local_state_removes_only_known_aux_files() {
+        let dir = std::env::temp_dir().join(format!("keelhouse-reset-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in [
+            ".session-lock",
+            "health.log",
+            ".window-state.json",
+            "workspace.json",
+        ] {
+            std::fs::write(dir.join(name), b"x").unwrap();
+        }
+
+        let removed = reset_local_state_in(&dir).unwrap();
+        assert_eq!(removed.len(), 3);
+        assert!(!dir.join(".session-lock").exists());
+        assert!(!dir.join("health.log").exists());
+        assert!(!dir.join(".window-state.json").exists());
+        // workspace.json is owned by the Tauri Store; the frontend clears it,
+        // so this command must leave it in place.
+        assert!(dir.join("workspace.json").exists());
+
+        // Idempotent: a second run finds nothing to remove.
+        assert!(reset_local_state_in(&dir).unwrap().is_empty());
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]

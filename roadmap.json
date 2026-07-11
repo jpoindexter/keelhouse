@@ -1399,14 +1399,14 @@
     {
       "id": "UNINSTALL-RESET",
       "title": "Uninstall and full reset story",
-      "column": "later",
+      "column": "done",
       "tier": "sand",
       "track": "quality",
       "size": "S",
       "launch": "v3",
       "buildOrder": 106,
       "summary": "Blind-audit 2026-07-11 (outside view): dragging Keelhouse.app to Trash leaves the Tauri Store, logs, and any future credentials behind. Document what lives where, add a Settings full-reset action, and document manual cleanup paths for uninstall.",
-      "done": "docs/local-state.md lists every on-disk artifact; Settings exposes reset-all with confirmation; uninstall cleanup documented."
+      "done": "docs/local-state.md lists every on-disk artifact; Settings exposes reset-all with confirmation; uninstall cleanup documented. Executed 2026-07-12: docs/local-state.md now inventories every on-disk artifact and the manual uninstall path; Settings App configuration has a confirmed Reset all local data action that clears the Tauri Store and calls the reset_local_state Rust command (removes .session-lock/health.log/.window-state.json, leaves nothing behind), tested (37 cargo)."
     }
   ],
   "shipped": [

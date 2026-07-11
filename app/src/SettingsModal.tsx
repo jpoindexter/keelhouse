@@ -41,6 +41,7 @@ type SettingsModalProps = {
   onClose: () => void;
   onKeybindingOverrideChange?: (id: string, keys: string[] | null) => void;
   onNotificationsChange?: (enabled: boolean) => void;
+  onResetLocalData?: () => void;
   onThemeChange?: (theme: "graphite" | "mono-ghost") => void;
   onLayoutChange: (layout: WorkbenchLayoutMode) => void;
   onProfileChange: (profileId: string) => void;
@@ -68,6 +69,7 @@ export function SettingsModal({
   onKeybindingOverrideChange,
   onLayoutChange,
   onNotificationsChange,
+  onResetLocalData,
   onThemeChange,
   onProfileChange,
   onResetLayout,
@@ -187,6 +189,13 @@ export function SettingsModal({
     }
     if (row.id === "app.ignored") {
       return <span className="settings-modal__value">{IGNORED_FOLDERS.join("  ")}</span>;
+    }
+    if (row.id === "app.reset") {
+      return (
+        <button className="settings-modal__action settings-modal__action--danger" type="button" onClick={() => onResetLocalData?.()}>
+          Reset…
+        </button>
+      );
     }
     if (row.id === "app.notifications") {
       return (

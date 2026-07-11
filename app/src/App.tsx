@@ -5240,6 +5240,18 @@ function App() {
             void persistBrowserPreviewUrl(workspacePathRef.current, activeSessionId, normalized);
           }}
           keybindingOverrides={keybindingOverrides}
+          onResetLocalData={() => {
+            if (!window.confirm("Reset all local data? This clears saved projects, sessions, transcripts, layout, and local state files. This cannot be undone.")) return;
+            void (async () => {
+              const store = storeRef.current;
+              if (store) {
+                await store.clear();
+                await store.save();
+              }
+              await invoke("reset_local_state").catch(() => {});
+              window.location.reload();
+            })();
+          }}
           notificationsEnabled={notificationsEnabled}
           onNotificationsChange={(enabled) => {
             setNotificationsEnabled(enabled);

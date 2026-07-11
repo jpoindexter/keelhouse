@@ -3985,6 +3985,15 @@ body,
   color: var(--steel-cyan-400);
 }
 
+.settings-modal__action--danger {
+  color: var(--color-danger);
+}
+
+.settings-modal__action--danger:hover {
+  background: var(--color-danger-bg);
+  color: #ffd6dd;
+}
+
 .settings-modal__value {
   color: var(--color-text-muted);
   font: 12px var(--font-mono);

@@ -177,3 +177,19 @@ If `folder` points at a missing project, move `workspace.json` aside and relaunc
 - Recovery is only claimed when a stale lock coincides with restorable projects (`deriveCrashRecovery`), so first-ever and clean-slate launches never show a false notice. On recovery the shell shows a dismissible banner and relies on existing SESSION-RESTORE to reopen projects/sessions.
 - `log_health_event` appends to a size-capped (128 KB, drop-and-restart) local `health.log`; pty/open-workspace launch failures are logged. Local-only — nothing leaves the machine.
 - Boundary: SIGKILL/SIGTERM leave the lock in place (that is the point — it signals the crash on next launch); only the real close path clears it.
+
+## On-Disk Artifacts & Reset (UNINSTALL-RESET, 2026-07-12)
+
+All local state lives under `~/Library/Application Support/com.jasonpoindexter.agent-cli/`:
+
+| File | Owner | Contents |
+| --- | --- | --- |
+| `workspace.json` | Tauri Store | projects, sessions (incl. archived), pane labels/layouts, editor snapshots, browser URLs, composer harness, activity events, pane transcripts, keybinding overrides, theme, notification toggle, schemaVersion |
+| `.session-lock` | `begin_session`/`end_session_clean` | crash-detection marker |
+| `health.log` | `log_health_event` | capped local failure log |
+| `.window-state.json` | tauri-plugin-window-state | window frame |
+| `workspace.json.*-bak-*` | legacy sync backups | older ad-hoc backups (safe to delete) |
+
+**Reset all local data** (Settings → App configuration) confirms, then clears the Tauri Store (`store.clear()`) and calls the `reset_local_state` Rust command to delete `.session-lock`, `health.log`, and `.window-state.json`, then reloads. WebView caches are managed by the OS.
+
+**Manual uninstall:** drag `Keelhouse.app` to Trash, then delete the app-support directory above to remove all state and any cached credentials the CLIs stored there.

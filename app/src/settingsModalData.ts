@@ -102,6 +102,13 @@ export const SETTINGS_ROWS: SettingsRowDef[] = [
     keywords: ["notification", "badge", "background", "macos", "alert"],
   },
   {
+    id: "app.reset",
+    categoryId: "app",
+    label: "Reset all local data",
+    hint: "Clear saved projects, sessions, transcripts, layout, and local state files. Cannot be undone.",
+    keywords: ["reset", "clear", "uninstall", "wipe", "delete", "local data"],
+  },
+  {
     id: "shortcuts.reference",
     categoryId: "shortcuts",
     label: "Active shortcuts",
