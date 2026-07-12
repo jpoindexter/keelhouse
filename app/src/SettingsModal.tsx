@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { AppIcon } from "./icons";
 import type { AgentApprovalMode } from "./agentSessionHandle";
+import { formatCliToolStatus, type SourceControlStatus } from "./sourceControl";
 import type { ToolTrayMode, WorkbenchLayoutMode } from "./workbenchLayout";
 import {
   filterSettingsRows,
@@ -32,6 +33,7 @@ type SettingsModalProps = {
   keybindingOverrides?: KeybindingOverrides;
   layout: WorkbenchLayoutMode;
   notificationsEnabled?: boolean;
+  sourceControlStatus?: SourceControlStatus | null;
   theme?: "graphite" | "mono-ghost";
   profileId: string;
   profiles: SettingsProfileOption[];
@@ -59,6 +61,7 @@ export function SettingsModal({
   keybindingOverrides = {},
   layout,
   notificationsEnabled = false,
+  sourceControlStatus = null,
   theme = "graphite",
   profileId,
   profiles,
@@ -186,6 +189,15 @@ export function SettingsModal({
           {gitBranch
             ? `⎇ ${gitBranch}${gitChangeCount != null ? ` · ${gitChangeCount} change${gitChangeCount === 1 ? "" : "s"}` : ""}`
             : "No repository detected"}
+        </span>
+      );
+    }
+    if (row.id === "git.source-control") {
+      return (
+        <span className="settings-modal__value">
+          {sourceControlStatus
+            ? `git: ${formatCliToolStatus(sourceControlStatus.git)} · gh: ${formatCliToolStatus(sourceControlStatus.gh)} · glab: ${formatCliToolStatus(sourceControlStatus.glab)}`
+            : "Detecting…"}
         </span>
       );
     }

@@ -1069,6 +1069,7 @@
       "launch": "v2",
       "summary": "Local Git is not enough once agent work needs to move through PR/MR review. Add first-class source-hosting connections without becoming a full forge client.",
       "done": "Settings detects `git`, `gh`, and `glab` auth health; supports GitHub, GitLab.com, and self-hosted GitLab remotes; opens repo/PR/MR/issue/pipeline links in browser preview or external browser; shows source-host status for the active repo; credentials are stored only through OS-safe storage.",
+      "progress": "2026-07-12 detection slice landed: Rust `source_control_status` command (cli_tool_status/extract_account_name) detects git/gh/glab presence and auth health read-only, never touching token material; Settings > Git shows a live 'git: ... · gh: ... · glab: ...' row. Verified against this machine's real state (git installed, gh installed+authenticated as jpoindexter, glab not installed) via cargo test (extract_account_name against captured real `gh auth status` output, cli_tool_status against the real git/nonexistent-binary cases) and cargo fmt --check, plus npm build/test/qa:chrome-contract. Remaining for full done: self-hosted GitLab host matching, opening repo/PR/MR/issue/pipeline links, active-repo host status, and OS-safe credential storage — none of that is built yet, so the card stays in `next`.",
       "buildOrder": 78
     },
     {

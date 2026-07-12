@@ -1841,6 +1841,113 @@ fn remove_project_worktree(
     Ok(())
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct CliToolStatus {
+    installed: bool,
+    authenticated: Option<bool>,
+    account: Option<String>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct SourceControlStatusResponse {
+    git: CliToolStatus,
+    gh: CliToolStatus,
+    glab: CliToolStatus,
+}
+
+/// Best-effort account-name extraction from a CLI auth-status line. Only ever
+/// reads a bare username token; never touches a "Token:" line, so a masked or
+/// unmasked credential can never end up in the returned string.
+fn extract_account_name(output: &str) -> Option<String> {
+    for line in output.lines() {
+        if line.contains("Token") {
+            continue;
+        }
+        for marker in [" account ", " as "] {
+            if let Some(idx) = line.find(marker) {
+                let rest = &line[idx + marker.len()..];
+                let name: String = rest
+                    .trim_start()
+                    .chars()
+                    .take_while(|ch| ch.is_alphanumeric() || *ch == '-' || *ch == '_' || *ch == '.')
+                    .collect();
+                if !name.is_empty() {
+                    return Some(name);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Detect a hosting CLI's presence and auth health without ever reading or
+/// forwarding token material. `auth_args` is omitted for `git`, which has no
+/// login concept of its own (credentials live in its credential helper).
+fn cli_tool_status(binary: &str, auth_args: Option<&[&str]>) -> CliToolStatus {
+    let version_ok = Command::new(binary)
+        .arg("--version")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map(|out| out.status.success())
+        .unwrap_or(false);
+    if !version_ok {
+        return CliToolStatus {
+            installed: false,
+            authenticated: None,
+            account: None,
+        };
+    }
+    let Some(args) = auth_args else {
+        return CliToolStatus {
+            installed: true,
+            authenticated: None,
+            account: None,
+        };
+    };
+    match Command::new(binary)
+        .args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+    {
+        Ok(out) => {
+            let combined = format!(
+                "{}\n{}",
+                String::from_utf8_lossy(&out.stdout),
+                String::from_utf8_lossy(&out.stderr)
+            );
+            CliToolStatus {
+                installed: true,
+                authenticated: Some(out.status.success()),
+                account: if out.status.success() {
+                    extract_account_name(&combined)
+                } else {
+                    None
+                },
+            }
+        }
+        Err(_) => CliToolStatus {
+            installed: true,
+            authenticated: None,
+            account: None,
+        },
+    }
+}
+
+/// Detect git/gh/glab presence and auth health for the Settings source-control
+/// panel. Read-only: never stores, logs, or returns credential material.
+#[tauri::command]
+fn source_control_status() -> SourceControlStatusResponse {
+    SourceControlStatusResponse {
+        git: cli_tool_status("git", None),
+        gh: cli_tool_status("gh", Some(&["auth", "status"])),
+        glab: cli_tool_status("glab", Some(&["auth", "status"])),
+    }
+}
+
 /// Open a workspace folder by spawning a pane in `path` using the selected launch
 /// profile. Existing panes stay alive so other projects can keep running.
 #[tauri::command]
@@ -2489,6 +2596,7 @@ pub fn run() {
             log_health_event,
             create_project_worktree,
             remove_project_worktree,
+            source_control_status,
             reset_local_state,
             open_workspace,
             create_pane,
@@ -3206,6 +3314,41 @@ mod tests {
         assert!(clean.files.is_empty());
         assert!(!root.join("src/new.txt").exists());
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn extract_account_name_reads_gh_and_glab_formats_and_skips_token_lines() {
+        let gh_output = "github.com\n  ✓ Logged in to github.com account jpoindexter (keyring)\n  - Token: gho_************************************\n";
+        assert_eq!(
+            extract_account_name(gh_output),
+            Some("jpoindexter".to_string())
+        );
+
+        let glab_output = "gitlab.com\n  ✓ Logged in to gitlab.com as jpoindexter (oauth_token)\n  ✓ Token: glpat-****************\n";
+        assert_eq!(
+            extract_account_name(glab_output),
+            Some("jpoindexter".to_string())
+        );
+
+        assert_eq!(extract_account_name("no recognizable auth line here"), None);
+    }
+
+    #[test]
+    fn cli_tool_status_reports_missing_binary_without_error() {
+        let status = cli_tool_status(
+            "definitely-not-a-real-cli-binary",
+            Some(&["auth", "status"]),
+        );
+        assert!(!status.installed);
+        assert_eq!(status.authenticated, None);
+        assert_eq!(status.account, None);
+    }
+
+    #[test]
+    fn cli_tool_status_detects_real_git_with_no_auth_concept() {
+        let status = cli_tool_status("git", None);
+        assert!(status.installed);
+        assert_eq!(status.authenticated, None);
     }
 
     #[test]

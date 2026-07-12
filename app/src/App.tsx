@@ -173,6 +173,7 @@ import {
   worktreeForPaneId,
   type WorktreeRecord,
 } from "./worktrees";
+import { normalizeSourceControlStatus, type SourceControlStatus } from "./sourceControl";
 import {
   addBackgroundExit,
   backgroundExitCountForProject,
@@ -533,6 +534,7 @@ function App() {
   const [terminalFindLastQuery, setTerminalFindLastQuery] = useState("");
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sourceControlStatus, setSourceControlStatus] = useState<SourceControlStatus | null>(null);
   const [crashNotice, setCrashNotice] = useState<string | null>(null);
   const [worktrees, setWorktrees] = useState<WorktreeRecord[]>([]);
   const [backgroundExits, setBackgroundExits] = useState<BackgroundExit[]>([]);
@@ -554,6 +556,21 @@ function App() {
       delete document.documentElement.dataset.theme;
     }
   }, [appTheme]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    let cancelled = false;
+    invoke<unknown>("source_control_status")
+      .then((result) => {
+        if (!cancelled) setSourceControlStatus(normalizeSourceControlStatus(result));
+      })
+      .catch(() => {
+        if (!cancelled) setSourceControlStatus(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [settingsOpen]);
   const [composerDraft, setComposerDraft] = useState("");
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
@@ -5473,6 +5490,7 @@ function App() {
           browserUrl={browserUrl}
           gitBranch={gitStatus?.branch ?? null}
           gitChangeCount={gitStatus ? gitStatus.files.length : null}
+          sourceControlStatus={sourceControlStatus}
           layout={renderedWorkbenchLayout}
           profileId={launchProfile.id}
           profiles={LAUNCH_PROFILES.map((profile) => ({ id: profile.id, label: profile.label }))}

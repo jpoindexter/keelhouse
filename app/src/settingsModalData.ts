@@ -81,6 +81,13 @@ export const SETTINGS_ROWS: SettingsRowDef[] = [
     keywords: ["branch", "repo", "status", "changes", "health"],
   },
   {
+    id: "git.source-control",
+    categoryId: "git",
+    label: "Hosting CLI",
+    hint: "Detected git/gh/glab presence and login state. PR/MR links and self-hosted GitLab arrive with the full SOURCE-CONTROL-CONNECTIONS card.",
+    keywords: ["github", "gitlab", "gh", "glab", "auth", "login", "cli", "hosting"],
+  },
+  {
     id: "app.ignored",
     categoryId: "app",
     label: "Ignored folders",
