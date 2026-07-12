@@ -1488,6 +1488,25 @@ fn parse_git_status_output(output: &str) -> GitStatusResponse {
     }
 }
 
+/// Read-only lookup of the `origin` remote URL for the Settings source-control
+/// panel's repo/PR/issue link buttons. Returns None when there's no `origin`
+/// remote rather than erroring, since that's the common non-repo case.
+#[tauri::command]
+fn git_remote_url(root: String) -> Result<Option<String>, String> {
+    let root = validate_workspace_path(&root)?;
+    let output = Command::new("git")
+        .args(["-C", &root, "remote", "get-url", "origin"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|err| format!("Could not run git remote get-url: {err}"))?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    let url = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(if url.is_empty() { None } else { Some(url) })
+}
+
 #[tauri::command]
 fn git_status(root: String) -> Result<GitStatusResponse, String> {
     let root = validate_workspace_path(&root)?;
@@ -2615,6 +2634,7 @@ pub fn run() {
             delete_workspace_path,
             duplicate_workspace_path,
             git_status,
+            git_remote_url,
             git_file_diff,
             git_file_action
         ])
@@ -3313,6 +3333,32 @@ mod tests {
             .expect("discard untracked file");
         assert!(clean.files.is_empty());
         assert!(!root.join("src/new.txt").exists());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn git_remote_url_reads_origin_and_returns_none_without_one() {
+        let root = temp_root("remote-url-repo");
+        fs::create_dir_all(&root).expect("create root");
+        run_test_git(&root, &["init"]);
+        let root_s = root.to_string_lossy().into_owned();
+
+        assert_eq!(git_remote_url(root_s.clone()).expect("call succeeds"), None);
+
+        run_test_git(
+            &root,
+            &[
+                "remote",
+                "add",
+                "origin",
+                "https://github.com/jpoindexter/keelhouse.git",
+            ],
+        );
+        assert_eq!(
+            git_remote_url(root_s).expect("call succeeds"),
+            Some("https://github.com/jpoindexter/keelhouse.git".to_string())
+        );
+
         let _ = fs::remove_dir_all(root);
     }
 

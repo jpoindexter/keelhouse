@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
+import { openPath, openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { load } from "@tauri-apps/plugin-store";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
@@ -174,6 +174,7 @@ import {
   type WorktreeRecord,
 } from "./worktrees";
 import { normalizeSourceControlStatus, type SourceControlStatus } from "./sourceControl";
+import { parseRemoteUrl, type RepoLocation } from "./sourceControlLinks";
 import { imeCaretStyle } from "./terminalIme";
 import {
   addBackgroundExit,
@@ -540,6 +541,7 @@ function App() {
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sourceControlStatus, setSourceControlStatus] = useState<SourceControlStatus | null>(null);
+  const [repoLocation, setRepoLocation] = useState<RepoLocation | null>(null);
   const [crashNotice, setCrashNotice] = useState<string | null>(null);
   const [worktrees, setWorktrees] = useState<WorktreeRecord[]>([]);
   const [backgroundExits, setBackgroundExits] = useState<BackgroundExit[]>([]);
@@ -576,6 +578,24 @@ function App() {
       cancelled = true;
     };
   }, [settingsOpen]);
+
+  useEffect(() => {
+    if (!settingsOpen || !workspacePath) {
+      setRepoLocation(null);
+      return;
+    }
+    let cancelled = false;
+    invoke<string | null>("git_remote_url", { root: workspacePath })
+      .then((url) => {
+        if (!cancelled) setRepoLocation(url ? parseRemoteUrl(url) : null);
+      })
+      .catch(() => {
+        if (!cancelled) setRepoLocation(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [settingsOpen, workspacePath]);
   const [composerDraft, setComposerDraft] = useState("");
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
@@ -5515,6 +5535,8 @@ function App() {
           gitBranch={gitStatus?.branch ?? null}
           gitChangeCount={gitStatus ? gitStatus.files.length : null}
           sourceControlStatus={sourceControlStatus}
+          repoLocation={repoLocation}
+          onOpenSourceControlLink={(url) => void openUrl(url).catch(() => {})}
           layout={renderedWorkbenchLayout}
           profileId={launchProfile.id}
           profiles={LAUNCH_PROFILES.map((profile) => ({ id: profile.id, label: profile.label }))}

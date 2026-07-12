@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppIcon } from "./icons";
 import type { AgentApprovalMode } from "./agentSessionHandle";
 import { formatCliToolStatus, type SourceControlStatus } from "./sourceControl";
+import { buildIssuesUrl, buildPipelinesUrl, buildPullRequestsUrl, buildRepoUrl, type RepoLocation } from "./sourceControlLinks";
 import type { ToolTrayMode, WorkbenchLayoutMode } from "./workbenchLayout";
 import {
   filterSettingsRows,
@@ -34,6 +35,8 @@ type SettingsModalProps = {
   layout: WorkbenchLayoutMode;
   notificationsEnabled?: boolean;
   sourceControlStatus?: SourceControlStatus | null;
+  repoLocation?: RepoLocation | null;
+  onOpenSourceControlLink?: (url: string) => void;
   theme?: "graphite" | "mono-ghost";
   profileId: string;
   profiles: SettingsProfileOption[];
@@ -62,6 +65,8 @@ export function SettingsModal({
   layout,
   notificationsEnabled = false,
   sourceControlStatus = null,
+  repoLocation = null,
+  onOpenSourceControlLink,
   theme = "graphite",
   profileId,
   profiles,
@@ -198,6 +203,28 @@ export function SettingsModal({
           {sourceControlStatus
             ? `git: ${formatCliToolStatus(sourceControlStatus.git)} · gh: ${formatCliToolStatus(sourceControlStatus.gh)} · glab: ${formatCliToolStatus(sourceControlStatus.glab)}`
             : "Detecting…"}
+        </span>
+      );
+    }
+    if (row.id === "git.remote-links") {
+      if (!repoLocation) {
+        return <span className="settings-modal__value">No remote detected</span>;
+      }
+      const openLink = (url: string) => onOpenSourceControlLink?.(url);
+      return (
+        <span className="settings-modal__value">
+          <button type="button" className="settings-modal__action" onClick={() => openLink(buildRepoUrl(repoLocation))}>
+            Repo
+          </button>
+          <button type="button" className="settings-modal__action" onClick={() => openLink(buildPullRequestsUrl(repoLocation))}>
+            {repoLocation.kind === "gitlab" ? "Merge requests" : "Pull requests"}
+          </button>
+          <button type="button" className="settings-modal__action" onClick={() => openLink(buildIssuesUrl(repoLocation))}>
+            Issues
+          </button>
+          <button type="button" className="settings-modal__action" onClick={() => openLink(buildPipelinesUrl(repoLocation))}>
+            {repoLocation.kind === "gitlab" ? "Pipelines" : "Actions"}
+          </button>
         </span>
       );
     }

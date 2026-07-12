@@ -88,6 +88,13 @@ export const SETTINGS_ROWS: SettingsRowDef[] = [
     keywords: ["github", "gitlab", "gh", "glab", "auth", "login", "cli", "hosting"],
   },
   {
+    id: "git.remote-links",
+    categoryId: "git",
+    label: "Remote",
+    hint: "Opens the active repo's remote host in your default browser. Detected from the origin remote; works for GitHub, GitLab, and self-hosted hosts.",
+    keywords: ["github", "gitlab", "pull request", "merge request", "issues", "pipeline", "ci", "remote", "open"],
+  },
+  {
     id: "app.ignored",
     categoryId: "app",
     label: "Ignored folders",
