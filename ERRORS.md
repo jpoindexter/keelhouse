@@ -61,3 +61,17 @@ Append-only failure log. Approaches that took >2 attempts, or that a 16-framewor
 **Why it failed:** No discipline separating "evaluating an option" from "deciding on an option." Evaluations bled straight into source-of-truth scope docs. The mechanical tool-streak hook added this session helps with runaway tool-calls but not with this specific "wrote an unchosen option into the plan" failure.
 
 **Next time:** An evaluation of an external tool/app writes to PARKED.md or a DECISIONS "considering" note — NEVER to PRD/ROADMAP scope — until Jason explicitly picks it. "Should we?" and "we will" are different doc destinations.
+
+## 2026-07-12 — First `npm run tauri build` (release) fails: Zig 0.15.2 vs newer macOS CLT
+
+**What failed:** `PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH" npm run tauri build` (PACKAGING card, first real release-build attempt this project has made) fails during `libghostty-vt-sys`'s vendored Zig build: `sub-compilation of libcxx failed` — `use of undeclared identifier 'INFINITY'` in Zig 0.15.2's bundled `libcxx/include/__random/clamp_to_integral.h`, only in `-OReleaseFast`. `cargo test`/`cargo build` (dev/debug, non-release) build fine with the exact same Zig 0.15.2 pin — this is release-path-specific.
+
+**Root cause (verified via web search + Codeberg issue #31658):** This machine is on Xcode Command Line Tools 27.0.0 / macOS 26.6 (`xcode-select -p` → `/Library/Developer/CommandLineTools`, `pkgutil` → CLT `27.0.0.0.1780650213`). Upstream zig/zig#31658 documents the same class of bug starting with Xcode 26.4: newer macOS SDKs export `.tbd` stubs as `arm64e-macos` instead of `aarch64-macos`, which Zig 0.15.2 doesn't handle correctly, producing libc/libc++ symbol-resolution failures during certain optimized codegen paths. A fix landed for Zig 0.16.x (Codeberg PR #31673); no confirmed patch exists for 0.15.2. This CLT (27.0.0) is even newer than the reported 26.4 baseline, so it's plausibly the same bug or a further-drifted variant — not independently confirmed against the exact `INFINITY`/`clamp_to_integral.h` symptom, only against the same "newer-CLT breaks Zig 0.15.2" mechanism.
+
+**Not fixed, needs Jason:** Every real workaround changes machine-wide toolchain state, which isn't mine to change silently:
+1. Downgrade system Xcode CLT to 26.3 (`xcode-select --switch`) — affects every other Xcode/Zig-based build on this machine (indx, brutal, hashmark, prova per the portfolio).
+2. Install Xcode 26.3 alongside 26.4/27.0 and scope the older SDK via `DEVELOPER_DIR=/Applications/Xcode_26.3.app/Contents/Developer` just for `tauri build` — lower blast radius, but still a multi-GB Apple Developer download.
+3. Upgrade to Zig 0.16.x for the release-build path only — CLAUDE.md already pins 0.15.2 because 0.16 breaks the dev-build `libghostty-vt` bridge for a *different* reason; whether 0.16's #31673 fix also resolves that original dev-build break is unverified and would need its own real test.
+4. Wait / do nothing until PACKAGING is actually prioritized (v2, not blocking daily use).
+
+**Why flagged instead of fixed:** All four options are machine-environment or cross-cutting-toolchain decisions (system CLT version, a second Xcode install, or re-litigating the Zig version pin) — exactly the "hard-to-reverse, affects shared/other-project state" class of action that needs Jason's call, not a silent workaround.

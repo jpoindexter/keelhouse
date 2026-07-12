@@ -1082,6 +1082,7 @@
       "launch": "v2",
       "summary": "Make it launch like a real macOS app, not only from `npm run tauri dev`.",
       "done": "A local signed or ad-hoc packaged .app launches, opens folders, and runs agents with documented setup requirements.",
+      "progress": "2026-07-12 blocked: tauri.conf.json bundle config is already scaffolded (identifier, icons, targets:all), but the first real `npm run tauri build` attempt fails during libghostty-vt-sys's vendored Zig ReleaseFast compile (INFINITY undeclared in Zig 0.15.2's bundled libcxx) — a machine-toolchain issue (CLT 27.0.0/macOS 26.6 vs Zig 0.15.2), not app code. Full write-up + options in ERRORS.md 2026-07-12. Needs a Jason decision on CLT/Zig version before this can proceed.",
       "buildOrder": 79
     },
     {
