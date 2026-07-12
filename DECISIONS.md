@@ -288,3 +288,11 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 **Why:** NOTIFICATIONS card. Attention badges (project-rail count of unseen background exits) are always on and free; native OS notifications are opt-in (Settings → App configuration → Background notifications, default OFF) and only request permission when enabled. Only exits in a non-focused project count as background; focusing a project clears its badges.
 
 **Reversible?** Yes — remove the plugin, the capability, and the settings row; badge counting is pure frontend state.
+
+## 2026-07-12 — Limit bundled Inter to the Latin subset
+
+**Choice:** Supersede the broad Inter imports with `@fontsource/inter/latin-{400,500,600,700,800}.css`. Inter remains the chrome font at every approved weight; system fonts remain the fallback for scripts outside the English UI.
+
+**Why:** The full imports bundled unused Cyrillic, Greek, Vietnamese, and Latin-extension font-face declarations and pushed production CSS to 98.6 KB, above the 90,000-byte hard budget. Subset imports preserve the accepted Inter metrics and offline posture while reducing CSS to 87,989 bytes without loosening the gate.
+
+**Reversible?** Yes. Restore the broad imports if the product localizes its chrome, then set a measured multilingual asset budget instead of silently exceeding the current cap.

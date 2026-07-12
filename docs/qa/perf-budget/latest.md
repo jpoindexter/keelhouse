@@ -1,13 +1,13 @@
 # Performance Budget
 
-Generated: 2026-07-12T18:45:18.912Z
-Commit: 7b564d5+dirty
-Status: missing-budget-evidence
+Generated: 2026-07-12T19:54:01.137Z
+Commit: 7c3aa73+dirty
+Status: baseline-ready
 
 ## Hard Budgets
 
 - PASS Total built JS assets: 1188.8 KiB / 1367.2 KiB
-- FAIL Total built CSS assets: 96.3 KiB / 87.9 KiB
+- PASS Total built CSS assets: 85.9 KiB / 87.9 KiB
 
 ## Soft Budgets
 

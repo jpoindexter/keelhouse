@@ -925,8 +925,8 @@
       "launch": "v1",
       "summary": "Prove this is lighter than the VS Code workflow it replaces across 1-project, 2-agent, and 3-project task runs. Blind-audit 2026-07-11 addition: a concrete render-perf gate before v1 — measure IPC payload size at fast-output rates, Canvas 2D frame time at 1, 2, and 4 concurrent panes, and a jank threshold (frame-drop rate), so the deferred dirty-region/WebGL decisions trigger from data instead of surprise.",
       "done": "Static budgets green plus recorded render-perf numbers (IPC payload, frame times at 1/2/4 panes, jank rate) with thresholds; packaged Keelhouse vs VS Code memory/CPU comparison recorded with DAILY-DRIVER-LIVE.",
-      "progress": "2026-07-12: render-perf gate built and live-verified. renderPerf.ts (rolling frame-time/IPC-payload-size buffers, avg/p95/max/jank-rate stats, fully unit tested) wired into the canvas paint loop and grid-event listener; a 'Copy Render Perf Snapshot' command-palette action writes real numbers to docs/qa/perf-budget/render-perf-live.json. Live-captured on a real tauri dev pane running a ~4000-line fast-output burst: 16 paint samples, avg 3.8ms/p95+max 53ms frame time, 6.25% jank rate; IPC payload avg ~68KB per sampled grid snapshot. Only 1-pane data was captured this pass — 2/4-concurrent-pane numbers are a real gap, not fabricated, left for a follow-up (this session's live-automation environment proved too focus-flaky to reliably orchestrate multiple simultaneous panes; see ERRORS.md). collect-perf-budget.mjs gained matching source/artifact checks. Found and fixed a real bug in the process: write_text_file needs an absolute, pre-existing-file path (not root-relative, not auto-creating) — logged in ERRORS.md. Separately discovered: the total-css-assets hard budget (90KB) now fails at 98.5KB — this predates this slice (source grew ~17KB across several earlier session commits shipping the chrome-convergence work), not something to silently fix by loosening the threshold; flagged for Jason to decide (raise the budget given the real shipped work, or trim CSS). Card stays in `next`: static budgets aren't fully green, and the packaged-vs-VS-Code comparison still needs DAILY-DRIVER-LIVE.",
-      "buildOrder": 66
+      "progress": "2026-07-12: render-perf gate built and live-verified. renderPerf.ts (rolling frame-time/IPC-payload-size buffers, avg/p95/max/jank-rate stats, fully unit tested) is wired into the canvas paint loop and grid-event listener; a 'Copy Render Perf Snapshot' command-palette action writes real numbers to docs/qa/perf-budget/render-perf-live.json. Live capture on a real tauri dev pane running a ~4000-line fast-output burst recorded 16 paint samples (avg 3.8ms, p95/max 53ms, 6.25% jank) and ~68KB average sampled IPC grid payload. The CSS hard budget discovered in that pass is fixed without loosening the cap: Inter uses its Latin subset at all five approved weights, reducing production CSS from 98.6KB to 88.0KB (87,989 bytes). Static budgets are green. Card stays in next because 2/4-concurrent-pane data and the packaged Keelhouse-vs-VS-Code comparison still require DAILY-DRIVER-LIVE.",
+      "buildOrder": 90.4
     },
     {
       "id": "TERMINAL-FIND",
@@ -998,7 +998,7 @@
       "launch": "v2",
       "summary": "Users need to hook up real AI tooling: Claude/Codex CLI auth, provider API keys, model defaults, MCP servers, environment variables, permission defaults, and health checks.",
       "done": "Settings can configure Claude/Codex command profiles, provider/API credentials via OS-safe storage, MCP server entries, env vars, default models, permission policy, and validation checks that explain missing auth or broken connections.",
-      "buildOrder": 72
+      "buildOrder": 90.5
     },
     {
       "id": "AGENT-HOOKS",
@@ -1010,7 +1010,7 @@
       "launch": "v2",
       "summary": "Give Claude/Codex-style agents a first-class way to cooperate with the app without making a plugin platform: inspect projects/panes/open files, request focus/split/new-pane actions, open diffs, and report task status through app-owned commands.",
       "done": "A local permissioned MCP/API endpoint exposes documented app-owned commands; actions that mutate files, git state, panes, or project layout require visible approval/undo where appropriate; every agent action is attributed in the UI/log.",
-      "buildOrder": 73
+      "buildOrder": 90.6
     },
     {
       "id": "TRANSCRIPTS",
@@ -1071,7 +1071,7 @@
       "summary": "Local Git is not enough once agent work needs to move through PR/MR review. Add first-class source-hosting connections without becoming a full forge client.",
       "done": "Settings detects `git`, `gh`, and `glab` auth health; supports GitHub, GitLab.com, and self-hosted GitLab remotes; opens repo/PR/MR/issue/pipeline links in browser preview or external browser; shows source-host status for the active repo; credentials are stored only through OS-safe storage.",
       "progress": "2026-07-12 detection slice: Rust `source_control_status` command (cli_tool_status/extract_account_name) detects git/gh/glab presence and auth health read-only, never touching token material; Settings > Git shows a live 'git: ... · gh: ... · glab: ...' row. Verified against this machine's real state (git installed, gh installed+authenticated as jpoindexter, glab not installed). 2026-07-12 links slice: Rust `git_remote_url` (origin remote lookup) + TS `sourceControlLinks.ts` (SSH/HTTPS remote parsing, host-kind detection, GitHub vs GitLab vs self-hosted-fallback link building) power a Settings > Git > Remote row with Repo/PRs/Issues/Actions-or-Pipelines buttons opened via the existing `@tauri-apps/plugin-opener` `openUrl`. Verified: cargo test 43/43 (incl. a real git remote add/read round-trip), cargo fmt --check, npm build/test 165/165 (incl. 6 new link-builder tests against real GitHub/GitLab/self-hosted URL shapes), qa:chrome-contract; cross-checked the parser against this repo's actual origin remote (`https://github.com/jpoindexter/agent-cli.git`) and it resolves correctly. Remaining for full done: active-repo host status surfaced outside Settings (e.g. titlebar/statusbar), and OS-safe credential storage (not needed yet since gh/glab own their own credential storage today) — card stays in `next`.",
-      "buildOrder": 78
+      "buildOrder": 90.7
     },
     {
       "id": "PACKAGING",
@@ -1084,7 +1084,7 @@
       "summary": "Make it launch like a real macOS app, not only from `npm run tauri dev`.",
       "done": "A local signed or ad-hoc packaged .app launches, opens folders, and runs agents with documented setup requirements.",
       "progress": "2026-07-12 blocked: tauri.conf.json bundle config is already scaffolded (identifier, icons, targets:all), but the first real `npm run tauri build` attempt fails during libghostty-vt-sys's vendored Zig ReleaseFast compile (INFINITY undeclared in Zig 0.15.2's bundled libcxx) — a machine-toolchain issue (CLT 27.0.0/macOS 26.6 vs Zig 0.15.2), not app code. Full write-up + options in ERRORS.md 2026-07-12. Needs a Jason decision on CLT/Zig version before this can proceed.",
-      "buildOrder": 79
+      "buildOrder": 90.8
     },
     {
       "id": "SESSION-ARCHIVE",
@@ -1229,7 +1229,7 @@
       "launch": "v1",
       "summary": "Extend scripts/check-chrome-contract.mjs so boxed-button drift cannot recur silently: forbid the boxed control background on toolbar/composer/editor/browser button classes, require the text-action grammar classes, assert composer card values, run-surface centered column, sidebar section-label treatment, and tray tab-strip actives, and require docs/qa/chrome-delta side-by-side artifacts (demo reference captures plus matching app captures at 1440/1024/900). Blind-audit 2026-07-11 additions: refresh the stale pre-convergence editor-QA fixture to current chrome; titlebar crumb overflow rules (project truncates before branch, branch ellipsis over ~30 chars, detached HEAD shows short SHA); overlay side-by-side captures for context menu and palette; assert the shipped font-stack decision from CHROME-FONT-LOCK. Executes after CHROME-EYEBALL-SIGNOFF so the gate locks a human-approved state.",
       "done": "The gate fails on reintroduction of boxed toolbar buttons (verified by a temporary revert); demo-reference PNGs are checked in and asserted; the editor fixture renders current chrome; crumb overflow rules implemented and tested with long branch names and detached HEAD; npm run qa:chrome-contract is green on the converged chrome.",
-      "buildOrder": 91
+      "buildOrder": 90.2
     },
     {
       "id": "RUN-CARDS-ADAPTER",
@@ -1263,7 +1263,7 @@
       "track": "quality",
       "size": "M",
       "launch": "v1",
-      "buildOrder": 94,
+      "buildOrder": 90.3,
       "summary": "Blind-audit 2026-07-11: DAILY-DRIVER-METRICS is a readiness gate, not proof — the North Star (replace VS Code for three workflows) has never been measured live. Run the three scenarios end-to-end in the packaged/dev Tauri app with no fixtures: one-project edit+agent+preview, two-agent same-project, three-project switch/relaunch. Time pane switch, prompt send latency, and project switch; record memory/CPU baselines and compare against the equivalent VS Code session. Include one real Gemini TUI smoke since the gemini profile has never been render-verified. Define fail thresholds before running.",
       "done": "docs/qa/daily-driver/ contains timed live-run records for all three workflows with pane-switch/send/switch latencies, memory/CPU vs VS Code comparison, and a Gemini TUI render check; thresholds documented and met or failures filed as cards; STATE.md wording separates readiness evidence from live proof."
     },
@@ -1287,7 +1287,7 @@
       "track": "quality",
       "size": "S",
       "launch": "v1",
-      "buildOrder": 96,
+      "buildOrder": 90.1,
       "summary": "Blind-audit 2026-07-11: the re-convergence loop was fully self-referential — the same session diagnosed, planned, implemented, and verified; Jason's eye never formally approved the result, and the demo's three-control grammar was never audited for whether it scales to a real app's control count. Jason reviews the running app side-by-side with the demo at 1440/1024/900 (populated states from RUN-CONTENT-DENSITY-QA), confirms or corrects the direction, and any grammar exceptions (surfaces that legitimately need more control density than the demo shows) are documented in docs/chrome-contract.md. Runs before CHROME-CONTRACT-V2 locks the gate.",
       "done": "Sign-off recorded (date + verdict + corrections) in docs/chrome-contract.md; grammar exceptions documented; any corrections filed as cards before CHROME-CONTRACT-V2 executes."
     },
@@ -1347,7 +1347,7 @@
       "track": "core",
       "size": "M",
       "launch": "v2",
-      "buildOrder": 101,
+      "buildOrder": 90.9,
       "summary": "Blind-audit 2026-07-11 (outside view): the canvas keyboard path has never been tested with IME composition (CJK, dead keys, accented input) or non-Latin glyph fallback in the terminal grid. Verify the libghostty-vt encode path with macOS IME composition events, ensure composing text renders, and add a font-fallback chain for glyphs JetBrains Mono lacks.",
       "done": "Typing accented characters via Option-dead-keys and one CJK IME round-trip works in a real pane; missing-glyph fallback renders instead of tofu boxes; findings documented in docs/terminal-robustness.md.",
       "progress": "2026-07-12: root cause confirmed (canvas never receives compositionstart/update/end in WebKit) and fixed — a hidden, always-focused textarea now holds terminal-pane DOM focus so composition events route correctly; positioned over the cursor cell every paint tick; compositionend sends the composed text via the existing paste path. CJK font-fallback chain added to FONT_FAMILY. Verified: npm build/test (159/159, incl. new imeCaretStyle unit tests)/qa:chrome-contract green; live tauri dev smoke test confirms normal keyboard input is NOT regressed by the canvas->textarea focus change; Enter/Return path also live-confirmed working (echo command typed+submitted+executed in a real pane via osascript keystroke, after cliclick's kp:return was isolated as broken on this machine via a clean TextEdit test, unrelated to the app). NOT verified live: a real CJK IME round-trip, and Option-dead-key composition (one attempt was inconclusive — window lost frontmost focus mid-sequence per the traffic-light chrome, not a negative result). Full writeup: docs/terminal-robustness.md. Stays in `next` until Jason confirms the two remaining live-unverified items."
@@ -1396,7 +1396,7 @@
       "track": "research",
       "size": "S",
       "launch": "v2",
-      "buildOrder": 105,
+      "buildOrder": 90.95,
       "summary": "Blind-audit 2026-07-11 (Johari): the project has zero outside eyes — comparative claims (Codex-level, Zed-quality) and approval-UX friction are exactly where self-assessment fails. Before publicly claiming daily-driver status, get one targeted external perspective: a Codex/Zed-familiar person reviews the chrome against the claims, or one other developer runs a real agent session and reports friction. Not a beta program.",
       "done": "One recorded outside review (notes or annotated screenshots) filed in docs/; resulting gaps triaged into cards or PARKED."
     },

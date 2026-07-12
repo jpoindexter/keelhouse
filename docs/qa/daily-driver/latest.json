@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-11T20:48:04.917Z",
-  "commit": "f12b916",
+  "generatedAt": "2026-07-12T19:54:00.893Z",
+  "commit": "7c3aa73+dirty",
   "branch": "main",
   "northStar": "daily-driver workflow runs completed without opening VS Code",
   "status": "implementation-ready-for-live-runs",
@@ -38,13 +38,13 @@
           "label": "actual app shell at 1440x900",
           "file": "docs/qa/app-shell/first-open-1440.png",
           "pass": true,
-          "bytes": 72121
+          "bytes": 55817
         },
         {
           "label": "actual app shell at 900x640",
           "file": "docs/qa/app-shell/first-open-900.png",
           "pass": true,
-          "bytes": 56352
+          "bytes": 41949
         },
         {
           "label": "native Tauri run with live pty output",
@@ -153,172 +153,12 @@
   "metrics": {
     "assetSizes": [
       {
-        "file": "app/dist/assets/index-DqkCHeIL.js",
-        "bytes": 1179499
+        "file": "app/dist/assets/index-B8l9SaVz.js",
+        "bytes": 1217316
       },
       {
-        "file": "app/dist/assets/index-nL9hNnAM.css",
-        "bytes": 75714
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-400-normal-HOLc17fK.woff",
-        "bytes": 9780
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-400-normal-obahsSVq.woff2",
-        "bytes": 7712
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-500-normal-BasfLYem.woff2",
-        "bytes": 7900
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-500-normal-CxZf_p3X.woff",
-        "bytes": 9940
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-600-normal-4D_pXhcN.woff",
-        "bytes": 9936
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-600-normal-CWCymEST.woff2",
-        "bytes": 7972
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-700-normal-CjBOestx.woff2",
-        "bytes": 7904
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-700-normal-DrXBdSj3.woff",
-        "bytes": 9912
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-800-normal-C7MGvYyJ.woff2",
-        "bytes": 7992
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-800-normal-CCHyn08d.woff",
-        "bytes": 9944
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-400-normal-BQZuk6qB.woff2",
-        "bytes": 10232
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-400-normal-DQukG94-.woff",
-        "bytes": 13336
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-500-normal-B0yAr1jD.woff2",
-        "bytes": 10432
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-500-normal-BmqWE9Dz.woff",
-        "bytes": 13452
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-600-normal-Bcila6Z-.woff",
-        "bytes": 13464
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-600-normal-Dfes3d0z.woff2",
-        "bytes": 10484
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-700-normal-BjwYoWNd.woff2",
-        "bytes": 10496
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-700-normal-LO58E6JB.woff",
-        "bytes": 13408
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-800-normal-BZOjs1Xv.woff2",
-        "bytes": 10440
-      },
-      {
-        "file": "app/dist/assets/inter-cyrillic-ext-800-normal-Ca-gJeZY.woff",
-        "bytes": 13476
-      },
-      {
-        "file": "app/dist/assets/inter-greek-400-normal-B4URO6DV.woff2",
-        "bytes": 7776
-      },
-      {
-        "file": "app/dist/assets/inter-greek-400-normal-q2sYcFCs.woff",
-        "bytes": 9924
-      },
-      {
-        "file": "app/dist/assets/inter-greek-500-normal-BIZE56-Y.woff2",
-        "bytes": 7920
-      },
-      {
-        "file": "app/dist/assets/inter-greek-500-normal-Xzm54t5V.woff",
-        "bytes": 9980
-      },
-      {
-        "file": "app/dist/assets/inter-greek-600-normal-BZpKdvQh.woff",
-        "bytes": 10032
-      },
-      {
-        "file": "app/dist/assets/inter-greek-600-normal-plRanbMR.woff2",
-        "bytes": 7944
-      },
-      {
-        "file": "app/dist/assets/inter-greek-700-normal-BUv2fZ6O.woff",
-        "bytes": 9980
-      },
-      {
-        "file": "app/dist/assets/inter-greek-700-normal-C3JjAnD8.woff2",
-        "bytes": 7920
-      },
-      {
-        "file": "app/dist/assets/inter-greek-800-normal-BU00tryP.woff",
-        "bytes": 9964
-      },
-      {
-        "file": "app/dist/assets/inter-greek-800-normal-CLIouy3y.woff2",
-        "bytes": 7892
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-400-normal-DGGRlc-M.woff2",
-        "bytes": 5264
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-400-normal-KugGGMne.woff",
-        "bytes": 7064
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-500-normal-2j5mBUwD.woff",
-        "bytes": 7192
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-500-normal-C4iEst2y.woff2",
-        "bytes": 5428
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-600-normal-B8X0CLgF.woff",
-        "bytes": 7212
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-600-normal-DRtmH8MT.woff2",
-        "bytes": 5432
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-700-normal-BoQ6DsYi.woff",
-        "bytes": 7216
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-700-normal-qfdV9bQt.woff2",
-        "bytes": 5444
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-800-normal-B--PVpEC.woff2",
-        "bytes": 5548
-      },
-      {
-        "file": "app/dist/assets/inter-greek-ext-800-normal-DUe57HfS.woff",
-        "bytes": 7204
+        "file": "app/dist/assets/index-DE4HR0Qp.css",
+        "bytes": 87989
       },
       {
         "file": "app/dist/assets/inter-latin-400-normal-C38fXH4l.woff2",
@@ -359,100 +199,20 @@
       {
         "file": "app/dist/assets/inter-latin-800-normal-D1mf63XC.woff",
         "bytes": 31296
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-400-normal-77YHD8bZ.woff",
-        "bytes": 47560
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-400-normal-C1nco2VV.woff2",
-        "bytes": 35000
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-500-normal-BxGbmqWO.woff",
-        "bytes": 48492
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-500-normal-CV4jyFjo.woff2",
-        "bytes": 36024
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-600-normal-CIVaiw4L.woff",
-        "bytes": 48668
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-600-normal-D2bJ5OIk.woff2",
-        "bytes": 36260
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-700-normal-Ca8adRJv.woff2",
-        "bytes": 36244
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-700-normal-TidjK2hL.woff",
-        "bytes": 48632
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-800-normal-BOMpwxm3.woff",
-        "bytes": 48592
-      },
-      {
-        "file": "app/dist/assets/inter-latin-ext-800-normal-DZJjya6U.woff2",
-        "bytes": 36128
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-400-normal-Bbgyi5SW.woff",
-        "bytes": 6500
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-400-normal-DMkecbls.woff2",
-        "bytes": 4972
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-500-normal-DOriooB6.woff2",
-        "bytes": 5112
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-500-normal-mJboJaSs.woff",
-        "bytes": 6596
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-600-normal-BuLX-rYi.woff",
-        "bytes": 6640
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-600-normal-Cc8MFFhd.woff2",
-        "bytes": 5100
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-700-normal-BZaoP0fm.woff",
-        "bytes": 6632
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-700-normal-DlLaEgI2.woff2",
-        "bytes": 5104
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-800-normal-Cm7tD1pz.woff2",
-        "bytes": 5176
-      },
-      {
-        "file": "app/dist/assets/inter-vietnamese-800-normal-DDlpr_Ee.woff",
-        "bytes": 6644
       }
     ],
     "screenshotSizes": [
       {
         "file": "docs/qa/app-shell/first-open-1440.png",
-        "bytes": 72121
+        "bytes": 55817
       },
       {
         "file": "docs/qa/app-shell/first-open-1024.png",
-        "bytes": 63630
+        "bytes": 44058
       },
       {
         "file": "docs/qa/app-shell/first-open-900.png",
-        "bytes": 56352
+        "bytes": 41949
       },
       {
         "file": "docs/qa/app-shell/native-run.png",
