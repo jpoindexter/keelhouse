@@ -78,7 +78,9 @@
   --shadow-card: 0 12px 34px rgba(0, 0, 0, 0.18);
   --shadow-composer: 0 22px 60px rgba(0, 0, 0, 0.34);
   --run-column-pad: 56px;
-  --run-column-width: min(860px, calc(100% - var(--run-column-pad)));
+  /* Fluid, not the demo's capped 860px reading column — Jason wants the
+     thread/composer to use available width on a real desktop monitor. */
+  --run-column-width: calc(100% - var(--run-column-pad));
   --control-height-sm: 22px;
   --control-height-md: 28px;
   --menu-bg: #1b1c23;
@@ -4930,7 +4932,7 @@ body,
 }
 
 .agent-run-output__transcript {
-  width: min(860px, calc(100% - 56px));
+  width: calc(100% - 56px);
   margin: 0 auto;
   color: #ececf4;
   font: 12px/1.6 "SF Mono", Menlo, Monaco, Consolas, monospace;
@@ -4938,7 +4940,7 @@ body,
 }
 
 .agent-activity-log__list {
-  width: min(860px, calc(100% - 56px));
+  width: calc(100% - 56px);
   margin: 0 auto;
   padding: 0 0 18px;
 }
@@ -4959,7 +4961,7 @@ body,
 }
 
 .agent-composer__card {
-  width: min(860px, 100%);
+  width: 100%;
   border: 1px solid #343642;
   border-radius: 12px;
   background: #1b1c23;
