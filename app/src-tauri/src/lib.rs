@@ -2382,6 +2382,10 @@ pub fn run() {
                 watcher: Mutex::new(None),
                 next_pane_id: Mutex::new(0),
             });
+            if let Some(window) = app.get_webview_window("main") {
+                window.show()?;
+                window.set_focus()?;
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

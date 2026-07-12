@@ -4,10 +4,9 @@ import { describe, expect, it } from "vitest";
 import { AgentRunSurface } from "./AgentRunSurface";
 
 describe("AgentRunSurface", () => {
-  it("combines live output, activity provenance, and the raw terminal escape hatch", () => {
+  it("combines live output and activity provenance in one thread", () => {
     const html = renderToStaticMarkup(
       <AgentRunSurface
-        activityFilter="all"
         events={[{
           id: "event-1",
           projectId: "/repo",
@@ -20,18 +19,14 @@ describe("AgentRunSurface", () => {
           timestamp: 100,
         }]}
         hasPane
-        hasSession
         transcript="Agent response"
-        onActivityFilterChange={() => undefined}
-        onClearActivity={() => undefined}
-        onShowTerminal={() => undefined}
       />,
     );
 
     expect(html).toContain("Agent response");
     expect(html).toContain("Edited a file");
     expect(html).toContain("App.tsx");
-    expect(html).toContain("Raw terminal");
-    expect(html).toContain("Clear");
+    expect(html).not.toContain(">Activity<");
+    expect(html).not.toContain(">Clear<");
   });
 });

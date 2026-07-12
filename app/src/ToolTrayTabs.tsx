@@ -7,17 +7,37 @@ type ToolTrayTabsProps = {
   onClose: () => void;
 };
 
+export const toolTraySelection = (current: ToolTrayMode, next: ToolTrayMode): ToolTrayMode | null =>
+  current === next ? null : next;
+
 const showsEditor = (mode: ToolTrayMode) => mode === "editor" || mode === "split";
 const showsBrowser = (mode: ToolTrayMode) => mode === "browser" || mode === "split";
 
 export function ToolTrayTabs({ mode, onModeChange, onClose }: ToolTrayTabsProps) {
+  const choose = (next: ToolTrayMode) => {
+    const selection = toolTraySelection(mode, next);
+    if (selection == null) onClose();
+    else onModeChange(selection);
+  };
+
   return (
     <nav className="tool-tray-tabs" aria-label="Tool tray surfaces">
+      <button
+        className={`tool-tray-tabs__tab ${mode === "files" ? "tool-tray-tabs__tab--active" : ""}`}
+        type="button"
+        aria-pressed={mode === "files"}
+        title={mode === "files" ? "Hide Files panel" : "Show Files panel"}
+        onClick={() => choose("files")}
+      >
+        <AppIcon name="folder" />
+        <span>Files</span>
+      </button>
       <button
         className={`tool-tray-tabs__tab ${showsEditor(mode) ? "tool-tray-tabs__tab--active" : ""}`}
         type="button"
         aria-pressed={showsEditor(mode)}
-        onClick={() => onModeChange("editor")}
+        title={mode === "editor" ? "Hide Editor panel" : "Show Editor panel"}
+        onClick={() => choose("editor")}
       >
         <AppIcon name="file" />
         <span>Editor</span>
@@ -26,22 +46,23 @@ export function ToolTrayTabs({ mode, onModeChange, onClose }: ToolTrayTabsProps)
         className={`tool-tray-tabs__tab ${showsBrowser(mode) ? "tool-tray-tabs__tab--active" : ""}`}
         type="button"
         aria-pressed={showsBrowser(mode)}
-        onClick={() => onModeChange("browser")}
+        title={mode === "browser" ? "Hide Browser panel" : "Show Browser panel"}
+        onClick={() => choose("browser")}
       >
         <AppIcon name="browser" />
         <span>Browser</span>
       </button>
-      <span className="tool-tray-tabs__spacer" />
       <button
-        className={`tool-tray-tabs__icon ${mode === "split" ? "tool-tray-tabs__icon--active" : ""}`}
+        className={`tool-tray-tabs__tab ${mode === "git" ? "tool-tray-tabs__tab--active" : ""}`}
         type="button"
-        title="Split editor and browser"
-        aria-label="Split editor and browser"
-        aria-pressed={mode === "split"}
-        onClick={() => onModeChange("split")}
+        aria-pressed={mode === "git"}
+        title={mode === "git" ? "Hide Git panel" : "Show Git panel"}
+        onClick={() => choose("git")}
       >
-        <AppIcon name="workspace" />
+        <AppIcon name="git" />
+        <span>Git</span>
       </button>
+      <span className="tool-tray-tabs__spacer" />
       <button
         className="tool-tray-tabs__icon"
         type="button"

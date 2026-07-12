@@ -16,11 +16,11 @@ import {
 } from "./workbenchLayout";
 import type { ToolTrayMode, WorkbenchLayoutMode, WorkbenchSizing } from "./workbenchLayout";
 
-const WORKBENCH_LAYOUT_STORAGE_KEY = "keelhouse.workbench.layout.v2";
-const WORKBENCH_SIZING_STORAGE_KEY = "keelhouse.workbench.sizing";
-const TOOL_TRAY_MODE_STORAGE_KEY = "keelhouse.workbench.toolTrayMode.v2";
-const SIDE_DRAWER_WIDTH_STORAGE_KEY = "keelhouse.sideDrawer.width";
-const SIDE_DRAWER_COLLAPSED_STORAGE_KEY = "keelhouse.sideDrawer.collapsed";
+const WORKBENCH_LAYOUT_STORAGE_KEY = "keelhouse.workbench.layout.v4";
+const WORKBENCH_SIZING_STORAGE_KEY = "keelhouse.workbench.sizing.v2";
+const TOOL_TRAY_MODE_STORAGE_KEY = "keelhouse.workbench.toolTrayMode.v4";
+const SIDE_DRAWER_WIDTH_STORAGE_KEY = "keelhouse.sideDrawer.width.v3";
+const SIDE_DRAWER_COLLAPSED_STORAGE_KEY = "keelhouse.sideDrawer.collapsed.v2";
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -50,7 +50,9 @@ const readStoredWorkbenchSizing = (): WorkbenchSizing => {
 const readStoredToolTrayMode = (): ToolTrayMode => {
   try {
     const value = window.localStorage.getItem(TOOL_TRAY_MODE_STORAGE_KEY);
-    return value === "editor" || value === "browser" || value === "split" ? value : DEFAULT_TOOL_TRAY_MODE;
+    return value === "files" || value === "editor" || value === "browser" || value === "git" || value === "split"
+      ? value
+      : DEFAULT_TOOL_TRAY_MODE;
   } catch {
     return DEFAULT_TOOL_TRAY_MODE;
   }
@@ -74,14 +76,20 @@ const readStoredSideDrawerCollapsed = () => {
 };
 
 export const useWorkbenchLayout = () => {
-  const [workbenchLayout, setWorkbenchLayout] = useState<WorkbenchLayoutMode>(readStoredWorkbenchLayout);
+  const [workbenchLayout, setStoredWorkbenchLayout] = useState<WorkbenchLayoutMode>(readStoredWorkbenchLayout);
   const [toolTrayMode, setToolTrayMode] = useState<ToolTrayMode>(readStoredToolTrayMode);
   const [workbenchSizing, setWorkbenchSizing] = useState<WorkbenchSizing>(readStoredWorkbenchSizing);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+  const [narrowPanelOpen, setNarrowPanelOpen] = useState(false);
   const [sideDrawerWidth, setSideDrawerWidth] = useState(readStoredSideDrawerWidth);
   const [sideDrawerCollapsed, setSideDrawerCollapsed] = useState(readStoredSideDrawerCollapsed);
   const workbenchRef = useRef<HTMLElement | null>(null);
-  const renderedWorkbenchLayout = effectiveWorkbenchLayout(workbenchLayout, viewportWidth);
+  const renderedWorkbenchLayout = effectiveWorkbenchLayout(workbenchLayout, viewportWidth, narrowPanelOpen);
+
+  const setWorkbenchLayout = (layout: WorkbenchLayoutMode) => {
+    setStoredWorkbenchLayout(layout);
+    setNarrowPanelOpen(layout !== "hidden");
+  };
 
   const workbenchStyle = {
     "--tool-tray-size": `${workbenchSizing.trayPercent}%`,
@@ -89,6 +97,7 @@ export const useWorkbenchLayout = () => {
   } as CSSProperties;
   const appShellStyle = {
     "--side-drawer-width": `${sideDrawerCollapsed ? 52 : sideDrawerWidth}px`,
+    "--dock-width": `${Math.max(240, (viewportWidth - (sideDrawerCollapsed ? 52 : sideDrawerWidth) - 6) * (workbenchSizing.trayPercent / 100))}px`,
   } as CSSProperties;
 
   const beginSideDrawerResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -164,6 +173,15 @@ export const useWorkbenchLayout = () => {
     });
   };
 
+  const resetWorkbenchLayout = () => {
+    setStoredWorkbenchLayout(DEFAULT_WORKBENCH_LAYOUT);
+    setNarrowPanelOpen(false);
+    setToolTrayMode(DEFAULT_TOOL_TRAY_MODE);
+    setWorkbenchSizing(DEFAULT_WORKBENCH_SIZING);
+    setSideDrawerWidth(DEFAULT_SIDE_DRAWER_WIDTH);
+    setSideDrawerCollapsed(false);
+  };
+
   useEffect(() => {
     const onResize = () => setViewportWidth(window.innerWidth);
     window.addEventListener("resize", onResize);
@@ -188,6 +206,7 @@ export const useWorkbenchLayout = () => {
     beginWorkbenchResize,
     nudgeSideDrawerResize,
     nudgeWorkbenchResize,
+    resetWorkbenchLayout,
     renderedWorkbenchLayout,
     setSideDrawerCollapsed,
     setToolTrayMode,

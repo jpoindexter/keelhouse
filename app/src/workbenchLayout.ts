@@ -1,5 +1,5 @@
 export type WorkbenchLayoutMode = "left" | "right" | "bottom" | "hidden";
-export type ToolTrayMode = "split" | "editor" | "browser";
+export type ToolTrayMode = "files" | "editor" | "browser" | "git" | "split";
 
 export type WorkbenchSizing = {
   trayPercent: number;
@@ -7,13 +7,17 @@ export type WorkbenchSizing = {
 };
 
 export const DEFAULT_WORKBENCH_LAYOUT: WorkbenchLayoutMode = "right";
-export const DEFAULT_TOOL_TRAY_MODE: ToolTrayMode = "editor";
-export const DEFAULT_WORKBENCH_SIZING: WorkbenchSizing = { trayPercent: 30, toolSplitPercent: 58 };
-export const DEFAULT_SIDE_DRAWER_WIDTH = 260;
+export const DEFAULT_TOOL_TRAY_MODE: ToolTrayMode = "files";
+export const DEFAULT_WORKBENCH_SIZING: WorkbenchSizing = { trayPercent: 39, toolSplitPercent: 58 };
+export const DEFAULT_SIDE_DRAWER_WIDTH = 332;
 
-export const effectiveWorkbenchLayout = (layout: WorkbenchLayoutMode, viewportWidth: number) => {
+export const effectiveWorkbenchLayout = (
+  layout: WorkbenchLayoutMode,
+  viewportWidth: number,
+  narrowPanelOpen = false,
+) => {
   if (layout === "left" || layout === "right") {
-    return viewportWidth < 1200 ? "bottom" : layout;
+    return viewportWidth <= 1120 && !narrowPanelOpen ? "hidden" : layout;
   }
   return layout;
 };
@@ -34,3 +38,11 @@ export const usableAgentWidth = ({
   const mainWidth = viewportWidth - (drawerCollapsed ? 52 : drawerWidth);
   return layout === "left" || layout === "right" ? mainWidth * (1 - trayPercent / 100) : mainWidth;
 };
+
+/* The centered run/activity/composer column is `min(860, agentWidth - pad)`.
+   The horizontal padding narrows under 1100px so the column stays readable at
+   the 900px minimum window instead of compressing below the 600px floor. */
+export const RUN_COLUMN_MAX = 860;
+export const runColumnPadding = (agentWidth: number) => (agentWidth < 1100 ? 24 : 56);
+export const runColumnWidth = (agentWidth: number) =>
+  Math.min(RUN_COLUMN_MAX, agentWidth - runColumnPadding(agentWidth));

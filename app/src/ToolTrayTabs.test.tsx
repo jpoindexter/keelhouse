@@ -1,30 +1,35 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { ToolTrayTabs } from "./ToolTrayTabs";
+import { ToolTrayTabs, toolTraySelection } from "./ToolTrayTabs";
 
 const noop = () => {};
 
 describe("ToolTrayTabs", () => {
-  it("marks the active surface tab with the underline-active class", () => {
-    const html = renderToStaticMarkup(<ToolTrayTabs mode="editor" onModeChange={noop} onClose={noop} />);
+  it("closes an active panel and switches to an inactive panel", () => {
+    expect(toolTraySelection("files", "files")).toBeNull();
+    expect(toolTraySelection("files", "browser")).toBe("browser");
+  });
 
+  it("provides the approved four-surface dock and marks one active tab", () => {
+    const html = renderToStaticMarkup(<ToolTrayTabs mode="files" onModeChange={noop} onClose={noop} />);
+
+    expect(html).toContain("Files");
     expect(html).toContain("Editor");
     expect(html).toContain("Browser");
+    expect(html).toContain("Git");
     expect(html.match(/tool-tray-tabs__tab--active/g)).toHaveLength(1);
   });
 
-  it("marks both surface tabs active in split mode", () => {
+  it("marks editor and browser active when split is restored from settings", () => {
     const html = renderToStaticMarkup(<ToolTrayTabs mode="split" onModeChange={noop} onClose={noop} />);
 
     expect(html.match(/tool-tray-tabs__tab--active/g)).toHaveLength(2);
-    expect(html).toContain("tool-tray-tabs__icon--active");
   });
 
   it("exposes accessible names for the icon-only controls", () => {
     const html = renderToStaticMarkup(<ToolTrayTabs mode="browser" onModeChange={noop} onClose={noop} />);
 
-    expect(html).toContain('aria-label="Split editor and browser"');
     expect(html).toContain('aria-label="Hide tool tray"');
   });
 });

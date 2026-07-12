@@ -148,8 +148,10 @@ export function SettingsModal({
           value={trayMode}
           onChange={(event) => onTrayModeChange(event.currentTarget.value as ToolTrayMode)}
         >
+          <option value="files">Files</option>
           <option value="editor">Editor</option>
           <option value="browser">Browser</option>
+          <option value="git">Git</option>
           <option value="split">Split</option>
         </select>
       );

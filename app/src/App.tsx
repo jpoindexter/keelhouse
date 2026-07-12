@@ -298,7 +298,7 @@ type CommandPaletteCommand = CommandPaletteCommandBase & {
 const FONT_SIZE = 15;
 const FONT_FAMILY = "JetBrains Mono, monospace";
 const LINE_HEIGHT = 1.25;
-const AGENT_SURFACE_STORAGE_KEY = "keelhouse.agent.surface";
+const AGENT_SURFACE_STORAGE_KEY = "keelhouse.agent.surface.v2";
 const readStoredAgentSurfaceMode = (): AgentSurfaceMode => {
   if (typeof window === "undefined") return "chat";
   try {
@@ -551,13 +551,14 @@ function App() {
   const [composerHistory, setComposerHistory] = useState<string[]>([]);
   const [composerHistoryIndex, setComposerHistoryIndex] = useState<number | null>(null);
   const [agentActivityEvents, setAgentActivityEvents] = useState<AgentActivityEvent[]>([]);
-  const [agentActivityFilter, setAgentActivityFilter] = useState<AgentActivityLogFilter>("all");
+  const agentActivityFilter: AgentActivityLogFilter = "all";
   const {
     appShellStyle,
     beginSideDrawerResize,
     beginWorkbenchResize,
     nudgeSideDrawerResize,
     nudgeWorkbenchResize,
+    resetWorkbenchLayout,
     renderedWorkbenchLayout,
     setSideDrawerCollapsed,
     setToolTrayMode,
@@ -571,6 +572,20 @@ function App() {
   } = useWorkbenchLayout();
   const [agentSurfaceMode, setAgentSurfaceMode] = useState<AgentSurfaceMode>(readStoredAgentSurfaceMode);
   const [sideDrawerMode, setSideDrawerMode] = useState<SideDrawerMode>("projects");
+  const resetInterface = () => {
+    resetWorkbenchLayout();
+    setSideDrawerMode("projects");
+    setAgentSurfaceMode("chat");
+    setSettingsOpen(false);
+  };
+  const toggleToolPanel = (mode: ToolTrayMode) => {
+    if (renderedWorkbenchLayout !== "hidden" && toolTrayMode === mode) {
+      setWorkbenchLayout("hidden");
+      return;
+    }
+    setToolTrayMode(mode);
+    setWorkbenchLayout("right");
+  };
   const [drawerSearchQuery, setDrawerSearchQuery] = useState("");
   const [drawerSearchScope, setDrawerSearchScope] = useState<DrawerSearchScope>("files");
   const [textSearchResults, setTextSearchResults] = useState<WorkspaceTextSearchMatch[]>([]);
@@ -3085,13 +3100,10 @@ function App() {
     {
       id: "layout.reset-demo",
       label: "Reset Layout to Demo Default",
-      detail: "Tray docked right on Editor, drawer visible",
+      detail: "Threads visible, Files docked right, Terminal tray collapsed",
       icon: "workspace",
       keywords: ["layout", "tray", "dock", "first open", "demo"],
-      run: () => {
-        setWorkbenchLayout("right");
-        setToolTrayMode("editor");
-      },
+      run: resetInterface,
     },
     {
       id: "workspace.quick-open",
@@ -3854,47 +3866,75 @@ function App() {
 
   return (
     <div className={`app-shell ${sideDrawerCollapsed ? "app-shell--side-drawer-collapsed" : ""}`} style={appShellStyle}>
-      <header className="app-titlebar" aria-label="Application chrome">
+      <header className="app-titlebar" aria-label="Application chrome" data-tauri-drag-region>
         <div className="titlebar-identity">
-          <span className="titlebar-product">Keelhouse</span>
+          <button className="titlebar-search" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Search threads and commands") }>
+            <AppIcon name="search" />
+            <span>Search threads…</span>
+          </button>
+        </div>
+        <div className="titlebar-splitter" aria-hidden="true" />
+        <div className="titlebar-agent-context" aria-label="Workspace context">
           <button className="titlebar-workspace" type="button" onClick={pickWorkspace} title="Open or switch project folder">
-            <AppIcon name="workspace" />
             <span>{activeWorkspaceName}</span>
           </button>
-          <span className="titlebar-session">{activeSessionTitle}</span>
           {gitStatus?.branch ? <span className="titlebar-branch">{`⎇ ${gitStatus.branch}`}</span> : null}
         </div>
-        <div className="titlebar-agent-context" aria-label="Selected agent context">
-          <span className="titlebar-meta titlebar-meta--agent">
-            <AppIcon name="agent" />
+        <div className="titlebar-splitter" aria-hidden="true" />
+        <div className="titlebar-actions">
+          <div className="titlebar-panel-toggles" aria-label="Toggle panels">
+            <button className={`titlebar-action ${renderedWorkbenchLayout !== "hidden" && toolTrayMode === "files" ? "titlebar-action--active" : ""}`} type="button" title="Toggle Files" aria-label="Toggle Files" aria-pressed={renderedWorkbenchLayout !== "hidden" && toolTrayMode === "files"} onClick={() => toggleToolPanel("files")}>
+              <AppIcon name="folder" />
+            </button>
+            <button className={`titlebar-action ${renderedWorkbenchLayout !== "hidden" && toolTrayMode === "editor" ? "titlebar-action--active" : ""}`} type="button" title="Toggle Editor" aria-label="Toggle Editor" aria-pressed={renderedWorkbenchLayout !== "hidden" && toolTrayMode === "editor"} onClick={() => toggleToolPanel("editor")}>
+              <AppIcon name="file" />
+            </button>
+            <button className={`titlebar-action ${renderedWorkbenchLayout !== "hidden" && toolTrayMode === "browser" ? "titlebar-action--active" : ""}`} type="button" title="Toggle Browser" aria-label="Toggle Browser" aria-pressed={renderedWorkbenchLayout !== "hidden" && toolTrayMode === "browser"} onClick={() => toggleToolPanel("browser")}>
+              <AppIcon name="browser" />
+            </button>
+            <button className={`titlebar-action ${renderedWorkbenchLayout !== "hidden" && toolTrayMode === "git" ? "titlebar-action--active" : ""}`} type="button" title="Toggle Git" aria-label="Toggle Git" aria-pressed={renderedWorkbenchLayout !== "hidden" && toolTrayMode === "git"} onClick={() => toggleToolPanel("git")}>
+              <AppIcon name="git" />
+            </button>
+            <button className={`titlebar-action ${agentSurfaceMode === "terminal" ? "titlebar-action--active" : ""}`} type="button" title="Toggle Terminal" aria-label="Toggle Terminal" aria-pressed={agentSurfaceMode === "terminal"} onClick={() => setAgentSurfaceMode(agentSurfaceMode === "terminal" ? "chat" : "terminal")}>
+              <AppIcon name="terminal" />
+            </button>
+          </div>
+          <span className={`titlebar-pill titlebar-pill--${terminalPaneState}`} title={`${activeTerminalProfile.label} · ${terminalStatusLabel}`}>
+            <AppIcon name={paneStateIconName(terminalPaneState)} />
             <span>{activeTerminalProfile.label}</span>
           </span>
-          <span className="titlebar-meta">{activeTerminalPaneLabel ?? "No pane"}</span>
-          <span className={`titlebar-pill titlebar-pill--${terminalPaneState}`}>
-            <AppIcon name={paneStateIconName(terminalPaneState)} />
-            <span>{terminalStatusLabel}</span>
-          </span>
-        </div>
-        <div className="titlebar-actions">
-          <button className="titlebar-action" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Command palette")}>
+          <button className="titlebar-action" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Command palette")} aria-label="Command palette">
             <AppIcon name="search" />
-            <span>Commands</span>
           </button>
-          <button className="titlebar-action" type="button" onClick={pickWorkspace}>
+          <button className="titlebar-action" type="button" onClick={pickWorkspace} title="Open folder" aria-label="Open folder">
             <AppIcon name="folderOpen" />
-            <span>Open Folder</span>
           </button>
-          {renderedWorkbenchLayout !== "hidden" && toolTrayMode !== "editor" ? (
-            <button className="titlebar-action titlebar-action--primary" type="button" onClick={() => void reloadBrowserPreview()}>
-              <AppIcon name="reload" />
-              <span>Reload Preview</span>
-            </button>
-          ) : null}
         </div>
       </header>
       <aside className={`file-rail ${sideDrawerCollapsed ? "file-rail--collapsed" : ""}`} aria-label={`${drawerActiveTitle} drawer`}>
         <div className="drawer-toolbar">
-          <span>{drawerActiveTitle}</span>
+          <span>{sideDrawerMode === "projects" ? "Threads" : drawerActiveTitle}</span>
+          {sideDrawerMode === "projects" ? (
+            <button
+              className="drawer-collapse-button"
+              type="button"
+              title="New thread"
+              aria-label="New thread"
+              disabled={!workspacePath}
+              onClick={() => workspacePath && void createProjectSession(workspacePath)}
+            >
+              <AppIcon name="filePlus" />
+            </button>
+          ) : null}
+          <button
+            className="drawer-collapse-button"
+            type="button"
+            title="Reset interface"
+            aria-label="Reset interface"
+            onClick={resetInterface}
+          >
+            <AppIcon name="reload" />
+          </button>
           <button
             className="drawer-collapse-button"
             type="button"
@@ -3980,7 +4020,7 @@ function App() {
         ) : null}
         {!sideDrawerCollapsed && sideDrawerMode === "projects" && visibleOpenProjects.length > 0 ? (
           <nav className="project-rail" aria-label="Open projects">
-            <div className="project-rail__heading">Projects</div>
+            <div className="project-rail__heading">Today</div>
             {visibleOpenProjects.map((project) => {
               const status = projectRailStatus(project);
               const active = project.path === workspacePath;
@@ -4020,21 +4060,6 @@ function App() {
                     )}
                   </button>
                   <div className="session-list" aria-label={`${basename(project.path)} sessions`}>
-                    <button
-                      className="session-row session-row--new"
-                      type="button"
-                      aria-label={`New session in ${basename(project.path)}`}
-                      onPointerDown={(event) => {
-                        if (event.button !== 0) return;
-                        event.preventDefault();
-                        void createProjectSession(project.path);
-                      }}
-                    >
-                      <span className="session-row__copy">
-                        <AppIcon name="filePlus" />
-                        <span>New session</span>
-                      </span>
-                    </button>
                     {visibleSessions.map((session) => {
                       const sessionStatus = projectSessionStatus(project.path, session);
                       const sessionActive = active && session.id === activeSessionId;
@@ -4357,9 +4382,11 @@ function App() {
             <label className="drawer-field">
               <span>Tray tabs</span>
               <select value={toolTrayMode} onChange={(event) => setToolTrayMode(event.currentTarget.value as ToolTrayMode)}>
+                <option value="files">Files</option>
                 <option value="split">Split editor + browser</option>
                 <option value="editor">Editor only</option>
                 <option value="browser">Browser only</option>
+                <option value="git">Git</option>
               </select>
             </label>
             <div className="drawer-action-grid">
@@ -4436,6 +4463,75 @@ function App() {
             onClose={() => setWorkbenchLayout("hidden")}
           />
         ) : null}
+        <section className="files-dock" aria-label="Project files">
+          <div className="dock-surface__header">
+            <span title={workspacePath ?? ""}>{workspacePath ? basename(workspacePath) : "Files"}</span>
+            <div className="dock-surface__actions">
+              <button type="button" disabled={!workspacePath} title="New file" aria-label="Create new file" onClick={() => void createFileInRail()}>
+                <AppIcon name="filePlus" />
+              </button>
+              <button type="button" disabled={!workspacePath} title="New folder" aria-label="Create new folder" onClick={() => void createFolderInRail()}>
+                <AppIcon name="folderPlus" />
+              </button>
+              <button type="button" disabled={!workspacePath} title="Refresh files" aria-label="Refresh files" onClick={refreshFileTree}>
+                <AppIcon name="reload" />
+              </button>
+            </div>
+          </div>
+          <label className="dock-file-filter">
+            <AppIcon name="search" />
+            <input aria-label="Filter files" value={drawerSearchQuery} placeholder="Filter files…" onChange={(event) => setDrawerSearchQuery(event.currentTarget.value)} />
+          </label>
+          <div className="dock-file-list">
+            {fileTreeLoading ? <div className="rail-status">Loading files…</div> : null}
+            {fileTreeError ? <div className="rail-status rail-status--error">{fileTreeError}</div> : null}
+            {!workspacePath ? <div className="rail-status">Open a folder to browse files</div> : null}
+            {workspacePath && !fileTreeLoading && searchableFiles.length === 0 ? <div className="rail-status">Empty folder</div> : null}
+            {(drawerSearchQuery.trim() ? drawerSearchResults : searchableFiles.slice(0, 600)).map((file) => (
+              <button
+                className={`dock-file-row ${selectedFile?.path === file.path ? "dock-file-row--active" : ""}`}
+                type="button"
+                key={file.path}
+                title={file.path}
+                onClick={() => void requestOpenEditorFile(file, { focusEditor: true })}
+              >
+                <AppIcon name="file" />
+                <span className="dock-file-row__name">{file.name}</span>
+                <span className="dock-file-row__path">{pathBreadcrumbs(workspacePath, file.path).slice(0, -1).join(" / ")}</span>
+              </button>
+            ))}
+            {!drawerSearchQuery.trim() && searchableFiles.length > 600 ? <div className="rail-status rail-status--muted">Showing first 600 files. Use Quick Open for the full workspace.</div> : null}
+          </div>
+        </section>
+        <section className="git-dock" aria-label="Source control">
+          <div className="dock-surface__header">
+            <span>{gitStatus?.branch ?? "Source Control"}</span>
+            <div className="dock-surface__actions">
+              <button type="button" disabled={!workspacePath || gitStatusLoading} title="Refresh source control" aria-label="Refresh source control" onClick={() => void refreshGitStatus()}>
+                <AppIcon name="reload" />
+              </button>
+            </div>
+          </div>
+          <div className="git-dock__summary">
+            <span>{gitStatus?.files.length ?? 0} changes</span>
+            <span>{gitStatus?.staged ?? 0} staged</span>
+            <span>{gitStatus?.untracked ?? 0} untracked</span>
+          </div>
+          <div className="dock-file-list">
+            {gitStatusLoading ? <div className="rail-status">Reading git status…</div> : null}
+            {gitStatusError ? <div className="rail-status rail-status--error">{gitStatusError}</div> : null}
+            {!workspacePath ? <div className="rail-status">Open a folder to read source control</div> : null}
+            {workspacePath && gitStatus?.isRepository === false ? <div className="rail-status">This workspace is not a Git repository</div> : null}
+            {gitStatus?.isRepository && gitStatus.files.length === 0 ? <div className="rail-status">Working tree clean</div> : null}
+            {gitStatus?.files.map((file) => (
+              <button className="dock-file-row" type="button" key={`${file.index}${file.worktree}${file.path}`} title={`${gitStatusLabel(file)} · ${file.path}`} onClick={() => void openGitDiff(file)}>
+                <AppIcon name={file.index === "?" ? "filePlus" : "git"} />
+                <span className="dock-file-row__name">{basename(file.path)}</span>
+                <span className="dock-file-row__path">{gitStatusLabel(file)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
         <section
           className="editor-area"
           aria-label="Editor"
@@ -4836,7 +4932,7 @@ function App() {
               <span className="terminal-kicker">Thread</span>
               <span className="terminal-title">
                 <AppIcon name="agent" />
-                <span>{activeTerminalProfile.label}</span>
+                <span>{activeSessionTitle}</span>
               </span>
               <span className="terminal-command" title={launchProfileCommandLine(activeTerminalProfile)}>
                 {launchProfileCommandLine(activeTerminalProfile)}
@@ -4855,6 +4951,13 @@ function App() {
               </span>
             </div>
             <div className="terminal-actions">
+              <span className="thread-tab-context">{activeWorkspaceName}</span>
+              <button className="terminal-tab-action" type="button" title="Open workspace externally" aria-label="Open workspace externally" disabled={!workspacePath} onClick={() => workspacePath && void openPath(workspacePath)}>
+                <AppIcon name="openExternal" />
+              </button>
+              <button className="terminal-tab-action" type="button" title="Thread settings" aria-label="Thread settings" onClick={() => setSettingsOpen(true)}>
+                <AppIcon name="settings" />
+              </button>
               <div className="agent-surface-switcher" role="tablist" aria-label="Agent surface">
                 <button
                   className={`agent-surface-switcher__button ${agentSurfaceMode === "chat" ? "agent-surface-switcher__button--active" : ""}`}
@@ -5033,27 +5136,11 @@ function App() {
               />
             </div>
             <AgentRunSurface
-              activityFilter={agentActivityFilter}
               events={selectedAgentActivityLog}
               hasPane={Boolean(activeTerminalPane)}
-              hasSession={Boolean(activeAgentSessionDescriptor)}
               hidden={agentSurfaceMode !== "chat"}
               metaLabel={activeTerminalPane ? activeTerminalProfile.label : undefined}
               transcript={activeTerminalTranscript}
-              onActivityFilterChange={setAgentActivityFilter}
-              onClearActivity={() => {
-                const root = workspacePathRef.current;
-                if (!root || !activeSessionId) return;
-                setAgentActivityEvents((events) => {
-                  const next = events.filter(
-                    (event) => event.projectId !== root || event.projectSessionId !== activeSessionId,
-                  );
-                  void storeRef.current?.set("agentActivityEvents", next);
-                  void storeRef.current?.save();
-                  return next;
-                });
-              }}
-              onShowTerminal={() => setAgentSurfaceMode("terminal")}
             />
           </div>
           <div className="agent-composer" aria-label="Agent composer" onContextMenu={(event) => openContextMenu(event, composerContextMenuItems())}>
@@ -5122,7 +5209,7 @@ function App() {
                 aria-label="Agent composer draft"
                 value={composerDraft}
                 rows={2}
-                placeholder="Send to selected agent. Use >save, >find, >open, or >clear for app actions."
+                placeholder="Ask Keelhouse to run agents, open files, inspect git, or use the browser..."
                 disabled={composerSending}
                 onChange={(event) => {
                   setComposerDraft(event.currentTarget.value);
@@ -5144,34 +5231,22 @@ function App() {
                 }}
               />
               <div className="agent-composer__bar">
-                <div className="agent-composer__attachments" aria-label="Composer attachments">
+                <div className="agent-composer__attachments" aria-label="Composer context">
                   <button
                     className="agent-composer__attachment-button"
                     type="button"
+                    aria-label="Attach file"
+                    title="Attach file"
                     disabled={!activeComposerHarnessKey}
                     onClick={() => void attachLocalFileToComposer()}
                   >
                     <AppIcon name="filePlus" />
-                    <span>File</span>
                   </button>
-                  <button
-                    className="agent-composer__attachment-button"
-                    type="button"
-                    disabled={!activeComposerHarnessKey || !selectedFile}
-                    onClick={() => void attachSelectedFileToComposer()}
-                  >
-                    <AppIcon name="file" />
-                    <span>Current</span>
-                  </button>
-                  <button
-                    className="agent-composer__attachment-button"
-                    type="button"
-                    disabled={!activeComposerHarnessKey}
-                    onClick={() => void attachPreviewToComposer()}
-                  >
-                    <AppIcon name="browser" />
-                    <span>Preview</span>
-                  </button>
+                  <span className="agent-composer__meta agent-composer__meta--accent">
+                    {activeComposerHarness.approvalMode === "fullAccess" ? "Full access" : activeComposerHarness.approvalMode === "approveSafe" ? "Approve safe" : "Ask"}
+                  </span>
+                  <span className="agent-composer__meta">Goal</span>
+                  <span className="agent-composer__meta">{activeTerminalProfile.label}</span>
                   {activeComposerHarness.attachments.map((attachment) => (
                     <span className="agent-composer__attachment" key={attachment.id} title={attachment.target}>
                       <span>{attachment.label}</span>
@@ -5189,12 +5264,12 @@ function App() {
                   <button
                     className="agent-composer__button agent-composer__button--danger"
                     type="button"
+                    aria-label="Stop selected pane"
                     title="Stop selected pane (Ctrl+C)"
                     disabled={!activeAgentSessionHandle}
                     onClick={() => void interruptActivePane()}
                   >
                     <AppIcon name="stop" />
-                    <span>Stop</span>
                   </button>
                   <button
                     className="agent-composer__send"
@@ -5220,6 +5295,34 @@ function App() {
             ) : null}
           </div>
         </section>
+        <div className="terminal-tray" aria-label="Terminal tray">
+          <button
+            className="terminal-tray__toggle"
+            type="button"
+            aria-pressed={agentSurfaceMode === "terminal"}
+            onClick={() => setAgentSurfaceMode(agentSurfaceMode === "terminal" ? "chat" : "terminal")}
+          >
+            <AppIcon name="terminal" />
+            <span>Terminal</span>
+          </button>
+          <div className="terminal-tray__panes" aria-label="Terminal panes">
+            {terminalPanes.map((pane, index) => (
+              <button
+                className={pane.id === activeTerminalPaneId ? "terminal-tray__pane terminal-tray__pane--active" : "terminal-tray__pane"}
+                type="button"
+                key={pane.id}
+                title={terminalPaneStateLabel(pane.state, pane.exitCode)}
+                onClick={() => void focusTerminalPane(pane.id)}
+              >
+                <AppIcon name={paneStateIconName(pane.state)} />
+                <span>{terminalPaneLabel(pane, index)}</span>
+              </button>
+            ))}
+          </div>
+          <button className="terminal-tray__new" type="button" title={`New ${launchProfile.label} pane`} aria-label={`New ${launchProfile.label} pane`} disabled={!workspacePath || launchProfileChanging} onClick={() => void createTerminalPane(launchProfile)}>
+            <AppIcon name="filePlus" />
+          </button>
+        </div>
       </main>
 
       {settingsOpen ? (
@@ -5280,10 +5383,7 @@ function App() {
             const profile = LAUNCH_PROFILES.find((entry) => entry.id === profileId);
             if (profile) void switchLaunchProfile(profile);
           }}
-          onResetLayout={() => {
-            setWorkbenchLayout("right");
-            setToolTrayMode("editor");
-          }}
+          onResetLayout={resetInterface}
           onTrayModeChange={setToolTrayMode}
         />
       ) : null}
@@ -5516,19 +5616,24 @@ function App() {
         />
       ) : null}
       <footer className="status-bar" aria-label="Workspace status">
-        <span className="status-bar__item">
-          <AppIcon name="workspace" />
-          <span>{activeWorkspaceName}</span>
-        </span>
-        <span className="status-bar__item">{activeSessionTitle}</span>
-        <span className="status-bar__item">
-          <AppIcon name={paneStateIconName(terminalPaneState)} />
-          <span>{activeTerminalProfile.label}</span>
-          <span>{terminalStatusLabel}</span>
-        </span>
-        <span className="status-bar__spacer" />
-        <span className="status-bar__item">{agentSurfaceMode === "chat" ? "Run" : "Terminal"}</span>
-        <span className="status-bar__item">Prettier</span>
+        <div className="status-bar__group status-bar__group--left">
+          <span className="status-bar__item">
+            <AppIcon name="workspace" />
+            <span>{activeWorkspaceName}</span>
+          </span>
+        </div>
+        <div className="status-bar__group status-bar__group--center">
+          <span className="status-bar__item">{activeSessionTitle}</span>
+          <span className="status-bar__item">
+            <AppIcon name={paneStateIconName(terminalPaneState)} />
+            <span>{activeTerminalProfile.label}</span>
+            <span>{terminalStatusLabel}</span>
+          </span>
+        </div>
+        <div className="status-bar__group status-bar__group--right">
+          <span className="status-bar__item">{agentSurfaceMode === "chat" ? "Run" : "Terminal"}</span>
+          <span className="status-bar__item">Prettier</span>
+        </div>
       </footer>
     </div>
   );
