@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-12T20:47:15.231Z",
-  "commit": "f5e9776+dirty",
+  "generatedAt": "2026-07-12T21:56:25.418Z",
+  "commit": "f1e5b1e+dirty",
   "branch": "main",
   "northStar": "daily-driver workflow runs completed without opening VS Code",
   "status": "implementation-ready-for-live-runs",
@@ -96,7 +96,7 @@
           "label": "pane manager contract doc",
           "file": "docs/pane-manager.md",
           "pass": true,
-          "bytes": 1617
+          "bytes": 1974
         }
       ],
       "passed": 6,
@@ -142,7 +142,7 @@
           "label": "session restore doc",
           "file": "docs/session-restore.md",
           "pass": true,
-          "bytes": 2013
+          "bytes": 2299
         }
       ],
       "passed": 6,
@@ -153,12 +153,12 @@
   "metrics": {
     "assetSizes": [
       {
-        "file": "app/dist/assets/index-BkLhtsvh.js",
-        "bytes": 1215895
+        "file": "app/dist/assets/index-BdR901f9.css",
+        "bytes": 85006
       },
       {
-        "file": "app/dist/assets/index-DBiVMzoU.css",
-        "bytes": 84852
+        "file": "app/dist/assets/index-DFzB7VY1.js",
+        "bytes": 1215895
       },
       {
         "file": "app/dist/assets/inter-latin-400-normal-C38fXH4l.woff2",
@@ -220,19 +220,19 @@
       },
       {
         "file": "docs/qa/editor-parity/selected.png",
-        "bytes": 140660
+        "bytes": 126634
       },
       {
         "file": "docs/qa/editor-parity/narrow-composer.png",
-        "bytes": 116770
+        "bytes": 86916
       },
       {
         "file": "docs/qa/editor-parity/diff-review.png",
-        "bytes": 147496
+        "bytes": 136696
       },
       {
         "file": "docs/qa/editor-parity/chrome-states.png",
-        "bytes": 146822
+        "bytes": 132370
       }
     ]
   },

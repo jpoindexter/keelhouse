@@ -1,13 +1,13 @@
 # Performance Budget
 
-Generated: 2026-07-12T20:47:15.474Z
-Commit: f5e9776+dirty
+Generated: 2026-07-12T21:56:25.612Z
+Commit: f1e5b1e+dirty
 Status: baseline-ready
 
 ## Hard Budgets
 
 - PASS Total built JS assets: 1187.4 KiB / 1367.2 KiB
-- PASS Total built CSS assets: 82.9 KiB / 87.9 KiB
+- PASS Total built CSS assets: 83.0 KiB / 87.9 KiB
 
 ## Soft Budgets
 
@@ -29,9 +29,13 @@ Status: baseline-ready
 - PASS Actual app first-open screenshot - docs/qa/app-shell/first-open-1440.png (53.5 KiB)
 - PASS Actual app narrow screenshot - docs/qa/app-shell/first-open-900.png (39.4 KiB)
 - PASS Native Tauri run screenshot - docs/qa/app-shell/native-run.png (315.8 KiB)
-- PASS Editor selected-state screenshot - docs/qa/editor-parity/selected.png (137.4 KiB)
+- PASS Editor selected-state screenshot - docs/qa/editor-parity/selected.png (123.7 KiB)
 - PASS Daily-driver report - docs/qa/daily-driver/latest.md (2.1 KiB)
 - PASS Live-captured render-perf snapshot (frame time/IPC payload/jank) - docs/qa/perf-budget/render-perf-live.json (0.3 KiB)
+- PASS Packaged two-pane render-perf snapshot - docs/qa/perf-budget/render-perf-2-pane.json (0.3 KiB)
+- PASS Packaged four-pane render-perf snapshot - docs/qa/perf-budget/render-perf-4-pane.json (0.3 KiB)
+- PASS Process-tree runtime comparison - docs/qa/perf-budget/runtime-comparison.json (2.4 KiB)
+- PASS Packaged Gemini TUI screenshot - docs/qa/daily-driver/gemini-tui.png (119.0 KiB)
 
 ## Next Live Measurements
 

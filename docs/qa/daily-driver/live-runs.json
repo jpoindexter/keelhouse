@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-07-12T21:53:25Z",
+  "app": "Packaged arm64 Keelhouse.app",
+  "status": "partial-live-proof",
+  "measurementNote": "Project-switch timings include Computer Use action and accessibility-tree refresh overhead; they are conservative upper-bound observations, not low-level event timings.",
+  "runs": {
+    "terminalLoad": {
+      "status": "executed",
+      "details": "A packaged shell rendered seq 1 4000. Two additional shells then emitted 2000 delayed lines each with overlapping execution."
+    },
+    "multiPane": {
+      "status": "executed",
+      "details": "The active project reached four panes for the recorded performance sample and five panes after Gemini launch."
+    },
+    "threeProjectSwitch": {
+      "status": "executed",
+      "switches": [
+        { "to": "Greg", "elapsedMs": 1553, "confirmed": true },
+        { "to": "NeuroNav", "elapsedMs": 1156, "confirmed": true },
+        { "to": "agent cli", "elapsedMs": 915, "confirmed": true, "restoredFourPanes": true }
+      ]
+    },
+    "geminiTui": {
+      "status": "executed",
+      "launchMs": 3207,
+      "details": "Gemini started in a packaged pane and rendered its folder-trust prompt. No trust choice or prompt was submitted.",
+      "screenshot": "docs/qa/daily-driver/gemini-tui.png"
+    },
+    "oneProjectEditAgentPreview": {
+      "status": "not-executed",
+      "gap": "The complete edit + agent prompt + detected browser preview workflow still needs a timed packaged run."
+    },
+    "twoAgentSameProject": {
+      "status": "failed-product-contract",
+      "gap": "Creating a new project thread retained the previous thread's live pane set. SESSION-PANE-ISOLATION must make same-project threads own independent processes before this workflow can pass."
+    }
+  }
+}

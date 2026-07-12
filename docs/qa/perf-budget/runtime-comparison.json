@@ -1,0 +1,97 @@
+{
+  "capturedAt": "2026-07-12T21:54:55.489Z",
+  "status": "observational-comparison",
+  "caveat": "This captures current real workloads. It does not prove the equivalent-workflow North Star until VS Code and Keelhouse run the same controlled scenario.",
+  "sampleCount": 5,
+  "sampleDelayMs": 500,
+  "summary": {
+    "keelhouse": {
+      "label": "Packaged Keelhouse",
+      "workload": "Three restored projects; five panes in the active project (three shells, one exited Codex, one Gemini at the trust prompt).",
+      "samples": 5,
+      "processCountAverage": 8,
+      "rssMbAverage": 263.915625,
+      "cpuPercentAverage": 0.04
+    },
+    "vscode": {
+      "label": "Current VS Code workload",
+      "workload": "Existing long-running user workload with extensions and multiple windows; observational baseline only, not a controlled equivalent run.",
+      "samples": 5,
+      "processCountAverage": 482,
+      "rssMbAverage": 14915.325,
+      "cpuPercentAverage": 201.07999999999998
+    }
+  },
+  "samples": [
+    {
+      "keelhouse": {
+        "rootPid": 55628,
+        "processCount": 8,
+        "rssKb": 270256,
+        "cpuPercent": 0.2
+      },
+      "vscode": {
+        "rootPid": 1276,
+        "processCount": 482,
+        "rssKb": 15247520,
+        "cpuPercent": 254.69999999999993
+      }
+    },
+    {
+      "keelhouse": {
+        "rootPid": 55628,
+        "processCount": 8,
+        "rssKb": 270256,
+        "cpuPercent": 0
+      },
+      "vscode": {
+        "rootPid": 1276,
+        "processCount": 482,
+        "rssKb": 15247776,
+        "cpuPercent": 176.09999999999988
+      }
+    },
+    {
+      "keelhouse": {
+        "rootPid": 55628,
+        "processCount": 8,
+        "rssKb": 270256,
+        "cpuPercent": 0
+      },
+      "vscode": {
+        "rootPid": 1276,
+        "processCount": 482,
+        "rssKb": 15266480,
+        "cpuPercent": 161.39999999999978
+      }
+    },
+    {
+      "keelhouse": {
+        "rootPid": 55628,
+        "processCount": 8,
+        "rssKb": 270240,
+        "cpuPercent": 0
+      },
+      "vscode": {
+        "rootPid": 1276,
+        "processCount": 482,
+        "rssKb": 15268784,
+        "cpuPercent": 153.6
+      }
+    },
+    {
+      "keelhouse": {
+        "rootPid": 55628,
+        "processCount": 8,
+        "rssKb": 270240,
+        "cpuPercent": 0
+      },
+      "vscode": {
+        "rootPid": 1276,
+        "processCount": 482,
+        "rssKb": 15335904,
+        "cpuPercent": 259.60000000000025
+      }
+    }
+  ]
+}

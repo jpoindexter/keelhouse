@@ -52,9 +52,11 @@ Useful checks:
 cd app && npm run build
 cd app && npm test
 cd app/src-tauri && PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH" cargo test
+cd app && npm run package:mac
 ```
 
 Zig must stay pinned to `0.15.2`; Homebrew's default `0.16` breaks the Ghostty bridge build.
+The package command creates the ad-hoc-signed app at `app/src-tauri/target/release/bundle/macos/Keelhouse.app`; see `docs/packaging.md`.
 
 ## Work From The Docs
 

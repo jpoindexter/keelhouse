@@ -4562,13 +4562,17 @@ body,
 
 .titlebar-agent-context {
   gap: 10px;
+  overflow: hidden;
   padding: 0 12px;
   color: #a6a8b6;
   font-size: 13px;
 }
 
 .titlebar-workspace {
+  overflow: hidden;
+  min-width: 0;
   height: 100%;
+  flex: 1 1 0;
   color: #ececf4;
   font-size: 13px;
   font-weight: 600;
@@ -4582,8 +4586,14 @@ body,
 }
 
 .titlebar-branch {
+  overflow: hidden;
+  min-width: 0;
+  max-width: 30ch;
+  flex: 0 1 auto;
   color: #707383;
   font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .titlebar-actions {

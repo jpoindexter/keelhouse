@@ -1,6 +1,6 @@
 # Chrome Contract
 
-Status: active guardrail, v2 2026-07-11 (control grammar added after the boxed-button drift; see `docs/chrome-delta-audit.md` and DECISIONS.md 2026-07-11).
+Status: v2 guardrail prepared; final lock remains pending CHROME-EYEBALL-SIGNOFF. Control grammar was added after the boxed-button drift; see `docs/chrome-delta-audit.md` and DECISIONS.md 2026-07-11.
 
 Keelhouse chrome follows the accepted `demo/keelhouse-chrome-demo.html` direction: graphite surfaces, steel-cyan accent, direct project/session drawer, agent-first center, and editor/browser/git/raw terminal as optional trays. The demo is binding at the control-grammar level, not only tokens.
 
@@ -39,7 +39,7 @@ First open shows the demo layout: threads drawer, centered conversation+composer
 ## Agent Run Surface
 
 - The agent conversation is the default surface and shows the visible terminal-backed transcript; raw terminal remains an alternate view for direct TUI interaction.
-- Activity is separate provenance for observable prompt, approval, file, command, error, browser, git, and app events.
+- Observable prompt, approval, file, command, error, browser, git, and app events appear as inline provenance in the conversation.
 - Keelhouse does not infer structured chat, tool events, or thinking from terminal text. Those require an explicit adapter or hook.
 - The composer stays pinned below output and activity.
 
@@ -47,7 +47,7 @@ First open shows the demo layout: threads drawer, centered conversation+composer
 
 - The side drawer uses mode-aware product nouns. The default Projects mode is `Project threads`, not a generic `Drawer`.
 - The center work surface is labelled as an agent conversation with an optional raw terminal. One persistent titlebar icon switches between them; no in-thread switcher or bottom Terminal tray may duplicate that mode.
-- The first-open tool tray is hidden. Opening Tools defaults to Editor and can dock left, right, or bottom.
+- First open shows Files in the right dock. Files, Editor, Browser, and Git can be selected from the shared tray tabs; tools can dock left, right, or bottom or be hidden.
 
 ## Control Chrome Signals
 
@@ -59,13 +59,13 @@ First open shows the demo layout: threads drawer, centered conversation+composer
 
 ## Documented Exceptions (grammar-scale, per CHROME-EYEBALL-SIGNOFF)
 
-- **Tray tab strip is Editor/Browser, not Files/Editor/Browser/Git.** The demo's right dock shows four tabs, but Keelhouse's Files tree and Git panel already live in the side drawer (ACTIVITY-DRAWERS, verified 2026-07-09). Duplicating those surfaces in the tray would double their state (height observers, tree instances, selection) for no workflow gain. The tray strip carries the demo's tab treatment for the surfaces the tray actually hosts; Files/Git keep the same visual grammar inside the drawer. Revisit only if daily-driver use shows the drawer round-trip is a real friction.
+No new exceptions are locked yet. Jason's sign-off must record any control-density exception before CHROME-CONTRACT-V2 is marked complete.
 
 ## Tool Tray Signals
 
-- One compact Tools menu exposes `Editor`, `Browser`, and `Split editor and browser` plus dock position.
-- `Split` shows editor and browser trays with the secondary splitter.
-- `Editor` and `Browser` modes hide the unused tray and remove the secondary editor/browser splitter.
+- The shared strip exposes `Files`, `Editor`, `Browser`, and `Git`; one compact menu controls dock position and optional split mode.
+- `Split` shows editor and browser with the secondary splitter.
+- Single-tool modes hide unused surfaces and remove the secondary editor/browser splitter.
 - Tray mode is a local workbench preference so daily-driver layout does not reset between launches.
 
 ## Verification
@@ -76,7 +76,7 @@ Run from `app/`:
 npm run qa:chrome-contract
 ```
 
-The gate checks the accepted demo, real app-shell sources, 1440/1024/900 first-open screenshots, steel-cyan tokens, rejected warm accents/avatar labels, the terminal-backed Run contract, hidden first-open tray, and compact Tools menu.
+The gate checks the accepted demo, real app-shell sources, 1440/1024/900 first-open and populated screenshots, overlay evidence, steel-cyan tokens, rejected warm accents/avatar labels, flat toolbar grammar, centered composer values, Files-first tray structure, crumb overflow, and detached-HEAD labeling.
 
 For visible chrome changes, run both:
 

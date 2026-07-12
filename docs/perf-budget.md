@@ -10,6 +10,7 @@ Run from `app/` after a production build and daily-driver readiness check:
 npm run build
 npm run qa:daily-driver
 npm run qa:perf-budget
+npm run qa:runtime-perf
 ```
 
 The collector writes:
@@ -26,4 +27,4 @@ The collector writes:
 
 ## Current Boundary
 
-This gate proves the static budget and evidence baseline is present. It does not yet prove Keelhouse is lighter than VS Code at runtime. The next pass must capture packaged Tauri memory, CPU, and responsiveness for one-project, two-agent, and three-project workflows, then compare the same workflows against VS Code.
+The packaged two- and four-pane render snapshots are now recorded in `docs/qa/perf-budget/`, along with a repeatable current-workload process-tree comparison. The latter is observational because VS Code and Keelhouse were not running controlled equivalent workflows. Final proof still requires a packaged one-pane sample and matching one-project, two-agent, and three-project runs in both apps.

@@ -11,6 +11,20 @@
         height: 100vh;
       }
 
+      [data-qa="editor-parity-shell"] .browser-preview,
+      [data-qa="editor-parity-shell"] .workbench-resizer--tools,
+      [data-qa="editor-parity-shell"] .terminal-titlebar .layout-switcher,
+      [data-qa="editor-parity-shell"] .terminal-titlebar .tool-tray-switcher {
+        display: none;
+      }
+
+      [data-qa="editor-parity-shell"] .context-menu,
+      [data-qa="editor-parity-shell"] .chrome-state-palette {
+        opacity: 1 !important;
+        translate: none !important;
+        transition: none !important;
+      }
+
       .qa-note {
         position: fixed;
         right: 12px;
@@ -153,35 +167,36 @@
       <symbol id="i-error" viewBox="0 0 24 24"><path d="M12 8v5M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     </svg>
-    <div class="app-shell" data-qa="editor-parity-shell">
+    <div class="app-shell" data-qa="editor-parity-shell" style="--side-drawer-width: 332px; --dock-width: 430px">
       <header class="app-titlebar" aria-label="Application chrome">
         <div class="titlebar-identity">
-          <span class="titlebar-product">Keelhouse</span>
-          <button class="titlebar-workspace" type="button"><svg class="app-icon"><use href="#i-workspace" /></svg><span>agent cli</span></button>
-          <span class="titlebar-session">Project sessions</span>
+          <button class="titlebar-search" type="button"><svg class="app-icon"><use href="#i-search" /></svg><span>Search threads…</span></button>
         </div>
-        <div class="titlebar-agent-context" aria-label="Selected agent context">
-          <span class="titlebar-meta"><svg class="app-icon"><use href="#i-agent" /></svg><span>Codex</span></span>
-          <span class="titlebar-meta">API fix - Codex</span>
-          <span class="titlebar-pill titlebar-pill--running"><svg class="app-icon"><use href="#i-loading" /></svg><span>Running</span></span>
+        <div class="titlebar-splitter" aria-hidden="true"></div>
+        <div class="titlebar-agent-context" aria-label="Workspace context">
+          <button class="titlebar-workspace" type="button"><span>agent cli</span></button>
+          <span class="titlebar-branch">⎇ feature/agent-chrome</span>
         </div>
+        <div class="titlebar-splitter" aria-hidden="true"></div>
         <div class="titlebar-actions">
-          <button class="titlebar-action" type="button"><svg class="app-icon"><use href="#i-folder" /></svg><span>Open Folder</span></button>
-          <button class="titlebar-action titlebar-action--primary" type="button"><svg class="app-icon"><use href="#i-reload" /></svg><span>Reload Preview</span></button>
+          <div class="titlebar-panel-toggles" aria-label="Toggle panels">
+            <button class="titlebar-action" type="button" aria-label="Toggle Files"><svg class="app-icon"><use href="#i-folder" /></svg></button>
+            <button class="titlebar-action titlebar-action--active" type="button" aria-label="Toggle Editor"><svg class="app-icon"><use href="#i-file" /></svg></button>
+            <button class="titlebar-action" type="button" aria-label="Toggle Browser"><svg class="app-icon"><use href="#i-browser" /></svg></button>
+            <button class="titlebar-action" type="button" aria-label="Toggle Git"><svg class="app-icon"><use href="#i-git" /></svg></button>
+            <button class="titlebar-action" type="button" aria-label="Open raw terminal"><svg class="app-icon"><use href="#i-terminal" /></svg></button>
+          </div>
+          <span class="titlebar-pill titlebar-pill--running"><svg class="app-icon"><use href="#i-loading" /></svg><span>Codex</span></span>
+          <button class="titlebar-action" type="button" aria-label="Command palette"><svg class="app-icon"><use href="#i-search" /></svg></button>
+          <button class="titlebar-action" type="button" aria-label="Open folder"><svg class="app-icon"><use href="#i-folder" /></svg></button>
         </div>
       </header>
       <aside class="file-rail" aria-label="Project threads drawer">
         <div class="drawer-toolbar">
-          <span>Project threads</span>
+          <span>Threads</span>
+          <button class="drawer-collapse-button" type="button" aria-label="New thread"><svg class="app-icon"><use href="#i-file-plus" /></svg></button>
+          <button class="drawer-collapse-button" type="button" aria-label="Reset interface"><svg class="app-icon"><use href="#i-reload" /></svg></button>
           <button class="drawer-collapse-button" type="button" aria-label="Collapse side drawer"><svg class="app-icon"><use href="#i-chevron-down" /></svg></button>
-        </div>
-        <div class="drawer-mode-switcher" role="tablist" aria-label="Side drawer">
-          <button class="drawer-mode-switcher__button drawer-mode-switcher__button--active" type="button" role="tab" aria-selected="true"><svg class="app-icon"><use href="#i-workspace" /></svg><span>Projects</span></button>
-          <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-file" /></svg><span>Files</span></button>
-          <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-search" /></svg><span>Search</span></button>
-          <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-git" /></svg><span>Git</span></button>
-          <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-browser" /></svg><span>Browser</span></button>
-          <button class="drawer-mode-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-settings" /></svg><span>Settings</span></button>
         </div>
         <nav class="project-rail" aria-label="Open projects">
           <div class="project-rail__heading">Projects</div>
@@ -191,7 +206,7 @@
                 <span class="project-row__name"><svg class="app-icon"><use href="#i-workspace" /></svg><span>agent cli</span></span>
                 <span class="project-row__path">/Users/jasonpoindexter/Documents/GitHub/apps/agent cli</span>
               </span>
-              <span class="project-row__state"><svg class="app-icon"><use href="#i-loading" /></svg><span>Active</span></span>
+              <span class="project-row__state" aria-hidden="true"></span>
             </button>
             <div class="session-list" aria-label="agent cli sessions">
               <button class="session-row session-row--new" type="button" aria-label="New session in agent cli"><span class="session-row__copy"><svg class="app-icon"><use href="#i-file-plus" /></svg><span>New session</span></span></button>
@@ -216,7 +231,7 @@
                 <span class="project-row__name"><svg class="app-icon"><use href="#i-workspace" /></svg><span>postures</span></span>
                 <span class="project-row__path">/Users/jasonpoindexter/Documents/postures</span>
               </span>
-              <span class="project-row__state"><svg class="app-icon"><use href="#i-workspace" /></svg><span>Exited</span></span>
+              <span class="project-row__state" aria-hidden="true"></span>
             </button>
             <div class="session-list" aria-label="postures sessions">
               <button class="session-row session-row--new" type="button" aria-label="New session in postures"><span class="session-row__copy"><svg class="app-icon"><use href="#i-file-plus" /></svg><span>New session</span></span></button>
@@ -232,7 +247,7 @@
                 <span class="project-row__name"><svg class="app-icon"><use href="#i-workspace" /></svg><span>Vanta</span></span>
                 <span class="project-row__path">/Users/jasonpoindexter/Documents/GitHub/docs/Vanta</span>
               </span>
-              <span class="project-row__state"><svg class="app-icon"><use href="#i-error" /></svg><span>Needs attention</span></span>
+              <span class="project-row__state" aria-hidden="true"></span>
             </button>
             <div class="session-list" aria-label="Vanta sessions">
               <button class="session-row session-row--new" type="button" aria-label="New session in Vanta"><span class="session-row__copy"><svg class="app-icon"><use href="#i-file-plus" /></svg><span>New session</span></span></button>
@@ -244,7 +259,16 @@
           </div>
         </nav>
       </aside>
-      <main class="workbench workbench--drawer-right workbench--tools-split">
+      <button class="side-drawer-resizer" type="button" aria-label="Resize side drawer"></button>
+      <main class="workbench workbench--drawer-right workbench--tools-editor">
+        <nav class="tool-tray-tabs" aria-label="Tool tray surfaces">
+          <button class="tool-tray-tabs__tab" type="button"><svg class="app-icon"><use href="#i-folder" /></svg><span>Files</span></button>
+          <button class="tool-tray-tabs__tab tool-tray-tabs__tab--active" type="button"><svg class="app-icon"><use href="#i-file" /></svg><span>Editor</span></button>
+          <button class="tool-tray-tabs__tab" type="button"><svg class="app-icon"><use href="#i-browser" /></svg><span>Browser</span></button>
+          <button class="tool-tray-tabs__tab" type="button"><svg class="app-icon"><use href="#i-git" /></svg><span>Git</span></button>
+          <span class="tool-tray-tabs__spacer"></span>
+          <button class="tool-tray-tabs__icon" type="button" aria-label="Hide tool tray"><svg class="app-icon"><use href="#i-close" /></svg></button>
+        </nav>
         <section class="editor-area" aria-label="Editor">
           <div class="editor-tabbar">
             <div class="editor-tabs" role="tablist" aria-label="Open files">
@@ -341,7 +365,7 @@
             ></iframe>
           </div>
         </section>
-        <section class="terminal-panel" aria-label="Agent thread and raw terminal">
+        <section class="terminal-panel terminal-panel--chat" aria-label="Agent conversation with optional raw terminal">
           <div class="terminal-titlebar">
             <div class="terminal-profile">
               <span class="terminal-kicker">Thread</span>
@@ -352,10 +376,6 @@
               <span class="terminal-cwd" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli">agent cli</span>
             </div>
             <div class="terminal-actions">
-              <div class="agent-surface-switcher" role="tablist" aria-label="Agent surface">
-                <button class="agent-surface-switcher__button agent-surface-switcher__button--active" type="button" role="tab" aria-selected="true"><svg class="app-icon"><use href="#i-agent" /></svg><span>Chat</span></button>
-                <button class="agent-surface-switcher__button" type="button" role="tab" aria-selected="false"><svg class="app-icon"><use href="#i-terminal" /></svg><span>Terminal</span></button>
-              </div>
               <div class="layout-switcher" role="group" aria-label="Tool drawer layout">
                 <button class="layout-switcher__button" type="button"><svg class="app-icon"><use href="#i-file" /></svg><span>Left</span></button>
                 <button class="layout-switcher__button layout-switcher__button--active" type="button"><svg class="app-icon"><use href="#i-file" /></svg><span>Right</span></button>
@@ -400,16 +420,6 @@
                 <div class="agent-activity__row agent-activity__row--error"><svg class="app-icon"><use href="#i-error" /></svg><span class="agent-activity__label">Command failed</span><span class="agent-activity__detail">npm test</span></div>
               </div>
               <section class="agent-activity-log" aria-label="Agent activity timeline">
-                <div class="agent-activity-log__toolbar" role="toolbar" aria-label="Filter agent activity timeline">
-                  <span class="agent-activity-log__title">Thread</span>
-                  <div class="agent-activity-log__filters">
-                    <button class="agent-activity-log__filter agent-activity-log__filter--active" type="button" aria-pressed="true">All</button>
-                    <button class="agent-activity-log__filter" type="button" aria-pressed="false">Prompts</button>
-                    <button class="agent-activity-log__filter" type="button" aria-pressed="false">Files</button>
-                    <button class="agent-activity-log__filter" type="button" aria-pressed="false">Approvals</button>
-                    <button class="agent-activity-log__filter" type="button" aria-pressed="false">Errors</button>
-                  </div>
-                </div>
                 <div class="agent-activity-log__list">
                   <article class="agent-thread-event agent-thread-event--thinking"><div class="agent-thread-event__icon"><svg class="app-icon"><use href="#i-thinking" /></svg></div><div class="agent-thread-event__body"><div class="agent-thread-event__header"><strong>Prompt sent</strong><span>08:32</span><span>Prompts</span></div><div class="agent-thread-event__detail">API fix</div><div class="agent-thread-event__meta">terminal</div></div></article>
                   <article class="agent-thread-event agent-thread-event--complete"><div class="agent-thread-event__icon"><svg class="app-icon"><use href="#i-check" /></svg></div><div class="agent-thread-event__body"><div class="agent-thread-event__header"><strong>Action approved</strong><span>08:32</span><span>Approvals</span></div><div class="agent-thread-event__detail">Save file</div><div class="agent-thread-event__meta">review diff</div></div></article>
@@ -417,46 +427,35 @@
                   <article class="agent-thread-event agent-thread-event--error"><div class="agent-thread-event__icon"><svg class="app-icon"><use href="#i-error" /></svg></div><div class="agent-thread-event__body"><div class="agent-thread-event__header"><strong>Command failed</strong><span>08:35</span><span>Errors</span></div><div class="agent-thread-event__detail">npm test</div><div class="agent-thread-event__meta">exit 1 · terminal</div></div></article>
                 </div>
               </section>
-              <div class="agent-chat-terminal-hint">
-                <button class="agent-chat-terminal-hint__button" type="button"><svg class="app-icon"><use href="#i-terminal" /></svg><span>Raw terminal</span></button>
-              </div>
             </div>
           </div>
           <div class="agent-composer" aria-label="Agent composer">
-            <div class="agent-composer__harness">
-              <div class="agent-composer__target" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli">
-                <span>Target</span>
-                <strong><svg class="app-icon"><use href="#i-agent" /></svg><span>Codex</span></strong>
-                <span>agent cli</span>
-                <span>session-lt72gs</span>
-                <span>API fix</span>
+            <div class="agent-composer__topline">
+              <div class="agent-composer__target" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli"><strong><svg class="app-icon"><use href="#i-agent" /></svg><span>Codex</span></strong><span>agent cli</span><span>API fix</span></div>
+            </div>
+            <div class="agent-composer__card">
+              <textarea class="agent-composer__input" rows="2" aria-label="Agent composer draft" placeholder="Ask Keelhouse to run agents, open files, inspect git, or use the browser...">Summarize the selected file and propose the next edit.</textarea>
+              <div class="agent-composer__bar">
+                <div class="agent-composer__attachments" aria-label="Composer context">
+                  <button class="agent-composer__attachment-button" type="button" aria-label="Attach file"><svg class="app-icon"><use href="#i-file-plus" /></svg></button>
+                  <span class="agent-composer__meta agent-composer__meta--accent">Ask</span>
+                  <span class="agent-composer__meta">Goal</span>
+                  <span class="agent-composer__meta">Codex</span>
+                  <span class="agent-composer__attachment" title="app/src/App.tsx"><span>App.tsx</span><button type="button" aria-label="Remove attachment App.tsx"><svg class="app-icon"><use href="#i-close" /></svg></button></span>
+                </div>
+                <div class="agent-composer__actions">
+                  <button class="agent-composer__button agent-composer__button--danger" type="button" aria-label="Stop selected pane"><svg class="app-icon"><use href="#i-stop" /></svg></button>
+                  <button class="agent-composer__send" type="button" aria-label="Send"><svg class="app-icon"><use href="#i-send" /></svg></button>
+                </div>
               </div>
-              <label class="agent-composer__field"><span>Permission</span><select aria-label="Composer permission mode"><option>Ask</option><option>Approve safe</option><option>Full access</option></select></label>
-              <label class="agent-composer__field"><span>Profile</span><select aria-label="Composer profile"><option>Codex</option><option>Gemini</option><option>Claude</option><option>Shell</option></select></label>
-              <label class="agent-composer__field agent-composer__field--goal"><span>Goal</span><input aria-label="Composer goal" value="Fix API flow" /></label>
-            </div>
-            <div class="agent-composer__attachments" aria-label="Composer attachments">
-              <button class="agent-composer__attachment-button" type="button"><svg class="app-icon"><use href="#i-file-plus" /></svg><span>File</span></button>
-              <button class="agent-composer__attachment-button" type="button"><svg class="app-icon"><use href="#i-file" /></svg><span>Current</span></button>
-              <button class="agent-composer__attachment-button" type="button"><svg class="app-icon"><use href="#i-browser" /></svg><span>Preview</span></button>
-              <span class="agent-composer__attachment" title="/Users/jasonpoindexter/Documents/GitHub/apps/agent cli/app/src/App.tsx"><span>App.tsx</span><button type="button" aria-label="Remove attachment App.tsx"><svg class="app-icon"><use href="#i-close" /></svg></button></span>
-              <span class="agent-composer__attachment" title="http://localhost:5173/"><span>Browser preview</span><button type="button" aria-label="Remove attachment Browser preview"><svg class="app-icon"><use href="#i-close" /></svg></button></span>
-            </div>
-            <textarea class="agent-composer__input" rows="2" aria-label="Agent composer draft" placeholder="Send to selected agent. Use >save, >find, >open, or >clear for app actions.">Summarize the selected file and propose the next edit.</textarea>
-            <div class="agent-composer__actions">
-              <button class="agent-composer__button" type="button"><svg class="app-icon"><use href="#i-send" /></svg><span>Send</span></button>
-              <button class="agent-composer__button" type="button"><svg class="app-icon"><use href="#i-stop" /></svg><span>Stop</span></button>
             </div>
           </div>
         </section>
       </main>
       <footer class="status-bar" aria-label="Workspace status">
-        <span class="status-bar__item"><svg class="app-icon"><use href="#i-workspace" /></svg><span>agent cli</span></span>
-        <span class="status-bar__item">Project sessions</span>
-        <span class="status-bar__item"><svg class="app-icon"><use href="#i-loading" /></svg><span>Codex</span><span>Running</span></span>
-        <span class="status-bar__spacer"></span>
-        <span class="status-bar__item">Chat</span>
-        <span class="status-bar__item">Prettier</span>
+        <div class="status-bar__group status-bar__group--left"><span class="status-bar__item"><svg class="app-icon"><use href="#i-workspace" /></svg><span>agent cli</span></span></div>
+        <div class="status-bar__group status-bar__group--center"><span class="status-bar__item">Project sessions</span><span class="status-bar__item"><svg class="app-icon"><use href="#i-loading" /></svg><span>Codex</span><span>Running</span></span></div>
+        <div class="status-bar__group status-bar__group--right"><span class="status-bar__item">Chat</span><span class="status-bar__item">Prettier</span></div>
       </footer>
     </div>
     <div class="qa-note"></div>

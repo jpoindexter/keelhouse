@@ -76,6 +76,8 @@ Append-only failure log. Approaches that took >2 attempts, or that a 16-framewor
 
 **Why flagged instead of fixed:** All four options are machine-environment or cross-cutting-toolchain decisions (system CLT version, a second Xcode install, or re-litigating the Zig version pin) — exactly the "hard-to-reverse, affects shared/other-project state" class of action that needs Jason's call, not a silent workaround.
 
+**Resolved 2026-07-12:** `libghostty-vt-sys` was not the only available control point. Zig honors `ZIG_LIB_DIR`, so `scripts/build-macos-app.sh` creates an ignored copy of Zig 0.15.2's bundled library under Cargo `target/`, replaces the broken `INFINITY` expression with the equivalent typed `numeric_limits<_RealT>::infinity()`, and scopes that copy to `npm run package:mac`. This changes no installed SDK/toolchain files. The optimized bundle built and the packaged app launched a real Codex pane.
+
 ## 2026-07-12 — `write_text_file` silently failed writing a new perf-snapshot file
 
 **What failed:** A new command-palette action (PERF-BUDGET's render-perf snapshot export) called `invoke("write_text_file", { root, path: "docs/qa/perf-budget/render-perf-live.json", ... })` with a root-relative path. It silently did nothing (error swallowed by `.catch(() => {})`) — took 3 live-app round-trips to catch because the failure was invisible until the catch was temporarily changed to surface the real error via `setLaunchError`.

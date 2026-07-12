@@ -151,6 +151,10 @@ const artifactChecks = [
   fileCheck("editor-selected", "Editor selected-state screenshot", "docs/qa/editor-parity/selected.png", 1024),
   fileCheck("daily-driver-report", "Daily-driver report", "docs/qa/daily-driver/latest.md", 1024),
   fileCheck("render-perf-live", "Live-captured render-perf snapshot (frame time/IPC payload/jank)", "docs/qa/perf-budget/render-perf-live.json", 50),
+  fileCheck("render-perf-two-pane", "Packaged two-pane render-perf snapshot", "docs/qa/perf-budget/render-perf-2-pane.json", 50),
+  fileCheck("render-perf-four-pane", "Packaged four-pane render-perf snapshot", "docs/qa/perf-budget/render-perf-4-pane.json", 50),
+  fileCheck("runtime-comparison", "Process-tree runtime comparison", "docs/qa/perf-budget/runtime-comparison.json", 100),
+  fileCheck("gemini-tui", "Packaged Gemini TUI screenshot", "docs/qa/daily-driver/gemini-tui.png", 1024),
 ];
 
 const headCommit = git("rev-parse --short HEAD");

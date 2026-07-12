@@ -46,13 +46,13 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 ## In progress
 
-**Next active slice: CHROME-EYEBALL-SIGNOFF, then CHROME-CONTRACT-V2; DEV-SERVER-DETECT/DAILY-DRIVER-METRICS/PERF-BUDGET completions resume after.** The 2026-07-12 native correction now follows `demo/keelhouse-chrome-demo.html` structurally: project threads left, one continuous agent conversation and anchored composer center, Files/Editor/Browser/Git dock right, and one macOS overlay titlebar. Raw terminal replaces the conversation only when its persistent titlebar icon is active; there is no duplicate bottom tray. Persistent titlebar icons close/reopen panels; narrow windows open one tool as the main view rather than compressing chat; Reset interface restores the approved defaults. Deterministic React-shell captures are in `docs/qa/app-shell/`; the native Tauri process/window was verified separately. Do not restore the superseded centered Run card, separate Activity dashboard, or terminal tray.
+**Next active slice: CHROME-EYEBALL-SIGNOFF, then CHROME-CONTRACT-V2, DAILY-DRIVER-LIVE, and PERF-BUDGET.** PACKAGING is complete and now correctly precedes live/performance proof. The 2026-07-12 native correction follows `demo/keelhouse-chrome-demo.html` structurally: project threads left, one continuous agent conversation and anchored composer center, Files/Editor/Browser/Git dock right, and one macOS overlay titlebar. Raw terminal replaces the conversation only when its persistent titlebar icon is active; there is no duplicate bottom tray. Persistent titlebar icons close/reopen panels; narrow windows open one tool as the main view rather than compressing chat; Reset interface restores the approved defaults. Deterministic React-shell captures are in `docs/qa/app-shell/`; the packaged Tauri app was verified with a real Codex child process. Do not restore the superseded centered Run card, separate Activity dashboard, or terminal tray.
 
 **CHROME STRUCTURE CORRECTION (executed 2026-07-12):** the earlier centered Run card plus separate Activity dashboard was rejected after comparison with the approved demo. The native shell now uses one continuous conversation, inline provenance, anchored compact composer, project threads left, and Files/Editor/Browser/Git dock right. Tauri uses an overlay titlebar so traffic lights, thread search, workspace, panel toggles, agent status, and the raw-terminal toggle share one strip. Raw terminal replaces the center conversation when active; it is never rendered as a duplicate bottom tray. Active panel icons close their panel and reopen it on the next click. Reset interface restores sidebar, chat, Files-right, sizing, and terminal defaults.
 
 **SIDEBAR-RHYTHM + TITLEBAR-STATUSBAR-PARITY (slice 2, committed 2026-07-11):** 34px single-line project rows with 7px status dots, 28px-indented session rows with real recency stamps from `session.updatedAt` (`sessionRecencyLabel` in `workspaceState.ts`), left-stripe actives on graphite `--color-row-active: #252732`, 36px gradient titlebar with real git branch crumb and accent-strong agent chip, 24px/12px statusbar. Verified with `npm run build`, `npm test` (116), `cargo test` (35), `cargo fmt --check`, gates, and screenshots.
 
-**OVERLAY-PARITY (committed 2026-07-11):** context menus at 252px/6px radius with full-bleed 28px rows, palette at 640px/10px radius with 42px `#15161d` input and 32px left-stripe active rows, darkened blurred scrim, menu tokens on demo graphite. The editor-QA fixture still renders pre-convergence sidebar markup (paths, old badges) — refresh it with CHROME-CONTRACT-V2.
+**OVERLAY-PARITY (committed 2026-07-11; fixture refreshed 2026-07-12):** context menus at 252px/6px radius with full-bleed 28px rows, palette at 640px/10px radius with 42px `#15161d` input and 32px left-stripe active rows, darkened blurred scrim, and menu tokens on demo graphite. The editor-QA fixture now uses the converged project-thread drawer, titlebar, dock tabs, status bar, and composer structure; `qa:editor` owns its current screenshots.
 
 **APP-CHROME-PORT / CHROME-CONTROL-POLISH / TRAY-DOCKING-UX / CHROME-COHERENCE-PASS (VERIFIED 2026-07-10):** the native app opens at 1440x900 with a direct project/session drawer, terminal-backed Run output, separate app-owned Activity, compact composer, and no default editor/browser stack. Run renders the visible PTY viewport; it does not invent provider chat, structured tool events, or hidden reasoning. One Tools menu exposes Editor, Browser, Split, left/right/bottom, and hidden states. Responsive geometry keeps at least 600px for the agent at the 900px minimum and moves side docks to bottom. `npm run qa:shell` captures the real React shell at 1440/1024/900, `npm run qa:chrome-contract` enforces the source/screenshot contract, and `docs/qa/app-shell/native-run.png` proves the live Tauri PTY path. Deterministic editor QA remains supporting evidence for menus, settings, command palette, diff, modal, and failure states.
 
@@ -60,7 +60,11 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 **DAILY-DRIVER-METRICS partial (VERIFIED 2026-07-09):** `scripts/collect-daily-driver-metrics.mjs` and `npm run qa:daily-driver` now collect a repeatable readiness report for the three target replacement workflows: one-project edit+agent+preview, two-agent same-project, and three-project switch/relaunch. The collector checks required source paths, docs, and screenshot artifacts, writes `docs/qa/daily-driver/latest.json` plus `latest.md`, records bundle/screenshot byte metrics when build artifacts exist, and fails on missing evidence. `docs/daily-driver-metrics.md` defines the North Star and makes clear this is a readiness gate; live timed Tauri runs and VS Code memory/CPU comparison remain next. Verified with `npm run qa:daily-driver`, `npm test`, `npm run build`, `npm run qa:chrome-contract`, and `git diff --check`.
 
-**PERF-BUDGET partial (VERIFIED 2026-07-12):** `scripts/collect-perf-budget.mjs` and `npm run qa:perf-budget` enforce static resource and evidence budgets, including live render-frame and IPC evidence. The CSS hard cap is green again: Inter remains bundled at weights 400–800, but subset-specific Latin imports reduce production CSS from 98.6 KB to 88.0 KB (87,989 bytes) without changing chrome metrics. The current largest-JS Vite warning remains a disclosed soft budget. `docs/perf-budget.md` documents the remaining boundary: packaged Tauri memory/CPU comparison, 2/4-pane render measurements, and the equivalent VS Code workflow still belong to `DAILY-DRIVER-LIVE`. Verified with `npm run build`, `npm run qa:daily-driver`, `npm run qa:perf-budget`, `npm test`, `npm run qa:chrome-contract`, and `git diff --check`.
+**PERF-BUDGET partial (LIVE EVIDENCE 2026-07-12):** `scripts/collect-perf-budget.mjs` and `npm run qa:perf-budget` enforce static resource and evidence budgets, including live render-frame and IPC evidence. Packaged two-pane output recorded 117 paints (1.66ms average, ~1ms p95, 1.71% jank); four panes with overlapping shell output recorded 300 paints (~0.54ms average, 1ms p95/max, 0% jank) and 220 IPC samples averaging ~108KB. `npm run qa:runtime-perf` samples full process trees: the current real workloads measured packaged Keelhouse at 263.9MB RSS/8 processes and the user's long-running VS Code workload at 14.9GB/482 processes. That comparison is explicitly observational, not equivalent-workflow proof. Inter Latin subsets keep CSS at 87,989 bytes; the largest-JS warning remains soft. Controlled equivalent runs and a packaged one-pane capture remain.
+
+**DAILY-DRIVER-LIVE partial (EXECUTED 2026-07-12):** the packaged app rendered a 4,000-line shell burst, overlapping output in two shells, restored three projects with conservative switch bounds of 1.55s/1.16s/0.92s, and launched the Gemini TUI to its folder-trust prompt in 3.21s without submitting trust or a prompt. Live testing disproved one readiness assumption: creating a new same-project thread retained the previous thread's pane set. `SESSION-PANE-ISOLATION` now precedes the remaining one-project edit+agent+preview and isolated two-agent runs. Evidence: `docs/qa/daily-driver/live-runs.{json,md}`.
+
+**PACKAGING (VERIFIED 2026-07-12):** `npm run package:mac` builds an optimized arm64, ad-hoc-signed `Keelhouse.app` without changing the installed Zig/Xcode toolchain. The scoped build script patches an ignored Zig-lib copy under Cargo `target/`. The packaged app launched, restored the real workspace, spawned a shell, and launched Codex as a child process. See `docs/packaging.md`.
 
 **COMMAND-PALETTE partial (VERIFIED 2026-07-09):** the real app now has a compact command palette opened by `Shift+Cmd+P` or the titlebar Commands control. It filters labels, details, ids, shortcuts, and keywords; Arrow Up/Down moves rows, Enter runs, and Escape closes. The first command set runs existing app-owned actions only: Open Folder, Save, Find and Replace, Close Tab, terminal pane create/restart/kill/close/clear, Reload Preview, Open Detected Dev Server, drawer switches, tray layout switches, and composer context attachments. `app/src/commandPalette.ts` owns filter behavior, `docs/command-palette.md` records scope, and `npm run qa:chrome-contract` now checks that the palette remains present and styled. `Cmd+P`, ripgrep-backed search, and terminal scrollback search remain with `SEARCH` and `TERMINAL-FIND`. Verified with `npm test -- commandPalette.test.ts shortcuts.test.ts`, `npm run build`, `npm test`, `npm run qa:chrome-contract`, and `git diff --check`.
 
@@ -138,27 +142,18 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 ## Next (ordered)
 
-1. **DEV-SERVER-DETECT:** finish common localhost dev-server detection and browser-preview handoff.
-2. **COMMAND-PALETTE:** finish the existing compact app-action palette.
-3. **SEARCH:** finish current-project Quick Open and text search, then decide whether cross-project/session search earns scope.
-4. **DAILY-DRIVER-METRICS:** record real one-project edit+agent, two-agent same-project, and three-project switch/relaunch runs.
-5. **PERF-BUDGET:** compare packaged Keelhouse against the equivalent VS Code workflows.
-6. **TERMINAL-FIND:** search active terminal output/scrollback.
-7. **SETTINGS-PARITY:** searchable useful settings only.
-8. **SETTINGS:** inspectable config for agent commands, ignored folders, font/theme, layout, AI connections, and shortcut overrides.
-9. **KEYBINDINGS-CONFIG:** configurable app shortcut overrides after defaults stabilize, including conflict detection and a visible shortcut reference.
-10. **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost and preserve the chrome token contract.
-11. **AI-CONNECTIONS:** settings for providers, API keys, MCP servers, CLI auth, env vars, model defaults, and permission policy.
-12. **AGENT-HOOKS:** built-in MCP/API surface so agents can inspect app state and request app-owned actions.
-13. **TRANSCRIPTS:** save/review completed pane output.
-14. **NOTIFICATIONS:** background agent exit/attention badges and optional macOS notifications.
-15. **WORKTREE:** create disposable worktree + agent pane from a project.
-16. **INTEGRATIONS-POLICY:** define which other integrations are allowed, parked, or explicitly out of scope.
-17. **SOURCE-CONTROL-CONNECTIONS:** GitHub/GitLab/source-host auth, repo links, PR/MR status, CI/pipeline status, and health checks.
-18. **PACKAGING:** local macOS `.app` packaging.
-19. **SESSION-ARCHIVE:** archive old project sessions only after sessions and transcripts are real.
-20. **DIRECT-AGENT-HARNESS:** optional direct API/MCP agent path for app-owned orchestration, after real terminal panes and approvals are solid.
-21. **REUSE-AUDIT:** mine Hallmark/hashmark/brutal/indx for reusable Tauri shell, persistence, editor, or design patterns without inheriting the wrong product shape.
+1. **CHROME-EYEBALL-SIGNOFF:** Jason reviews the corrected packaged shell at 1440/1024/900 and records approval or corrections.
+2. **CHROME-CONTRACT-V2:** lock the approved control grammar, populated screenshots, overlays, fixture parity, and crumb overflow behavior.
+3. **SESSION-PANE-ISOLATION:** key live process sets by project + session so task threads own independent agents.
+4. **DAILY-DRIVER-LIVE:** finish the one-project and isolated two-agent packaged workflows; Gemini and three-project switching have live evidence.
+5. **PERF-BUDGET:** add a packaged one-pane capture and controlled equivalent VS Code comparison; packaged 2/4-pane data is recorded.
+6. **AI-CONNECTIONS:** provider/CLI auth, OS-safe credentials, MCP entries, environment, defaults, and health checks.
+7. **SOURCE-CONTROL-CONNECTIONS:** finish active-repo GitHub/GitLab status and connection boundaries.
+8. **AGENT-HOOKS:** permissioned local MCP/API commands for app-owned agent actions.
+9. **RUN-CARDS-ADAPTER:** render structured activity cards only from trusted hook events.
+10. **TERMINAL-INTL-INPUT:** finish live CJK and Option-dead-key verification.
+11. **OUTSIDE-REVIEW:** one targeted external review before public daily-driver claims.
+12. **DIRECT-AGENT-HARNESS:** optional feature-flagged direct agent path after hooks are stable.
 
 ## Gotchas
 

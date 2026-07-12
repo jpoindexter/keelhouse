@@ -124,6 +124,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 
 - [x] A persistent left project/workspace rail opens at least 3 projects in one window and shows active, running, exited, and attention-needed states.
 - [x] Each project can show multiple task sessions in the rail; selecting one restores the current implemented editor context without pretending dead processes are live.
+- [ ] Each task session owns an independent live pane set; switching same-project sessions must not share or relabel another session's processes.
 - [x] Browser/web preview opens localhost apps, docs, auth flows, and generated pages inside the workbench.
 - [x] Each project can run multiple named agent/shell panes, and different projects can run different agents concurrently.
 - [x] Pane lifecycle controls and icon badges cover thinking, running, waiting, errored, exited, restart, terminate, and attention-needed states.

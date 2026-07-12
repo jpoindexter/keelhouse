@@ -1534,9 +1534,23 @@ fn git_status(root: String) -> Result<GitStatusResponse, String> {
         return Err(format!("Could not read git status: {}", stderr.trim()));
     }
 
-    Ok(parse_git_status_output(&String::from_utf8_lossy(
-        &output.stdout,
-    )))
+    let mut response = parse_git_status_output(&String::from_utf8_lossy(&output.stdout));
+    if response
+        .branch
+        .as_deref()
+        .is_some_and(|branch| branch.starts_with("HEAD"))
+    {
+        let head = Command::new("git")
+            .args(["-C", &root, "rev-parse", "--short", "HEAD"])
+            .output()
+            .ok()
+            .filter(|result| result.status.success())
+            .map(|result| String::from_utf8_lossy(&result.stdout).trim().to_string())
+            .filter(|sha| !sha.is_empty());
+        response.branch = Some(head.map_or_else(|| "Detached".into(), |sha| format!("@ {sha}")));
+    }
+
+    Ok(response)
 }
 
 fn validate_git_relative_path(path: &str) -> Result<String, String> {
@@ -3246,6 +3260,38 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["src/app.ts", "README.md", "docs/new.md", "new.txt"],
         );
+    }
+
+    #[test]
+    fn git_status_labels_detached_head_with_short_sha() {
+        let root = temp_root("detached-head-repo");
+        fs::create_dir_all(&root).expect("create root");
+        run_test_git(&root, &["init"]);
+        fs::write(root.join("app.txt"), "base\n").expect("write base");
+        run_test_git(&root, &["add", "app.txt"]);
+        run_test_git(
+            &root,
+            &[
+                "-c",
+                "user.name=Keelhouse Test",
+                "-c",
+                "user.email=keelhouse@example.test",
+                "commit",
+                "-m",
+                "base",
+            ],
+        );
+        run_test_git(&root, &["checkout", "--detach"]);
+
+        let status = git_status(root.to_string_lossy().into_owned()).expect("read git status");
+        let branch = status.branch.expect("detached label");
+        assert!(
+            branch.starts_with("@ "),
+            "unexpected detached label: {branch}"
+        );
+        assert!(branch.len() >= 9, "short SHA missing from {branch}");
+
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-12T20:47:15.474Z",
-  "commit": "f5e9776+dirty",
+  "generatedAt": "2026-07-12T21:56:25.612Z",
+  "commit": "f1e5b1e+dirty",
   "branch": "main",
   "status": "baseline-ready",
   "northStar": "daily-driver workflow runs completed without opening VS Code",
@@ -15,7 +15,7 @@
     {
       "id": "total-css-assets",
       "label": "Total built CSS assets",
-      "actualBytes": 84852,
+      "actualBytes": 85006,
       "limitBytes": 90000,
       "pass": true
     }
@@ -110,7 +110,7 @@
       "id": "editor-selected",
       "label": "Editor selected-state screenshot",
       "file": "docs/qa/editor-parity/selected.png",
-      "bytes": 140660,
+      "bytes": 126634,
       "minBytes": 1024,
       "pass": true
     },
@@ -126,22 +126,54 @@
       "id": "render-perf-live",
       "label": "Live-captured render-perf snapshot (frame time/IPC payload/jank)",
       "file": "docs/qa/perf-budget/render-perf-live.json",
-      "bytes": 279,
+      "bytes": 305,
       "minBytes": 50,
+      "pass": true
+    },
+    {
+      "id": "render-perf-two-pane",
+      "label": "Packaged two-pane render-perf snapshot",
+      "file": "docs/qa/perf-budget/render-perf-2-pane.json",
+      "bytes": 324,
+      "minBytes": 50,
+      "pass": true
+    },
+    {
+      "id": "render-perf-four-pane",
+      "label": "Packaged four-pane render-perf snapshot",
+      "file": "docs/qa/perf-budget/render-perf-4-pane.json",
+      "bytes": 305,
+      "minBytes": 50,
+      "pass": true
+    },
+    {
+      "id": "runtime-comparison",
+      "label": "Process-tree runtime comparison",
+      "file": "docs/qa/perf-budget/runtime-comparison.json",
+      "bytes": 2473,
+      "minBytes": 100,
+      "pass": true
+    },
+    {
+      "id": "gemini-tui",
+      "label": "Packaged Gemini TUI screenshot",
+      "file": "docs/qa/daily-driver/gemini-tui.png",
+      "bytes": 121891,
+      "minBytes": 1024,
       "pass": true
     }
   ],
   "metrics": {
     "assets": [
       {
-        "file": "app/dist/assets/index-BkLhtsvh.js",
-        "bytes": 1215895,
-        "ext": ".js"
+        "file": "app/dist/assets/index-BdR901f9.css",
+        "bytes": 85006,
+        "ext": ".css"
       },
       {
-        "file": "app/dist/assets/index-DBiVMzoU.css",
-        "bytes": 84852,
-        "ext": ".css"
+        "file": "app/dist/assets/index-DFzB7VY1.js",
+        "bytes": 1215895,
+        "ext": ".js"
       },
       {
         "file": "app/dist/assets/inter-latin-400-normal-C38fXH4l.woff2",
@@ -196,7 +228,7 @@
     ],
     "totals": {
       "totalJsBytes": 1215895,
-      "totalCssBytes": 84852,
+      "totalCssBytes": 85006,
       "largestJsBytes": 1215895
     }
   },

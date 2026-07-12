@@ -12,7 +12,8 @@ PANE-MANAGER adds real multi-pane terminal support without turning the terminal 
 - `PROCESS-LIFECYCLE` adds `restart_pane` and `terminate_pane` so restart preserves pane slot/label and kill can keep the transcript visible.
 - Grid events include `paneId`; the frontend caches snapshots by pane and paints only the focused pane.
 - The terminal header shows a pane strip, active pane state, New pane profile selector, New, and Close controls.
-- Project/session running/exited/attention state aggregates all panes for that project, so switching projects does not imply background panes stopped.
+- Project running/exited/attention state currently aggregates all panes for that project, so switching projects does not imply background panes stopped.
+- **Known v1 gap (2026-07-12):** live pane ownership is still keyed by project. Session layout metadata is persisted separately, but switching or creating a same-project session reuses the project's live processes. `SESSION-PANE-ISOLATION` must key process sets and active-pane state by project + session before task threads can claim independent agents.
 
 ## Deliberate Boundaries
 

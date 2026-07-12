@@ -32,3 +32,5 @@ Manual check for this slice:
 3. Open a file tab and move the cursor/scroll.
 4. Quit and relaunch.
 5. Confirm the same project/session, file tabs, browser URL, and pane layout return, with fresh running processes.
+
+This verifies relaunch of the active session only. It does not prove independent live pane ownership across multiple same-project sessions; packaged testing on 2026-07-12 found those sessions currently reuse one project-level pane set. That gap is tracked by `SESSION-PANE-ISOLATION`.
