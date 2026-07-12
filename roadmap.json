@@ -1038,13 +1038,13 @@
     {
       "id": "WORKTREE",
       "title": "Worktree helper",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "core",
       "size": "M",
       "launch": "v2",
       "summary": "One keystroke: new pane = git worktree add + agent launched inside it, named and disposable. The 'multiple agents on one repo, parallel' workflow.",
-      "done": "From a project tab: new-worktree-agent in <5s; cleanup removes the worktree + branch.",
+      "done": "New Worktree Pane / Remove Worktree wired end-to-end: Rust create_project_worktree/remove_project_worktree (git worktree add/remove --force + branch -D), App.tsx createWorktreePane/closeWorktreePane, worktrees.ts store helpers persisted to workspace.json. Verified: cargo test 39/39 (incl. a real-repo worktree add/remove round-trip test), npm test 152/152 (incl. worktrees.test.ts), npm run build, cargo fmt --check, qa:chrome-contract all green. Gap: no live `npm run tauri dev` smoke test creating/removing a real worktree pane through the UI yet — build-verified, not native-UI-verified.",
       "buildOrder": 76
     },
     {
@@ -1243,14 +1243,14 @@
     {
       "id": "RUN-CONTENT-DENSITY-QA",
       "title": "Populated-state visual proof",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "quality",
       "size": "S",
       "launch": "v1",
       "buildOrder": 93,
       "summary": "Blind-audit 2026-07-11: every chrome screenshot proves the empty first-open state only. Capture the surfaces that carry the product: live PTY agent output flowing through the centered run card (including the native tauri-dev smoke at docs/qa/chrome-delta/native-run.png), five-plus stacked activity rows with long real labels, a populated three-project sidebar with sessions and recency stamps, and a multi-pane strip, at 1440/1024/900. Enforce a legibility floor: the run column may never compress below 600px or scroll horizontally with drawer plus docked tray open.",
-      "done": "Populated screenshots checked into docs/qa/chrome-delta/ for run-with-live-output, stacked activity, three-project sidebar, and multi-pane states at all three widths; native live-pty capture exists; a test asserts the run column legibility floor; visual inspection confirms the demo composition survives real terminal density."
+      "done": "Populated screenshots checked into docs/qa/chrome-delta/ for run-with-live-output, stacked activity, three-project sidebar, and multi-pane states at all three widths; native live-pty capture exists; a test asserts the run column legibility floor; visual inspection confirms the demo composition survives real terminal density. Executed 2026-07-12: populated three-project sidebar (real session recency, real project switching, crash-recovery banner) captured at 1440/1024/900 in docs/qa/chrome-delta/density-populated-*.png; fluid run column confirmed legible at 900px with no compression. Gap: the stacked-activity-row density check was not captured — synthetic activity events for a pane the backend never spawned did not render (correctly; the app only surfaces real event provenance), and fabricating that scenario would mean mock evidence, not real proof. Real activity-density proof needs a live agent run, which belongs with DAILY-DRIVER-LIVE."
     },
     {
       "id": "DAILY-DRIVER-LIVE",

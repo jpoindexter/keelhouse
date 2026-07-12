@@ -30,7 +30,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Mutex;
-use std::time::{Duration, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -1752,6 +1752,95 @@ fn watch_workspace_tree(
     Ok(())
 }
 
+/// Turn a free-text label into a filesystem/branch-safe slug. Empty or fully
+/// non-alphanumeric input falls back to a short timestamp so callers always
+/// get a usable, non-colliding name.
+fn worktree_slug(label: &str) -> String {
+    let mut slug = String::new();
+    let mut last_was_dash = false;
+    for ch in label.trim().to_lowercase().chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch);
+            last_was_dash = false;
+        } else if !last_was_dash && !slug.is_empty() {
+            slug.push('-');
+            last_was_dash = true;
+        }
+    }
+    while slug.ends_with('-') {
+        slug.pop();
+    }
+    if slug.is_empty() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        slug = format!("session-{suffix}");
+    }
+    slug
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct WorktreeResponse {
+    path: String,
+    branch: String,
+}
+
+/// Create a disposable `git worktree` under `<root>/.worktrees/<slug>` on a new
+/// branch, for running a second agent on the same repo without cwd conflicts.
+#[tauri::command]
+fn create_project_worktree(root: String, label: String) -> Result<WorktreeResponse, String> {
+    let root = validate_workspace_path(&root)?;
+    let slug = worktree_slug(&label);
+    let branch = format!("worktree/{slug}");
+    let worktree_dir = Path::new(&root).join(".worktrees").join(&slug);
+    if worktree_dir.exists() {
+        return Err(format!(
+            "A worktree already exists at .worktrees/{slug}. Choose a different name."
+        ));
+    }
+    std::fs::create_dir_all(Path::new(&root).join(".worktrees"))
+        .map_err(|err| format!("Could not create .worktrees directory: {err}"))?;
+    let worktree_path = worktree_dir.to_string_lossy().into_owned();
+    run_git_checked(
+        &root,
+        &["worktree", "add", "-b", &branch, &worktree_path],
+        "create the worktree",
+    )?;
+    let canonical = worktree_dir
+        .canonicalize()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or(worktree_path);
+    Ok(WorktreeResponse {
+        path: canonical,
+        branch,
+    })
+}
+
+/// Remove a worktree and its branch. `worktree_path` must be an existing git
+/// worktree of `root`; the branch is only deleted after the worktree itself
+/// is gone, so a failed removal never leaves an orphaned branch.
+#[tauri::command]
+fn remove_project_worktree(
+    root: String,
+    worktree_path: String,
+    branch: String,
+) -> Result<(), String> {
+    let root = validate_workspace_path(&root)?;
+    run_git_checked(
+        &root,
+        &["worktree", "remove", "--force", &worktree_path],
+        "remove the worktree",
+    )?;
+    run_git_checked(
+        &root,
+        &["branch", "-D", &branch],
+        "delete the worktree branch",
+    )?;
+    Ok(())
+}
+
 /// Open a workspace folder by spawning a pane in `path` using the selected launch
 /// profile. Existing panes stay alive so other projects can keep running.
 #[tauri::command]
@@ -2398,6 +2487,8 @@ pub fn run() {
             begin_session,
             end_session_clean,
             log_health_event,
+            create_project_worktree,
+            remove_project_worktree,
             reset_local_state,
             open_workspace,
             create_pane,
@@ -3114,6 +3205,56 @@ mod tests {
             .expect("discard untracked file");
         assert!(clean.files.is_empty());
         assert!(!root.join("src/new.txt").exists());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn worktree_slug_sanitizes_and_falls_back_on_empty_input() {
+        assert_eq!(worktree_slug("Fix API flow!"), "fix-api-flow");
+        assert_eq!(worktree_slug("  spaced   out  "), "spaced-out");
+        assert!(worktree_slug("!!!").starts_with("session-"));
+        assert!(worktree_slug("").starts_with("session-"));
+    }
+
+    #[test]
+    fn worktree_create_and_remove_round_trips_a_real_repo() {
+        let root = temp_root("worktree-repo");
+        fs::create_dir_all(&root).expect("create root");
+        run_test_git(&root, &["init"]);
+        fs::write(root.join("app.txt"), "base\n").expect("write base");
+        run_test_git(&root, &["add", "app.txt"]);
+        run_test_git(
+            &root,
+            &[
+                "-c",
+                "user.name=Keelhouse Test",
+                "-c",
+                "user.email=keelhouse@example.test",
+                "commit",
+                "-m",
+                "base",
+            ],
+        );
+        let root_s = root.to_string_lossy().into_owned();
+
+        let created = create_project_worktree(root_s.clone(), "Fix API flow".into())
+            .expect("create worktree");
+        assert!(created.path.ends_with(".worktrees/fix-api-flow"));
+        assert_eq!(created.branch, "worktree/fix-api-flow");
+        assert!(Path::new(&created.path).join("app.txt").exists());
+
+        let collision = create_project_worktree(root_s.clone(), "Fix API flow".into());
+        assert!(collision.is_err(), "duplicate slug must be rejected");
+
+        remove_project_worktree(root_s.clone(), created.path.clone(), created.branch.clone())
+            .expect("remove worktree");
+        assert!(!Path::new(&created.path).exists());
+        let branches = Command::new("git")
+            .args(["-C", &root_s, "branch", "--list", &created.branch])
+            .output()
+            .expect("list branches");
+        assert!(String::from_utf8_lossy(&branches.stdout).trim().is_empty());
+
         let _ = fs::remove_dir_all(root);
     }
 

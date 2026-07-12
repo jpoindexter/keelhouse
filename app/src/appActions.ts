@@ -14,6 +14,8 @@ export type AppActionKind =
   | "terminate-process"
   | "create-pane"
   | "close-pane"
+  | "create-worktree"
+  | "remove-worktree"
   | "open-browser-preview"
   | "save-file"
   | "find-in-file"

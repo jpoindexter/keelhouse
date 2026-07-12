@@ -167,6 +167,13 @@ import { migrateWorkspaceStore } from "./workspaceMigrations";
 import { SettingsModal } from "./SettingsModal";
 import { crashRecoveryMessage, deriveCrashRecovery } from "./crashRecovery";
 import {
+  addWorktree,
+  normalizeWorktrees,
+  removeWorktreeByPaneId,
+  worktreeForPaneId,
+  type WorktreeRecord,
+} from "./worktrees";
+import {
   addBackgroundExit,
   backgroundExitCountForProject,
   clearBackgroundExitsForProject,
@@ -200,6 +207,7 @@ type PaneExit = { paneId: number; command: string; code: number; message: string
 type OpenWorkspaceResponse = { root: string; paneId: number };
 type OpenPaneResponse = { paneId: number };
 type ClosePaneResponse = { activePaneId: number | null };
+type WorktreeResponse = { path: string; branch: string };
 type ManagedTerminalPane = {
   id: number;
   profile: LaunchProfile;
@@ -526,6 +534,7 @@ function App() {
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [crashNotice, setCrashNotice] = useState<string | null>(null);
+  const [worktrees, setWorktrees] = useState<WorktreeRecord[]>([]);
   const [backgroundExits, setBackgroundExits] = useState<BackgroundExit[]>([]);
   const [paneTranscripts, setPaneTranscripts] = useState<PaneTranscript[]>([]);
   const [transcriptsOpen, setTranscriptsOpen] = useState(false);
@@ -2254,6 +2263,111 @@ function App() {
     }
   };
 
+  const createWorktreePane = async (profile: LaunchProfile = launchProfileRef.current) => {
+    const root = workspacePathRef.current ?? workspacePath;
+    if (!root || launchProfileChanging) return;
+    const rawLabel = window.prompt("Worktree label (used for the branch name)");
+    const label = rawLabel?.trim();
+    if (!label) return;
+    const audit = await gateAppAction(createAppAction({
+      kind: "create-worktree",
+      label: "Create worktree",
+      target: `${label} in ${root}`,
+      risk: "medium",
+      requestedBy: "user",
+      undoHint: "Remove the worktree from the pane's context menu.",
+    }));
+    if (audit.decision !== "approved") return;
+    setLaunchProfileChanging(true);
+    try {
+      const worktree = await invoke<WorktreeResponse>("create_project_worktree", { root, label });
+      const result = await invoke<OpenPaneResponse>("create_pane", { path: worktree.path, profile });
+      const existingPanes = terminalPanesForProject(root);
+      const slot = existingPanes.length;
+      const pane: ManagedTerminalPane = {
+        id: result.paneId,
+        profile,
+        cwd: worktree.path,
+        slot,
+        label: normalizeTerminalPaneLabel(label),
+        state: "running",
+        exitCode: null,
+        createdAt: Date.now(),
+      };
+      const nextPanes = [...existingPanes, pane];
+      setProjectTerminalPanes(root, nextPanes, result.paneId);
+      setWorktrees((current) => {
+        const next = addWorktree(current, {
+          paneId: String(result.paneId),
+          projectRoot: root,
+          path: worktree.path,
+          branch: worktree.branch,
+          label: normalizeTerminalPaneLabel(label) ?? label,
+          createdAt: Date.now(),
+        });
+        void storeRef.current?.set("worktrees", next);
+        void storeRef.current?.save();
+        return next;
+      });
+      const sessionId = activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, root);
+      if (sessionId) {
+        recordAgentActivity(
+          buildAgentSessionHandleDescriptor({
+            pane,
+            projectId: root,
+            projectSessionId: sessionId,
+            label: terminalPaneLabelForDisplay(pane.label, pane.profile.label, slot),
+            approvalMode: agentApprovalMode,
+          }),
+          { kind: "process", label: "Created worktree pane", detail: worktree.branch, status: "running" },
+        );
+      }
+      launchProfileRef.current = profile;
+      setLaunchProfile(profile);
+      await storeRef.current?.set("launchProfile", profile);
+      await storeRef.current?.save();
+      setLaunchError(null);
+      setTimeout(sendTerminalResize, 0);
+      await updateOpenProjectStatus(root, terminalPaneProjectStatus(nextPanes));
+      await updateActiveSessionStatus(root, terminalPaneProjectStatus(nextPanes));
+    } catch (err) {
+      setLaunchError(String(err));
+      await updateOpenProjectStatus(root, "attention");
+      await updateActiveSessionStatus(root, "attention");
+    } finally {
+      setLaunchProfileChanging(false);
+    }
+  };
+
+  const closeWorktreePane = async (paneId: number) => {
+    const root = workspacePathRef.current;
+    if (!root) return;
+    const worktree = worktreeForPaneId(worktrees, String(paneId));
+    if (!worktree) return;
+    const audit = await gateAppAction(createAppAction({
+      kind: "remove-worktree",
+      label: "Remove worktree",
+      target: worktree.branch,
+      risk: "destructive",
+      requestedBy: "user",
+      undoHint: "The worktree branch and files are deleted; recreate from the context menu if needed.",
+    }), activeAgentSessionDescriptor);
+    if (audit.decision !== "approved") return;
+    const closed = await closeTerminalPane(paneId);
+    if (!closed) return;
+    try {
+      await invoke("remove_project_worktree", { root, worktreePath: worktree.path, branch: worktree.branch });
+    } catch (err) {
+      setLaunchError(String(err));
+    }
+    setWorktrees((current) => {
+      const next = removeWorktreeByPaneId(current, String(paneId));
+      void storeRef.current?.set("worktrees", next);
+      void storeRef.current?.save();
+      return next;
+    });
+  };
+
   const activeAgentSessionHandle: AgentSessionHandle | null = activeAgentSessionDescriptor
     ? {
         ...activeAgentSessionDescriptor,
@@ -2971,6 +3085,10 @@ function App() {
       icon: "terminal",
       disabled: !workspacePath || launchProfileChanging,
     }),
+    menuItem("terminal.new-worktree-pane", "New Worktree Pane", () => void createWorktreePane(launchProfile), {
+      icon: "terminal",
+      disabled: !workspacePath || launchProfileChanging,
+    }),
     menuItem("terminal.rename-pane", "Rename Selected Pane", () => activeTerminalPane && void renameTerminalPane(activeTerminalPane), {
       icon: "terminal",
       disabled: !activeTerminalPane,
@@ -2992,6 +3110,11 @@ function App() {
       icon: "close",
       danger: true,
       disabled: !activeAgentSessionHandle,
+    }),
+    menuItem("terminal.remove-worktree", "Remove Worktree", () => activeTerminalPane && void closeWorktreePane(activeTerminalPane.id), {
+      icon: "close",
+      danger: true,
+      disabled: !activeTerminalPane || !worktreeForPaneId(worktrees, activeTerminalPane ? String(activeTerminalPane.id) : null),
     }),
     menuItem("terminal.copy", "Copy Selection", () => void copyTerminalSelection(), {
       icon: "terminal",
@@ -3615,6 +3738,7 @@ function App() {
       if (savedTheme === "mono-ghost") setAppTheme("mono-ghost");
       if ((await store.get<unknown>("notificationsEnabled")) === true) setNotificationsEnabled(true);
       setPaneTranscripts(normalizePaneTranscripts(await store.get<unknown>("paneTranscripts")));
+      setWorktrees(normalizeWorktrees(await store.get<unknown>("worktrees")));
       const initialOpenProjects = savedOpenProjects.length > 0 ? savedOpenProjects : openProjectsFromRecent(savedRecent);
       const initialProjectSessions = initialOpenProjects.reduce(
         (sessions, project) => ensureProjectSessions(sessions, project.path, Date.now()),

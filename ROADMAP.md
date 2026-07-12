@@ -165,7 +165,7 @@ Amended by the same audit: FIRST-OPEN-LAYOUT (spawn-failure recovery banner, res
 - **AGENT-HOOKS:** built-in MCP/API surface so agents can inspect app state and request app-owned actions.
 - **TRANSCRIPTS:** save/review completed pane output.
 - **NOTIFICATIONS:** background agent exit/attention badges and optional macOS notifications.
-- **WORKTREE:** create disposable worktree + agent pane from a project.
+- ~~**WORKTREE:** create disposable worktree + agent pane from a project.~~ **DONE 2026-07-12** — `New Worktree Pane`/`Remove Worktree` in the terminal context menu drive Rust `create_project_worktree`/`remove_project_worktree` (`git worktree add -b`/`remove --force` + `branch -D`), persisted via `worktrees.ts` store helpers. Verified: `cargo test` 39/39 (incl. a real-repo add/remove round-trip), `npm test` 152/152, `npm run build`, `cargo fmt --check`, `qa:chrome-contract` all green. Gap: no live `npm run tauri dev` UI smoke test yet — build-verified, not native-UI-verified.
 - **INTEGRATIONS-POLICY:** define which other integrations are allowed, parked, or explicitly out of scope.
 - **SOURCE-CONTROL-CONNECTIONS:** GitHub/GitLab/source-host auth, repo links, PR/MR status, CI/pipeline status, and health checks.
 - **PACKAGING:** local macOS `.app` packaging.
