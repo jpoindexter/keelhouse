@@ -135,6 +135,7 @@ A 16-framework blind-spot audit of the chrome re-convergence and roadmap coverag
 - **STATE-MIGRATION** (v2): schemaVersion + migration path for `workspace.json` before post-adoption schema changes.
 - **CRASH-RESILIENCE** (v2): abnormal-exit detection, crash-recovery notice, local health log.
 - **TERMINAL-INTL-INPUT** (v2): IME composition, non-Latin input, glyph fallback on the canvas path.
+  - 2026-07-12: root cause confirmed and fixed — canvas never receives composition events in WebKit (same class of issue as the existing `Cmd+V` paste workaround); a hidden always-focused textarea (xterm.js's pattern) now holds terminal-pane focus, positioned over the cursor cell each paint tick, `compositionend` sends composed text via the existing paste path. CJK font-fallback chain added. Verified: build/test (159/159)/qa:chrome-contract green, live smoke test confirms no keyboard regression from the canvas→textarea focus change. NOT live-verified: real CJK IME round-trip, Option-dead-key composition, Enter path specifically (this session's `cliclick` automation was confirmed broken for synthetic Return on this machine — isolated via TextEdit, not an app finding). Full writeup: `docs/terminal-robustness.md`. Stays `next` pending Jason's live confirmation.
 - **WINDOW-LIFECYCLE** (v2): window frame restore, off-screen recovery, mixed-DPI canvas checks.
 - **MOTION-POLISH** (v2): the micro-motion criteria from `docs/chrome-ui-polish.md`, reduced-motion-guarded.
 - **APP-COMMANDS-DISCOVERABLE** (v2): `>help`, palette rows for `>` commands.

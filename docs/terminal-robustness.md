@@ -48,6 +48,23 @@ cd app/src-tauri && PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH" cargo fmt --chec
 git diff --check
 ```
 
+## IME and International Input (TERMINAL-INTL-INPUT, 2026-07-12)
+
+**Root cause found:** canvas elements never receive `compositionstart`/`compositionupdate`/`compositionend` from WebKit — those only route to an editable, focused element. This is the same root cause already noted in-code for `Cmd+V` paste (`App.tsx`, "the browser `paste` event never fires on a bare canvas"). Before this slice, IME composition (CJK, Option-dead-keys) had no path to the pty at all — keystrokes composing a character would silently produce nothing.
+
+**What shipped:** a hidden `<textarea class="terminal-ime-input">` (xterm.js's established pattern) now holds real DOM focus for terminal panes instead of the canvas. It's positioned over the cursor cell every paint tick (`imeCaretStyle` in `terminalIme.ts`, scaled by cell width/height) so the OS candidate window anchors near the caret. `onCompositionEnd` sends the final composed string through the existing `paste` invoke path and clears the textarea. Non-composing keydowns are unaffected — the existing `window`-level keydown listener that forwards keys to `send_key` was not modified and is not element-focus-dependent, so it keeps working regardless of which element holds DOM focus. `FONT_FAMILY` gained an explicit CJK fallback chain (`"PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo"`) ahead of generic `monospace`, since JetBrains Mono has no CJK glyphs.
+
+**Verified:**
+- `imeCaretStyle` unit-tested (`terminalIme.test.ts`) for the cursor-to-pixel transform math.
+- Live `npm run tauri dev` smoke test: normal ASCII keyboard input still reaches the pty correctly after the canvas→textarea focus change (typed text echoed correctly in a real pane) — the regression this change was riskiest for.
+- Code-path review: `send_key`/`Msg::Key` (Rust) is untouched by this slice; the `onKey` JS listener is untouched; both are unaffected by the focus-target change.
+
+**Not verified — needs Jason:**
+- A real CJK IME round-trip (actually composing through a live input source) — not something that can be simulated through this session's available automation.
+- Live confirmation of the Return/Enter key path specifically: `cliclick kp:return` was found not to work at all on this machine (isolated via a clean TextEdit test — 1 paragraph after a typed "return", i.e. no newline inserted anywhere, not just in Keelhouse), so this session's automation could not produce a real Return keydown to test against. Code-path analysis gives high confidence Enter is unaffected (see above), but this is unverified, not confirmed.
+- Option-dead-key composition (é via Option+E) — same automation limitation as CJK.
+- Missing-glyph fallback was extended defensively but not visually confirmed against real rendered CJK text in a live pane.
+
 ## Scrollback Find (TERMINAL-FIND, 2026-07-11)
 
 - Backend `search_terminal_scrollback(query)` searches the focused pane's full screen space (scrollback + active area) through `Point::Screen` grid reads on the real Ghostty terminal; case-insensitive substring, 200-hit cap, replies over a per-request channel with a 1.5s timeout guard.

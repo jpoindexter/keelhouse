@@ -174,6 +174,7 @@ import {
   type WorktreeRecord,
 } from "./worktrees";
 import { normalizeSourceControlStatus, type SourceControlStatus } from "./sourceControl";
+import { imeCaretStyle } from "./terminalIme";
 import {
   addBackgroundExit,
   backgroundExitCountForProject,
@@ -305,7 +306,10 @@ type CommandPaletteCommand = CommandPaletteCommandBase & {
 };
 
 const FONT_SIZE = 15;
-const FONT_FAMILY = "JetBrains Mono, monospace";
+// JetBrains Mono has no CJK glyphs; chain macOS's bundled CJK system fonts
+// ahead of the generic monospace fallback so unmatched glyphs (e.g. agent
+// output containing Chinese/Japanese/Korean text) render instead of tofu.
+const FONT_FAMILY = '"JetBrains Mono", "PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo", monospace';
 const LINE_HEIGHT = 1.25;
 const AGENT_SURFACE_STORAGE_KEY = "keelhouse.agent.surface.v2";
 const readStoredAgentSurfaceMode = (): AgentSurfaceMode => {
@@ -430,6 +434,7 @@ function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<FileTreeNode
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imeInputRef = useRef<HTMLTextAreaElement>(null);
   const terminalHostRef = useRef<HTMLDivElement>(null);
   const railBodyRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<TreeApi<FileTreeNode> | undefined>(undefined);
@@ -3707,6 +3712,15 @@ function App() {
         ctx.fillStyle = "rgba(230,230,230,0.55)";
         ctx.fillRect(snap.cx * cw, snap.cy * ch, cw, ch);
       }
+      // Track the IME composition input to the cursor cell so the OS candidate
+      // window (CJK IME, dead-key accent picker) anchors near the caret.
+      const imeInput = imeInputRef.current;
+      if (imeInput) {
+        const caret = imeCaretStyle(snap.cx, snap.cy, cw, ch);
+        imeInput.style.transform = caret.transform;
+        imeInput.style.width = caret.width;
+        imeInput.style.height = caret.height;
+      }
     };
 
     const requestPaint = () => {
@@ -5283,15 +5297,25 @@ function App() {
             <div
               ref={terminalHostRef}
               className={`terminal-host ${agentSurfaceMode === "terminal" ? "terminal-host--active" : "terminal-host--background"}`}
-              onPointerDown={() => canvasRef.current?.focus()}
+              onPointerDown={() => imeInputRef.current?.focus()}
               onContextMenu={(event) => openContextMenu(event, terminalContextMenuItems())}
             >
-              <canvas
-                ref={canvasRef}
-                className="term"
+              <canvas ref={canvasRef} className="term" aria-hidden="true" />
+              <textarea
+                ref={imeInputRef}
+                className="terminal-ime-input"
                 tabIndex={0}
                 role="application"
                 aria-label={`${activeTerminalProfile.label} terminal pane. Type to send keyboard input to the active process.`}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                onCompositionEnd={(event) => {
+                  const text = event.data;
+                  event.currentTarget.value = "";
+                  if (text) invoke("paste", { text }).catch(() => {});
+                }}
               />
             </div>
             <AgentRunSurface

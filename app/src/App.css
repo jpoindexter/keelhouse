@@ -3973,9 +3973,32 @@ body,
   background: var(--color-app-bg);
 }
 
-.term:focus-visible {
+.terminal-host:focus-within {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: -2px;
+}
+
+/* Invisible IME composition target. Canvas cannot receive
+   compositionstart/update/end (WebKit only routes those to an editable
+   focused element), so this textarea holds real DOM focus for terminal
+   panes; the OS candidate window anchors to it via the transform applied
+   in the paint loop. pointer-events stays off so clicks reach the host's
+   onPointerDown instead of the (invisible) textarea. */
+.terminal-ime-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-width: 1px;
+  min-height: 1px;
+  padding: 0;
+  border: none;
+  resize: none;
+  overflow: hidden;
+  opacity: 0;
+  color: transparent;
+  caret-color: transparent;
+  background: transparent;
+  pointer-events: none;
 }
 
 .settings-modal {
