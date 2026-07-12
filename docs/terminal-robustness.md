@@ -58,11 +58,11 @@ git diff --check
 - `imeCaretStyle` unit-tested (`terminalIme.test.ts`) for the cursor-to-pixel transform math.
 - Live `npm run tauri dev` smoke test: normal ASCII keyboard input still reaches the pty correctly after the canvas→textarea focus change (typed text echoed correctly in a real pane) — the regression this change was riskiest for.
 - Code-path review: `send_key`/`Msg::Key` (Rust) is untouched by this slice; the `onKey` JS listener is untouched; both are unaffected by the focus-target change.
+- **Return/Enter key path — live-confirmed 2026-07-12.** `cliclick kp:return` turned out to be broken for synthetic Return on this machine entirely (confirmed via an isolated TextEdit test), unrelated to the app. Switching to `osascript`'s `System Events keystroke return` (a different underlying input mechanism) confirmed Enter works correctly through the new textarea focus path: `echo ENTER_TEST_OK` typed and submitted, executed, and printed real output in a live pane.
 
 **Not verified — needs Jason:**
 - A real CJK IME round-trip (actually composing through a live input source) — not something that can be simulated through this session's available automation.
-- Live confirmation of the Return/Enter key path specifically: `cliclick kp:return` was found not to work at all on this machine (isolated via a clean TextEdit test — 1 paragraph after a typed "return", i.e. no newline inserted anywhere, not just in Keelhouse), so this session's automation could not produce a real Return keydown to test against. Code-path analysis gives high confidence Enter is unaffected (see above), but this is unverified, not confirmed.
-- Option-dead-key composition (é via Option+E) — same automation limitation as CJK.
+- Option-dead-key composition (é via Option+E): one live attempt via `osascript keystroke ... using option down` produced no visible result, but the window's traffic-light chrome indicated it had lost frontmost focus mid-sequence — inconclusive, not a negative result. This session's automation proved too flaky (frontmost focus drifted unpredictably more than once during testing) to trust a clean negative here.
 - Missing-glyph fallback was extended defensively but not visually confirmed against real rendered CJK text in a live pane.
 
 ## Scrollback Find (TERMINAL-FIND, 2026-07-11)
