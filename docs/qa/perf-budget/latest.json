@@ -1,30 +1,30 @@
 {
-  "generatedAt": "2026-07-11T19:37:33.083Z",
-  "commit": "fc76940+dirty",
+  "generatedAt": "2026-07-12T18:45:18.912Z",
+  "commit": "7b564d5+dirty",
   "branch": "main",
-  "status": "baseline-ready",
+  "status": "missing-budget-evidence",
   "northStar": "daily-driver workflow runs completed without opening VS Code",
   "hardBudgets": [
     {
       "id": "total-js-assets",
       "label": "Total built JS assets",
-      "actualBytes": 1179499,
+      "actualBytes": 1217316,
       "limitBytes": 1400000,
       "pass": true
     },
     {
       "id": "total-css-assets",
       "label": "Total built CSS assets",
-      "actualBytes": 75714,
+      "actualBytes": 98564,
       "limitBytes": 90000,
-      "pass": true
+      "pass": false
     }
   ],
   "softBudgets": [
     {
       "id": "largest-js-vite-warning",
       "label": "Largest JS chunk stays below Vite warning size",
-      "actualBytes": 1179499,
+      "actualBytes": 1217316,
       "limitBytes": 500000,
       "pass": false,
       "note": "Warning only for now because CodeMirror language packages already exceed Vite's default chunk warning."
@@ -72,6 +72,13 @@
       "file": "docs/qa/daily-driver/latest.json",
       "pattern": "implementation-ready-for-live-runs",
       "pass": true
+    },
+    {
+      "id": "render-perf-instrumented",
+      "label": "Canvas paint path records frame time for the render-perf gate",
+      "file": "app/src/renderPerf.ts",
+      "pattern": "recordFrameTime",
+      "pass": true
     }
   ],
   "artifactChecks": [
@@ -79,7 +86,7 @@
       "id": "chrome-first-open",
       "label": "Actual app first-open screenshot",
       "file": "docs/qa/app-shell/first-open-1440.png",
-      "bytes": 72004,
+      "bytes": 55817,
       "minBytes": 1024,
       "pass": true
     },
@@ -87,7 +94,7 @@
       "id": "chrome-narrow",
       "label": "Actual app narrow screenshot",
       "file": "docs/qa/app-shell/first-open-900.png",
-      "bytes": 56086,
+      "bytes": 41949,
       "minBytes": 1024,
       "pass": true
     },
@@ -111,22 +118,30 @@
       "id": "daily-driver-report",
       "label": "Daily-driver report",
       "file": "docs/qa/daily-driver/latest.md",
-      "bytes": 2175,
+      "bytes": 2169,
       "minBytes": 1024,
+      "pass": true
+    },
+    {
+      "id": "render-perf-live",
+      "label": "Live-captured render-perf snapshot (frame time/IPC payload/jank)",
+      "file": "docs/qa/perf-budget/render-perf-live.json",
+      "bytes": 279,
+      "minBytes": 50,
       "pass": true
     }
   ],
   "metrics": {
     "assets": [
       {
-        "file": "app/dist/assets/index-DqkCHeIL.js",
-        "bytes": 1179499,
-        "ext": ".js"
+        "file": "app/dist/assets/index-BIKLBcD6.css",
+        "bytes": 98564,
+        "ext": ".css"
       },
       {
-        "file": "app/dist/assets/index-nL9hNnAM.css",
-        "bytes": 75714,
-        "ext": ".css"
+        "file": "app/dist/assets/index-zsYTqRMk.js",
+        "bytes": 1217316,
+        "ext": ".js"
       },
       {
         "file": "app/dist/assets/inter-cyrillic-400-normal-HOLc17fK.woff",
@@ -480,9 +495,9 @@
       }
     ],
     "totals": {
-      "totalJsBytes": 1179499,
-      "totalCssBytes": 75714,
-      "largestJsBytes": 1179499
+      "totalJsBytes": 1217316,
+      "totalCssBytes": 98564,
+      "largestJsBytes": 1217316
     }
   },
   "nextLiveMeasurements": [

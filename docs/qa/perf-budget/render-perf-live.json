@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-07-12T18:43:40.658Z",
+  "paneCount": 1,
+  "frameTime": {
+    "count": 16,
+    "avg": 3.812499999998174,
+    "p95": 53,
+    "max": 53
+  },
+  "jankRate": 0.0625,
+  "ipcPayload": {
+    "count": 2,
+    "avg": 69640.5,
+    "p95": 69641,
+    "max": 69641
+  }
+}

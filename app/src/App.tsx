@@ -176,6 +176,7 @@ import {
 import { normalizeSourceControlStatus, type SourceControlStatus } from "./sourceControl";
 import { parseRemoteUrl, type RepoLocation } from "./sourceControlLinks";
 import { imeCaretStyle } from "./terminalIme";
+import { buildSnapshot, createRenderPerfState, recordFrameTime, recordIpcPayloadBytes } from "./renderPerf";
 import {
   addBackgroundExit,
   backgroundExitCountForProject,
@@ -480,6 +481,8 @@ function App() {
   const transcriptFrame = useRef<number | null>(null);
   const pendingTerminalTranscript = useRef("");
   const metrics = useRef({ cw: 9, ch: 19 });
+  const renderPerfRef = useRef(createRenderPerfState());
+  const ipcSampleCounter = useRef(0);
   const selection = useRef<SelectionRange | null>(null);
   const selecting = useRef(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
@@ -3122,6 +3125,29 @@ function App() {
     persistPaneTranscript(root, sessionId, pane, paneIndex, terminalSnapshotText(snapshot), Date.now());
   };
 
+  const exportRenderPerfSnapshot = async () => {
+    const root = workspacePathRef.current;
+    if (!root) return;
+    const paneCount = terminalPanesForProject(root).length;
+    const snapshot = buildSnapshot(renderPerfRef.current, paneCount, new Date().toISOString());
+    const absolutePath = `${root}/docs/qa/perf-budget/render-perf-live.json`;
+    // write_text_file's `path` is a raw filesystem path, not root-relative, and
+    // requires the target to already exist (it reads metadata for the editor's
+    // optimistic-concurrency check) — so create it first on a fresh run;
+    // "Path already exists" on later runs is expected and ignored.
+    await invoke("create_workspace_file", {
+      root,
+      parent: `${root}/docs/qa/perf-budget`,
+      name: "render-perf-live.json",
+    }).catch(() => {});
+    await invoke("write_text_file", {
+      root,
+      path: absolutePath,
+      content: `${JSON.stringify(snapshot, null, 2)}\n`,
+      expectedModifiedMs: null,
+    }).catch((err) => setLaunchError(`Render perf snapshot failed: ${String(err)}`));
+  };
+
   const terminalContextMenuItems = (): ContextMenuItem[] => [
     menuItem("terminal.new-pane", `New ${launchProfile.label} Pane`, () => void createTerminalPane(launchProfile), {
       icon: "terminal",
@@ -3261,6 +3287,15 @@ function App() {
       disabled: !activeTerminalPane,
       keywords: ["scrollback", "search", "output", "terminal"],
       run: () => setTerminalFindOpen(true),
+    },
+    {
+      id: "perf.snapshot-render-stats",
+      label: "Copy Render Perf Snapshot",
+      detail: "Write frame-time/IPC-payload/jank stats to docs/qa/perf-budget/render-perf-live.json",
+      icon: "file",
+      disabled: !workspacePath,
+      keywords: ["perf", "performance", "frame", "jank", "render", "budget"],
+      run: () => void exportRenderPerfSnapshot(),
     },
     {
       id: "layout.reset-demo",
@@ -3700,6 +3735,7 @@ function App() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         return;
       }
+      const paintStart = performance.now();
       const { cw, ch } = metrics.current;
       const dpr = window.devicePixelRatio || 1;
       const w = snap.cols * cw;
@@ -3741,6 +3777,7 @@ function App() {
         imeInput.style.width = caret.width;
         imeInput.style.height = caret.height;
       }
+      recordFrameTime(renderPerfRef.current, performance.now() - paintStart);
     };
 
     const requestPaint = () => {
@@ -3948,6 +3985,10 @@ function App() {
     };
 
     const unlisten = listen<GridPayload>("grid", (ev) => {
+      ipcSampleCounter.current += 1;
+      if (ipcSampleCounter.current % 20 === 0) {
+        recordIpcPayloadBytes(renderPerfRef.current, JSON.stringify(ev.payload).length);
+      }
       terminalSnapshotsRef.current[ev.payload.paneId] = ev.payload.snapshot;
       detectLocalDevServerFromSnapshot(ev.payload.paneId, ev.payload.snapshot);
       if (ev.payload.paneId === activeTerminalPaneIdRef.current) {

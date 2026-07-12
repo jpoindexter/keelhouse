@@ -75,3 +75,13 @@ Append-only failure log. Approaches that took >2 attempts, or that a 16-framewor
 4. Wait / do nothing until PACKAGING is actually prioritized (v2, not blocking daily use).
 
 **Why flagged instead of fixed:** All four options are machine-environment or cross-cutting-toolchain decisions (system CLT version, a second Xcode install, or re-litigating the Zig version pin) — exactly the "hard-to-reverse, affects shared/other-project state" class of action that needs Jason's call, not a silent workaround.
+
+## 2026-07-12 — `write_text_file` silently failed writing a new perf-snapshot file
+
+**What failed:** A new command-palette action (PERF-BUDGET's render-perf snapshot export) called `invoke("write_text_file", { root, path: "docs/qa/perf-budget/render-perf-live.json", ... })` with a root-relative path. It silently did nothing (error swallowed by `.catch(() => {})`) — took 3 live-app round-trips to catch because the failure was invisible until the catch was temporarily changed to surface the real error via `setLaunchError`.
+
+**Root cause (two distinct bugs, both mine):** (1) `write_text_file`'s Rust handler calls `fs::metadata(&file_path)` *before* writing — it's built for the editor's existing-file-plus-optimistic-concurrency flow, not for creating new files, so it errors on any path that doesn't already exist. (2) Its `path` parameter is used directly as `Path::new(trimmed)` — a raw filesystem path, not root-relative — unlike the naming used elsewhere in this codebase's own conventions; passing a relative path produces "File does not exist" even after the file was created moments earlier by a different, correctly-absolute-path command.
+
+**What worked:** Stopped guessing after the first silent failure and swallowed-catch retry; switched the catch to `setLaunchError` so the app itself reported the real Rust error string, which immediately named the exact wrong assumption. Fix: call `create_workspace_file(root, parent: "<absolute path>", name)` first (ignore its "already exists" error on repeat runs) to create the file, then `write_text_file` with the **absolute** path.
+
+**Next time:** When writing a new file via the backend command surface, check whether the target already exists in code/behavior — `write_text_file` is save-existing-file only. And check whether a command's path-like parameter is documented/used as root-relative or absolute by reading its Rust implementation, not by pattern-matching against a sibling call site's usage.

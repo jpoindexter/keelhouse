@@ -1,17 +1,17 @@
 # Performance Budget
 
-Generated: 2026-07-11T19:37:33.083Z
-Commit: fc76940+dirty
-Status: baseline-ready
+Generated: 2026-07-12T18:45:18.912Z
+Commit: 7b564d5+dirty
+Status: missing-budget-evidence
 
 ## Hard Budgets
 
-- PASS Total built JS assets: 1151.9 KiB / 1367.2 KiB
-- PASS Total built CSS assets: 73.9 KiB / 87.9 KiB
+- PASS Total built JS assets: 1188.8 KiB / 1367.2 KiB
+- FAIL Total built CSS assets: 96.3 KiB / 87.9 KiB
 
 ## Soft Budgets
 
-- WARN Largest JS chunk stays below Vite warning size: 1151.9 KiB / 488.3 KiB
+- WARN Largest JS chunk stays below Vite warning size: 1188.8 KiB / 488.3 KiB
   - Warning only for now because CodeMirror language packages already exceed Vite's default chunk warning.
 
 ## Source Checks
@@ -22,14 +22,16 @@ Status: baseline-ready
 - PASS Terminal snapshots are cached by pane - app/src/App.tsx
 - PASS Dev-server detection is output driven, not browser-heavy - app/src/browserPreview.ts
 - PASS Daily-driver readiness gate has passed - docs/qa/daily-driver/latest.json
+- PASS Canvas paint path records frame time for the render-perf gate - app/src/renderPerf.ts
 
 ## Artifact Checks
 
-- PASS Actual app first-open screenshot - docs/qa/app-shell/first-open-1440.png (70.3 KiB)
-- PASS Actual app narrow screenshot - docs/qa/app-shell/first-open-900.png (54.8 KiB)
+- PASS Actual app first-open screenshot - docs/qa/app-shell/first-open-1440.png (54.5 KiB)
+- PASS Actual app narrow screenshot - docs/qa/app-shell/first-open-900.png (41.0 KiB)
 - PASS Native Tauri run screenshot - docs/qa/app-shell/native-run.png (315.8 KiB)
 - PASS Editor selected-state screenshot - docs/qa/editor-parity/selected.png (137.4 KiB)
 - PASS Daily-driver report - docs/qa/daily-driver/latest.md (2.1 KiB)
+- PASS Live-captured render-perf snapshot (frame time/IPC payload/jank) - docs/qa/perf-budget/render-perf-live.json (0.3 KiB)
 
 ## Next Live Measurements
 

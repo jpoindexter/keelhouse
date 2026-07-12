@@ -136,6 +136,12 @@ const sourceChecks = [
     pattern: "implementation-ready-for-live-runs",
     pass: dailyDriver?.status === "implementation-ready-for-live-runs",
   },
+  sourceCheck(
+    "render-perf-instrumented",
+    "Canvas paint path records frame time for the render-perf gate",
+    "app/src/renderPerf.ts",
+    "recordFrameTime"
+  ),
 ];
 
 const artifactChecks = [
@@ -144,6 +150,7 @@ const artifactChecks = [
   fileCheck("native-run", "Native Tauri run screenshot", "docs/qa/app-shell/native-run.png", 1024),
   fileCheck("editor-selected", "Editor selected-state screenshot", "docs/qa/editor-parity/selected.png", 1024),
   fileCheck("daily-driver-report", "Daily-driver report", "docs/qa/daily-driver/latest.md", 1024),
+  fileCheck("render-perf-live", "Live-captured render-perf snapshot (frame time/IPC payload/jank)", "docs/qa/perf-budget/render-perf-live.json", 50),
 ];
 
 const headCommit = git("rev-parse --short HEAD");
