@@ -42,6 +42,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `git-actions-lite.md`: v1 minimal stage, unstage, discard, and copy-diff actions.
 - `shortcuts.md`: active v0.5 shortcut map and planned exceptions.
 - `search.md`: Cmd+P quick-open plus project file/text search behavior.
+- `chat-history-discovery.md`: global chat/message search, bookmarks, pin/archive behavior, and packaged persistence proof.
 - `context-menus.md`: right-click/Control-click coverage and deferred Git mutation actions.
 - `chrome-polish-system.md`: current token/state system and deferred chrome surfaces.
 - `reuse-audit.md`: 2026-07-12 audit of spike/reference reuse vs parked material.

@@ -16,6 +16,7 @@ export type ProjectSession = {
   status: ProjectSessionStatus;
   updatedAt: number;
   archived?: boolean;
+  pinnedAt?: number;
 };
 
 export type ProjectSessionsByProject = Record<string, ProjectSession[]>;
@@ -133,6 +134,9 @@ const normalizeProjectSession = (value: unknown): ProjectSession | null => {
     status: normalizeProjectStatus(item.status),
     updatedAt,
     ...(item.archived === true ? { archived: true } : {}),
+    ...(typeof item.pinnedAt === "number" && Number.isFinite(item.pinnedAt) && item.pinnedAt > 0
+      ? { pinnedAt: Math.floor(item.pinnedAt) }
+      : {}),
   };
 };
 
@@ -155,8 +159,31 @@ export const setProjectSessionArchived = (
   };
 };
 
+export const setProjectSessionPinned = (
+  sessions: ProjectSessionsByProject,
+  path: string,
+  sessionId: string,
+  pinned: boolean,
+  pinnedAt: number = Date.now(),
+): ProjectSessionsByProject => {
+  const list = sessions[path];
+  if (!list) return sessions;
+  return {
+    ...sessions,
+    [path]: list.map((session) =>
+      session.id === sessionId ? { ...session, pinnedAt: pinned ? pinnedAt : undefined } : session,
+    ),
+  };
+};
+
 export const activeSessionsForRail = (sessions: ProjectSession[], showArchived: boolean): ProjectSession[] =>
-  showArchived ? sessions : sessions.filter((session) => !session.archived);
+  (showArchived ? [...sessions] : sessions.filter((session) => !session.archived))
+    .sort((a, b) => {
+      if (a.pinnedAt && b.pinnedAt) return b.pinnedAt - a.pinnedAt;
+      if (a.pinnedAt) return -1;
+      if (b.pinnedAt) return 1;
+      return 0;
+    });
 
 export const archivedSessionCount = (sessions: ProjectSession[]): number =>
   sessions.filter((session) => session.archived).length;

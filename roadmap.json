@@ -1170,13 +1170,13 @@
     {
       "id": "CHAT-HISTORY-DISCOVERY",
       "title": "Chat search, pin, and bookmarks",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "workspace",
       "size": "M",
       "launch": "v1",
-      "summary": "Carry over Hashmark's practical history controls after SQLite lands: search chat titles and message text, pin recurring chats, bookmark important assistant turns, and keep archive behavior compatible with provider thread identity.",
-      "done": "Global search returns matching chats and message snippets across projects; selecting a result opens and scrolls to the message; pinned chats sort predictably without losing project grouping; bookmarks are visible and removable; archive/search/pin survive relaunch; query latency stays interactive on a representative history database.",
+      "summary": "Completed 2026-07-13: global chat discovery searches titles and SQLite message text across projects, opens the exact matched message, filters persistent bookmarks, sorts pinned chats within project groups, and reopens archived results without losing provider identity.",
+      "done": "Executed 2026-07-13 in the packaged app: searched CHAT-A-ONE across projects, opened the exact result, bookmarked a message, pinned and archived New chat 6, found and reopened the archived chat, and confirmed bookmark/archive/pin persistence after relaunch. The pre-QA user state was restored afterward. Rust migration, cross-project search, bookmark persistence, 3,000-message latency, and frontend wiring tests pass. Evidence: docs/chat-history-discovery.md.",
       "buildOrder": 90.25
     },
     {

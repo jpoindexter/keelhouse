@@ -12,6 +12,7 @@ export type ChatMessage = {
   status?: "running" | "complete" | "error";
   approvalRequestId?: number;
   approvalMethod?: string;
+  bookmarked?: boolean;
 };
 
 export type ChatUsage = {
@@ -96,6 +97,7 @@ const normalizeMessage = (value: unknown): ChatMessage | null => {
     itemId: textValue(value.itemId) || undefined,
     title: textValue(value.title) || undefined,
     status: status === "running" || status === "complete" || status === "error" ? status : undefined,
+    bookmarked: value.bookmarked === true ? true : undefined,
   };
 };
 

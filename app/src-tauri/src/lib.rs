@@ -15,7 +15,8 @@ mod chat_store;
 use chat_harness::{respond_chat_approval, start_chat_run, stop_chat_run, ChatRunState};
 use chat_store::{
     delete_chat_conversation, delete_project_chat_conversations, load_chat_conversations,
-    migrate_chat_conversations, reset_chat_store, save_chat_conversation, ChatStore,
+    migrate_chat_conversations, reset_chat_store, save_chat_conversation, search_chat_messages,
+    ChatStore,
 };
 use ignore::WalkBuilder;
 use libghostty_vt::key::{Action, Encoder, Event, Key, Mods, OptionAsAlt};
@@ -2858,6 +2859,7 @@ pub fn run() {
             respond_chat_approval,
             load_chat_conversations,
             save_chat_conversation,
+            search_chat_messages,
             migrate_chat_conversations,
             delete_chat_conversation,
             delete_project_chat_conversations,

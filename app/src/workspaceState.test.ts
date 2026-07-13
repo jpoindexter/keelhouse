@@ -22,6 +22,7 @@ import {
   sessionRecencyLabel,
   setActiveProjectSession,
   setProjectSessionArchived,
+  setProjectSessionPinned,
   setOpenProjectStatus,
   setProjectSessionStatus,
   upsertProjectSession,
@@ -183,6 +184,21 @@ describe("workspace state helpers", () => {
 
     const restored = setProjectSessionArchived(archived, "/a", "two", false);
     expect(restored["/a"].find((s) => s.id === "two")?.archived).toBeUndefined();
+  });
+
+  it("pins chats to the top of their project without changing project grouping", () => {
+    const base = {
+      "/a": [
+        { id: "one", title: "First", status: "exited" as const, updatedAt: 3 },
+        { id: "two", title: "Second", status: "exited" as const, updatedAt: 2 },
+        { id: "three", title: "Third", status: "exited" as const, updatedAt: 1 },
+      ],
+    };
+    const pinned = setProjectSessionPinned(base, "/a", "three", true, 40);
+    expect(activeSessionsForRail(pinned["/a"], false).map((session) => session.id)).toEqual(["three", "one", "two"]);
+    expect(normalizeProjectSessionsByProject(pinned)["/a"][2].pinnedAt).toBe(40);
+    const unpinned = setProjectSessionPinned(pinned, "/a", "three", false);
+    expect(activeSessionsForRail(unpinned["/a"], false).map((session) => session.id)).toEqual(["one", "two", "three"]);
   });
 
   it("resolves active project sessions with fallback to the first row", () => {

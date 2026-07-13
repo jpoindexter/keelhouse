@@ -13,6 +13,8 @@ type ChatThreadSurfaceProps = {
   onSuggestion: (prompt: string) => void;
   onRetry: (prompt: string) => void;
   onApprovalDecision?: (message: ChatMessage, decision: "accept" | "acceptForSession" | "decline") => void;
+  onToggleBookmark?: (message: ChatMessage) => void;
+  focusMessageId?: string | null;
 };
 
 const SUGGESTIONS = [
@@ -81,7 +83,7 @@ function useElapsedNow(active: boolean) {
   return now;
 }
 
-export function ChatThreadSurface({ conversation, events, hidden = false, onSuggestion, onRetry, onApprovalDecision }: ChatThreadSurfaceProps) {
+export function ChatThreadSurface({ conversation, events, hidden = false, onSuggestion, onRetry, onApprovalDecision, onToggleBookmark, focusMessageId = null }: ChatThreadSurfaceProps) {
   const threadRef = useRef<HTMLDivElement | null>(null);
   const autoFollowRef = useRef(true);
   const userScrollIntentRef = useRef(false);
@@ -123,6 +125,14 @@ export function ChatThreadSurface({ conversation, events, hidden = false, onSugg
       setShowJumpToLatest(true);
     }
   }, [events.length, messageUpdateToken]);
+
+  useLayoutEffect(() => {
+    if (!focusMessageId) return;
+    const target = Array.from(threadRef.current?.querySelectorAll<HTMLElement>("[data-message-id]") ?? [])
+      .find((element) => element.dataset.messageId === focusMessageId);
+    target?.scrollIntoView({ block: "center" });
+    target?.focus({ preventScroll: true });
+  }, [focusMessageId, threadIdentity]);
 
   const handleScroll = () => {
     const thread = threadRef.current;
@@ -203,7 +213,12 @@ export function ChatThreadSurface({ conversation, events, hidden = false, onSugg
                   const continuation = message.role === "assistant" && lastConversationalRole === "assistant";
                   if (message.role === "user" || message.role === "assistant") lastConversationalRole = message.role;
                   return (
-                    <article className={`chat-message chat-message--${message.role}${continuation ? " chat-message--continuation" : ""}`} key={message.id}>
+                    <article
+                      className={`chat-message chat-message--${message.role}${continuation ? " chat-message--continuation" : ""}${focusMessageId === message.id ? " chat-message--focused" : ""}`}
+                      data-message-id={message.id}
+                      key={message.id}
+                      tabIndex={focusMessageId === message.id ? 0 : -1}
+                    >
                       {message.role !== "tool" && !continuation ? (
                         <header>
                           <strong>{messageLabel(message)}</strong>
@@ -233,17 +248,26 @@ export function ChatThreadSurface({ conversation, events, hidden = false, onSugg
                           </div>
                         </details>
                       ) : message.role === "assistant" ? (
-                        <>
-                          <ChatMarkdown text={message.text} />
-                          <div className="chat-message__actions">
-                            <button type="button" aria-label={copiedMessageId === message.id ? "Response copied" : "Copy response"} onClick={() => void copyMessage(message)}>
-                              <AppIcon name={copiedMessageId === message.id ? "check" : "copy"} />
-                            </button>
-                          </div>
-                        </>
+                        <ChatMarkdown text={message.text} />
                       ) : (
                         <div className="chat-message__text">{message.text}</div>
                       )}
+                      {message.role === "user" || message.role === "assistant" ? (
+                        <div className="chat-message__actions">
+                          <button type="button" aria-label={copiedMessageId === message.id ? "Message copied" : "Copy message"} onClick={() => void copyMessage(message)}>
+                            <AppIcon name={copiedMessageId === message.id ? "check" : "copy"} />
+                          </button>
+                          <button
+                            className={message.bookmarked ? "chat-message__bookmark chat-message__bookmark--active" : "chat-message__bookmark"}
+                            type="button"
+                            aria-label={message.bookmarked ? "Remove bookmark" : "Bookmark message"}
+                            aria-pressed={Boolean(message.bookmarked)}
+                            onClick={() => onToggleBookmark?.(message)}
+                          >
+                            <AppIcon name="bookmark" />
+                          </button>
+                        </div>
+                      ) : null}
                       {message.role === "error" && conversation.runStatus === "error" && retryPrompt ? (
                         <button className="chat-message__retry" type="button" onClick={() => onRetry(retryPrompt)}>
                           <AppIcon name="reload" />

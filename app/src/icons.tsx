@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Bot,
+  Bookmark,
   Brain,
   CheckCircle2,
   ChevronDown,
@@ -26,6 +27,7 @@ import {
   ExternalLink,
   PanelBottom,
   Plus,
+  Pin,
   RotateCw,
   Save,
   Search,
@@ -44,6 +46,7 @@ export type AppIconName =
   | "agent"
   | "back"
   | "browser"
+  | "bookmark"
   | "check"
   | "chevronDown"
   | "chevronRight"
@@ -66,6 +69,7 @@ export type AppIconName =
   | "more"
   | "openExternal"
   | "plus"
+  | "pin"
   | "reload"
   | "save"
   | "search"
@@ -83,6 +87,7 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   agent: Bot,
   back: ArrowLeft,
   browser: Globe2,
+  bookmark: Bookmark,
   check: CheckCircle2,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
@@ -105,6 +110,7 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   more: MoreHorizontal,
   openExternal: ExternalLink,
   plus: Plus,
+  pin: Pin,
   reload: RotateCw,
   save: Save,
   search: Search,

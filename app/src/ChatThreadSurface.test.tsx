@@ -100,4 +100,30 @@ describe("ChatThreadSurface", () => {
     expect(html).toContain("Start a new Codex chat");
     expect(html).toContain("Run the relevant tests");
   });
+
+  it("marks messages as addressable search targets and exposes bookmark state", () => {
+    const html = renderToStaticMarkup(
+      <ChatThreadSurface
+        conversation={{
+          provider: "codex",
+          updatedAt: 2,
+          revision: 1,
+          runStatus: "complete",
+          messages: [
+            { id: "user-1", role: "user", text: "Remember this", timestamp: 1 },
+            { id: "assistant-1", role: "assistant", text: "Saved", timestamp: 2, bookmarked: true },
+          ],
+        }}
+        events={[]}
+        focusMessageId="assistant-1"
+        onRetry={() => {}}
+        onSuggestion={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    );
+    expect(html).toContain('data-message-id="assistant-1"');
+    expect(html).toContain("chat-message--focused");
+    expect(html).toContain('aria-label="Remove bookmark"');
+    expect(html).toContain('aria-label="Bookmark message"');
+  });
 });

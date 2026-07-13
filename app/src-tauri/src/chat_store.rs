@@ -20,6 +20,8 @@ pub(crate) struct StoredChatMessage {
     pub title: Option<String>,
     #[serde(default)]
     pub status: Option<String>,
+    #[serde(default)]
+    pub bookmarked: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -46,6 +48,19 @@ pub(crate) struct StoredChatConversation {
 pub(crate) struct LegacyChatImportResult {
     imported: usize,
     already_completed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ChatSearchResult {
+    pub chat_id: String,
+    pub project_path: String,
+    pub session_id: String,
+    pub message_id: String,
+    pub role: String,
+    pub snippet: String,
+    pub timestamp: i64,
+    pub bookmarked: bool,
 }
 
 pub(crate) struct ChatStore {
@@ -189,6 +204,56 @@ impl ChatStore {
             .map_err(db_error("Could not delete project chats"))
     }
 
+    pub(crate) fn search(
+        &self,
+        query: &str,
+        bookmarks_only: bool,
+        limit: usize,
+    ) -> Result<Vec<ChatSearchResult>, String> {
+        let query = query.trim();
+        if (!bookmarks_only && query.chars().count() < 2) || query.chars().count() > 200 {
+            return Ok(Vec::new());
+        }
+        let connection = self
+            .connection
+            .lock()
+            .map_err(|_| "Could not lock the chat database.".to_string())?;
+        let mut statement = connection
+            .prepare(
+                "SELECT m.chat_id, c.project_path, c.session_id, m.message_id,
+                        m.role, m.text, m.timestamp, m.bookmarked
+                 FROM chat_messages m
+                 JOIN chat_conversations c ON c.chat_id = m.chat_id
+                 WHERE m.role != 'status'
+                   AND (?1 = '' OR instr(lower(m.text), lower(?1)) > 0)
+                   AND (?2 = 0 OR m.bookmarked = 1)
+                 ORDER BY m.bookmarked DESC, m.timestamp DESC, m.ordinal DESC
+                 LIMIT ?3",
+            )
+            .map_err(db_error("Could not prepare chat search"))?;
+        let rows = statement
+            .query_map(
+                params![query, i64::from(bookmarks_only), limit.clamp(1, 100) as i64],
+                |row| {
+                    let text: String = row.get(5)?;
+                    Ok(ChatSearchResult {
+                        chat_id: row.get(0)?,
+                        project_path: row.get(1)?,
+                        session_id: row.get(2)?,
+                        message_id: row.get(3)?,
+                        role: row.get(4)?,
+                        snippet: chat_search_snippet(&text, query),
+                        timestamp: row.get(6)?,
+                        bookmarked: row.get::<_, i64>(7)? != 0,
+                    })
+                },
+            )
+            .map_err(db_error("Could not search chat messages"))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(db_error("Could not read chat search results"))?;
+        Ok(rows)
+    }
+
     pub(crate) fn reset(&self) -> Result<(), String> {
         let mut connection = self
             .connection
@@ -251,6 +316,7 @@ fn migrate_schema(connection: &Connection) -> Result<(), String> {
                 item_id TEXT,
                 title TEXT,
                 status TEXT CHECK(status IS NULL OR status IN ('running','complete','error')),
+                bookmarked INTEGER NOT NULL DEFAULT 0 CHECK(bookmarked IN (0, 1)),
                 PRIMARY KEY(chat_id, message_id),
                 UNIQUE(chat_id, ordinal)
              );
@@ -259,7 +325,55 @@ fn migrate_schema(connection: &Connection) -> Result<(), String> {
              INSERT OR IGNORE INTO chat_schema_migrations(version, description, applied_at)
                 VALUES (1, 'durable chat conversations and messages', unixepoch() * 1000);",
         )
-        .map_err(db_error("Could not migrate the chat database"))
+        .map_err(db_error("Could not migrate the chat database"))?;
+    let has_bookmarked = connection
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM pragma_table_info('chat_messages') WHERE name = 'bookmarked')",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .map_err(db_error("Could not inspect chat bookmark migration"))?
+        != 0;
+    if !has_bookmarked {
+        connection
+            .execute_batch("ALTER TABLE chat_messages ADD COLUMN bookmarked INTEGER NOT NULL DEFAULT 0 CHECK(bookmarked IN (0, 1));")
+            .map_err(db_error("Could not add chat bookmarks"))?;
+    }
+    connection
+        .execute(
+            "INSERT OR IGNORE INTO chat_schema_migrations(version, description, applied_at)
+             VALUES (2, 'message bookmarks and chat discovery', unixepoch() * 1000)",
+            [],
+        )
+        .map_err(db_error("Could not record chat discovery migration"))?;
+    Ok(())
+}
+
+fn chat_search_snippet(text: &str, query: &str) -> String {
+    let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.chars().count() <= 180 {
+        return normalized;
+    }
+    let lower = normalized.to_lowercase();
+    let query = query.to_lowercase();
+    let match_byte = if query.is_empty() {
+        0
+    } else {
+        lower.find(&query).unwrap_or(0)
+    };
+    let match_char = normalized[..match_byte].chars().count();
+    let start = match_char.saturating_sub(60);
+    let snippet = normalized.chars().skip(start).take(180).collect::<String>();
+    format!(
+        "{}{}{}",
+        if start > 0 { "…" } else { "" },
+        snippet,
+        if start + 180 < normalized.chars().count() {
+            "…"
+        } else {
+            ""
+        }
+    )
 }
 
 fn split_chat_id(chat_id: &str) -> Result<(&str, &str), String> {
@@ -380,8 +494,8 @@ fn save_in_transaction(
         transaction
             .execute(
                 "INSERT INTO chat_messages (
-                    chat_id, message_id, ordinal, role, text, timestamp, item_id, title, status
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                    chat_id, message_id, ordinal, role, text, timestamp, item_id, title, status, bookmarked
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                 params![
                     chat_id,
                     message.id,
@@ -392,6 +506,7 @@ fn save_in_transaction(
                     message.item_id,
                     message.title,
                     message.status,
+                    i64::from(message.bookmarked),
                 ],
             )
             .map_err(db_error("Could not save chat message"))?;
@@ -490,7 +605,7 @@ fn load_all_from(
     for (chat_id, mut conversation) in rows {
         let mut messages = transaction
             .prepare(
-                "SELECT message_id, role, text, timestamp, item_id, title, status
+                "SELECT message_id, role, text, timestamp, item_id, title, status, bookmarked
                  FROM chat_messages WHERE chat_id = ?1 ORDER BY ordinal ASC",
             )
             .map_err(db_error("Could not prepare chat message load"))?;
@@ -504,6 +619,7 @@ fn load_all_from(
                     item_id: row.get(4)?,
                     title: row.get(5)?,
                     status: row.get(6)?,
+                    bookmarked: row.get::<_, i64>(7)? != 0,
                 })
             })
             .map_err(db_error("Could not load chat messages"))?
@@ -528,6 +644,16 @@ pub(crate) fn save_chat_conversation(
     conversation: StoredChatConversation,
 ) -> Result<bool, String> {
     state.save(&chat_id, &conversation)
+}
+
+#[tauri::command]
+pub(crate) fn search_chat_messages(
+    state: tauri::State<'_, ChatStore>,
+    query: String,
+    bookmarks_only: bool,
+    limit: Option<usize>,
+) -> Result<Vec<ChatSearchResult>, String> {
+    state.search(&query, bookmarks_only, limit.unwrap_or(60))
 }
 
 #[tauri::command]
@@ -581,6 +707,7 @@ mod tests {
                 item_id: Some(format!("item-{revision}")),
                 title: None,
                 status: Some("complete".into()),
+                bookmarked: false,
             }],
             updated_at: 100 + revision,
             revision,
@@ -715,5 +842,111 @@ mod tests {
                 .unwrap();
         }
         assert_eq!(store.load_all().unwrap()["/repo\nchat-1"].usage, None);
+    }
+
+    #[test]
+    fn search_returns_cross_project_snippets_and_persisted_bookmarks() {
+        let store = store();
+        let mut first = conversation("Authentication refresh race in token cache", 1);
+        first.messages[0].bookmarked = true;
+        store.save("/alpha\nchat-1", &first).unwrap();
+        store
+            .save(
+                "/beta\nchat-2",
+                &conversation("Authentication audit passed", 2),
+            )
+            .unwrap();
+        let hits = store.search("authentication", false, 20).unwrap();
+        assert_eq!(hits.len(), 2);
+        assert!(hits[0].bookmarked);
+        assert_eq!(hits[0].project_path, "/alpha");
+        assert!(hits[0].snippet.contains("Authentication"));
+        let bookmarks = store.search("", true, 20).unwrap();
+        assert_eq!(bookmarks.len(), 1);
+        assert_eq!(bookmarks[0].message_id, "message-1");
+        assert!(store.load_all().unwrap()["/alpha\nchat-1"].messages[0].bookmarked);
+    }
+
+    #[test]
+    fn upgrades_existing_message_schema_without_losing_history() {
+        let connection = Connection::open_in_memory().unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE chat_conversations (
+                    chat_id TEXT PRIMARY KEY,
+                    project_path TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    provider_thread_id TEXT,
+                    active_run_id TEXT,
+                    run_status TEXT NOT NULL DEFAULT 'idle',
+                    usage_json TEXT,
+                    revision INTEGER NOT NULL DEFAULT 0,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL
+                 );
+                 CREATE TABLE chat_messages (
+                    chat_id TEXT NOT NULL REFERENCES chat_conversations(chat_id) ON DELETE CASCADE,
+                    message_id TEXT NOT NULL,
+                    ordinal INTEGER NOT NULL,
+                    role TEXT NOT NULL,
+                    text TEXT NOT NULL,
+                    timestamp INTEGER NOT NULL,
+                    item_id TEXT,
+                    title TEXT,
+                    status TEXT,
+                    PRIMARY KEY(chat_id, message_id),
+                    UNIQUE(chat_id, ordinal)
+                 );
+                 INSERT INTO chat_conversations (
+                    chat_id, project_path, session_id, provider, run_status, revision, created_at, updated_at
+                 ) VALUES ('/repo\nchat-1', '/repo', 'chat-1', 'codex', 'complete', 1, 1, 1);
+                 INSERT INTO chat_messages (
+                    chat_id, message_id, ordinal, role, text, timestamp, status
+                 ) VALUES ('/repo\nchat-1', 'message-1', 0, 'assistant', 'kept history', 1, 'complete');",
+            )
+            .unwrap();
+
+        let store = ChatStore::from_connection(connection).unwrap();
+        let loaded = store.load_all().unwrap();
+        assert_eq!(loaded["/repo\nchat-1"].messages[0].text, "kept history");
+        assert!(!loaded["/repo\nchat-1"].messages[0].bookmarked);
+        let connection = store.connection.lock().unwrap();
+        let migration: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM chat_schema_migrations WHERE version = 2",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(migration, 1);
+    }
+
+    #[test]
+    fn representative_history_search_stays_interactive() {
+        let store = store();
+        for chat in 0..100 {
+            let mut item = conversation("seed", chat + 1);
+            item.messages = (0..30)
+                .map(|message| StoredChatMessage {
+                    id: format!("message-{chat}-{message}"),
+                    role: if message % 2 == 0 { "user" } else { "assistant" }.into(),
+                    text: format!("Representative history item {message} for project {chat}; needle appears here"),
+                    timestamp: chat * 100 + message,
+                    item_id: None,
+                    title: None,
+                    status: Some("complete".into()),
+                    bookmarked: message == 7,
+                })
+                .collect();
+            store
+                .save(&format!("/repo-{chat}\nchat-{chat}"), &item)
+                .unwrap();
+        }
+        let started = std::time::Instant::now();
+        let hits = store.search("needle", false, 60).unwrap();
+        let elapsed = started.elapsed();
+        assert_eq!(hits.len(), 60);
+        assert!(elapsed.as_millis() < 500, "search took {elapsed:?}");
     }
 }

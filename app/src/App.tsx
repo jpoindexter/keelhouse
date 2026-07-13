@@ -50,6 +50,7 @@ import {
   setOpenProjectStatus,
   setProjectSessionStatus,
   setProjectSessionArchived,
+  setProjectSessionPinned,
   activeSessionsForRail,
   archivedSessionCount,
   upsertOpenProject,
@@ -217,7 +218,9 @@ import {
   migrateLegacyChatConversations,
   resetDurableChatStore,
   saveDurableChatConversation,
+  searchDurableChatMessages,
 } from "./chatStore";
+import { mergeChatDiscoveryResults, type ChatSearchResult, type ChatSearchViewResult } from "./chatDiscovery";
 import { ToolDockMenu } from "./ToolDockMenu";
 import { ToolTrayTabs } from "./ToolTrayTabs";
 import { ContextMenu, type ContextMenuItem, type ContextMenuState } from "./ContextMenu";
@@ -294,7 +297,7 @@ type SaveEditorFileOptions = { force?: boolean };
 type AgentSurfaceMode = "chat" | "terminal";
 type UtilityTrayMode = "terminal" | "processes" | "logs";
 type SideDrawerMode = "projects" | "files" | "search" | "git" | "browser" | "settings";
-type DrawerSearchScope = "files" | "text";
+type DrawerSearchScope = "chats" | "files" | "text";
 type DetectedLocalDevServer = {
   url: string;
   paneId: number;
@@ -690,6 +693,13 @@ function App() {
   };
   const [drawerSearchQuery, setDrawerSearchQuery] = useState("");
   const [drawerSearchScope, setDrawerSearchScope] = useState<DrawerSearchScope>("files");
+  const [chatSearchQuery, setChatSearchQuery] = useState("");
+  const [chatSearchBookmarksOnly, setChatSearchBookmarksOnly] = useState(false);
+  const [chatSearchResults, setChatSearchResults] = useState<ChatSearchResult[]>([]);
+  const [chatSearchLoading, setChatSearchLoading] = useState(false);
+  const [chatSearchError, setChatSearchError] = useState<string | null>(null);
+  const [chatSearchRevision, setChatSearchRevision] = useState(0);
+  const [focusedChatMessageId, setFocusedChatMessageId] = useState<string | null>(null);
   const [textSearchResults, setTextSearchResults] = useState<WorkspaceTextSearchMatch[]>([]);
   const [textSearchLoading, setTextSearchLoading] = useState(false);
   const [textSearchError, setTextSearchError] = useState<string | null>(null);
@@ -739,6 +749,16 @@ function App() {
   const drawerSearchResults = useMemo(() => {
     return filterWorkspaceFiles(searchableFiles, drawerSearchQuery, drawerSearchQuery.trim() ? 80 : 40);
   }, [drawerSearchQuery, searchableFiles]);
+  const chatSearchViewResults = useMemo<ChatSearchViewResult[]>(
+    () => mergeChatDiscoveryResults(
+      chatSearchResults,
+      projectSessions,
+      chatConversations,
+      chatSearchQuery,
+      chatSearchBookmarksOnly,
+    ),
+    [chatConversations, chatSearchBookmarksOnly, chatSearchQuery, chatSearchResults, projectSessions],
+  );
   const quickOpenResults = useMemo(() => filterWorkspaceFiles(searchableFiles, quickOpenQuery, 80), [quickOpenQuery, searchableFiles]);
   const composerMentionQuery = composerDraft.match(/(?:^|\s)@([^\s@]*)$/)?.[1] ?? null;
   const composerMentionResults = useMemo(
@@ -837,6 +857,39 @@ function App() {
       setGitStatusLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (drawerSearchScope !== "chats") return;
+    const query = chatSearchQuery.trim();
+    if (!chatSearchBookmarksOnly && query.length < 2) {
+      setChatSearchResults([]);
+      setChatSearchError(null);
+      setChatSearchLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setChatSearchLoading(true);
+    setChatSearchError(null);
+    const timer = window.setTimeout(() => {
+      searchDurableChatMessages(query, chatSearchBookmarksOnly, 80)
+        .then((results) => {
+          if (!cancelled) setChatSearchResults(results);
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            setChatSearchResults([]);
+            setChatSearchError(String(error));
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setChatSearchLoading(false);
+        });
+    }, 140);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [chatSearchBookmarksOnly, chatSearchQuery, chatSearchRevision, drawerSearchScope]);
 
   useEffect(() => {
     if (drawerSearchScope !== "text") return;
@@ -1252,6 +1305,21 @@ function App() {
       void invoke("log_health_event", { message }).catch(() => {});
     });
     return nextConversation;
+  };
+
+  const toggleChatMessageBookmark = (message: ChatMessage) => {
+    const chatId = activeComposerHarnessKey;
+    if (!chatId) return;
+    const bookmarked = !message.bookmarked;
+    updateChatConversation(chatId, (conversation) => ({
+      ...conversation,
+      messages: conversation.messages.map((item) =>
+        item.id === message.id ? { ...item, bookmarked: bookmarked ? true : undefined } : item,
+      ),
+      updatedAt: Date.now(),
+    }));
+    setChatSearchRevision((revision) => revision + 1);
+    setActionNotice(bookmarked ? "Bookmarked message" : "Removed bookmark");
   };
 
   useEffect(() => {
@@ -1977,6 +2045,7 @@ function App() {
   };
 
   const switchProjectSession = async (projectPath: string, sessionId: string) => {
+    setFocusedChatMessageId(null);
     const currentRoot = workspacePathRef.current;
     const sameProject = currentRoot === projectPath;
     const now = Date.now();
@@ -1996,6 +2065,18 @@ function App() {
     } else {
       await requestOpenWorkspace(projectPath);
     }
+  };
+
+  const openChatSearchResult = async (result: ChatSearchViewResult) => {
+    const session = projectSessionsRef.current[result.projectPath]?.find((item) => item.id === result.sessionId);
+    if (!session) {
+      setChatSearchError("This chat's navigation metadata is unavailable. Open its project and try again.");
+      return;
+    }
+    if (session.archived) setShowArchivedSessions(true);
+    await switchProjectSession(result.projectPath, result.sessionId);
+    setFocusedChatMessageId(result.messageId ?? null);
+    setSideDrawerMode("projects");
   };
 
   const createProjectSession = async (projectPath: string) => {
@@ -3407,6 +3488,14 @@ function App() {
     setCommandPaletteActiveIndex(0);
   };
 
+  const openChatSearch = (bookmarksOnly = false) => {
+    setContextMenu(null);
+    setSideDrawerCollapsed(false);
+    setSideDrawerMode("search");
+    setDrawerSearchScope("chats");
+    setChatSearchBookmarksOnly(bookmarksOnly);
+  };
+
   const openQuickOpen = () => {
     setContextMenu(null);
     setQuickOpenQuery("");
@@ -3496,6 +3585,12 @@ function App() {
     menuItem("session.rename", "Rename Chat", () => renameProjectSession(projectPath, session), { icon: "file" }),
     menuItem("session.copy-name", "Copy Chat Name", async () => { await writeText(session.title); setActionNotice("Copied chat name"); }, { icon: "file" }),
     menuItem(
+      "session.pin",
+      session.pinnedAt ? "Unpin Chat" : "Pin Chat",
+      () => pinProjectSession(projectPath, session, !session.pinnedAt),
+      { icon: "pin" },
+    ),
+    menuItem(
       "session.archive",
       session.archived ? "Unarchive Chat" : "Archive Chat",
       () => archiveProjectSession(projectPath, session, !session.archived),
@@ -3517,6 +3612,13 @@ function App() {
     const next = setProjectSessionArchived(projectSessionsRef.current, projectPath, session.id, archived);
     if (next === projectSessionsRef.current) return;
     await persistProjectSessions(next, activeSessionByProjectRef.current);
+  };
+
+  const pinProjectSession = async (projectPath: string, session: ProjectSession, pinned: boolean) => {
+    const next = setProjectSessionPinned(projectSessionsRef.current, projectPath, session.id, pinned);
+    if (next === projectSessionsRef.current) return;
+    await persistProjectSessions(next, activeSessionByProjectRef.current);
+    setActionNotice(pinned ? `Pinned ${session.title}` : `Unpinned ${session.title}`);
   };
 
   const editorTabContextMenuItems = (tab: FileTreeNode): ContextMenuItem[] => [
@@ -4692,7 +4794,7 @@ function App() {
     <div className={`app-shell ${sideDrawerCollapsed ? "app-shell--side-drawer-collapsed" : ""}`} style={appShellStyle}>
       <header className="app-titlebar" aria-label="Application chrome" data-tauri-drag-region>
         <div className="titlebar-identity">
-          <button className="titlebar-search" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Search threads and commands") }>
+          <button className="titlebar-search" type="button" onClick={() => openChatSearch()} title="Search chats across projects">
             <AppIcon name="search" />
             <span>Search threads…</span>
           </button>
@@ -4893,6 +4995,7 @@ function App() {
                             <span>{session.title}</span>
                           </span>
                           <span className="session-row__state">
+                            {session.pinnedAt ? <AppIcon className="session-row__pin" name="pin" label="Pinned chat" /> : null}
                             <span className="session-row__time">{sessionRecencyLabel(session.updatedAt)}</span>
                             <AppIcon name={projectRailStatusIcon(sessionStatus)} />
                           </span>
@@ -4939,7 +5042,7 @@ function App() {
         ) : null}
         {!sideDrawerCollapsed && sideDrawerMode === "projects" && visibleOpenProjects.length === 0 ? <div className="rail-status">Open a folder to start a chat</div> : null}
         {!sideDrawerCollapsed && sideDrawerMode === "search" ? (
-          <section className="drawer-panel" aria-label="Search workspace">
+          <section className="drawer-panel" aria-label="Search chats and workspace">
             <div className="panel-title panel-title--with-action">
               <span>Search</span>
               <button className="rail-open-button" type="button" onClick={openQuickOpen}>
@@ -4948,6 +5051,16 @@ function App() {
               </button>
             </div>
             <div className="search-scope-tabs" role="tablist" aria-label="Search scope">
+              <button
+                className={`search-scope-tabs__button ${drawerSearchScope === "chats" ? "search-scope-tabs__button--active" : ""}`}
+                type="button"
+                role="tab"
+                aria-selected={drawerSearchScope === "chats"}
+                onClick={() => setDrawerSearchScope("chats")}
+              >
+                <AppIcon name="agent" />
+                <span>Chats</span>
+              </button>
               <button
                 className={`search-scope-tabs__button ${drawerSearchScope === "files" ? "search-scope-tabs__button--active" : ""}`}
                 type="button"
@@ -4970,16 +5083,45 @@ function App() {
               </button>
             </div>
             <label className="drawer-field">
-              <span>{drawerSearchScope === "files" ? "Filter files" : "Search text"}</span>
+              <span>{drawerSearchScope === "chats" ? "Search chat history" : drawerSearchScope === "files" ? "Filter files" : "Search text"}</span>
               <input
-                value={drawerSearchQuery}
-                placeholder={drawerSearchScope === "files" ? "Type a filename or path" : "Type at least 2 characters"}
-                disabled={!workspacePath}
-                onChange={(event) => setDrawerSearchQuery(event.currentTarget.value)}
+                value={drawerSearchScope === "chats" ? chatSearchQuery : drawerSearchQuery}
+                placeholder={drawerSearchScope === "chats" ? "Search all projects and messages" : drawerSearchScope === "files" ? "Type a filename or path" : "Type at least 2 characters"}
+                disabled={drawerSearchScope !== "chats" && !workspacePath}
+                onChange={(event) => drawerSearchScope === "chats" ? setChatSearchQuery(event.currentTarget.value) : setDrawerSearchQuery(event.currentTarget.value)}
               />
             </label>
+            {drawerSearchScope === "chats" ? (
+              <div className="chat-search-filter" role="group" aria-label="Chat search filter">
+                <button className={!chatSearchBookmarksOnly ? "is-active" : ""} type="button" aria-pressed={!chatSearchBookmarksOnly} onClick={() => setChatSearchBookmarksOnly(false)}>All</button>
+                <button className={chatSearchBookmarksOnly ? "is-active" : ""} type="button" aria-pressed={chatSearchBookmarksOnly} onClick={() => setChatSearchBookmarksOnly(true)}>
+                  <AppIcon name="bookmark" />
+                  Bookmarks
+                </button>
+              </div>
+            ) : null}
             <div className="drawer-list">
-              {!workspacePath ? <div className="rail-status">Open a folder to search</div> : null}
+              {drawerSearchScope !== "chats" && !workspacePath ? <div className="rail-status">Open a folder to search</div> : null}
+              {drawerSearchScope === "chats" && !chatSearchBookmarksOnly && chatSearchQuery.trim().length < 2 ? <div className="rail-status">Type at least 2 characters to search every chat</div> : null}
+              {drawerSearchScope === "chats" && chatSearchLoading ? <div className="rail-status">Searching chats…</div> : null}
+              {drawerSearchScope === "chats" && chatSearchError ? <div className="rail-status rail-status--error">{chatSearchError}</div> : null}
+              {drawerSearchScope === "chats" && !chatSearchLoading && !chatSearchError && (chatSearchBookmarksOnly || chatSearchQuery.trim().length >= 2) && chatSearchViewResults.length === 0 ? (
+                <div className="rail-status">{chatSearchBookmarksOnly ? "No bookmarked messages" : "No chat matches"}</div>
+              ) : null}
+              {drawerSearchScope === "chats" && chatSearchViewResults.map((result) => (
+                <button
+                  className="drawer-list-row drawer-list-row--chat-hit"
+                  type="button"
+                  key={`${result.chatId}:${result.messageId ?? result.role}`}
+                  title={`${result.projectPath} · ${result.title}`}
+                  onClick={() => void openChatSearchResult(result)}
+                >
+                  <AppIcon name={result.bookmarked ? "bookmark" : result.pinned ? "pin" : "agent"} />
+                  <span className="drawer-list-row__main">{result.title}</span>
+                  <span className="drawer-list-row__meta">{result.projectName}{result.archived ? " · Archived" : ""}</span>
+                  <span className="drawer-list-row__snippet">{result.snippet}</span>
+                </button>
+              ))}
               {workspacePath && drawerSearchScope === "files" && drawerSearchResults.length === 0 ? <div className="rail-status">No matching files</div> : null}
               {workspacePath && drawerSearchScope === "files" && drawerSearchResults.map((file) => (
                 <button
@@ -5799,6 +5941,8 @@ function App() {
               onSuggestion={(draft) => setComposerLocalState(activeComposerHarnessKey, draft, composerHistory)}
               onRetry={(prompt) => void submitComposerDraft(prompt)}
               onApprovalDecision={(message, decision) => void resolveChatApproval(message, decision)}
+              onToggleBookmark={toggleChatMessageBookmark}
+              focusMessageId={focusedChatMessageId}
             />
           </div>
           <div className="agent-composer" aria-label="Agent composer" onContextMenu={(event) => openContextMenu(event, composerContextMenuItems())}>
