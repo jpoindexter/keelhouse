@@ -1,6 +1,6 @@
 # Session Pane Isolation
 
-Implementation checkpoint: 2026-07-12.
+Completed in the packaged app on 2026-07-13.
 
 ## Code Evidence
 
@@ -13,16 +13,24 @@ Implementation checkpoint: 2026-07-12.
 
 `npm run build`, all 176 frontend tests, all QA gates, and `npm run package:mac` pass.
 
-## Live Criterion Still Pending
+## Packaged Live Evidence
 
-As of the 2026-07-13 Codex-style chat correction, this criterion applies only to optional raw-terminal panes. It no longer defines chat identity or blocks structured chat history. The higher-priority native gate is `codex-multi-chat.md`.
+As of the 2026-07-13 Codex-style chat correction, this criterion applies only to optional raw-terminal panes. Structured chat identity remains covered by `codex-multi-chat.md`.
 
-The packaged app must execute this sequence after macOS is unlocked:
+The packaged app executed this sequence with an isolated two-chat store:
 
-1. Open a same-project thread with multiple live panes.
-2. Create a new thread and confirm it starts with only its own default pane.
-3. Start output in both threads.
-4. Switch twice and confirm pane IDs, labels, output, and process state remain independent.
-5. Quit/relaunch and confirm each thread restores its own layout with fresh processes.
+1. Isolation A opened `Alpha shell`, printed `ISOLATION-A`, and reported PID `59144`.
+2. Isolation B opened `Beta shell`, printed `ISOLATION-B`, and reported PID `62755`.
+3. Switching A → B → A restored only the selected pane and preserved both live processes.
+4. Killing and relaunching the package terminated both old shells.
+5. A restored `Alpha shell` at fresh PID `84110`; B restored `Beta shell` at fresh PID `89143`.
+6. Switching back to A reported PID `84110` again, proving B did not restart or replace A.
 
-Two attempts to execute this path were stopped by the locked Mac. This is not negative product evidence and does not complete `SESSION-PANE-ISOLATION`.
+Evidence:
+
+- `session-pane-isolation-before-a.png`
+- `session-pane-isolation-before-b.png`
+- `session-pane-isolation-relaunch-a.png`
+- `session-pane-isolation-relaunch-b.png`
+
+The QA store was temporary. The pre-QA app-support directory was restored and verified against an exact copy after the run.

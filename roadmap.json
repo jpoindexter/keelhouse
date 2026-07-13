@@ -1364,7 +1364,7 @@
     {
       "id": "SESSION-PANE-ISOLATION",
       "title": "Isolate live panes by project thread",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "core",
       "size": "L",
@@ -1372,7 +1372,7 @@
       "buildOrder": 90.35,
       "summary": "Live packaged testing 2026-07-12 disproved the readiness assumption that pane layouts are session-scoped: creating New session 3 changed the thread label but retained the prior thread's five live panes. Key running panes by project + session, preserve each thread's active pane and layout, and switch same-project threads without sharing or relabeling another thread's processes.",
       "done": "A new thread starts its own default pane set; two same-project threads can run different agents concurrently; switching threads focuses only that thread's panes without restarting the other thread; relaunch restores ownership and layouts; unit tests cover keying/migration; a packaged live run records independent pane IDs and output for both threads.",
-      "progress": "Implementation checkpoint 2026-07-12: live/active pane maps are keyed by project + session; switching and new-thread creation use the target context; project status aggregates contexts; background exits update the owning session; deletion closes only owned panes. 176 frontend tests, build, QA gates, and package:mac pass. Not complete: two packaged Computer Use attempts were stopped because macOS was locked, so independent output plus quit/relaunch remains unexecuted. See docs/qa/daily-driver/session-pane-isolation.md."
+      "progress": "Completed 2026-07-13. Live/active pane maps are keyed by project + session; switching and new-thread creation use the target context; project status aggregates contexts; background exits update the owning session; deletion closes only owned panes. Packaged QA ran Alpha and Beta shells in two same-project chats with independent labels, output, and process ids (59144 and 62755), switched without restart, then relaunched with fresh independent processes (84110 and 89143) and restored layouts. Evidence: docs/qa/daily-driver/session-pane-isolation.md."
     },
     {
       "id": "DAILY-DRIVER-LIVE",

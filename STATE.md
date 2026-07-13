@@ -74,7 +74,7 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 **DIRECT-AGENT-HARNESS (EXECUTED 2026-07-13):** the rebuilt packaged app ran two independent same-project Codex chats through existing OAuth, resumed each provider thread, ran both concurrently, stopped only Chat A within 1.8s while Chat B remained Running and completed, exercised raw-terminal isolation, and restored histories/provider context after quit/relaunch. The first stop attempt exposed wrapper-only cancellation; `chat_harness.rs` now launches and terminates one process group per chat, with a real descendant-process regression test. Evidence: `docs/qa/daily-driver/codex-multi-chat.md` and `codex-multi-chat-native.png`. The later chrome correction moved that isolated terminal from alternate-center mode into the bottom utility tray.
 
-**SESSION-PANE-ISOLATION implementation checkpoint (CODE/PACKAGE VERIFIED 2026-07-12; LIVE PENDING):** pane and active-pane maps now use project + session keys; same-project switches target independent contexts; project status aggregates all contexts; background exits are attributed to the owner; deleting a thread closes only its panes. `npm run build`, 176 tests, QA gates, and `npm run package:mac` pass. Two packaged live attempts were stopped by the locked Mac, so the required independent-output and quit/relaunch sequence is not yet complete. See `docs/qa/daily-driver/session-pane-isolation.md`.
+**SESSION-PANE-ISOLATION (PACKAGED VERIFIED 2026-07-13):** pane and active-pane maps use project + session keys; same-project switches target independent contexts; project status aggregates all contexts; background exits are attributed to the owner; deleting a thread closes only its panes. Packaged QA ran Alpha and Beta shells in two same-project chats with distinct PIDs `59144`/`62755`, labels, and output; switching preserved both processes. Relaunch restored both layouts with fresh PIDs `84110`/`89143`, and switching back kept A on `84110`. Evidence: `docs/qa/daily-driver/session-pane-isolation.md`.
 
 **PACKAGING (VERIFIED 2026-07-13):** `npm run package:mac` builds an optimized arm64, fully ad-hoc-signed `Keelhouse.app` without changing the installed Zig/Xcode toolchain. The scoped build script patches an ignored Zig-lib copy under Cargo `target/`, seals the complete app bundle after Tauri copies resources, and runs strict `codesign` verification so a linker-only signature cannot pass. The packaged app launched, restored the real workspace, spawned a shell, and launched Codex as a child process. See `docs/packaging.md`.
 
@@ -157,11 +157,10 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 1. **CHROME-EYEBALL-SIGNOFF:** Jason reviews the corrected packaged shell at 1440/1024/900 and records approval or corrections. Engineering/native review is complete but does not substitute for this verdict.
 2. **CHROME-CONTRACT-V2:** formally lock the prepared control grammar, populated/native screenshots, overlays, fixture parity, and crumb overflow behavior after sign-off.
 3. **CHAT-COMPOSER-CONTEXT:** execute one packaged file-context send and one image send after explicit transmission approval.
-4. **SESSION-PANE-ISOLATION:** key optional raw-terminal process sets by project + chat so chats cannot share terminal ownership accidentally.
-5. **DAILY-DRIVER-LIVE / PERF-BUDGET:** complete native workflows and controlled resource comparison after the primary chat model is durable.
-6. **AI-CONNECTIONS / AGENT-HOOKS:** harden provider auth, MCP/OAuth, app actions, and health checks using Hashmark patterns where safe.
-7. **SOURCE-CONTROL-CONNECTIONS / TERMINAL-INTL-INPUT / OUTSIDE-REVIEW:** finish remaining integration, terminal, and external-review gates.
-8. **CHAT-FORK-CHECKPOINT / CLAUDE-STRUCTURED-ADAPTER / AGENT-ORCHESTRATION / RUN-CARDS-ADAPTER:** extend the provider-neutral contract after v1 durability and approvals.
+4. **DAILY-DRIVER-LIVE / PERF-BUDGET:** complete native workflows and controlled resource comparison after the primary chat model is durable.
+5. **AI-CONNECTIONS / AGENT-HOOKS:** harden provider auth, MCP/OAuth, app actions, and health checks using Hashmark patterns where safe.
+6. **SOURCE-CONTROL-CONNECTIONS / TERMINAL-INTL-INPUT / OUTSIDE-REVIEW:** finish remaining integration, terminal, and external-review gates.
+7. **CHAT-FORK-CHECKPOINT / CLAUDE-STRUCTURED-ADAPTER / AGENT-ORCHESTRATION / RUN-CARDS-ADAPTER:** extend the provider-neutral contract after v1 durability and approvals.
 
 ## Gotchas
 

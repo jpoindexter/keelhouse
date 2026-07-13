@@ -31,8 +31,9 @@
       "gap": "The complete edit + agent prompt + detected browser preview workflow still needs a timed packaged run."
     },
     "twoAgentSameProject": {
-      "status": "failed-product-contract",
-      "gap": "Creating a new project thread retained the previous thread's live pane set. SESSION-PANE-ISOLATION must make same-project threads own independent processes before this workflow can pass."
+      "status": "passed",
+      "details": "Structured Codex chats preserve independent provider runs. Optional raw terminals also passed packaged isolation: pre-relaunch PIDs 59144/62755, post-relaunch PIDs 84110/89143, independent labels/output, and switch-back without restart.",
+      "evidence": "docs/qa/daily-driver/session-pane-isolation.md"
     }
   }
 }

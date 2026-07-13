@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-13T09:37:45.434Z",
-  "commit": "0edecb3+dirty",
+  "generatedAt": "2026-07-13T18:40:09.365Z",
+  "commit": "28a17fc+dirty",
   "branch": "main",
   "northStar": "daily-driver workflow runs completed without opening VS Code",
   "status": "implementation-ready-for-live-runs",
@@ -11,10 +11,10 @@
       "goal": "A single project can keep the agent conversation primary while exposing editor save and browser preview surfaces.",
       "checks": [
         {
-          "label": "agent-first conversation label",
+          "label": "structured agent conversation surface",
           "file": "app/src/App.tsx",
           "pass": true,
-          "evidence": "Agent conversation with optional raw terminal"
+          "evidence": "aria-label=\"Agent conversation\""
         },
         {
           "label": "real editor save path",
@@ -38,13 +38,13 @@
           "label": "actual app shell at 1440x900",
           "file": "docs/qa/app-shell/first-open-1440.png",
           "pass": true,
-          "bytes": 61269
+          "bytes": 60263
         },
         {
           "label": "actual app shell at 900x640",
           "file": "docs/qa/app-shell/first-open-900.png",
           "pass": true,
-          "bytes": 47112
+          "bytes": 46199
         },
         {
           "label": "native Tauri run with live pty output",
@@ -96,7 +96,7 @@
           "label": "executed packaged multi-chat record",
           "file": "docs/qa/daily-driver/codex-multi-chat.md",
           "pass": true,
-          "bytes": 3204
+          "bytes": 3328
         },
         {
           "label": "packaged multi-chat screenshot",
@@ -148,7 +148,7 @@
           "label": "session restore doc",
           "file": "docs/session-restore.md",
           "pass": true,
-          "bytes": 2402
+          "bytes": 2439
         }
       ],
       "passed": 6,
@@ -159,12 +159,12 @@
   "metrics": {
     "assetSizes": [
       {
-        "file": "app/dist/assets/index-D0qNotY0.css",
-        "bytes": 86707
+        "file": "app/dist/assets/index-DvGyewJl.js",
+        "bytes": 1515818
       },
       {
-        "file": "app/dist/assets/index-eNGzsiBi.js",
-        "bytes": 1222756
+        "file": "app/dist/assets/index-wiCPm4BG.css",
+        "bytes": 108000
       },
       {
         "file": "app/dist/assets/inter-latin-400-normal-C38fXH4l.woff2",
@@ -210,15 +210,15 @@
     "screenshotSizes": [
       {
         "file": "docs/qa/app-shell/first-open-1440.png",
-        "bytes": 61269
+        "bytes": 60263
       },
       {
         "file": "docs/qa/app-shell/first-open-1024.png",
-        "bytes": 49008
+        "bytes": 48135
       },
       {
         "file": "docs/qa/app-shell/first-open-900.png",
-        "bytes": 47112
+        "bytes": 46199
       },
       {
         "file": "docs/qa/app-shell/native-run.png",
@@ -226,19 +226,19 @@
       },
       {
         "file": "docs/qa/editor-parity/selected.png",
-        "bytes": 127889
+        "bytes": 126975
       },
       {
         "file": "docs/qa/editor-parity/narrow-composer.png",
-        "bytes": 83691
+        "bytes": 92261
       },
       {
         "file": "docs/qa/editor-parity/diff-review.png",
-        "bytes": 137959
+        "bytes": 136183
       },
       {
         "file": "docs/qa/editor-parity/chrome-states.png",
-        "bytes": 134160
+        "bytes": 132810
       }
     ]
   },

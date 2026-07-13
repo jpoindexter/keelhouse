@@ -33,4 +33,4 @@ Manual check for this slice:
 4. Quit and relaunch.
 5. Confirm the same project/session, file tabs, browser URL, and pane layout return, with fresh running processes.
 
-This originally verified relaunch of the active session only. Packaged testing on 2026-07-12 found that same-project sessions reused one project-level pane set. The ownership implementation now keys live panes by project + session, but the corrected packaged switch/relaunch sequence still requires execution after macOS is unlocked; see `docs/qa/daily-driver/session-pane-isolation.md`.
+This originally verified relaunch of the active session only. Packaged testing on 2026-07-12 found that same-project sessions reused one project-level pane set. The ownership implementation now keys live panes by project + session. On 2026-07-13, packaged QA executed independent output, switching, process-id checks, and relaunch restoration for two same-project chats; see `docs/qa/daily-driver/session-pane-isolation.md`.

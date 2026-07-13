@@ -1,7 +1,7 @@
 # Daily Driver Metrics
 
-Generated: 2026-07-13T09:37:45.434Z
-Commit: 0edecb3+dirty
+Generated: 2026-07-13T18:40:09.365Z
+Commit: 28a17fc+dirty
 Status: implementation-ready-for-live-runs
 
 ## Scenarios
@@ -11,7 +11,7 @@ Status: implementation-ready-for-live-runs
 Goal: A single project can keep the agent conversation primary while exposing editor save and browser preview surfaces.
 Status: implementation-ready (7/7)
 
-- PASS agent-first conversation label — app/src/App.tsx
+- PASS structured agent conversation surface — app/src/App.tsx
 - PASS real editor save path — app/src/App.tsx
 - PASS composer routes prompts with context — app/src/composerHarness.ts
 - PASS terminal-output dev-server detection — app/src/browserPreview.ts

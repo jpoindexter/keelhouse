@@ -35,7 +35,7 @@ const scenarios = [
     title: "One project: talk, edit, preview",
     goal: "A single project can keep the agent conversation primary while exposing editor save and browser preview surfaces.",
     checks: [
-      sourceContains("app/src/App.tsx", "Agent conversation with optional raw terminal", "agent-first conversation label"),
+      sourceContains("app/src/App.tsx", 'aria-label="Agent conversation"', "structured agent conversation surface"),
       sourceContains("app/src/App.tsx", "write_text_file", "real editor save path"),
       sourceContains("app/src/composerHarness.ts", "composerPromptPayload", "composer routes prompts with context"),
       sourceContains("app/src/browserPreview.ts", "detectLocalDevServerUrl", "terminal-output dev-server detection"),
