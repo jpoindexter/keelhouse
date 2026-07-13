@@ -53,6 +53,8 @@ const MENU_OPEN: &str = "workspace.open";
 const MENU_SAVE: &str = "editor.save";
 const MAX_TREE_ENTRIES: usize = 8_000;
 const MAX_TEXT_FILE_BYTES: u64 = 2 * 1024 * 1024;
+const MAX_CHAT_CONTEXT_BYTES: u64 = 128 * 1024;
+const MAX_CHAT_IMAGE_BYTES: u64 = 10 * 1024 * 1024;
 const MAX_SEARCH_FILE_BYTES: u64 = 512 * 1024;
 const MAX_SEARCH_MATCHES: usize = 200;
 
@@ -349,6 +351,14 @@ struct TextFileResponse {
     content: String,
     bytes: u64,
     modified_ms: Option<u64>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChatImageResponse {
+    path: String,
+    bytes: u64,
+    mime_type: String,
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq, Eq)]
@@ -1307,6 +1317,177 @@ fn read_text_file(root: String, path: String) -> Result<TextFileResponse, String
         bytes,
         modified_ms: modified_ms(&metadata),
     })
+}
+
+fn sensitive_context_filename(path: &Path) -> bool {
+    let name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    name == ".env"
+        || name.starts_with(".env.")
+        || matches!(
+            name.as_str(),
+            "id_rsa" | "id_ed25519" | "credentials" | "credentials.json" | "secrets.json"
+        )
+}
+
+#[tauri::command]
+fn read_chat_context_file(root: String, path: String) -> Result<TextFileResponse, String> {
+    let file_path = validate_workspace_file_path(&root, &path)?;
+    if sensitive_context_filename(&file_path) {
+        return Err(format!(
+            "Sensitive file cannot be attached to chat: {}",
+            file_path.display()
+        ));
+    }
+    let metadata = fs::metadata(&file_path).map_err(|err| {
+        format!(
+            "Could not inspect context file {}: {err}",
+            file_path.display()
+        )
+    })?;
+    let bytes = metadata.len();
+    if bytes > MAX_CHAT_CONTEXT_BYTES {
+        return Err(format!(
+            "File is too large for chat context: {bytes} bytes, limit is {MAX_CHAT_CONTEXT_BYTES} bytes."
+        ));
+    }
+    let raw = fs::read(&file_path)
+        .map_err(|err| format!("Could not read context file {}: {err}", file_path.display()))?;
+    let content = String::from_utf8(raw).map_err(|_| {
+        format!(
+            "Chat context must be valid UTF-8 text: {}",
+            file_path.display()
+        )
+    })?;
+    Ok(TextFileResponse {
+        path: file_path.to_string_lossy().into_owned(),
+        content,
+        bytes,
+        modified_ms: modified_ms(&metadata),
+    })
+}
+
+fn inspect_chat_image_path(path: &Path) -> Result<ChatImageResponse, String> {
+    let file_path =
+        fs::canonicalize(path).map_err(|err| format!("Could not open chat image: {err}"))?;
+    let metadata = fs::metadata(&file_path).map_err(|err| {
+        format!(
+            "Could not inspect chat image {}: {err}",
+            file_path.display()
+        )
+    })?;
+    if !metadata.is_file() {
+        return Err("Chat image must be a file.".into());
+    }
+    if metadata.len() > MAX_CHAT_IMAGE_BYTES {
+        return Err(format!(
+            "Image is too large for chat: {} bytes, limit is {} bytes.",
+            metadata.len(),
+            MAX_CHAT_IMAGE_BYTES
+        ));
+    }
+    let extension = file_path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let mime_type = match extension.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        _ => return Err("Chat images must be PNG, JPEG, WebP, or GIF.".into()),
+    };
+    Ok(ChatImageResponse {
+        path: file_path.to_string_lossy().into_owned(),
+        bytes: metadata.len(),
+        mime_type: mime_type.into(),
+    })
+}
+
+#[tauri::command]
+fn inspect_chat_image(path: String) -> Result<ChatImageResponse, String> {
+    inspect_chat_image_path(Path::new(path.trim()))
+}
+
+fn cache_chat_image_in(directory: &Path, source: &Path) -> Result<ChatImageResponse, String> {
+    let inspected = inspect_chat_image_path(source)?;
+    fs::create_dir_all(directory)
+        .map_err(|err| format!("Could not create the chat image cache: {err}"))?;
+    let directory = fs::canonicalize(directory)
+        .map_err(|err| format!("Could not open the chat image cache: {err}"))?;
+    let source = PathBuf::from(&inspected.path);
+    if source.starts_with(&directory) {
+        return Ok(inspected);
+    }
+
+    let extension = source
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("png");
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let destination = directory.join(format!("attachment-{timestamp}.{extension}"));
+    fs::copy(&source, &destination).map_err(|err| {
+        format!(
+            "Could not copy chat image {} into the app cache: {err}",
+            source.display()
+        )
+    })?;
+    inspect_chat_image_path(&destination)
+}
+
+#[tauri::command]
+fn cache_chat_image(app: AppHandle, path: String) -> Result<ChatImageResponse, String> {
+    let directory = app
+        .path()
+        .app_cache_dir()
+        .map_err(|err| format!("Could not locate the app cache: {err}"))?
+        .join("chat-images");
+    cache_chat_image_in(&directory, Path::new(path.trim()))
+}
+
+#[tauri::command]
+fn save_chat_clipboard_image(
+    app: AppHandle,
+    rgba: Vec<u8>,
+    width: u32,
+    height: u32,
+) -> Result<ChatImageResponse, String> {
+    if width == 0 || height == 0 || width > 8192 || height > 8192 {
+        return Err("Clipboard image dimensions are invalid.".into());
+    }
+    let expected = width as usize * height as usize * 4;
+    if rgba.len() != expected || rgba.len() as u64 > 64 * 1024 * 1024 {
+        return Err("Clipboard image data is invalid or too large.".into());
+    }
+    let directory = app
+        .path()
+        .app_cache_dir()
+        .map_err(|err| format!("Could not locate the app cache: {err}"))?
+        .join("chat-images");
+    fs::create_dir_all(&directory)
+        .map_err(|err| format!("Could not create the chat image cache: {err}"))?;
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let path = directory.join(format!("clipboard-{timestamp}.png"));
+    image::save_buffer_with_format(
+        &path,
+        &rgba,
+        width,
+        height,
+        image::ColorType::Rgba8,
+        image::ImageFormat::Png,
+    )
+    .map_err(|err| format!("Could not encode the clipboard image: {err}"))?;
+    inspect_chat_image_path(&path)
 }
 
 /// Frontend -> filesystem: overwrite an existing UTF-8 text file inside the
@@ -2681,6 +2862,10 @@ pub fn run() {
             search_workspace_text,
             watch_workspace_tree,
             read_text_file,
+            read_chat_context_file,
+            inspect_chat_image,
+            cache_chat_image,
+            save_chat_clipboard_image,
             write_text_file,
             create_workspace_file,
             create_workspace_folder,
@@ -3081,6 +3266,101 @@ mod tests {
             "after\n"
         );
 
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn chat_context_rejects_sensitive_large_binary_and_outside_files() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("keelhouse-context-{suffix}"));
+        fs::create_dir_all(&root).expect("create root");
+        let safe = root.join("README.md");
+        let secret = root.join(".env.local");
+        let large = root.join("large.txt");
+        let binary = root.join("binary.dat");
+        let outside = std::env::temp_dir().join(format!("keelhouse-outside-{suffix}.txt"));
+        fs::write(&safe, "safe context").expect("write safe");
+        fs::write(&secret, "TOKEN=secret").expect("write secret");
+        fs::write(&large, vec![b'a'; (MAX_CHAT_CONTEXT_BYTES + 1) as usize]).expect("write large");
+        fs::write(&binary, [0xff, 0xfe]).expect("write binary");
+        fs::write(&outside, "outside").expect("write outside");
+        let root_s = root.to_string_lossy().into_owned();
+
+        assert_eq!(
+            read_chat_context_file(root_s.clone(), safe.to_string_lossy().into_owned())
+                .expect("safe context")
+                .content,
+            "safe context"
+        );
+        assert!(
+            read_chat_context_file(root_s.clone(), secret.to_string_lossy().into_owned())
+                .unwrap_err()
+                .contains("Sensitive file")
+        );
+        assert!(
+            read_chat_context_file(root_s.clone(), large.to_string_lossy().into_owned())
+                .unwrap_err()
+                .contains("too large")
+        );
+        assert!(
+            read_chat_context_file(root_s.clone(), binary.to_string_lossy().into_owned())
+                .unwrap_err()
+                .contains("UTF-8")
+        );
+        assert!(read_chat_context_file(root_s, outside.to_string_lossy().into_owned()).is_err());
+
+        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_file(outside);
+    }
+
+    #[test]
+    fn chat_image_preflight_accepts_supported_images_and_rejects_other_files() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("keelhouse-image-{suffix}"));
+        fs::create_dir_all(&root).expect("create root");
+        let image = root.join("capture.png");
+        let text = root.join("note.txt");
+        fs::write(&image, [0x89, b'P', b'N', b'G']).expect("write image");
+        fs::write(&text, "not an image").expect("write text");
+
+        let inspected = inspect_chat_image(image.to_string_lossy().into_owned()).expect("image");
+        assert_eq!(inspected.mime_type, "image/png");
+        assert_eq!(inspected.bytes, 4);
+        assert!(inspect_chat_image(text.to_string_lossy().into_owned())
+            .unwrap_err()
+            .contains("PNG, JPEG, WebP, or GIF"));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn chat_image_cache_copies_external_files_once() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("keelhouse-image-cache-{suffix}"));
+        let source_dir = root.join("source");
+        let cache_dir = root.join("cache");
+        fs::create_dir_all(&source_dir).expect("create source");
+        let source = source_dir.join("capture.png");
+        fs::write(&source, [0x89, b'P', b'N', b'G']).expect("write image");
+
+        let cached = cache_chat_image_in(&cache_dir, &source).expect("cache image");
+        let cached_path = PathBuf::from(&cached.path);
+        assert!(cached_path.starts_with(fs::canonicalize(&cache_dir).expect("cache path")));
+        assert_eq!(
+            fs::read(&cached_path).expect("read cached image"),
+            [0x89, b'P', b'N', b'G']
+        );
+
+        let reused = cache_chat_image_in(&cache_dir, &cached_path).expect("reuse cached image");
+        assert_eq!(reused.path, cached.path);
         let _ = fs::remove_dir_all(root);
     }
 

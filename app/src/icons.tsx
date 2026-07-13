@@ -20,7 +20,9 @@ import {
   GitBranch,
   Globe2,
   HardDrive,
+  List,
   LoaderCircle,
+  MoreHorizontal,
   ExternalLink,
   PanelBottom,
   Plus,
@@ -59,6 +61,9 @@ export type AppIconName =
   | "git"
   | "idle"
   | "loading"
+  | "logs"
+  | "menu"
+  | "more"
   | "openExternal"
   | "plus"
   | "reload"
@@ -95,6 +100,9 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   git: GitBranch,
   idle: Circle,
   loading: LoaderCircle,
+  logs: List,
+  menu: List,
+  more: MoreHorizontal,
   openExternal: ExternalLink,
   plus: Plus,
   reload: RotateCw,

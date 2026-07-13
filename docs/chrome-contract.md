@@ -2,7 +2,7 @@
 
 Status: v2 gate prepared and the 2026-07-13 composer/selection correction has refreshed packaged-native evidence. Jason's explicit sign-off remains before the contract is formally locked. Control grammar was added after the boxed-button drift; see `docs/chrome-delta-audit.md` and DECISIONS.md 2026-07-11.
 
-Keelhouse chrome follows the accepted `demo/keelhouse-chrome-demo.html` direction: graphite surfaces, steel-cyan accent, direct project/chat drawer, agent-first center, and editor/browser/git/raw terminal as optional trays. The demo is binding at the control-grammar level, not only tokens.
+Keelhouse chrome follows the accepted `demo/keelhouse-chrome-demo.html` direction: graphite surfaces, steel-cyan accent, direct project/thread drawer, agent-first center, Files/Editor/Browser/Git right dock, and a bottom utility tray for Terminal/Processes/Logs/Browser Preview. The demo is binding at the control-grammar and shell-geometry levels, not only tokens.
 
 ## Control Grammar (v2, normative)
 
@@ -16,7 +16,7 @@ Actives: tabs may use a steel-cyan top/bottom underline with subtle tint; rows u
 
 ## First-Open Layout (v2)
 
-First open shows the demo layout: chats drawer, centered conversation+composer column (`min(56rem, 100% - 64px)`), right dock open on Files with its tab strip, and statusbar. Returning users keep persisted layouts. Trays remain movable/closable; raw terminal replaces the center conversation only while its titlebar icon is active. Codex's observed `48rem` variant was a useful reference, not a transferable requirement: populated native comparison required a wider Keelhouse center with broad `46rem` right-offset user prompts.
+First open shows the demo layout: 332px Threads drawer, centered conversation+composer column (`min(860px, 100% - 56px)`), 430px right dock open on Files, collapsed 42px bottom utility tray, and 24px statusbar. Returning users keep persisted layouts. The right dock remains movable/closable; the bottom tray is vertically resizable and never replaces chat. Codex's observed `48rem` variant was a useful reference, not a transferable requirement.
 
 ## Required Tokens
 
@@ -39,7 +39,7 @@ First open shows the demo layout: chats drawer, centered conversation+composer c
 
 ## Agent Run Surface
 
-- The structured agent chat is the default surface; raw terminal remains an alternate view for direct TUI interaction.
+- Structured agent chat is the persistent primary surface; raw terminal is a bottom-tray escape hatch for direct TUI interaction.
 - Each user prompt starts one visual turn; assistant, tool, status, and error events remain directly beneath that prompt until the next user prompt.
 - Observable prompt, approval, file, command, error, browser, git, and app events appear as inline provenance in the conversation.
 - Keelhouse does not infer structured chat, tool events, or thinking from terminal text. Codex JSON events provide the first explicit adapter; other providers route to raw terminal until their adapters land.
@@ -50,7 +50,7 @@ First open shows the demo layout: chats drawer, centered conversation+composer c
 ## Real App Port Signals
 
 - The side drawer uses mode-aware product nouns. The default Projects mode is `Project chats`, not a generic `Drawer`.
-- The center work surface is labelled as an agent conversation with an optional raw terminal. One persistent titlebar icon switches between them; no in-thread switcher or bottom Terminal tray may duplicate that mode.
+- The center work surface is labelled as an agent conversation and remains mounted while utilities open. The bottom tray exposes Terminal, Processes, Logs, and Browser Preview; its splitter resizes vertically and its tabs collapse back to a 42px strip.
 - First open shows Files in the right dock. Files, Editor, Browser, and Git can be selected from the shared tray tabs; tools can dock left, right, or bottom or be hidden.
 
 ## Control Chrome Signals

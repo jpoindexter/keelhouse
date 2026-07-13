@@ -22,8 +22,7 @@ export function ToolDockMenu({ layout, toolMode, onLayoutChange, onToolModeChang
   return (
     <details className="tool-dock-menu" aria-label="Tools and dock position">
       <summary>
-        <AppIcon name="workspace" />
-        <span>Tools</span>
+        <AppIcon name="more" />
       </summary>
       <div className="tool-dock-menu__popover" role="menu">
         <span className="tool-dock-menu__label">Position</span>

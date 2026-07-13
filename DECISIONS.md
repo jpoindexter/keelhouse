@@ -352,3 +352,13 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 **Verified:** Unit tests execute migration, rollback, stale revision rejection, cascade deletion, concurrent chats, interrupted-run recovery, and malformed usage. A packaged-app run migrated two chats and 29 messages without loss, completed a real resumed Codex turn, persisted 32 messages plus usage, and restored the original and new replies after quit/relaunch. Evidence: `docs/qa/daily-driver/chat-durable-store.md`.
 
 **Reversible?** The storage implementation is replaceable behind the Tauri commands, but the durable schema and migration guarantees are now product contracts.
+
+## 2026-07-13 — Keep chat primary and move raw terminal into the bottom utility tray
+
+**Choice:** Match `demo/keelhouse-chrome-demo.html` structurally: project threads stay left, structured chat plus composer stays visible in the center, Files/Editor/Browser/Git stay in the right dock, and Terminal/Processes/Logs/Browser Preview share a collapsible, resizable bottom utility tray. Opening a terminal must never replace the selected chat.
+
+**Supersedes:** The 2026-07-12 choice that raw terminal replaces chat and the corresponding no-bottom-tray contract. That choice addressed a terminal-backed pseudo-chat; after structured Codex chats shipped, chat and raw PTY became distinct objects and simultaneous visibility stopped being duplication.
+
+**Why:** Native comparison against the approved demo showed the alternate-center model was the remaining source of visual and conceptual disjointedness. A real packaged run now opens a live Codex PTY in the bottom tray while preserving the chat timeline and composer, switches to a real process list, and collapses back to the default 42px tab strip.
+
+**Verified:** `npm run build`, 197 frontend tests, 59 Rust tests, `npm run qa:chrome-contract`, package build, and native Computer Use checks for Terminal open, Processes switch, and collapse. Jason's explicit visual sign-off remains separate.

@@ -1,6 +1,6 @@
 import type { AgentApprovalMode } from "./agentSessionHandle";
 
-export type ComposerAttachmentKind = "file" | "browser" | "screenshot";
+export type ComposerAttachmentKind = "file" | "browser" | "screenshot" | "image";
 export type ComposerReasoningEffort = "default" | "low" | "medium" | "high" | "xhigh";
 
 export type ComposerAttachment = {
@@ -47,7 +47,7 @@ export const normalizeComposerAttachment = (value: unknown): ComposerAttachment 
   if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
   const item = value as Record<string, unknown>;
   const id = typeof item.id === "string" ? item.id.trim() : "";
-  const kind = item.kind === "file" || item.kind === "browser" || item.kind === "screenshot" ? item.kind : null;
+  const kind = item.kind === "file" || item.kind === "browser" || item.kind === "screenshot" || item.kind === "image" ? item.kind : null;
   const label = typeof item.label === "string" ? item.label.trim() : "";
   const target = typeof item.target === "string" ? item.target.trim() : "";
   const createdAt = typeof item.createdAt === "number" && Number.isFinite(item.createdAt) ? item.createdAt : 0;

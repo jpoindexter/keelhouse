@@ -97,7 +97,9 @@ export const useWorkbenchLayout = () => {
   } as CSSProperties;
   const appShellStyle = {
     "--side-drawer-width": `${sideDrawerCollapsed ? 52 : sideDrawerWidth}px`,
-    "--dock-width": `${Math.max(240, (viewportWidth - (sideDrawerCollapsed ? 52 : sideDrawerWidth) - 6) * (workbenchSizing.trayPercent / 100))}px`,
+    "--dock-width": `${workbenchSizing.trayPercent === DEFAULT_WORKBENCH_SIZING.trayPercent
+      ? 430
+      : Math.max(240, (viewportWidth - (sideDrawerCollapsed ? 52 : sideDrawerWidth) - 6) * (workbenchSizing.trayPercent / 100))}px`,
   } as CSSProperties;
 
   const beginSideDrawerResize = (event: ReactPointerEvent<HTMLButtonElement>) => {

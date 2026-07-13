@@ -1,7 +1,8 @@
-import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { readImage, readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { load } from "@tauri-apps/plugin-store";
@@ -99,7 +100,6 @@ import {
 } from "./agentComposer";
 import type { ComposerAppCommand } from "./agentComposer";
 import {
-  composerPromptPayload,
   createComposerAttachment,
   defaultComposerHarnessState,
   normalizeComposerHarnessRecords,
@@ -107,6 +107,7 @@ import {
   upsertComposerAttachment,
 } from "./composerHarness";
 import type { ComposerAttachment, ComposerHarnessRecords, ComposerHarnessState, ComposerReasoningEffort } from "./composerHarness";
+import { prepareChatContext } from "./chatContext";
 import {
   appActionAuditLabel,
   createAppAction,
@@ -257,6 +258,7 @@ type FileTreeNode = {
 type FileTreeResponse = { root: string; nodes: FileTreeNode[]; truncated: boolean };
 type WorkspaceTreeChanged = { root: string; count: number };
 type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
+type ChatImageResponse = { path: string; bytes: number; mimeType: string };
 type FileOpResponse = { path: string };
 type GitStatusResponse = {
   isRepository: boolean;
@@ -286,6 +288,7 @@ type ActiveDiffReview = {
 type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
 type AgentSurfaceMode = "chat" | "terminal";
+type UtilityTrayMode = "terminal" | "processes" | "logs" | "browser";
 type SideDrawerMode = "projects" | "files" | "search" | "git" | "browser" | "settings";
 type DrawerSearchScope = "files" | "text";
 type DetectedLocalDevServer = {
@@ -635,6 +638,11 @@ function App() {
   const [composerError, setComposerError] = useState<string | null>(null);
   const [composerHistory, setComposerHistory] = useState<string[]>([]);
   const [composerHistoryIndex, setComposerHistoryIndex] = useState<number | null>(null);
+  const composerLocalStateRef = useRef<{ key: string | null; draft: string; history: string[] }>({
+    key: null,
+    draft: "",
+    history: [],
+  });
   const [agentActivityEvents, setAgentActivityEvents] = useState<AgentActivityEvent[]>([]);
   const agentActivityFilter: AgentActivityLogFilter = "all";
   const {
@@ -656,20 +664,35 @@ function App() {
     workbenchStyle,
   } = useWorkbenchLayout();
   const [agentSurfaceMode, setAgentSurfaceMode] = useState<AgentSurfaceMode>(readStoredAgentSurfaceMode);
+  const [utilityTrayMode, setUtilityTrayMode] = useState<UtilityTrayMode>("terminal");
+  const [utilityTrayHeight, setUtilityTrayHeight] = useState(260);
   const [sideDrawerMode, setSideDrawerMode] = useState<SideDrawerMode>("projects");
   const resetInterface = () => {
     resetWorkbenchLayout();
     setSideDrawerMode("projects");
     setAgentSurfaceMode("chat");
+    setUtilityTrayMode("terminal");
+    setUtilityTrayHeight(260);
     setSettingsOpen(false);
   };
-  const toggleToolPanel = (mode: ToolTrayMode) => {
-    if (renderedWorkbenchLayout !== "hidden" && toolTrayMode === mode) {
-      setWorkbenchLayout("hidden");
-      return;
-    }
-    setToolTrayMode(mode);
-    setWorkbenchLayout("right");
+  const beginUtilityTrayResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    document.body.classList.add("is-resizing-workbench");
+    const move = (pointerEvent: PointerEvent) => {
+      const rect = workbenchRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setUtilityTrayHeight(Math.round(Math.max(150, Math.min(rect.height * 0.65, rect.bottom - pointerEvent.clientY))));
+    };
+    const stop = () => {
+      document.body.classList.remove("is-resizing-workbench");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
   };
   const [drawerSearchQuery, setDrawerSearchQuery] = useState("");
   const [drawerSearchScope, setDrawerSearchScope] = useState<DrawerSearchScope>("files");
@@ -730,6 +753,11 @@ function App() {
     return filterWorkspaceFiles(searchableFiles, drawerSearchQuery, drawerSearchQuery.trim() ? 80 : 40);
   }, [drawerSearchQuery, searchableFiles]);
   const quickOpenResults = useMemo(() => filterWorkspaceFiles(searchableFiles, quickOpenQuery, 80), [quickOpenQuery, searchableFiles]);
+  const composerMentionQuery = composerDraft.match(/(?:^|\s)@([^\s@]*)$/)?.[1] ?? null;
+  const composerMentionResults = useMemo(
+    () => composerMentionQuery == null ? [] : filterWorkspaceFiles(searchableFiles, composerMentionQuery, 8),
+    [composerMentionQuery, searchableFiles],
+  );
   const activeSessionId = useMemo(
     () => activeProjectSessionId(activeSessionByProject, projectSessions, workspacePath),
     [activeSessionByProject, projectSessions, workspacePath],
@@ -787,13 +815,12 @@ function App() {
   const terminalPaneState = activeTerminalPane?.state ?? "idle";
   const terminalExitCode = activeTerminalPane?.exitCode ?? null;
   const terminalStatusLabel = terminalPaneStateLabel(terminalPaneState, terminalExitCode);
-  const primarySurfaceState: TerminalPaneState = agentSurfaceMode === "chat"
-    ? activeChatConversation.activeRunId ? "starting" : "idle"
-    : terminalPaneState;
-  const primarySurfaceLabel = agentSurfaceMode === "chat" ? "Codex" : activeTerminalProfile.label;
-  const primarySurfaceStatusLabel = agentSurfaceMode === "chat"
-    ? activeChatConversation.activeRunId ? "Working" : "Ready"
-    : terminalStatusLabel;
+  const primarySurfaceState: TerminalPaneState = activeChatConversation.activeRunId ? "starting" : "idle";
+  const primarySurfaceLabel = "Codex";
+  const primarySurfaceStatusLabel = activeChatConversation.activeRunId ? "Working" : "Ready";
+  const utilityTrayStatusLabel = utilityTrayMode === "browser"
+    ? "Browser Preview"
+    : utilityTrayMode.charAt(0).toUpperCase() + utilityTrayMode.slice(1);
   const browserCanGoBack = browserHistoryCanGoBack(browserHistoryIndex);
   const browserCanGoForward = browserHistoryCanGoForward(browserHistory, browserHistoryIndex);
   const activeDetectedLocalDevServer =
@@ -1279,7 +1306,29 @@ function App() {
     await storeRef.current?.save();
   };
 
-  useEffect(() => {
+  const setComposerLocalState = (key: string | null, draft: string, history: string[]) => {
+    composerLocalStateRef.current = { key, draft, history };
+    setComposerDraft(draft);
+    setComposerHistory(history);
+  };
+
+  const flushActiveComposerLocalState = async () => {
+    const local = composerLocalStateRef.current;
+    if (!local.key) return;
+    const previous = composerHarnessBySessionRef.current[local.key] ?? defaultComposerHarnessState(launchProfileRef.current.id);
+    if (previous.draft === local.draft && previous.history === local.history) return;
+    await persistComposerHarnessRecords({
+      ...composerHarnessBySessionRef.current,
+      [local.key]: { ...previous, draft: local.draft, history: local.history },
+    });
+  };
+
+  useLayoutEffect(() => {
+    composerLocalStateRef.current = {
+      key: activeComposerHarnessKey,
+      draft: activeComposerHarness.draft,
+      history: activeComposerHarness.history,
+    };
     setComposerDraft(activeComposerHarness.draft);
     setComposerHistory(activeComposerHarness.history);
     setComposerHistoryIndex(null);
@@ -1287,8 +1336,11 @@ function App() {
 
   useEffect(() => {
     const key = activeComposerHarnessKey;
-    if (!key) return;
+    const local = composerLocalStateRef.current;
+    if (!key || local.key !== key || local.draft !== composerDraft || local.history !== composerHistory) return;
     const timer = window.setTimeout(() => {
+      const current = composerLocalStateRef.current;
+      if (current.key !== key || current.draft !== composerDraft || current.history !== composerHistory) return;
       const previous = composerHarnessBySessionRef.current[key] ?? defaultComposerHarnessState(launchProfileRef.current.id);
       if (previous.draft === composerDraft && previous.history === composerHistory) return;
       void persistComposerHarnessRecords({
@@ -1302,7 +1354,9 @@ function App() {
   const updateActiveComposerHarness = async (updater: (state: ComposerHarnessState) => ComposerHarnessState) => {
     const key = activeComposerHarnessKey;
     if (!key) return null;
-    const previous = composerHarnessBySessionRef.current[key] ?? defaultComposerHarnessState(launchProfileRef.current.id);
+    const stored = composerHarnessBySessionRef.current[key] ?? defaultComposerHarnessState(launchProfileRef.current.id);
+    const local = composerLocalStateRef.current;
+    const previous = local.key === key ? { ...stored, draft: local.draft, history: local.history } : stored;
     const nextState = updater(previous);
     const next = { ...composerHarnessBySessionRef.current, [key]: nextState };
     await persistComposerHarnessRecords(next);
@@ -1638,6 +1692,7 @@ function App() {
     options: { captureCurrentSession?: boolean } = {},
   ) => {
     const previousRoot = workspacePathRef.current;
+    await flushActiveComposerLocalState();
     if (options.captureCurrentSession !== false) captureCurrentSessionSnapshot();
     const store = storeRef.current;
     const profile = profileOverride;
@@ -1879,6 +1934,7 @@ function App() {
     const currentRoot = workspacePathRef.current;
     const sameProject = currentRoot === projectPath;
     const now = Date.now();
+    await flushActiveComposerLocalState();
     captureCurrentSessionSnapshot();
     let nextSessions = projectSessionsRef.current;
     let nextActiveSessions = setActiveProjectSession(activeSessionByProjectRef.current, projectPath, sessionId);
@@ -2220,7 +2276,15 @@ function App() {
           setComposerError("Create or select a chat before sending.");
           return;
         }
-        const payload = composerPromptPayload(route.text, activeComposerHarness);
+        const preparedContext = await prepareChatContext(route.text, activeComposerHarness, {
+          readFile: (attachment) => invoke<TextFileResponse>("read_chat_context_file", {
+            root: workspacePathRef.current,
+            path: attachment.target,
+          }),
+          inspectImage: (attachment) => invoke<ChatImageResponse>("inspect_chat_image", {
+            path: attachment.target,
+          }),
+        });
         const previousConversation = chatConversationsRef.current[chatId] ?? emptyChatConversation();
         const runId = `chat-run-${crypto.randomUUID()}`;
         updateChatConversation(chatId, (conversation) =>
@@ -2244,7 +2308,8 @@ function App() {
             projectPath: workspacePathRef.current,
             provider: "codex",
             providerThreadId: previousConversation.providerThreadId ?? null,
-            prompt: payload,
+            prompt: preparedContext.prompt,
+            images: preparedContext.images,
             approvalMode: activeComposerHarness.approvalMode,
             model: activeComposerHarness.model.trim() || null,
             reasoningEffort: activeComposerHarness.reasoningEffort === "default" ? null : activeComposerHarness.reasoningEffort,
@@ -2269,9 +2334,8 @@ function App() {
         });
       }
       const nextHistory = composerHistoryAfterSubmit(composerHistory, submittedDraft);
-      setComposerHistory(nextHistory);
+      setComposerLocalState(activeComposerHarnessKey, "", nextHistory);
       setComposerHistoryIndex(null);
-      setComposerDraft("");
       void updateActiveComposerHarness((state) => ({ ...state, draft: "", history: nextHistory }));
     } catch (err) {
       setComposerError(String(err));
@@ -2321,13 +2385,13 @@ function App() {
     const nextIndex = previousComposerHistoryIndex(composerHistory, composerHistoryIndex);
     if (nextIndex == null) return;
     setComposerHistoryIndex(nextIndex);
-    setComposerDraft(composerHistoryAt(composerHistory, nextIndex));
+    setComposerLocalState(activeComposerHarnessKey, composerHistoryAt(composerHistory, nextIndex), composerHistory);
   };
 
   const showNextComposerHistory = () => {
     const nextIndex = nextComposerHistoryIndex(composerHistory, composerHistoryIndex);
     setComposerHistoryIndex(nextIndex);
-    setComposerDraft(nextIndex == null ? "" : composerHistoryAt(composerHistory, nextIndex));
+    setComposerLocalState(activeComposerHarnessKey, nextIndex == null ? "" : composerHistoryAt(composerHistory, nextIndex), composerHistory);
   };
 
   const switchLaunchProfile = async (profile: LaunchProfile) => {
@@ -2378,17 +2442,24 @@ function App() {
     logComposerHarnessEvent("Attachment added", attachment.label);
   };
 
-  const attachSelectedFileToComposer = async () => {
-    if (!selectedFile) {
+  const attachWorkspaceFileToComposer = async (file: Pick<FileTreeNode, "name" | "path"> | null) => {
+    if (!file) {
       setComposerError("Open a file before attaching the current file.");
       return;
     }
-    await addComposerAttachment(createComposerAttachment({
-      kind: "file",
-      label: selectedFile.name,
-      target: selectedFile.path,
-    }));
+    try {
+      await invoke("read_chat_context_file", { root: workspacePathRef.current, path: file.path });
+      await addComposerAttachment(createComposerAttachment({
+        kind: "file",
+        label: file.name,
+        target: file.path,
+      }));
+    } catch (err) {
+      setComposerError(String(err));
+    }
   };
+
+  const attachSelectedFileToComposer = async () => attachWorkspaceFileToComposer(selectedFile);
 
   const attachPreviewToComposer = async () => {
     await addComposerAttachment(createComposerAttachment({
@@ -2402,11 +2473,74 @@ function App() {
     const picked = await open({ multiple: true });
     const paths = Array.isArray(picked) ? picked : typeof picked === "string" ? [picked] : [];
     for (const path of paths.slice(0, 6)) {
-      await addComposerAttachment(createComposerAttachment({
-        kind: "file",
-        label: basename(path),
-        target: path,
-      }));
+      try {
+        if (/\.(png|jpe?g|webp|gif)$/i.test(path)) {
+          await attachImagePathToComposer(path);
+        } else {
+          await invoke("read_chat_context_file", { root: workspacePathRef.current, path });
+          await addComposerAttachment(createComposerAttachment({
+            kind: "file",
+            label: basename(path),
+            target: path,
+          }));
+        }
+      } catch (err) {
+        setComposerError(String(err));
+      }
+    }
+  };
+
+  const attachImagePathToComposer = async (path: string) => {
+    try {
+      const image = await invoke<ChatImageResponse>("cache_chat_image", { path });
+      await addComposerAttachment(createComposerAttachment({ kind: "image", label: basename(image.path), target: image.path }));
+      setComposerError(null);
+    } catch (err) {
+      setComposerError(String(err));
+    }
+  };
+
+  useEffect(() => {
+    let disposed = false;
+    let remove: (() => void) | null = null;
+    void getCurrentWebview().onDragDropEvent((event) => {
+      if (disposed || event.payload.type !== "drop" || agentSurfaceMode !== "chat") return;
+      for (const path of event.payload.paths.slice(0, 6)) {
+        if (/\.(png|jpe?g|webp|gif)$/i.test(path)) void attachImagePathToComposer(path);
+      }
+    }).then((unlisten) => { if (disposed) unlisten(); else remove = unlisten; });
+    return () => { disposed = true; remove?.(); };
+  }, [agentSurfaceMode, activeComposerHarnessKey]);
+
+  const pasteComposerImage = async () => {
+    try {
+      const image = await readImage();
+      const [{ width, height }, rgba] = await Promise.all([image.size(), image.rgba()]);
+      const saved = await invoke<ChatImageResponse>("save_chat_clipboard_image", {
+        rgba: Array.from(rgba),
+        width,
+        height,
+      });
+      await addComposerAttachment(createComposerAttachment({ kind: "image", label: basename(saved.path), target: saved.path }));
+      setComposerError(null);
+    } catch (err) {
+      setComposerError(`Could not attach clipboard image: ${String(err)}`);
+    }
+  };
+
+  const reviewComposerContext = async () => {
+    try {
+      const prepared = await prepareChatContext(composerDraft || "[No draft text]", activeComposerHarness, {
+        readFile: (attachment) => invoke<TextFileResponse>("read_chat_context_file", {
+          root: workspacePathRef.current,
+          path: attachment.target,
+        }),
+        inspectImage: (attachment) => invoke<ChatImageResponse>("inspect_chat_image", { path: attachment.target }),
+      });
+      setComposerNotice(prepared.preview);
+      setComposerError(null);
+    } catch (err) {
+      setComposerError(String(err));
     }
   };
 
@@ -2515,7 +2649,7 @@ function App() {
   };
 
   const toggleRawTerminal = async () => {
-    if (agentSurfaceMode === "terminal") {
+    if (agentSurfaceMode === "terminal" && utilityTrayMode === "terminal") {
       setAgentSurfaceMode("chat");
       return;
     }
@@ -2523,6 +2657,20 @@ function App() {
     const sessionId = activeSessionForProject(root);
     const hasTerminal = Boolean(root && sessionId && terminalPanesForSession(root, sessionId).length > 0);
     if (!hasTerminal && !await createTerminalPane(launchProfileRef.current)) return;
+    setUtilityTrayMode("terminal");
+    setAgentSurfaceMode("terminal");
+  };
+
+  const openUtilityTray = async (mode: UtilityTrayMode) => {
+    if (agentSurfaceMode === "terminal" && utilityTrayMode === mode) {
+      setAgentSurfaceMode("chat");
+      return;
+    }
+    if (mode === "terminal") {
+      await toggleRawTerminal();
+      return;
+    }
+    setUtilityTrayMode(mode);
     setAgentSurfaceMode("terminal");
   };
 
@@ -3487,7 +3635,7 @@ function App() {
       shortcut: shortcutKeys("composer.send"),
       disabled: composerSending || !composerDraft.trim(),
     }),
-    menuItem("composer.clear", "Clear Draft", () => setComposerDraft(""), { icon: "close", disabled: !composerDraft }),
+    menuItem("composer.clear", "Clear Draft", () => setComposerLocalState(activeComposerHarnessKey, "", composerHistory), { icon: "close", disabled: !composerDraft }),
     menuItem("composer.attach-file", "Attach Local File", () => void attachLocalFileToComposer(), { icon: "filePlus" }),
     menuItem("composer.attach-current", "Attach Current File", () => void attachSelectedFileToComposer(), {
       icon: "file",
@@ -4383,9 +4531,9 @@ function App() {
     <div className={`app-shell ${sideDrawerCollapsed ? "app-shell--side-drawer-collapsed" : ""}`} style={appShellStyle}>
       <header className="app-titlebar" aria-label="Application chrome" data-tauri-drag-region>
         <div className="titlebar-identity">
-          <button className="titlebar-search" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Search chats and commands") }>
+          <button className="titlebar-search" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Search threads and commands") }>
             <AppIcon name="search" />
-            <span>Search chats…</span>
+            <span>Search threads…</span>
           </button>
         </div>
         <div className="titlebar-splitter" aria-hidden="true" />
@@ -4398,38 +4546,28 @@ function App() {
         <div className="titlebar-splitter" aria-hidden="true" />
         <div className="titlebar-actions">
           <div className="titlebar-panel-toggles" aria-label="Toggle panels">
-            <button className={`titlebar-action ${renderedWorkbenchLayout !== "hidden" && toolTrayMode === "files" ? "titlebar-action--active" : ""}`} type="button" title="Toggle Files" aria-label="Toggle Files" aria-pressed={renderedWorkbenchLayout !== "hidden" && toolTrayMode === "files"} onClick={() => toggleToolPanel("files")}>
-              <AppIcon name="folder" />
+            <button className={`titlebar-action ${!sideDrawerCollapsed ? "titlebar-action--active" : ""}`} type="button" title="Toggle Threads" aria-label="Toggle Threads" aria-pressed={!sideDrawerCollapsed} onClick={() => setSideDrawerCollapsed((collapsed) => !collapsed)}>
+              <AppIcon name="menu" />
             </button>
-            <button className={`titlebar-action ${renderedWorkbenchLayout !== "hidden" && toolTrayMode === "editor" ? "titlebar-action--active" : ""}`} type="button" title="Toggle Editor" aria-label="Toggle Editor" aria-pressed={renderedWorkbenchLayout !== "hidden" && toolTrayMode === "editor"} onClick={() => toggleToolPanel("editor")}>
-              <AppIcon name="file" />
+            <button className="titlebar-action" type="button" title="New thread" aria-label="New thread" disabled={!workspacePath} onClick={() => workspacePath && void createProjectSession(workspacePath)}>
+              <AppIcon name="plus" />
             </button>
-            <button className={`titlebar-action ${renderedWorkbenchLayout !== "hidden" && toolTrayMode === "browser" ? "titlebar-action--active" : ""}`} type="button" title="Toggle Browser" aria-label="Toggle Browser" aria-pressed={renderedWorkbenchLayout !== "hidden" && toolTrayMode === "browser"} onClick={() => toggleToolPanel("browser")}>
-              <AppIcon name="browser" />
-            </button>
-            <button className={`titlebar-action ${renderedWorkbenchLayout !== "hidden" && toolTrayMode === "git" ? "titlebar-action--active" : ""}`} type="button" title="Toggle Git" aria-label="Toggle Git" aria-pressed={renderedWorkbenchLayout !== "hidden" && toolTrayMode === "git"} onClick={() => toggleToolPanel("git")}>
-              <AppIcon name="git" />
-            </button>
-            <button
-              className={`titlebar-action ${agentSurfaceMode === "terminal" ? "titlebar-action--active" : ""}`}
-              type="button"
-              title={agentSurfaceMode === "terminal" ? "Return to agent chat" : "Open raw terminal"}
-              aria-label={agentSurfaceMode === "terminal" ? "Return to agent chat" : "Open raw terminal"}
-              aria-pressed={agentSurfaceMode === "terminal"}
-              onClick={() => void toggleRawTerminal()}
-            >
-              <AppIcon name="terminal" />
+            <button className="titlebar-action" type="button" title="Open externally" aria-label="Open workspace externally" disabled={!workspacePath} onClick={() => workspacePath && void openPath(workspacePath)}>
+              <AppIcon name="openExternal" />
             </button>
           </div>
           <span className={`titlebar-pill titlebar-pill--${primarySurfaceState}`} title={`${primarySurfaceLabel} · ${primarySurfaceStatusLabel}`}>
             <AppIcon name={paneStateIconName(primarySurfaceState)} />
             <span>{primarySurfaceLabel}</span>
           </span>
+          <button className="titlebar-action" type="button" title="More" aria-label="Open settings and more" onClick={() => setSettingsOpen(true)}>
+            <AppIcon name="more" />
+          </button>
         </div>
       </header>
-      <aside className={`file-rail ${sideDrawerCollapsed ? "file-rail--collapsed" : ""}`} aria-label={`${drawerActiveTitle} drawer`}>
+      <aside className={`file-rail ${sideDrawerCollapsed ? "file-rail--collapsed" : ""}`} aria-label={`${sideDrawerMode === "projects" ? "Project threads" : drawerActiveTitle} drawer`}>
         <div className="drawer-toolbar">
-          <span>{sideDrawerMode === "projects" ? "Chats" : drawerActiveTitle}</span>
+          <span>{sideDrawerMode === "projects" ? "Threads" : drawerActiveTitle}</span>
           {sideDrawerMode === "projects" ? (
             <button
               className="drawer-collapse-button"
@@ -4880,15 +5018,15 @@ function App() {
               </select>
             </label>
             <label className="drawer-field">
-              <span>Agent surface</span>
+              <span>Bottom tray</span>
               <select
                 value={agentSurfaceMode}
                 onChange={(event) => event.currentTarget.value === "terminal"
                   ? void toggleRawTerminal()
                   : setAgentSurfaceMode("chat")}
               >
-                <option value="chat">Conversation</option>
-                <option value="terminal">Raw terminal</option>
+                <option value="chat">Collapsed</option>
+                <option value="terminal">Terminal open</option>
               </select>
             </label>
             <label className="drawer-field">
@@ -4976,7 +5114,11 @@ function App() {
         />
       ) : null}
 
-      <main ref={workbenchRef} className={`workbench workbench--drawer-${renderedWorkbenchLayout} workbench--tools-${toolTrayMode}`} style={workbenchStyle}>
+      <main
+        ref={workbenchRef}
+        className={`workbench workbench--drawer-${renderedWorkbenchLayout} workbench--tools-${toolTrayMode} ${agentSurfaceMode === "terminal" ? "workbench--utility-open" : ""}`}
+        style={{ ...workbenchStyle, "--utility-tray-height": `${agentSurfaceMode === "terminal" ? utilityTrayHeight : 42}px` } as CSSProperties}
+      >
         {renderedWorkbenchLayout !== "hidden" ? (
           <ToolTrayTabs
             mode={toolTrayMode}
@@ -5447,7 +5589,7 @@ function App() {
           </div>
         </section>
 
-        <section className={`terminal-panel terminal-panel--${agentSurfaceMode}`} aria-label="Agent conversation with optional raw terminal">
+        <section className={`terminal-panel terminal-panel--${agentSurfaceMode}`} aria-label="Agent conversation">
           <div className="terminal-titlebar">
             <div className="terminal-profile">
               <span className="terminal-kicker">Thread</span>
@@ -5485,173 +5627,19 @@ function App() {
                 onLayoutChange={setWorkbenchLayout}
                 onToolModeChange={setToolTrayMode}
               />
-              <div className="terminal-pane-strip" aria-label="Terminal panes">
-                {terminalPanes.map((pane, index) => {
-                  const label = terminalPaneLabel(pane, index);
-                  return (
-                    <button
-                      key={pane.id}
-                      className={`terminal-pane-button ${pane.id === activeTerminalPaneId ? "terminal-pane-button--active" : ""}`}
-                      type="button"
-                      title={`${label} - ${terminalPaneStateLabel(pane.state, pane.exitCode)}. Double-click to rename.`}
-                      aria-label={`Focus ${label}. Double-click to rename.`}
-                      aria-pressed={pane.id === activeTerminalPaneId}
-                      onClick={() => void focusTerminalPane(pane.id)}
-                      onDoubleClick={() => void renameTerminalPane(pane)}
-                    >
-                      <AppIcon name={paneStateIconName(pane.state)} />
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <label className="terminal-profile-picker">
-                <span className="terminal-profile-picker__label">New pane</span>
-                <select
-                  aria-label="New pane profile"
-                  value={launchProfile.id}
-                  disabled={launchProfileChanging}
-                  onChange={(event) => void switchLaunchProfile(launchProfileById(event.currentTarget.value))}
-                >
-                  {LAUNCH_PROFILES.map((profile) => (
-                    <option key={profile.id} value={profile.id}>
-                      {profile.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                className="terminal-new-pane"
-                type="button"
-                title={`New ${launchProfile.label} pane`}
-                disabled={!workspacePath || launchProfileChanging}
-                onClick={() => void createTerminalPane(launchProfile)}
-              >
-                <AppIcon name="terminal" />
-                <span>New</span>
-              </button>
-              <button
-                className="terminal-new-pane"
-                type="button"
-                title="Find in terminal scrollback"
-                disabled={!activeTerminalPane}
-                onClick={() => setTerminalFindOpen((open) => !open)}
-              >
-                <AppIcon name="search" />
-                <span>Find</span>
-              </button>
-              <button
-                className="terminal-new-pane"
-                type="button"
-                title="Restart selected process"
-                disabled={!activeTerminalPane || launchProfileChanging}
-                onClick={() => void restartTerminalPane(activeTerminalPane)}
-              >
-                <AppIcon name="reload" />
-                <span>Restart</span>
-              </button>
-              <button
-                className="terminal-new-pane terminal-new-pane--danger"
-                type="button"
-                title="Kill selected process and keep the pane visible"
-                disabled={!activeTerminalPane || activeTerminalPane.state === "exited"}
-                onClick={() => void terminateTerminalPane(activeTerminalPane)}
-              >
-                <AppIcon name="stop" />
-                <span>Kill</span>
-              </button>
-              <button
-                className="terminal-new-pane terminal-new-pane--danger"
-                type="button"
-                title="Close selected pane"
-                disabled={!activeAgentSessionHandle}
-                onClick={() => activeAgentSessionHandle && void activeAgentSessionHandle.close()}
-              >
-                <AppIcon name="stop" />
-                <span>Close</span>
-              </button>
             </div>
           </div>
-          {terminalFindOpen ? (
-            <div className="terminal-find" role="search" aria-label="Find in terminal scrollback">
-              <AppIcon name="search" />
-              <input
-                value={terminalFindQuery}
-                placeholder="Find in scrollback"
-                aria-label="Terminal search query"
-                disabled={terminalFindBusy}
-                onChange={(event) => setTerminalFindQuery(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && event.shiftKey) {
-                    event.preventDefault();
-                    stepTerminalFind(-1);
-                  } else if (event.key === "Enter") {
-                    event.preventDefault();
-                    if (terminalFindQuery.trim() === terminalFindLastQuery && terminalFindHits.length > 0) {
-                      stepTerminalFind(1);
-                    } else {
-                      void runTerminalFind();
-                    }
-                  } else if (event.key === "Escape") {
-                    event.preventDefault();
-                    closeTerminalFind();
-                  }
-                }}
-              />
-              <span className="terminal-find__count">
-                {terminalFindError ?? terminalFindCountLabel(terminalFindIndex, terminalFindHits.length)}
-              </span>
-              <button className="terminal-new-pane" type="button" aria-label="Previous match" title="Previous match" disabled={terminalFindHits.length === 0} onClick={() => stepTerminalFind(-1)}>
-                <AppIcon name="chevronUp" />
-              </button>
-              <button className="terminal-new-pane" type="button" aria-label="Next match" title="Next match" disabled={terminalFindHits.length === 0} onClick={() => stepTerminalFind(1)}>
-                <AppIcon name="chevronDown" />
-              </button>
-              {terminalFindIndex != null && terminalFindHits[terminalFindIndex] ? (
-                <span className="terminal-find__preview" title={terminalFindHits[terminalFindIndex].text}>
-                  {terminalFindHitLabel(terminalFindHits[terminalFindIndex])}
-                </span>
-              ) : null}
-              <button className="terminal-new-pane" type="button" aria-label="Close terminal find" title="Close" onClick={closeTerminalFind}>
-                <AppIcon name="close" />
-              </button>
-            </div>
-          ) : null}
           <div className={`agent-surface agent-surface--${agentSurfaceMode}`}>
-            <div
-              ref={terminalHostRef}
-              className={`terminal-host ${agentSurfaceMode === "terminal" ? "terminal-host--active" : "terminal-host--background"}`}
-              onPointerDown={() => imeInputRef.current?.focus()}
-              onContextMenu={(event) => openContextMenu(event, terminalContextMenuItems())}
-            >
-              <canvas ref={canvasRef} className="term" aria-hidden="true" />
-              <textarea
-                ref={imeInputRef}
-                className="terminal-ime-input"
-                tabIndex={0}
-                role="application"
-                aria-label={`${activeTerminalProfile.label} terminal pane. Type to send keyboard input to the active process.`}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                onCompositionEnd={(event) => {
-                  const text = event.data;
-                  event.currentTarget.value = "";
-                  if (text) invoke("paste", { text }).catch(() => {});
-                }}
-              />
-            </div>
             <ChatThreadSurface
               conversation={activeChatConversation}
               events={selectedAgentActivityLog}
-              hidden={agentSurfaceMode !== "chat"}
-              onSuggestion={setComposerDraft}
+              hidden={false}
+              onSuggestion={(draft) => setComposerLocalState(activeComposerHarnessKey, draft, composerHistory)}
               onRetry={(prompt) => void submitComposerDraft(prompt)}
               onApprovalDecision={(message, decision) => void resolveChatApproval(message, decision)}
             />
           </div>
-          <div className="agent-composer" aria-label="Agent composer" hidden={agentSurfaceMode !== "chat"} onContextMenu={(event) => openContextMenu(event, composerContextMenuItems())}>
+          <div className="agent-composer" aria-label="Agent composer" onContextMenu={(event) => openContextMenu(event, composerContextMenuItems())}>
             <div className="agent-composer__card">
               <textarea
                 className="agent-composer__input"
@@ -5661,8 +5649,14 @@ function App() {
                 placeholder="Ask Keelhouse to run agents, open files, inspect git, or use the browser..."
                 disabled={composerSending}
                 onChange={(event) => {
-                  setComposerDraft(event.currentTarget.value);
+                  setComposerLocalState(activeComposerHarnessKey, event.currentTarget.value, composerHistory);
                   setComposerHistoryIndex(null);
+                }}
+                onPaste={(event) => {
+                  if ([...event.clipboardData.types].some((type) => type.startsWith("image/"))) {
+                    event.preventDefault();
+                    void pasteComposerImage();
+                  }
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
@@ -5679,6 +5673,25 @@ function App() {
                   }
                 }}
               />
+              {composerMentionQuery != null && composerMentionResults.length > 0 ? (
+                <div className="agent-composer__mentions" role="listbox" aria-label="Attach workspace file">
+                  {composerMentionResults.map((file) => (
+                    <button
+                      key={file.path}
+                      type="button"
+                      role="option"
+                      onClick={() => {
+                        setComposerLocalState(activeComposerHarnessKey, composerDraft.replace(/@[^\s@]*$/, ""), composerHistory);
+                        void attachWorkspaceFileToComposer(file);
+                      }}
+                    >
+                      <AppIcon name="file" />
+                      <span>{file.name}</span>
+                      <small>{file.path}</small>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <div className="agent-composer__bar">
                 <div className="agent-composer__attachments" aria-label="Composer context">
                   <button
@@ -5747,6 +5760,7 @@ function App() {
                   <div className="agent-composer__attachment-list">
                     {activeComposerHarness.attachments.map((attachment) => (
                       <span className="agent-composer__attachment" key={attachment.id} title={attachment.target}>
+                        {attachment.kind === "image" ? <img src={convertFileSrc(attachment.target)} alt="" /> : null}
                         <span>{attachment.label}</span>
                         <button
                           type="button"
@@ -5758,6 +5772,12 @@ function App() {
                       </span>
                     ))}
                   </div>
+                  {activeComposerHarness.attachments.length > 0 || activeComposerHarness.goal ? (
+                    <button className="agent-composer__control" type="button" onClick={() => void reviewComposerContext()}>
+                      <AppIcon name="search" />
+                      <span>Review context</span>
+                    </button>
+                  ) : null}
                 </div>
                 <div className="agent-composer__actions">
                   <details className="agent-composer__menu agent-composer__menu--runtime">
@@ -5834,6 +5854,162 @@ function App() {
                 </button>
               </div>
             ) : null}
+          </div>
+        </section>
+        <button
+          className="utility-tray-resizer"
+          type="button"
+          aria-label="Resize bottom utility tray"
+          title="Resize bottom utility tray"
+          onPointerDown={(event) => {
+            setAgentSurfaceMode("terminal");
+            beginUtilityTrayResize(event);
+          }}
+        />
+        <section className={`utility-tray ${agentSurfaceMode === "terminal" ? "utility-tray--open" : "utility-tray--collapsed"}`} aria-label="Bottom utility tray">
+          <nav className="utility-tray__tabs" aria-label="Utility tray surfaces">
+            {([
+              ["terminal", "terminal", "Terminal"],
+              ["processes", "waiting", "Processes"],
+              ["logs", "logs", "Logs"],
+              ["browser", "browser", "Browser Preview"],
+            ] as const).map(([mode, icon, label]) => (
+              <button
+                className={`utility-tray__tab ${utilityTrayMode === mode ? "utility-tray__tab--active" : ""}`}
+                type="button"
+                aria-pressed={agentSurfaceMode === "terminal" && utilityTrayMode === mode}
+                key={mode}
+                onClick={() => void openUtilityTray(mode)}
+              >
+                <AppIcon name={icon} />
+                <span>{label}</span>
+              </button>
+            ))}
+            <span className="utility-tray__spacer" />
+            <button className="utility-tray__icon" type="button" title="Collapse tray" aria-label="Collapse utility tray" onClick={() => setAgentSurfaceMode("chat")}>
+              <AppIcon name="chevronDown" />
+            </button>
+            <button className="utility-tray__icon" type="button" title="Close tray" aria-label="Close utility tray" onClick={() => setAgentSurfaceMode("chat")}>
+              <AppIcon name="close" />
+            </button>
+          </nav>
+          <div className={`utility-tray__body utility-tray__body--${utilityTrayMode}`}>
+            <div className="utility-tray__terminal-controls">
+              <div className="terminal-pane-strip" aria-label="Terminal panes">
+                {terminalPanes.map((pane, index) => {
+                  const label = terminalPaneLabel(pane, index);
+                  return (
+                    <button
+                      key={pane.id}
+                      className={`terminal-pane-button ${pane.id === activeTerminalPaneId ? "terminal-pane-button--active" : ""}`}
+                      type="button"
+                      title={`${label} - ${terminalPaneStateLabel(pane.state, pane.exitCode)}. Double-click to rename.`}
+                      aria-label={`Focus ${label}. Double-click to rename.`}
+                      aria-pressed={pane.id === activeTerminalPaneId}
+                      onClick={() => void focusTerminalPane(pane.id)}
+                      onDoubleClick={() => void renameTerminalPane(pane)}
+                    >
+                      <AppIcon name={paneStateIconName(pane.state)} />
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="utility-tray__spacer" />
+              <label className="terminal-profile-picker">
+                <span className="terminal-profile-picker__label">New pane</span>
+                <select aria-label="New pane profile" value={launchProfile.id} disabled={launchProfileChanging} onChange={(event) => void switchLaunchProfile(launchProfileById(event.currentTarget.value))}>
+                  {LAUNCH_PROFILES.map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
+                </select>
+              </label>
+              <button className="terminal-new-pane" type="button" title={`New ${launchProfile.label} pane`} disabled={!workspacePath || launchProfileChanging} onClick={() => void createTerminalPane(launchProfile)}>
+                <AppIcon name="plus" /><span>New</span>
+              </button>
+              <button className="terminal-new-pane" type="button" title="Find in terminal scrollback" disabled={!activeTerminalPane} onClick={() => setTerminalFindOpen((open) => !open)}>
+                <AppIcon name="search" /><span>Find</span>
+              </button>
+              <button className="terminal-new-pane" type="button" title="Restart selected process" disabled={!activeTerminalPane || launchProfileChanging} onClick={() => void restartTerminalPane(activeTerminalPane)}>
+                <AppIcon name="reload" /><span>Restart</span>
+              </button>
+              <button className="terminal-new-pane terminal-new-pane--danger" type="button" title="Kill selected process" disabled={!activeTerminalPane || activeTerminalPane.state === "exited"} onClick={() => void terminateTerminalPane(activeTerminalPane)}>
+                <AppIcon name="stop" /><span>Kill</span>
+              </button>
+              <button className="terminal-new-pane terminal-new-pane--danger" type="button" title="Close selected pane" disabled={!activeAgentSessionHandle} onClick={() => activeAgentSessionHandle && void activeAgentSessionHandle.close()}>
+                <AppIcon name="close" /><span>Close</span>
+              </button>
+            </div>
+            {terminalFindOpen ? (
+              <div className="terminal-find" role="search" aria-label="Find in terminal scrollback">
+                <AppIcon name="search" />
+                <input
+                  value={terminalFindQuery}
+                  placeholder="Find in scrollback"
+                  aria-label="Terminal search query"
+                  disabled={terminalFindBusy}
+                  onChange={(event) => setTerminalFindQuery(event.currentTarget.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && event.shiftKey) {
+                      event.preventDefault();
+                      stepTerminalFind(-1);
+                    } else if (event.key === "Enter") {
+                      event.preventDefault();
+                      if (terminalFindQuery.trim() === terminalFindLastQuery && terminalFindHits.length > 0) stepTerminalFind(1);
+                      else void runTerminalFind();
+                    } else if (event.key === "Escape") {
+                      event.preventDefault();
+                      closeTerminalFind();
+                    }
+                  }}
+                />
+                <span className="terminal-find__count">{terminalFindError ?? terminalFindCountLabel(terminalFindIndex, terminalFindHits.length)}</span>
+                <button className="terminal-new-pane" type="button" aria-label="Previous match" title="Previous match" disabled={terminalFindHits.length === 0} onClick={() => stepTerminalFind(-1)}><AppIcon name="chevronUp" /></button>
+                <button className="terminal-new-pane" type="button" aria-label="Next match" title="Next match" disabled={terminalFindHits.length === 0} onClick={() => stepTerminalFind(1)}><AppIcon name="chevronDown" /></button>
+                {terminalFindIndex != null && terminalFindHits[terminalFindIndex] ? <span className="terminal-find__preview" title={terminalFindHits[terminalFindIndex].text}>{terminalFindHitLabel(terminalFindHits[terminalFindIndex])}</span> : null}
+                <button className="terminal-new-pane" type="button" aria-label="Close terminal find" title="Close" onClick={closeTerminalFind}><AppIcon name="close" /></button>
+              </div>
+            ) : null}
+            <div ref={terminalHostRef} className="terminal-host utility-tray__terminal" onPointerDown={() => imeInputRef.current?.focus()} onContextMenu={(event) => openContextMenu(event, terminalContextMenuItems())}>
+              <canvas ref={canvasRef} className="term" aria-hidden="true" />
+              <textarea
+                ref={imeInputRef}
+                className="terminal-ime-input"
+                tabIndex={0}
+                role="application"
+                aria-label={`${activeTerminalProfile.label} terminal pane. Type to send keyboard input to the active process.`}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                onCompositionEnd={(event) => {
+                  const text = event.data;
+                  event.currentTarget.value = "";
+                  if (text) invoke("paste", { text }).catch(() => {});
+                }}
+              />
+            </div>
+            <div className="utility-tray__processes" aria-label="Processes">
+              {terminalPanes.length === 0 ? <div className="utility-tray__empty">No processes in this chat.</div> : terminalPanes.map((pane, index) => (
+                <button type="button" key={pane.id} onClick={() => void focusTerminalPane(pane.id)}>
+                  <AppIcon name={paneStateIconName(pane.state)} />
+                  <span>{terminalPaneLabel(pane, index)}</span>
+                  <small>{pane.profile.label}</small>
+                  <span>{terminalPaneStateLabel(pane.state, pane.exitCode)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="utility-tray__logs" aria-label="Agent logs">
+              {selectedAgentActivityLog.length === 0 ? <div className="utility-tray__empty">No activity logged for this chat.</div> : selectedAgentActivityLog.map((event) => (
+                <div className="utility-tray__log-row" key={event.id}>
+                  <span>{new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  <strong>{event.label}</strong>
+                  <span>{event.detail ?? event.target ?? event.kind}</span>
+                  <small>{event.status}</small>
+                </div>
+              ))}
+            </div>
+            <div className="utility-tray__browser" aria-label="Browser preview tray">
+              <iframe key={`tray-${browserUrl}-${browserReloadNonce}`} title={`Browser preview tray: ${browserUrl}`} src={browserUrl} referrerPolicy="no-referrer" />
+            </div>
           </div>
         </section>
       </main>
@@ -6148,7 +6324,7 @@ function App() {
           </span>
         </div>
         <div className="status-bar__group status-bar__group--right">
-          <span className="status-bar__item">{agentSurfaceMode === "chat" ? "Chat" : "Raw terminal"}</span>
+          <span className="status-bar__item">{agentSurfaceMode === "chat" ? "Chat" : utilityTrayStatusLabel}</span>
           <span className="status-bar__item">Prettier</span>
         </div>
       </footer>

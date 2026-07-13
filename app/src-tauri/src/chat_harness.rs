@@ -38,6 +38,8 @@ pub(crate) struct ChatRunRequest {
     provider: String,
     provider_thread_id: Option<String>,
     prompt: String,
+    #[serde(default)]
+    images: Vec<String>,
     approval_mode: String,
     model: Option<String>,
     reasoning_effort: Option<String>,
@@ -107,6 +109,36 @@ fn validate_runtime_overrides(request: &ChatRunRequest) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_image_inputs(request: &ChatRunRequest) -> Result<(), String> {
+    if request.images.len() > 6 {
+        return Err("A chat turn can include at most 6 images.".into());
+    }
+    for path in &request.images {
+        let image = Path::new(path);
+        let metadata = image.metadata().map_err(|error| {
+            format!("Could not inspect chat image {}: {error}", image.display())
+        })?;
+        if !metadata.is_file() || metadata.len() > 10 * 1024 * 1024 {
+            return Err(format!(
+                "Chat image is invalid or too large: {}",
+                image.display()
+            ));
+        }
+        let extension = image
+            .extension()
+            .and_then(|value| value.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        if !matches!(extension.as_str(), "png" | "jpg" | "jpeg" | "webp" | "gif") {
+            return Err(format!(
+                "Chat image type is not supported: {}",
+                image.display()
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn approval_policy_for_mode(mode: &str) -> &'static str {
     match mode {
         "fullAccess" => "never",
@@ -149,9 +181,16 @@ fn thread_open_request(request: &ChatRunRequest) -> Result<Value, String> {
 }
 
 fn turn_start_request(request: &ChatRunRequest, thread_id: &str) -> Value {
+    let mut input = vec![json!({ "type": "text", "text": request.prompt.trim() })];
+    input.extend(
+        request
+            .images
+            .iter()
+            .map(|path| json!({ "type": "localImage", "path": path })),
+    );
     let mut params = json!({
         "threadId": thread_id,
-        "input": [{ "type": "text", "text": request.prompt.trim() }],
+        "input": input,
         "approvalPolicy": approval_policy_for_mode(&request.approval_mode),
         "cwd": request.project_path,
     });
@@ -259,6 +298,7 @@ pub(crate) fn start_chat_run(
         return Err("Chat prompt is empty.".into());
     }
     let thread_request = thread_open_request(&request)?;
+    validate_image_inputs(&request)?;
     let run_id = validate_run_id(request.run_id.trim())?.to_string();
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
     let mut command = Command::new(&shell);
@@ -601,6 +641,7 @@ mod tests {
             provider: "codex".into(),
             provider_thread_id: thread.map(str::to_string),
             prompt: "hello".into(),
+            images: Vec::new(),
             approval_mode: mode.into(),
             model: None,
             reasoning_effort: None,
@@ -662,12 +703,14 @@ mod tests {
         let mut configured = request(None, "fullAccess");
         configured.model = Some("gpt-5.5".into());
         configured.reasoning_effort = Some("high".into());
+        configured.images = vec!["/tmp/capture.png".into()];
         let thread = thread_open_request(&configured).unwrap();
         let turn = turn_start_request(&configured, "thread-1");
         assert_eq!(thread["params"]["model"], "gpt-5.5");
         assert_eq!(turn["params"]["model"], "gpt-5.5");
         assert_eq!(turn["params"]["effort"], "high");
         assert_eq!(turn["params"]["input"][0]["text"], "hello");
+        assert_eq!(turn["params"]["input"][1]["type"], "localImage");
     }
 
     #[test]
