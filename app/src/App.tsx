@@ -94,6 +94,16 @@ import {
 } from "./launchProfiles";
 import type { LaunchProfile } from "./launchProfiles";
 import {
+  defaultScopedSettings,
+  migrateLegacyScopedSettings,
+  normalizeScopedSettings,
+  resetScopedSetting,
+  resolveScopedSetting,
+  scopedSettingView,
+  setScopedSetting,
+} from "./scopedSettings";
+import type { ScopedSettingKey, ScopedSettingsState, SettingsScope } from "./scopedSettings";
+import {
   composerHistoryAfterSubmit,
   composerHistoryAt,
   nextComposerHistoryIndex,
@@ -472,6 +482,7 @@ function App() {
   const browserPreviewByProjectRef = useRef<BrowserPreviewRecords>({});
   const browserPreviewBySessionRef = useRef<BrowserPreviewRecords>({});
   const composerHarnessBySessionRef = useRef<ComposerHarnessRecords>({});
+  const scopedSettingsRef = useRef<ScopedSettingsState>(defaultScopedSettings());
   const chatConversationsRef = useRef<ChatConversationRecords>({});
   const browserUrlRef = useRef(DEFAULT_BROWSER_PREVIEW_URL);
   const detectedLocalDevServerRef = useRef<DetectedLocalDevServer | null>(null);
@@ -544,6 +555,7 @@ function App() {
   const [browserPreviewByProject, setBrowserPreviewByProject] = useState<BrowserPreviewRecords>({});
   const [browserPreviewBySession, setBrowserPreviewBySession] = useState<BrowserPreviewRecords>({});
   const [composerHarnessBySession, setComposerHarnessBySession] = useState<ComposerHarnessRecords>({});
+  const [scopedSettings, setScopedSettings] = useState<ScopedSettingsState>(defaultScopedSettings);
   const [chatConversations, setChatConversations] = useState<ChatConversationRecords>({});
   const [browserUrl, setBrowserUrl] = useState(DEFAULT_BROWSER_PREVIEW_URL);
   const [browserAddress, setBrowserAddress] = useState(DEFAULT_BROWSER_PREVIEW_URL);
@@ -773,11 +785,30 @@ function App() {
     () => (workspacePath && activeSessionId ? `${workspacePath}\n${activeSessionId}` : null),
     [activeSessionId, workspacePath],
   );
+  const activeAgentProfileSetting = useMemo(
+    () => scopedSettingView(scopedSettings, "agentProfileId", workspacePath, activeSessionId),
+    [activeSessionId, scopedSettings, workspacePath],
+  );
+  const activeApprovalSetting = useMemo(
+    () => scopedSettingView(scopedSettings, "approvalMode", workspacePath, activeSessionId),
+    [activeSessionId, scopedSettings, workspacePath],
+  );
+  const activeBrowserSetting = useMemo(
+    () => scopedSettingView(scopedSettings, "browserUrl", workspacePath, activeSessionId),
+    [activeSessionId, scopedSettings, workspacePath],
+  );
   const activeComposerHarness = useMemo<ComposerHarnessState>(
-    () => activeComposerHarnessKey
-      ? composerHarnessBySession[activeComposerHarnessKey] ?? defaultComposerHarnessState(launchProfile.id)
-      : defaultComposerHarnessState(launchProfile.id),
-    [activeComposerHarnessKey, composerHarnessBySession, launchProfile.id],
+    () => {
+      const stored = activeComposerHarnessKey
+        ? composerHarnessBySession[activeComposerHarnessKey] ?? defaultComposerHarnessState(activeAgentProfileSetting.chat?.value ?? launchProfile.id)
+        : defaultComposerHarnessState(activeAgentProfileSetting.global.value);
+      return {
+        ...stored,
+        approvalMode: activeApprovalSetting.chat?.value ?? activeApprovalSetting.global.value,
+        selectedProfileId: activeAgentProfileSetting.chat?.value ?? activeAgentProfileSetting.global.value,
+      };
+    },
+    [activeAgentProfileSetting, activeApprovalSetting, activeComposerHarnessKey, composerHarnessBySession, launchProfile.id],
   );
   const activeChatConversation = useMemo<ChatConversation>(
     () => activeComposerHarnessKey
@@ -1101,6 +1132,10 @@ function App() {
   }, [composerHarnessBySession]);
 
   useEffect(() => {
+    scopedSettingsRef.current = scopedSettings;
+  }, [scopedSettings]);
+
+  useEffect(() => {
     browserUrlRef.current = browserUrl;
   }, [browserUrl]);
 
@@ -1346,6 +1381,38 @@ function App() {
     await storeRef.current?.save();
   };
 
+  const persistScopedSettings = async (next: ScopedSettingsState) => {
+    scopedSettingsRef.current = next;
+    setScopedSettings(next);
+    await storeRef.current?.set("scopedSettings", next);
+    await storeRef.current?.save();
+  };
+
+  const updateScopedSetting = async <K extends ScopedSettingKey,>(
+    scope: SettingsScope,
+    key: K,
+    value: ScopedSettingsState["global"][K],
+  ) => {
+    const root = workspacePathRef.current;
+    const sessionId = activeSessionForProject(root);
+    const next = setScopedSetting(scopedSettingsRef.current, scope, key, value, root, sessionId);
+    if (next === scopedSettingsRef.current) return false;
+    await persistScopedSettings(next);
+    return true;
+  };
+
+  const clearScopedSetting = async (
+    scope: Exclude<SettingsScope, "global">,
+    key: ScopedSettingKey,
+  ) => {
+    const root = workspacePathRef.current;
+    const sessionId = activeSessionForProject(root);
+    const next = resetScopedSetting(scopedSettingsRef.current, scope, key, root, sessionId);
+    if (next === scopedSettingsRef.current) return false;
+    await persistScopedSettings(next);
+    return true;
+  };
+
   const setComposerLocalState = (key: string | null, draft: string, history: string[]) => {
     composerLocalStateRef.current = { key, draft, history };
     setComposerDraft(draft);
@@ -1438,15 +1505,18 @@ function App() {
     browserPreviewBySessionRef.current = nextBySession;
     setBrowserPreviewByProject(nextByProject);
     setBrowserPreviewBySession(nextBySession);
+    let nextScopedSettings = setScopedSetting(scopedSettingsRef.current, "project", "browserUrl", url, root, sessionId);
+    if (sessionId) nextScopedSettings = setScopedSetting(nextScopedSettings, "chat", "browserUrl", url, root, sessionId);
+    scopedSettingsRef.current = nextScopedSettings;
+    setScopedSettings(nextScopedSettings);
     await storeRef.current?.set("browserPreviewByProject", nextByProject);
     await storeRef.current?.set("browserPreviewBySession", nextBySession);
+    await storeRef.current?.set("scopedSettings", nextScopedSettings);
     await storeRef.current?.save();
   };
 
   const restoreBrowserPreview = (root: string | null, sessionId: string | null) => {
-    const sessionUrl = root && sessionId ? browserPreviewBySessionRef.current[browserPreviewSessionKey(root, sessionId)] : null;
-    const projectUrl = root ? browserPreviewByProjectRef.current[root] : null;
-    const nextUrl = sessionUrl ?? projectUrl ?? DEFAULT_BROWSER_PREVIEW_URL;
+    const nextUrl = resolveScopedSetting(scopedSettingsRef.current, "browserUrl", root, sessionId).value;
     browserUrlRef.current = nextUrl;
     setBrowserUrl(nextUrl);
     setBrowserAddress(nextUrl);
@@ -2536,7 +2606,18 @@ function App() {
     const store = storeRef.current;
     launchProfileRef.current = profile;
     setLaunchProfile(profile);
+    const nextScopedSettings = setScopedSetting(
+      scopedSettingsRef.current,
+      "global",
+      "agentProfileId",
+      profile.id,
+      workspacePathRef.current,
+      activeSessionForProject(workspacePathRef.current),
+    );
+    scopedSettingsRef.current = nextScopedSettings;
+    setScopedSettings(nextScopedSettings);
     await store?.set("launchProfile", profile);
+    await store?.set("scopedSettings", nextScopedSettings);
     await store?.save();
   };
 
@@ -2549,6 +2630,7 @@ function App() {
   };
 
   const setComposerApprovalMode = async (approvalMode: AgentApprovalMode) => {
+    await updateScopedSetting("chat", "approvalMode", approvalMode);
     const next = await updateActiveComposerHarness((state) => ({ ...state, approvalMode }));
     if (!next) return;
     logComposerHarnessEvent("Permission mode changed", approvalMode);
@@ -4510,6 +4592,21 @@ function App() {
       const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
       const savedTerminalProfile = normalizeTerminalLaunchProfile(await store.get<unknown>("terminalLaunchProfile"));
       const savedComposerHarness = normalizeComposerHarnessRecords(await store.get<unknown>("composerHarnessBySession"), savedProfile.id);
+      const storedScopedSettings = await store.get<unknown>("scopedSettings");
+      const savedScopedSettings = storedScopedSettings == null
+        ? migrateLegacyScopedSettings({
+            agentProfileId: savedProfile.id,
+            browserUrl: DEFAULT_BROWSER_PREVIEW_URL,
+            browserProjects: savedBrowserProjects,
+            browserChats: savedBrowserSessions,
+            composerChats: savedComposerHarness,
+          })
+        : normalizeScopedSettings(storedScopedSettings, defaultScopedSettings(savedProfile.id, DEFAULT_BROWSER_PREVIEW_URL));
+      const savedGlobalProfile = launchProfileById(savedScopedSettings.global.agentProfileId);
+      if (storedScopedSettings == null) {
+        await store.set("scopedSettings", savedScopedSettings);
+        await store.save();
+      }
       const legacyChatConversations = normalizeChatConversationRecords(await store.get<unknown>("chatConversations"));
       if (Object.keys(legacyChatConversations).length > 0) {
         await migrateLegacyChatConversations(legacyChatConversations);
@@ -4546,12 +4643,13 @@ function App() {
       browserPreviewByProjectRef.current = savedBrowserProjects;
       browserPreviewBySessionRef.current = savedBrowserSessions;
       composerHarnessBySessionRef.current = savedComposerHarness;
+      scopedSettingsRef.current = savedScopedSettings;
       chatConversationsRef.current = savedChatConversations;
       paneLabelsBySessionRef.current = savedPaneLabels;
       sessionEditorSnapshotsRef.current = savedSessionSnapshots;
       paneLayoutsBySessionRef.current = savedPaneLayouts;
-      launchProfileRef.current = savedProfile;
-      setLaunchProfile(savedProfile);
+      launchProfileRef.current = savedGlobalProfile;
+      setLaunchProfile(savedGlobalProfile);
       terminalLaunchProfileRef.current = savedTerminalProfile;
       setTerminalLaunchProfile(savedTerminalProfile);
       setRecentProjects(savedRecent);
@@ -4561,11 +4659,12 @@ function App() {
       setBrowserPreviewByProject(savedBrowserProjects);
       setBrowserPreviewBySession(savedBrowserSessions);
       setComposerHarnessBySession(savedComposerHarness);
+      setScopedSettings(savedScopedSettings);
       setChatConversations(savedChatConversations);
       setPaneLabelsBySession(savedPaneLabels);
       setAgentActivityEvents(savedAgentActivity);
       const last = await store.get<string>("folder");
-      if (last) await openWorkspaceDirect(last, savedProfile);
+      if (last) await openWorkspaceDirect(last, savedGlobalProfile);
       else await pickWorkspace();
       sendTerminalResize();
     };
@@ -6319,25 +6418,36 @@ function App() {
 
       {settingsOpen ? (
         <SettingsModal
-          approvalMode={activeComposerHarness.approvalMode}
-          browserUrl={browserUrl}
+          approvalSetting={activeApprovalSetting}
+          browserSetting={activeBrowserSetting}
           gitBranch={gitStatus?.branch ?? null}
           gitChangeCount={gitStatus ? gitStatus.files.length : null}
           sourceControlStatus={sourceControlStatus}
           repoLocation={repoLocation}
           onOpenSourceControlLink={(url) => void openUrl(url).catch(() => {})}
           layout={renderedWorkbenchLayout}
-          profileId={launchProfile.id}
+          profileSetting={activeAgentProfileSetting}
           profiles={LAUNCH_PROFILES.map((profile) => ({ id: profile.id, label: profile.label }))}
           sessionTitle={activeSessionTitle}
           trayMode={toolTrayMode}
           workspaceName={activeWorkspaceName}
-          onApprovalModeChange={(mode) => void setComposerApprovalMode(mode)}
-          onBrowserUrlCommit={(url) => {
+          onApprovalModeChange={(scope, mode) => {
+            if (scope === "chat") void setComposerApprovalMode(mode);
+            else void updateScopedSetting(scope, "approvalMode", mode);
+          }}
+          onBrowserUrlCommit={(scope, url) => {
             const normalized = normalizeBrowserPreviewUrl(url);
             if (!normalized) return;
-            setBrowserLocation(normalized);
-            void persistBrowserPreviewUrl(workspacePathRef.current, activeSessionId, normalized);
+            void (async () => {
+              await updateScopedSetting(scope, "browserUrl", normalized);
+              const effective = resolveScopedSetting(
+                scopedSettingsRef.current,
+                "browserUrl",
+                workspacePathRef.current,
+                activeSessionForProject(workspacePathRef.current),
+              ).value;
+              setBrowserLocation(effective);
+            })();
           }}
           keybindingOverrides={keybindingOverrides}
           onResetLocalData={() => {
@@ -6377,9 +6487,24 @@ function App() {
           }}
           onClose={() => setSettingsOpen(false)}
           onLayoutChange={setWorkbenchLayout}
-          onProfileChange={(profileId) => {
+          onProfileChange={(scope, profileId) => {
             const profile = LAUNCH_PROFILES.find((entry) => entry.id === profileId);
-            if (profile) void switchLaunchProfile(profile);
+            if (!profile) return;
+            if (scope === "global") void switchLaunchProfile(profile);
+            else void updateScopedSetting(scope, "agentProfileId", profile.id);
+          }}
+          onScopedSettingReset={(rowId, scope) => {
+            const key = rowId === "agents.profile"
+              ? "agentProfileId"
+              : rowId === "agents.permission"
+                ? "approvalMode"
+                : "browserUrl";
+            void (async () => {
+              await clearScopedSetting(scope, key);
+              if (key === "browserUrl") {
+                restoreBrowserPreview(workspacePathRef.current, activeSessionForProject(workspacePathRef.current));
+              }
+            })();
           }}
           onResetLayout={resetInterface}
           onTrayModeChange={setToolTrayMode}

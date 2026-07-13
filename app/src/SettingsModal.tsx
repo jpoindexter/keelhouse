@@ -5,6 +5,7 @@ import type { AgentApprovalMode } from "./agentSessionHandle";
 import { formatCliToolStatus, type SourceControlStatus } from "./sourceControl";
 import { buildIssuesUrl, buildPipelinesUrl, buildPullRequestsUrl, buildRepoUrl, type RepoLocation } from "./sourceControlLinks";
 import type { ToolTrayMode, WorkbenchLayoutMode } from "./workbenchLayout";
+import type { ScopedSettingView, SettingsScope } from "./scopedSettings";
 import {
   filterSettingsRows,
   IGNORED_FOLDERS,
@@ -26,8 +27,8 @@ import {
 type SettingsProfileOption = { id: string; label: string };
 
 type SettingsModalProps = {
-  approvalMode: AgentApprovalMode;
-  browserUrl: string;
+  approvalSetting: ScopedSettingView<AgentApprovalMode>;
+  browserSetting: ScopedSettingView<string>;
   gitBranch: string | null;
   gitChangeCount: number | null;
   initialCategory?: SettingsCategoryId;
@@ -39,27 +40,28 @@ type SettingsModalProps = {
   repoLocation?: RepoLocation | null;
   onOpenSourceControlLink?: (url: string) => void;
   theme?: "graphite" | "mono-ghost";
-  profileId: string;
+  profileSetting: ScopedSettingView<string>;
   profiles: SettingsProfileOption[];
   trayMode: ToolTrayMode;
   sessionTitle?: string;
   workspaceName?: string;
-  onApprovalModeChange: (mode: AgentApprovalMode) => void;
-  onBrowserUrlCommit: (url: string) => void;
+  onApprovalModeChange: (scope: SettingsScope, mode: AgentApprovalMode) => void;
+  onBrowserUrlCommit: (scope: SettingsScope, url: string) => void;
   onClose: () => void;
   onKeybindingOverrideChange?: (id: string, keys: string[] | null) => void;
   onNotificationsChange?: (enabled: boolean) => void;
   onResetLocalData?: () => void;
   onThemeChange?: (theme: "graphite" | "mono-ghost") => void;
   onLayoutChange: (layout: WorkbenchLayoutMode) => void;
-  onProfileChange: (profileId: string) => void;
+  onProfileChange: (scope: SettingsScope, profileId: string) => void;
+  onScopedSettingReset: (rowId: "agents.profile" | "agents.permission" | "browser.url", scope: Exclude<SettingsScope, "global">) => void;
   onResetLayout: () => void;
   onTrayModeChange: (mode: ToolTrayMode) => void;
 };
 
 export function SettingsModal({
-  approvalMode,
-  browserUrl,
+  approvalSetting,
+  browserSetting,
   gitBranch,
   gitChangeCount,
   initialCategory = "general",
@@ -71,7 +73,7 @@ export function SettingsModal({
   repoLocation = null,
   onOpenSourceControlLink,
   theme = "graphite",
-  profileId,
+  profileSetting,
   profiles,
   trayMode,
   sessionTitle = "Current chat",
@@ -85,12 +87,14 @@ export function SettingsModal({
   onResetLocalData,
   onThemeChange,
   onProfileChange,
+  onScopedSettingReset,
   onResetLayout,
   onTrayModeChange,
 }: SettingsModalProps) {
   const [category, setCategory] = useState<SettingsCategoryId>(initialCategory);
   const [query, setQuery] = useState(initialQuery);
-  const [browserDraft, setBrowserDraft] = useState(browserUrl);
+  const [scopeByRow, setScopeByRow] = useState<Partial<Record<string, SettingsScope>>>({});
+  const [browserDraft, setBrowserDraft] = useState(browserSetting.chat?.value ?? browserSetting.project?.value ?? browserSetting.global.value);
   const [capturingId, setCapturingId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const conflicts = findKeybindingConflicts();
@@ -104,19 +108,29 @@ export function SettingsModal({
     ? filterSettingsRows(SETTINGS_ROWS, query)
     : settingsRowsForCategory(SETTINGS_ROWS, category);
 
+  const selectedScope = (row: SettingsRowDef): SettingsScope => scopeByRow[row.id] ?? row.scope;
+  const resolutionAt = <T,>(view: ScopedSettingView<T>, scope: SettingsScope) => view[scope] ?? view.global;
+  const browserResolution = resolutionAt(browserSetting, selectedScope(SETTINGS_ROWS.find((row) => row.id === "browser.url")!));
+
+  useEffect(() => {
+    setBrowserDraft(browserResolution.value);
+  }, [browserResolution.value, scopeByRow["browser.url"]]);
+
   const commitBrowserUrl = () => {
     const next = browserDraft.trim();
-    if (next && next !== browserUrl) onBrowserUrlCommit(next);
+    if (next && next !== browserResolution.value) onBrowserUrlCommit(selectedScope(SETTINGS_ROWS.find((row) => row.id === "browser.url")!), next);
   };
 
   const control = (row: SettingsRowDef) => {
     if (row.id === "agents.profile") {
+      const scope = selectedScope(row);
+      const profileId = resolutionAt(profileSetting, scope).value;
       return (
         <select
           className="settings-modal__select"
           aria-label="Default agent profile"
           value={profileId}
-          onChange={(event) => onProfileChange(event.currentTarget.value)}
+          onChange={(event) => onProfileChange(scope, event.currentTarget.value)}
         >
           {profiles.map((profile) => (
             <option key={profile.id} value={profile.id}>{profile.label}</option>
@@ -125,12 +139,14 @@ export function SettingsModal({
       );
     }
     if (row.id === "agents.permission") {
+      const scope = selectedScope(row);
+      const approvalMode = resolutionAt(approvalSetting, scope).value;
       return (
         <select
           className="settings-modal__select"
           aria-label="Permission mode"
           value={approvalMode}
-          onChange={(event) => onApprovalModeChange(event.currentTarget.value as AgentApprovalMode)}
+          onChange={(event) => onApprovalModeChange(scope, event.currentTarget.value as AgentApprovalMode)}
         >
           <option value="ask">Ask</option>
           <option value="approveSafe">Approve safe</option>
@@ -355,10 +371,66 @@ export function SettingsModal({
   );
 
   const activeCategory = SETTINGS_CATEGORIES.find((entry) => entry.id === category) ?? SETTINGS_CATEGORIES[0];
+  const scopedRowIds = new Set(["agents.profile", "agents.permission", "browser.url"]);
   const scopeLabel = (scope: SettingsRowDef["scope"]) => {
     if (scope === "project") return `Project · ${workspaceName}`;
     if (scope === "chat") return `Chat · ${sessionTitle}`;
     return "Global";
+  };
+  const scopedViewForRow = (row: SettingsRowDef): ScopedSettingView<unknown> | null => {
+    if (row.id === "agents.profile") return profileSetting;
+    if (row.id === "agents.permission") return approvalSetting;
+    if (row.id === "browser.url") return browserSetting;
+    return null;
+  };
+  const scopeEditor = (row: SettingsRowDef) => {
+    const view = scopedViewForRow(row);
+    if (!view) return <small className="settings-workspace__scope">{scopeLabel(row.scope)}</small>;
+    const scope = selectedScope(row);
+    const resolution = resolutionAt(view, scope);
+    const sourceLabel = resolution.source === "global"
+      ? "Global"
+      : resolution.source === "project"
+        ? `Project · ${workspaceName}`
+        : `Chat · ${sessionTitle}`;
+    const status = scope === "global"
+      ? "Global default"
+      : resolution.overridden
+        ? `${scope === "project" ? "Project" : "Chat"} override`
+        : `Inherited from ${sourceLabel}`;
+    return (
+      <div className="settings-workspace__scope-editor">
+        <select
+          className="settings-workspace__scope-select"
+          aria-label={`${row.label} scope`}
+          value={scope}
+          onChange={(event) => {
+            const nextScope = event.currentTarget.value as SettingsScope;
+            setScopeByRow((current) => ({
+              ...current,
+              [row.id]: nextScope,
+            }));
+          }}
+        >
+          <option value="global">Global</option>
+          <option value="project" disabled={!view.project}>Project</option>
+          <option value="chat" disabled={!view.chat}>Chat</option>
+        </select>
+        <small className="settings-workspace__scope">{status}</small>
+        {scope !== "global" && resolution.overridden ? (
+          <button
+            className="settings-workspace__scope-reset"
+            type="button"
+            onClick={() => onScopedSettingReset(
+              row.id as "agents.profile" | "agents.permission" | "browser.url",
+              scope,
+            )}
+          >
+            Reset override
+          </button>
+        ) : null}
+      </div>
+    );
   };
 
   return (
@@ -469,7 +541,7 @@ export function SettingsModal({
                     </div>
                     <div className="settings-workspace__row-control">
                       {control(row)}
-                      <small className="settings-workspace__scope">{scopeLabel(row.scope)}</small>
+                      {scopedRowIds.has(row.id) ? scopeEditor(row) : <small className="settings-workspace__scope">{scopeLabel(row.scope)}</small>}
                     </div>
                   </div>
                 ),

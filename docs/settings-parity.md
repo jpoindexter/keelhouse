@@ -21,7 +21,7 @@ This app should borrow the Codex settings shape where it supports the lean VS Co
 
 ## Scope Model
 
-Keelhouse currently has three real ownership levels: `Global`, `Project`, and `Chat`. The settings workspace labels every implemented value with its actual owner. A future override model will resolve Global -> Project -> Chat and show the inherited source plus a deliberate override/reset action. Keelhouse must not expose a synthetic Workspace level unless a distinct workspace-group object is implemented. Appearance and app-update behavior remain global unless a real workflow proves otherwise.
+Keelhouse has three real ownership levels: `Global`, `Project`, and `Chat`. Agent profile, permission mode, and browser preview URL now resolve Global -> Project -> Chat. The scope menu shows the value at that level, names its inherited source, and offers `Reset override` only when the selected Project or Chat owns a value. Existing browser/composer records migrate into the scoped store on first launch. Keelhouse does not expose a synthetic Workspace level because no distinct workspace-group object exists. Appearance and app-update behavior remain global unless a real workflow proves otherwise.
 
 ## Drop
 
@@ -58,7 +58,7 @@ The first modal was a useful functional slice but is not the final settings arch
 - A stable 230px searchable left navigation with grouped section labels and a flat `Back to app` command.
 - Active navigation uses background-only selection. No decorative side stripe, capsule, or boxed icon button.
 - Content uses a readable maximum width, section headings, hairline grouping, and 48px minimum setting rows.
-- Global/project/chat override controls appear only after that inheritance path is real; labels may describe current ownership without implying an editable override.
+- Global/project/chat override controls appear only for values backed by the real scoped store; read-only ownership labels remain on other rows.
 - Controls keep the existing 28px field grammar. Destructive actions remain explicit and confirmed; one filled primary action per surface at most.
 - At narrow widths, navigation collapses into a category menu without clipping labels or controls.
 
@@ -70,5 +70,9 @@ The first modal was a useful functional slice but is not the final settings arch
 - Implemented rows show truthful Global, Project, or Chat ownership labels.
 - The packaged app passed live navigation, cross-category search, and return-to-chat checks. Evidence is in `docs/qa/settings-workspace/`.
 - Narrow right-dock tabs now collapse labels at 420px instead of overlapping; icon buttons retain native tooltips and accessible names.
+- Agent profile, permission mode, and browser preview URL use persisted Global -> Project -> Chat inheritance with explicit override/reset controls and legacy-data migration.
+- The native package exercised Project inheritance, creating a Codex project override over a Shell global value, resetting it, and returning to the preserved workbench. The first attempt also caught and fixed a released-event crash in the scope selector.
+- Compact settings navigation now activates at 920px, inside the native window's reachable 900px minimum instead of the unreachable former 560px breakpoint.
+- The packaged 904x643 window rendered the Category selector with intact content and controls; evidence is `docs/qa/settings-workspace/native-compact-navigation.png`.
 
-Still open on `SETTINGS-PARITY`: inherited project/chat overrides, provider profile management, command-palette source controls, worktree/hook policy, and native proof of the category-select breakpoint.
+Still open on `SETTINGS-PARITY`: provider profile management, command-palette source controls, and worktree/hook policy.

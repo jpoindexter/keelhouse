@@ -2,18 +2,20 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { SettingsModal } from "./SettingsModal";
+import { defaultScopedSettings, scopedSettingView } from "./scopedSettings";
 
 const noop = () => undefined;
 
-const render = (overrides: Partial<Parameters<typeof SettingsModal>[0]> = {}) =>
-  renderToStaticMarkup(
+const render = (overrides: Partial<Parameters<typeof SettingsModal>[0]> = {}) => {
+  const scoped = defaultScopedSettings("codex", "http://localhost:5173");
+  return renderToStaticMarkup(
     <SettingsModal
-      approvalMode="ask"
-      browserUrl="http://localhost:5173"
+      approvalSetting={scopedSettingView(scoped, "approvalMode", "/repo", "chat-a")}
+      browserSetting={scopedSettingView(scoped, "browserUrl", "/repo", "chat-a")}
       gitBranch="main"
       gitChangeCount={3}
       layout="right"
-      profileId="codex"
+      profileSetting={scopedSettingView(scoped, "agentProfileId", "/repo", "chat-a")}
       profiles={[{ id: "codex", label: "Codex" }, { id: "shell", label: "Shell" }]}
       trayMode="editor"
       onApprovalModeChange={noop}
@@ -21,11 +23,13 @@ const render = (overrides: Partial<Parameters<typeof SettingsModal>[0]> = {}) =>
       onClose={noop}
       onLayoutChange={noop}
       onProfileChange={noop}
+      onScopedSettingReset={noop}
       onResetLayout={noop}
       onTrayModeChange={noop}
       {...overrides}
     />,
   );
+};
 
 describe("SettingsModal", () => {
   it("renders grouped real categories as a dedicated settings workspace", () => {
@@ -61,8 +65,8 @@ describe("SettingsModal", () => {
     const agentHtml = render({ initialCategory: "agents", workspaceName: "agent cli", sessionTitle: "Settings pass" });
     expect(agentHtml).toContain("Default agent");
     expect(agentHtml).toContain("Permission mode");
-    expect(agentHtml).toContain("Global");
-    expect(agentHtml).toContain("Chat · Settings pass");
+    expect(agentHtml).toContain("Global default");
+    expect(agentHtml).toContain("Inherited from Global");
 
     const projectHtml = render({ initialCategory: "git", workspaceName: "agent cli" });
     expect(projectHtml).toContain("Project · agent cli");

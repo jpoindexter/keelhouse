@@ -4,20 +4,22 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SettingsModal } from "./SettingsModal";
+import { defaultScopedSettings, scopedSettingView, setScopedSetting } from "./scopedSettings";
 
 afterEach(cleanup);
 
 const renderWorkspace = (overrides: Partial<Parameters<typeof SettingsModal>[0]> = {}) => {
   const onClose = vi.fn();
   const onLayoutChange = vi.fn();
+  const scoped = defaultScopedSettings("codex", "http://localhost:5173");
   render(
     <SettingsModal
-      approvalMode="ask"
-      browserUrl="http://localhost:5173"
+      approvalSetting={scopedSettingView(scoped, "approvalMode", "/repo", "chat-a")}
+      browserSetting={scopedSettingView(scoped, "browserUrl", "/repo", "chat-a")}
       gitBranch="main"
       gitChangeCount={1}
       layout="right"
-      profileId="codex"
+      profileSetting={scopedSettingView(scoped, "agentProfileId", "/repo", "chat-a")}
       profiles={[{ id: "codex", label: "Codex" }, { id: "shell", label: "Shell" }]}
       trayMode="files"
       onApprovalModeChange={vi.fn()}
@@ -25,6 +27,7 @@ const renderWorkspace = (overrides: Partial<Parameters<typeof SettingsModal>[0]>
       onClose={onClose}
       onLayoutChange={onLayoutChange}
       onProfileChange={vi.fn()}
+      onScopedSettingReset={vi.fn()}
       onResetLayout={vi.fn()}
       onTrayModeChange={vi.fn()}
       {...overrides}
@@ -64,5 +67,25 @@ describe("Settings workspace interactions", () => {
     first.onClose.mockClear();
     fireEvent.keyDown(screen.getByLabelText("Settings"), { key: "Escape" });
     expect(first.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("edits a project override and resets it back to the inherited value", () => {
+    const onProfileChange = vi.fn();
+    const onScopedSettingReset = vi.fn();
+    const base = defaultScopedSettings("codex", "http://localhost:5173");
+    const scoped = setScopedSetting(base, "project", "agentProfileId", "shell", "/repo", "chat-a");
+    renderWorkspace({
+      profileSetting: scopedSettingView(scoped, "agentProfileId", "/repo", "chat-a"),
+      onProfileChange,
+      onScopedSettingReset,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Agents" }));
+    fireEvent.change(screen.getByLabelText("Default agent scope"), { target: { value: "project" } });
+    expect(screen.getByText("Project override")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Default agent profile"), { target: { value: "codex" } });
+    expect(onProfileChange).toHaveBeenCalledWith("project", "codex");
+    fireEvent.click(screen.getByRole("button", { name: "Reset override" }));
+    expect(onScopedSettingReset).toHaveBeenCalledWith("agents.profile", "project");
   });
 });

@@ -4477,6 +4477,42 @@ body,
   text-align: right;
 }
 
+.settings-workspace__scope-editor {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.settings-workspace__scope-select {
+  height: 22px;
+  border: 0;
+  border-bottom: 1px solid var(--control-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: 10px var(--font-ui);
+  padding: 0 16px 0 2px;
+}
+
+.settings-workspace__scope-reset {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--steel-cyan-400);
+  cursor: default;
+  font: 10px var(--font-ui);
+  padding: 2px 0;
+}
+
+.settings-workspace__scope-reset:hover,
+.settings-workspace__scope-reset:focus-visible {
+  color: var(--color-text-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 @media (max-width: 760px) {
   .settings-workspace__header {
     grid-template-columns: auto minmax(0, 1fr);
@@ -4513,9 +4549,16 @@ body,
   .settings-workspace__row-control .settings-workspace__scope {
     text-align: left;
   }
+
+  .settings-workspace__scope-editor {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
 }
 
-@media (max-width: 560px) {
+/* The native window bottoms out at 900px, so its compact settings mode must
+   activate within the reachable range rather than at a browser-only width. */
+@media (max-width: 920px) {
   .settings-workspace__header {
     grid-template-columns: 34px minmax(0, 1fr);
     padding-left: 76px;

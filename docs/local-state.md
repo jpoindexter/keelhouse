@@ -47,6 +47,25 @@ Keelhouse separates lightweight workbench preferences from durable chat history.
   "activeSessionByProject": {
     "/absolute/path/to/workspace": "session-lt72gs"
   },
+  "scopedSettings": {
+    "version": 1,
+    "global": {
+      "agentProfileId": "codex",
+      "approvalMode": "ask",
+      "browserUrl": "http://localhost:3000/"
+    },
+    "projects": {
+      "/absolute/path/to/workspace": {
+        "browserUrl": "http://localhost:3000/"
+      }
+    },
+    "chats": {
+      "/absolute/path/to/workspace\nsession-lt72gs": {
+        "approvalMode": "approveSafe",
+        "browserUrl": "http://localhost:5173/"
+      }
+    }
+  },
   "browserPreviewByProject": {
     "/absolute/path/to/workspace": "http://localhost:3000/"
   },
@@ -130,6 +149,7 @@ Keelhouse separates lightweight workbench preferences from durable chat history.
 `folder` is the last workspace to reopen. `launchProfile` is the selected structured-chat provider profile and defaults to Codex. `terminalLaunchProfile` is the profile used only when the user explicitly opens a raw terminal; it defaults to Shell (`/bin/zsh -l`). Built-in profile ids are `codex`, `gemini`, `claude`, and `shell`. Opening a terminal never starts an agent unless the user explicitly changes that terminal's profile.
 `activeFileByWorkspace` stores the last active editor file per canonical workspace root; stale paths are ignored instead of being opened.
 `openProjects` stores the project rail. `projectSessions` is the compatibility key for named chats under each project, and `activeSessionByProject` stores the selected chat id per project. `browserPreviewByProject` and `browserPreviewBySession` remember the lightweight preview URL for project/chat context.
+`scopedSettings` is the authoritative Global -> Project -> Chat override store for agent profile, permission mode, and browser preview URL. Missing Project/Chat keys inherit from their parent. On first launch after this schema lands, existing `launchProfile`, browser records, and composer records seed it; the legacy keys remain readable during the transition.
 `paneLabelsBySession` stores user-edited terminal pane names by project-session key and pane slot. It restores labels when the same session/slot is recreated.
 `sessionEditorSnapshots` stores per-chat editor tabs, active file, dirty buffers, and CodeMirror view state. `paneLayoutsBySession` stores optional raw-terminal pane slots, launch profile ids, and labels. Chat mode does not spawn those panes; opening Raw terminal recreates them without restoring live process memory or transcripts.
 `composerHarnessBySession` stores composer permission mode, goal text, selected profile id, and attachment references by project-chat key. Attachments are references only; file contents and screenshots are not copied into local state.
@@ -161,7 +181,7 @@ The app will create a fresh `workspace.json` after a folder is picked. This pref
 
 ## Repair Without Full Reset
 
-To restore the structured-chat Codex default while keeping the last folder, edit only `launchProfile`. To restore blank terminals, set `terminalLaunchProfile` to the Shell shape below:
+To restore the structured-chat Codex default while keeping the last folder, set `scopedSettings.global.agentProfileId` to `codex` and keep `launchProfile` aligned during the compatibility period. To restore blank terminals, set `terminalLaunchProfile` to the Shell shape below:
 
 ```json
 "launchProfile": {
