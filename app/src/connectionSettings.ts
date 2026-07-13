@@ -22,6 +22,12 @@ export type EnvironmentVariableConfig = {
   secret: boolean;
 };
 
+export type ConnectionEnvironmentInput = {
+  name: string;
+  value?: string;
+  secretKey?: string;
+};
+
 export type AiConnectionSettings = {
   providerModels: Record<ConnectionProviderId, string>;
   mcpServers: McpServerConfig[];
@@ -123,3 +129,11 @@ export const validateMcpServer = (server: McpServerConfig): string[] => {
 export const environmentVariablesForProject = (settings: AiConnectionSettings, project: string) =>
   settings.environmentByProject[project] ?? [];
 
+export const connectionEnvironmentInputs = (
+  settings: AiConnectionSettings,
+  project: string,
+): ConnectionEnvironmentInput[] => environmentVariablesForProject(settings, project).map((variable) =>
+  variable.secret
+    ? { name: variable.name, secretKey: environmentSecretKey(variable.id) }
+    : { name: variable.name, value: variable.value }
+);

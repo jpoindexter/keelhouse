@@ -20,8 +20,8 @@ use chat_store::{
     ChatStore,
 };
 use connection_secrets::{
-    connection_secret_status, delete_connection_secret, set_connection_secret,
-    validate_connection_target,
+    connection_secret_status, delete_connection_secret, resolve_connection_environment,
+    set_connection_secret, validate_connection_target, ConnectionEnvironmentInput,
 };
 use ignore::WalkBuilder;
 use libghostty_vt::key::{Action, Encoder, Event, Key, Mods, OptionAsAlt};
@@ -2298,12 +2298,19 @@ fn open_workspace(
     state: State<PtyState>,
     path: String,
     profile: Option<LaunchProfile>,
+    environment: Option<Vec<ConnectionEnvironmentInput>>,
 ) -> Result<OpenWorkspaceResponse, String> {
     let cwd = validate_workspace_path(&path)?;
     let profile = profile.unwrap_or_default().normalized();
     preflight_profile(&profile, &cwd)?;
     let pane_id = state.allocate_pane_id();
-    let new = spawn_pane(app, cwd.clone(), profile, pane_id)?;
+    let new = spawn_pane(
+        app,
+        cwd.clone(),
+        profile,
+        environment.unwrap_or_default(),
+        pane_id,
+    )?;
     state.insert_and_focus(pane_id, new);
     Ok(OpenWorkspaceResponse { root: cwd, pane_id })
 }
@@ -2316,12 +2323,13 @@ fn create_pane(
     state: State<PtyState>,
     path: String,
     profile: Option<LaunchProfile>,
+    environment: Option<Vec<ConnectionEnvironmentInput>>,
 ) -> Result<OpenPaneResponse, String> {
     let cwd = validate_workspace_path(&path)?;
     let profile = profile.unwrap_or_default().normalized();
     preflight_profile(&profile, &cwd)?;
     let pane_id = state.allocate_pane_id();
-    let new = spawn_pane(app, cwd, profile, pane_id)?;
+    let new = spawn_pane(app, cwd, profile, environment.unwrap_or_default(), pane_id)?;
     state.insert_and_focus(pane_id, new);
     Ok(OpenPaneResponse { pane_id })
 }
@@ -2354,12 +2362,19 @@ fn restart_pane(
     path: String,
     pane_id: u64,
     profile: Option<LaunchProfile>,
+    environment: Option<Vec<ConnectionEnvironmentInput>>,
 ) -> Result<OpenPaneResponse, String> {
     let cwd = validate_workspace_path(&path)?;
     let profile = profile.unwrap_or_default().normalized();
     preflight_profile(&profile, &cwd)?;
     let new_pane_id = state.allocate_pane_id();
-    let new_pane = spawn_pane(app, cwd, profile, new_pane_id)?;
+    let new_pane = spawn_pane(
+        app,
+        cwd,
+        profile,
+        environment.unwrap_or_default(),
+        new_pane_id,
+    )?;
     state.replace_and_focus(pane_id, new_pane_id, new_pane)?;
     Ok(OpenPaneResponse {
         pane_id: new_pane_id,
@@ -2625,6 +2640,18 @@ fn profile_command(profile: &LaunchProfile) -> CommandBuilder {
     }
 }
 
+fn provider_for_profile(profile: &LaunchProfile) -> Option<&'static str> {
+    let command = Path::new(profile.command.trim())
+        .file_name()
+        .and_then(|value| value.to_str())?;
+    match command {
+        "codex" => Some("codex"),
+        "gemini" => Some("gemini"),
+        "claude" => Some("claude"),
+        _ => None,
+    }
+}
+
 /// Spawn a fresh terminal pane: the selected profile in `cwd` (or $HOME), a reader
 /// thread forwarding pty bytes, and a terminal thread owning the `!Send` Terminal +
 /// Encoder that emits grid snapshots via `app`. Returns a launch error if the
@@ -2633,6 +2660,7 @@ fn spawn_pane(
     app: AppHandle,
     cwd: String,
     profile: LaunchProfile,
+    environment: Vec<ConnectionEnvironmentInput>,
     pane_id: u64,
 ) -> Result<Pane, String> {
     let pty_system = native_pty_system();
@@ -2647,6 +2675,11 @@ fn spawn_pane(
 
     let mut cmd = profile_command(&profile);
     cmd.env("TERM", "xterm-256color");
+    for (name, value) in
+        resolve_connection_environment(&environment, provider_for_profile(&profile))?
+    {
+        cmd.env(name, value);
+    }
     cmd.cwd(&cwd);
     let mut child = pair
         .slave

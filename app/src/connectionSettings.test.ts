@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_AI_CONNECTION_SETTINGS,
+  connectionEnvironmentInputs,
   environmentSecretKey,
   normalizeAiConnectionSettings,
   providerSecretKey,
@@ -60,5 +61,22 @@ describe("AI connection settings", () => {
   it("uses opaque identifiers for Keychain accounts", () => {
     expect(providerSecretKey("gemini")).toBe("provider:gemini:api-key");
     expect(environmentSecretKey("secret-1")).toBe("environment:secret-1");
+  });
+
+  it("builds launch inputs without materializing secret values", () => {
+    const settings = normalizeAiConnectionSettings({
+      environmentByProject: {
+        "/repo": [
+          { id: "public", name: "NODE_ENV", value: "test", secret: false },
+          { id: "secret", name: "API_TOKEN", value: "must-not-survive", secret: true },
+        ],
+      },
+    });
+    const inputs = connectionEnvironmentInputs(settings, "/repo");
+    expect(inputs).toEqual([
+      { name: "NODE_ENV", value: "test" },
+      { name: "API_TOKEN", secretKey: "environment:secret" },
+    ]);
+    expect(JSON.stringify(inputs)).not.toContain("must-not-survive");
   });
 });

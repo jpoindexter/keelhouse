@@ -12,6 +12,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State};
 
+use crate::connection_secrets::{resolve_connection_environment, ConnectionEnvironmentInput};
+
 const CHAT_RUN_EVENT: &str = "chat-run-event";
 const APPROVAL_TIMEOUT_MS: u64 = 5 * 60 * 1000;
 
@@ -50,6 +52,8 @@ pub(crate) struct ChatRunRequest {
     approval_mode: String,
     model: Option<String>,
     reasoning_effort: Option<String>,
+    #[serde(default)]
+    environment: Vec<ConnectionEnvironmentInput>,
 }
 
 #[derive(Serialize)]
@@ -400,6 +404,11 @@ pub(crate) fn start_chat_run(
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    for (name, value) in
+        resolve_connection_environment(&request.environment, Some(&request.provider))?
+    {
+        command.env(name, value);
+    }
     isolate_chat_process(&mut command);
     let mut child = command
         .spawn()
@@ -741,6 +750,7 @@ mod tests {
             approval_mode: mode.into(),
             model: None,
             reasoning_effort: None,
+            environment: Vec::new(),
         }
     }
 

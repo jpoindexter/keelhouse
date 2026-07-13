@@ -204,6 +204,7 @@ import {
 import {
   CONNECTION_PROVIDER_IDS,
   DEFAULT_AI_CONNECTION_SETTINGS,
+  connectionEnvironmentInputs,
   environmentSecretKey,
   mcpSecretKey,
   normalizeAiConnectionSettings,
@@ -513,6 +514,7 @@ function App() {
   const launchProfileRef = useRef<LaunchProfile>(defaultLaunchProfile());
   const terminalLaunchProfileRef = useRef<LaunchProfile>(defaultTerminalLaunchProfile());
   const customLaunchProfilesRef = useRef<LaunchProfile[]>([]);
+  const aiConnectionSettingsRef = useRef<AiConnectionSettings>(DEFAULT_AI_CONNECTION_SETTINGS);
   const intentionallyTerminatedPaneIdsRef = useRef<Set<number>>(new Set());
   const terminalPanesRef = useRef<ManagedTerminalPane[]>([]);
   const fileNodeContextMenuItemsRef = useRef<(node: FileTreeNode) => ContextMenuItem[]>(() => []);
@@ -1879,7 +1881,7 @@ function App() {
       } else if (agentSurfaceMode === "terminal") {
         const firstLayout = initialLayout[0] ?? fallbackLayout[0];
         const firstProfile = resolveLaunchProfile(firstLayout.profileId);
-        const result = await invoke<OpenWorkspaceResponse>("open_workspace", { path, profile: firstProfile });
+        const result = await invoke<OpenWorkspaceResponse>("open_workspace", { path, profile: firstProfile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, path) });
         root = result.root;
         const layout = requestedSessionId
           ? paneLayoutsBySessionRef.current[sessionSnapshotKey(root, requestedSessionId)] ?? initialLayout
@@ -1899,7 +1901,7 @@ function App() {
         nextActivePaneId = result.paneId;
         for (const record of restRecords) {
           const paneProfile = resolveLaunchProfile(record.profileId);
-          const nextPane = await invoke<OpenPaneResponse>("create_pane", { path: root, profile: paneProfile });
+          const nextPane = await invoke<OpenPaneResponse>("create_pane", { path: root, profile: paneProfile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root) });
           nextProjectPanes = [
             ...nextProjectPanes,
             {
@@ -2364,7 +2366,7 @@ function App() {
     if (audit.decision !== "approved") return false;
     setLaunchProfileChanging(true);
     try {
-      const result = await invoke<OpenPaneResponse>("restart_pane", { path: root, paneId: pane.id, profile: pane.profile });
+      const result = await invoke<OpenPaneResponse>("restart_pane", { path: root, paneId: pane.id, profile: pane.profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root) });
       const nextPanes = terminalPanesForSession(root, sessionId).map((item) =>
         item.id === pane.id
           ? { ...item, id: result.paneId, state: "running" as TerminalPaneState, exitCode: null, createdAt: Date.now() }
@@ -2568,6 +2570,7 @@ function App() {
             approvalMode: activeComposerHarness.approvalMode,
             model: activeComposerHarness.model.trim() || aiConnectionSettings.providerModels[provider].trim() || null,
             reasoningEffort: activeComposerHarness.reasoningEffort === "default" ? null : activeComposerHarness.reasoningEffort,
+            environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, workspacePathRef.current),
           },
         });
       } else {
@@ -2708,6 +2711,7 @@ function App() {
   };
 
   const saveAiConnectionSettings = async (next: AiConnectionSettings) => {
+    aiConnectionSettingsRef.current = next;
     setAiConnectionSettings(next);
     await storeRef.current?.set("aiConnectionSettings", next);
     await storeRef.current?.save();
@@ -2931,7 +2935,7 @@ function App() {
     if (audit.decision !== "approved") return false;
     setLaunchProfileChanging(true);
     try {
-      const result = await invoke<OpenPaneResponse>("create_pane", { path: root, profile });
+      const result = await invoke<OpenPaneResponse>("create_pane", { path: root, profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root) });
       const existingPanes = terminalPanesForSession(root, sessionId);
       const slot = existingPanes.length;
       const pane = {
@@ -3074,7 +3078,7 @@ function App() {
     setLaunchProfileChanging(true);
     try {
       const worktree = await invoke<WorktreeResponse>("create_project_worktree", { root, label });
-      const result = await invoke<OpenPaneResponse>("create_pane", { path: worktree.path, profile });
+      const result = await invoke<OpenPaneResponse>("create_pane", { path: worktree.path, profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root) });
       const existingPanes = terminalPanesForSession(root, sessionId);
       const slot = existingPanes.length;
       const pane: ManagedTerminalPane = {
@@ -4738,6 +4742,7 @@ function App() {
       customLaunchProfilesRef.current = savedCustomProfiles;
       setCustomLaunchProfiles(savedCustomProfiles);
       const savedAiConnectionSettings = normalizeAiConnectionSettings(await store.get<unknown>("aiConnectionSettings"));
+      aiConnectionSettingsRef.current = savedAiConnectionSettings;
       setAiConnectionSettings(savedAiConnectionSettings);
       void refreshConnectionSecretPresence(savedAiConnectionSettings);
       const savedTerminalProfile = normalizeTerminalLaunchProfile(await store.get<unknown>("terminalLaunchProfile"));
