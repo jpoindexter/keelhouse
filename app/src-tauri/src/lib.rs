@@ -10,8 +10,13 @@
 // the live terminal's modes) and writes to the pty. Nothing non-Send escapes.
 
 mod chat_harness;
+mod chat_store;
 
 use chat_harness::{start_chat_run, stop_chat_run, ChatRunState};
+use chat_store::{
+    delete_chat_conversation, delete_project_chat_conversations, load_chat_conversations,
+    migrate_chat_conversations, reset_chat_store, save_chat_conversation, ChatStore,
+};
 use ignore::WalkBuilder;
 use libghostty_vt::key::{Action, Encoder, Event, Key, Mods, OptionAsAlt};
 use libghostty_vt::paste;
@@ -2628,6 +2633,14 @@ pub fn run() {
                 next_pane_id: Mutex::new(0),
             });
             app.manage(ChatRunState::default());
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .map_err(|error| format!("Could not resolve app data directory: {error}"))?;
+            fs::create_dir_all(&app_data_dir)?;
+            let chat_store = ChatStore::open(&app_data_dir.join("chats.sqlite3"))
+                .map_err(std::io::Error::other)?;
+            app.manage(chat_store);
             if let Some(window) = app.get_webview_window("main") {
                 window.show()?;
                 window.set_focus()?;
@@ -2649,6 +2662,12 @@ pub fn run() {
             source_control_status,
             start_chat_run,
             stop_chat_run,
+            load_chat_conversations,
+            save_chat_conversation,
+            migrate_chat_conversations,
+            delete_chat_conversation,
+            delete_project_chat_conversations,
+            reset_chat_store,
             reset_local_state,
             resolve_workspace,
             open_workspace,

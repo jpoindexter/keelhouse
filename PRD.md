@@ -164,7 +164,7 @@ The file rail and editor are not optional product garnish; they are the reason t
 ## Constraints
 
 - **Stack locked** (DECISIONS.md 2026-07-07): Tauri 2 + React/TS/Vite frontend + Rust backend; `libghostty-vt` terminal engine; `portable-pty`; CodeMirror 6 for the eventual editor. Switching before v0 ships = "yes, throw away the work."
-- **Library choices research-backed** (DECISIONS.md 2026-07-08, report `docs/vision-to-reality-2026-07-08.html`): editor `@uiw/react-codemirror`; file rail `ignore` (walk) + `notify`+`notify-debouncer-mini` (watch) + React Arborist (tree); persistence Tauri Store plugin (v0/v0.5) → SQL/SQLite plugin (v1); packaging ad-hoc sign for local use. All primary-sourced.
+- **Library choices research-backed** (DECISIONS.md 2026-07-08, report `docs/vision-to-reality-2026-07-08.html`): editor `@uiw/react-codemirror`; file rail `ignore` (walk) + `notify`+`notify-debouncer-mini` (watch) + React Arborist (tree); Tauri Store for lightweight workbench preferences; direct `rusqlite` WAL storage for transactional chat history; packaging ad-hoc sign for local use.
 - Toolchain: Zig **pinned to 0.15.2** (Homebrew default 0.16.0 breaks the libghostty-vt build). Documented in `spike-ghostty-vt/README.md`.
 - Must coexist with Jason's existing projects (indx, brutal, hashmark, prova, gripe, lint) without touching their git state.
 - Ship ugly first, but do not invent a new interaction language. VS Code-compatible shortcuts and basic settings/theme support are product requirements once the editor loop exists.

@@ -206,6 +206,14 @@ import {
   startChatRun,
 } from "./chatConversation";
 import type { ChatConversation, ChatConversationRecords, ChatRunEnvelope } from "./chatConversation";
+import {
+  deleteDurableChatConversation,
+  deleteDurableProjectChats,
+  loadDurableChatConversations,
+  migrateLegacyChatConversations,
+  resetDurableChatStore,
+  saveDurableChatConversation,
+} from "./chatStore";
 import { ToolDockMenu } from "./ToolDockMenu";
 import { ToolTrayTabs } from "./ToolTrayTabs";
 import { paneContextBelongsToProject, paneContextKey, paneContextParts, removeProjectPaneContexts } from "./paneOwnership";
@@ -1234,12 +1242,16 @@ function App() {
     updater: (conversation: ChatConversation) => ChatConversation,
   ) => {
     const previous = chatConversationsRef.current[key] ?? emptyChatConversation();
-    const nextConversation = updater(previous);
+    const updated = updater(previous);
+    const nextConversation = { ...updated, revision: previous.revision + 1 };
     const next = { ...chatConversationsRef.current, [key]: nextConversation };
     chatConversationsRef.current = next;
     setChatConversations(next);
-    void storeRef.current?.set("chatConversations", next);
-    void storeRef.current?.save();
+    void saveDurableChatConversation(key, nextConversation).catch((error) => {
+      const message = `Could not save chat history: ${String(error)}`;
+      setLaunchError(message);
+      void invoke("log_health_event", { message }).catch(() => {});
+    });
     return nextConversation;
   };
 
@@ -1783,7 +1795,9 @@ function App() {
         await store?.set("browserPreviewByProject", nextBrowserProjects);
         await store?.set("browserPreviewBySession", nextBrowserSessions);
         await store?.set("composerHarnessBySession", nextComposerHarness);
-        await store?.set("chatConversations", nextChatConversations);
+        await deleteDurableProjectChats(path).catch((error) => {
+          void invoke("log_health_event", { message: `delete project chats failed: ${String(error)}` }).catch(() => {});
+        });
         await store?.set("sessionEditorSnapshots", nextSessionSnapshots);
         await store?.set("paneLayoutsBySession", nextPaneLayouts);
         if (workspacePathRef.current === path) {
@@ -1910,6 +1924,12 @@ function App() {
       setLaunchError(`Could not close this chat's terminal panes: ${String(err)}`);
       return;
     }
+    try {
+      await deleteDurableChatConversation(composerHarnessSessionKey(projectPath, session.id));
+    } catch (err) {
+      setLaunchError(`Could not delete this chat's history: ${String(err)}`);
+      return;
+    }
     if (contextKey) {
       const { [contextKey]: _removedPanes, ...nextPaneContexts } = terminalPanesByContextRef.current;
       const { [contextKey]: _removedActive, ...nextActiveContexts } = activeTerminalPaneByContextRef.current;
@@ -1934,7 +1954,6 @@ function App() {
     setBrowserPreviewBySession(nextBrowserSessions);
     await storeRef.current?.set("browserPreviewBySession", nextBrowserSessions);
     await persistComposerHarnessRecords(nextComposerHarness);
-    await storeRef.current?.set("chatConversations", nextChatConversations);
     await persistProjectSessions(nextSessions, nextActiveSessions);
     if (workspacePathRef.current === projectPath && activeSessionId === session.id) {
       await openWorkspaceDirect(projectPath, launchProfileRef.current, { captureCurrentSession: false });
@@ -4038,7 +4057,17 @@ function App() {
       const savedBrowserSessions = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewBySession"));
       const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
       const savedComposerHarness = normalizeComposerHarnessRecords(await store.get<unknown>("composerHarnessBySession"), savedProfile.id);
-      const savedChatConversations = normalizeChatConversationRecords(await store.get<unknown>("chatConversations"));
+      const legacyChatConversations = normalizeChatConversationRecords(await store.get<unknown>("chatConversations"));
+      if (Object.keys(legacyChatConversations).length > 0) {
+        await migrateLegacyChatConversations(legacyChatConversations);
+      } else {
+        await migrateLegacyChatConversations({});
+      }
+      const savedChatConversations = normalizeChatConversationRecords(await loadDurableChatConversations());
+      if ((await store.get<unknown>("chatConversations")) !== null) {
+        await store.delete("chatConversations");
+        await store.save();
+      }
       const savedPaneLabels = normalizePaneLabelsBySession(await store.get<unknown>("paneLabelsBySession"));
       const savedSessionSnapshots = normalizeSessionEditorSnapshots(await store.get<unknown>("sessionEditorSnapshots"));
       const savedPaneLayouts = normalizePaneLayoutsBySession(await store.get<unknown>("paneLayoutsBySession"));
@@ -5796,6 +5825,7 @@ function App() {
                 await store.clear();
                 await store.save();
               }
+              await resetDurableChatStore();
               await invoke("reset_local_state").catch(() => {});
               window.location.reload();
             })();

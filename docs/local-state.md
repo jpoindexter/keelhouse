@@ -1,12 +1,12 @@
 # Local State
 
-Keelhouse uses Tauri Store for v0/v0.5 state. The current file still uses the `agent-cli` app identifier:
+Keelhouse separates lightweight workbench preferences from durable chat history. Both remain local under the current `agent-cli` app identifier:
 
 ```bash
 ~/Library/Application Support/com.jasonpoindexter.agent-cli/workspace.json
 ```
 
-Current schema:
+`workspace.json` is the Tauri Store preferences file. Its current schema includes:
 
 ```json
 {
@@ -100,21 +100,6 @@ Current schema:
       ]
     }
   },
-  "chatConversations": {
-    "/absolute/path/to/workspace\nsession-lt72gs": {
-      "provider": "codex",
-      "providerThreadId": "019f5a64-56ac-7e73-b554-138e0e8352b4",
-      "messages": [
-        {
-          "id": "user-mexample",
-          "role": "user",
-          "text": "Run the tests and fix the first failure.",
-          "timestamp": 1783530000000
-        }
-      ],
-      "updatedAt": 1783530000000
-    }
-  },
   "agentActivityEvents": [
     {
       "id": "pane:4:command:1783530000000",
@@ -141,8 +126,13 @@ Current schema:
 `paneLabelsBySession` stores user-edited terminal pane names by project-session key and pane slot. It restores labels when the same session/slot is recreated.
 `sessionEditorSnapshots` stores per-chat editor tabs, active file, dirty buffers, and CodeMirror view state. `paneLayoutsBySession` stores optional raw-terminal pane slots, launch profile ids, and labels. Chat mode does not spawn those panes; opening Raw terminal recreates them without restoring live process memory or transcripts.
 `composerHarnessBySession` stores composer permission mode, goal text, selected profile id, and attachment references by project-chat key. Attachments are references only; file contents and screenshots are not copied into local state.
-`chatConversations` stores independent structured histories and the Codex provider thread id for each project-chat key. Active run ids are intentionally not restored after relaunch.
 `agentActivityEvents` stores up to 200 user-safe activity rows across projects, sessions, and panes. Rows are normalized on startup; unknown kinds/statuses, malformed ids, and invalid timestamps are dropped. Current event kinds are `prompt`, `process`, `command`, `file`, `tool`, `git`, `approval`, `browser`, `app`, `error`, and `complete`.
+
+## Durable Chat Database
+
+`chats.sqlite3` is owned by the Rust backend and uses SQLite WAL mode. It stores conversations, ordered messages/blocks, provider thread ids, explicit run status, usage, and schema-migration metadata. Saves replace one conversation transactionally and reject stale revisions, so an older asynchronous write cannot overwrite a newer turn.
+
+On the first SQLite-aware launch, the app imports the legacy `chatConversations` object from `workspace.json` in one transaction. A migration marker prevents re-import; the legacy key is removed only after a successful import. Startup converts interrupted `running` records to `interrupted`, and malformed optional usage JSON is ignored instead of aborting launch.
 
 ## Reset Path
 
@@ -160,7 +150,7 @@ cd app
 PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH" npm run tauri dev
 ```
 
-The app will create a fresh `workspace.json` after a folder is picked.
+The app will create a fresh `workspace.json` after a folder is picked. This preference-only reset intentionally leaves `chats.sqlite3` intact.
 
 ## Repair Without Full Reset
 
@@ -200,12 +190,14 @@ All local state lives under `~/Library/Application Support/com.jasonpoindexter.a
 
 | File | Owner | Contents |
 | --- | --- | --- |
-| `workspace.json` | Tauri Store | projects, sessions (incl. archived), pane labels/layouts, editor snapshots, browser URLs, composer harness, activity events, pane transcripts, keybinding overrides, theme, notification toggle, schemaVersion |
+| `workspace.json` | Tauri Store | projects, session metadata, pane labels/layouts, editor snapshots, browser URLs, composer harness, activity events, pane transcripts, keybinding overrides, theme, notification toggle, schemaVersion |
+| `chats.sqlite3` | Rust `rusqlite` store | conversations, ordered messages, provider thread ids, run state, usage, schema/import metadata |
+| `chats.sqlite3-wal`, `chats.sqlite3-shm` | SQLite | live WAL bookkeeping; do not delete while Keelhouse is running |
 | `.session-lock` | `begin_session`/`end_session_clean` | crash-detection marker |
 | `health.log` | `log_health_event` | capped local failure log |
 | `.window-state.json` | tauri-plugin-window-state | window frame |
 | `workspace.json.*-bak-*` | legacy sync backups | older ad-hoc backups (safe to delete) |
 
-**Reset all local data** (Settings → App configuration) confirms, then clears the Tauri Store (`store.clear()`) and calls the `reset_local_state` Rust command to delete `.session-lock`, `health.log`, and `.window-state.json`, then reloads. WebView caches are managed by the OS.
+**Reset all local data** (Settings → App configuration) confirms, clears the Tauri Store, resets the SQLite chat database, calls the `reset_local_state` Rust command to delete `.session-lock`, `health.log`, and `.window-state.json`, then reloads. WebView caches are managed by the OS.
 
 **Manual uninstall:** drag `Keelhouse.app` to Trash, then delete the app-support directory above to remove all state and any cached credentials the CLIs stored there.

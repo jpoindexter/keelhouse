@@ -12,12 +12,23 @@ export type ChatMessage = {
   status?: "running" | "complete" | "error";
 };
 
+export type ChatUsage = {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+};
+
+export type ChatRunStatus = "idle" | "running" | "complete" | "error" | "interrupted";
+
 export type ChatConversation = {
   provider: ChatProvider;
   providerThreadId?: string;
   activeRunId?: string;
   messages: ChatMessage[];
   updatedAt: number;
+  revision: number;
+  runStatus: ChatRunStatus;
+  usage?: ChatUsage;
 };
 
 export type ChatConversationRecords = Record<string, ChatConversation>;
@@ -31,8 +42,6 @@ export type ChatRunEnvelope = {
   line?: string;
 };
 
-const MAX_CHAT_MESSAGES = 300;
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value != null;
 
@@ -45,7 +54,28 @@ export const emptyChatConversation = (now = Date.now()): ChatConversation => ({
   provider: "codex",
   messages: [],
   updatedAt: now,
+  revision: 0,
+  runStatus: "idle",
 });
+
+const nonNegativeInteger = (value: unknown): number =>
+  typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+
+const normalizeUsage = (value: unknown): ChatUsage | undefined => {
+  if (!isRecord(value)) return undefined;
+  return {
+    inputTokens: nonNegativeInteger(value.inputTokens ?? value.input_tokens),
+    cachedInputTokens: nonNegativeInteger(value.cachedInputTokens ?? value.cached_input_tokens),
+    outputTokens: nonNegativeInteger(value.outputTokens ?? value.output_tokens),
+  };
+};
+
+const normalizeRunStatus = (value: unknown, staleActiveRun: boolean): ChatRunStatus => {
+  if (staleActiveRun) return "interrupted";
+  return value === "running" || value === "complete" || value === "error" || value === "interrupted"
+    ? value
+    : "idle";
+};
 
 const normalizeMessage = (value: unknown): ChatMessage | null => {
   if (!isRecord(value)) return null;
@@ -71,8 +101,13 @@ export const normalizeChatConversationRecords = (value: unknown): ChatConversati
   if (!isRecord(value)) return {};
   return Object.fromEntries(Object.entries(value).flatMap(([key, entry]) => {
     if (!key.trim() || !isRecord(entry)) return [];
+    const staleActiveRun = Boolean(textValue(entry.activeRunId));
     const messages = Array.isArray(entry.messages)
-      ? entry.messages.map(normalizeMessage).filter((message): message is ChatMessage => Boolean(message)).slice(-MAX_CHAT_MESSAGES)
+      ? entry.messages.map(normalizeMessage).filter((message): message is ChatMessage => Boolean(message)).map((message) =>
+        staleActiveRun && message.status === "running"
+          ? { ...message, text: "Interrupted when Keelhouse last closed.", status: "error" as const }
+          : message
+      )
       : [];
     const updatedAt = typeof entry.updatedAt === "number" && Number.isFinite(entry.updatedAt)
       ? entry.updatedAt
@@ -83,13 +118,16 @@ export const normalizeChatConversationRecords = (value: unknown): ChatConversati
       activeRunId: undefined,
       messages,
       updatedAt,
+      revision: nonNegativeInteger(entry.revision) + (staleActiveRun ? 1 : 0),
+      runStatus: normalizeRunStatus(entry.runStatus, staleActiveRun),
+      usage: normalizeUsage(entry.usage),
     }]];
   }));
 };
 
 const pushMessage = (conversation: ChatConversation, message: ChatMessage): ChatConversation => ({
   ...conversation,
-  messages: [...conversation.messages, message].slice(-MAX_CHAT_MESSAGES),
+  messages: [...conversation.messages, message],
   updatedAt: message.timestamp,
 });
 
@@ -126,7 +164,8 @@ export const startChatRun = (
   return {
     ...conversation,
     activeRunId: runId,
-    messages: [...conversation.messages, statusMessage].slice(-MAX_CHAT_MESSAGES),
+    runStatus: "running",
+    messages: [...conversation.messages, statusMessage],
     updatedAt: now,
   };
 };
@@ -154,9 +193,11 @@ const itemMessage = (
   item: Record<string, unknown>,
   eventType: string,
   now: number,
+  runId: string,
 ): ChatMessage | null => {
   const type = textValue(item.type);
-  const itemId = textValue(item.id) || undefined;
+  const providerItemId = textValue(item.id);
+  const itemId = providerItemId ? `${runId}:${providerItemId}` : undefined;
   const running = eventType === "item.started";
   if (type === "agent_message") {
     const text = textValue(item.text).trim();
@@ -224,6 +265,7 @@ const itemMessage = (
 const completeRunningStatus = (conversation: ChatConversation, now: number): ChatConversation => ({
   ...conversation,
   activeRunId: undefined,
+  runStatus: "complete",
   messages: conversation.messages.map((message) =>
     message.role === "status" && message.status === "running"
       ? { ...message, text: "Completed", status: "complete" as const, timestamp: now }
@@ -241,7 +283,7 @@ export const applyChatRunEnvelope = (
     if (!isRecord(envelope.event) || textValue(envelope.event.type) !== "run.completed") return conversation;
     const exitCode = typeof envelope.event.exitCode === "number" ? envelope.event.exitCode : 1;
     const completed = completeRunningStatus(conversation, now);
-    return exitCode === 0 ? completed : pushMessage(completed, {
+    return exitCode === 0 ? completed : pushMessage({ ...completed, runStatus: "error" }, {
       id: messageId("error", now, envelope.runId),
       role: "error",
       text: textValue(envelope.event.message) || `Codex exited with status ${exitCode}.`,
@@ -257,12 +299,12 @@ export const applyChatRunEnvelope = (
   }
   if (eventType === "item.started" || eventType === "item.completed") {
     const item = isRecord(envelope.event.item) ? envelope.event.item : null;
-    const message = item ? itemMessage(item, eventType, now) : null;
+    const message = item ? itemMessage(item, eventType, now, envelope.runId) : null;
     return message ? upsertItemMessage(conversation, message) : conversation;
   }
   if (eventType === "turn.failed") {
     const error = isRecord(envelope.event.error) ? textValue(envelope.event.error.message) : "Codex could not complete this turn.";
-    return pushMessage(completeRunningStatus(conversation, now), {
+    return pushMessage({ ...completeRunningStatus(conversation, now), runStatus: "error" }, {
       id: messageId("error", now, envelope.runId),
       role: "error",
       text: error,
@@ -270,6 +312,11 @@ export const applyChatRunEnvelope = (
       timestamp: now,
     });
   }
-  if (eventType === "turn.completed") return completeRunningStatus(conversation, now);
+  if (eventType === "turn.completed") {
+    return {
+      ...completeRunningStatus(conversation, now),
+      usage: normalizeUsage(envelope.event.usage) ?? conversation.usage,
+    };
+  }
   return conversation;
 };

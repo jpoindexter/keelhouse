@@ -1116,14 +1116,14 @@
     {
       "id": "CHAT-DURABLE-STORE",
       "title": "Durable SQLite chat store",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "core",
       "size": "M",
       "launch": "v1",
       "blocker": true,
       "summary": "Adapt Hashmark's SQLite WAL session/message model so real chat history is not capped inside workspace.json. Keep lightweight layout preferences in Tauri Store; persist chats, provider thread ids, message blocks, run status, usage, and schema migrations in SQLite.",
-      "done": "Existing workspace.json chats migrate once without loss; messages and structured tool/error/status blocks commit transactionally per chat; provider thread ids and usage restore after relaunch; stale running state recovers explicitly; malformed rows cannot crash startup; tests cover migration, cascade delete, concurrent chats, and interrupted writes.",
+      "done": "Executed 2026-07-13: two workspace.json chats and 29 messages migrated once without loss; transaction rollback and stale-revision tests protect message blocks; provider thread ids, 32 post-run messages, and usage restored after a packaged Codex quit/relaunch; interrupted runs recover explicitly; malformed usage cannot crash startup; tests cover migration, cascade delete, concurrent chats, interrupted writes, and provider item-id reuse.",
       "buildOrder": 90.21
     },
     {

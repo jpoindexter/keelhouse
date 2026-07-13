@@ -57,6 +57,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `../demo/keelhouse-chrome-demo.html`: standalone chrome walkthrough for first open, drawer modes, movable trays, styled menus, settings, command palette, and constrained layouts.
 - `chrome-ui-polish.md`: workbench chrome quality bar.
 - `daily-driver-metrics.md`: replacement-workflow metrics, scenarios, and collector command.
+- `qa/daily-driver/chat-durable-store.md`: executed SQLite migration, real Codex turn, and relaunch-restoration proof.
 - `perf-budget.md`: static resource budget gate and next live measurement plan.
 - `editor-terminal-parity.md`: editor and terminal parity criteria.
 - `terminal-robustness.md`: v0.5 terminal runtime evidence and checklist.

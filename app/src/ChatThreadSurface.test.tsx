@@ -11,6 +11,8 @@ describe("ChatThreadSurface", () => {
           provider: "codex",
           providerThreadId: "thread-1",
           updatedAt: 4,
+          revision: 3,
+          runStatus: "complete",
           messages: [
             { id: "user-1", role: "user", text: "Inspect the repo", timestamp: 1 },
             { id: "status-1", role: "status", title: "Codex", text: "Completed", status: "complete", timestamp: 2 },
@@ -43,6 +45,8 @@ describe("ChatThreadSurface", () => {
         conversation={{
           provider: "codex",
           updatedAt: 5,
+          revision: 4,
+          runStatus: "complete",
           messages: [
             { id: "user-1", role: "user", text: "First prompt", timestamp: 1 },
             { id: "assistant-1", role: "assistant", text: "First response", timestamp: 2 },
@@ -67,6 +71,8 @@ describe("ChatThreadSurface", () => {
         conversation={{
           provider: "codex",
           activeRunId: "run-1",
+          revision: 1,
+          runStatus: "running",
           messages: [
             { id: "status-1", role: "status", title: "Codex", text: "Working", status: "running", timestamp: 1 },
           ],
@@ -82,7 +88,7 @@ describe("ChatThreadSurface", () => {
   it("offers concrete prompts in a new chat", () => {
     const html = renderToStaticMarkup(
       <ChatThreadSurface
-        conversation={{ provider: "codex", messages: [], updatedAt: 0 }}
+        conversation={{ provider: "codex", messages: [], updatedAt: 0, revision: 0, runStatus: "idle" }}
         events={[]}
         onSuggestion={() => {}}
       />,

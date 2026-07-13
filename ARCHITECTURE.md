@@ -13,7 +13,7 @@ The technical design that doesn't fit the one-page PRD. Stack is locked (DECISIO
 | Terminal render | Canvas 2D (v0) | Ship-ugly. WebGL only if perf demands it (measure first). |
 | Editor (v0.5) | CodeMirror 6 | Lighter than Monaco, good for the VS Code-shell replacement slice, real syntax highlighting. |
 | State | React state / Zustand | Keep it boring for v0. |
-| Persistence | Tauri Store plugin now, then `tauri-plugin-sql` (SQLite) when chat history turns relational | JSON is enough for bounded local chat records, provider thread ids, layout, and recent projects; SQL waits for search/export/branching pressure. |
+| Persistence | Tauri Store for lightweight workbench preferences; direct `rusqlite` WAL database for chats | JSON remains appropriate for layout and recent-project preferences. Chat conversations, messages, provider thread ids, run state, and usage require transactions, migration ordering, recovery, and later relational search. |
 
 ## Primary chat flow
 
@@ -27,7 +27,7 @@ The center surface is not a terminal transcript. A chat is keyed by `project roo
 [Rust chat_harness event bridge]
       ↓ chat-run-event
 [typed frontend reducer]
-      → persisted chat timeline
+      → transactional SQLite chat timeline
       → independent run/stop/error state per chat
 ```
 

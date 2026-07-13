@@ -340,3 +340,15 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 **Correction after populated review:** The measured `48rem` value was not a portable product rule. Jason rejected the first application as visually disjointed. Keelhouse now preserves Codex's shared-axis relationship with a `56rem` transcript/composer cap, broad `46rem` right-offset user prompts, prompt-led turn grouping, 44px primary/thread toolbars, and a subordinate 20px status strip. Duplicate titlebar actions were removed.
 
 **Verification boundary:** The rebuilt package was recaptured with restored multi-project chat history at 1232×768 and 919×653. The corrected turn grouping, wrapping, composer anchoring, and chrome hierarchy are executed evidence. Jason's explicit visual sign-off remains open.
+
+## 2026-07-13 — Persist chats through a Rust-owned SQLite WAL store
+
+**Choice:** Keep Tauri Store for lightweight workbench preferences and move structured chat conversations to a Rust-owned `rusqlite` database in WAL mode. Conversation saves are transactional and revision-ordered; schema and one-time legacy-import versions are stored in the database.
+
+**Why:** Chat history now includes provider thread ids, ordered structured blocks, run state, and usage. These records need atomic writes, stale-write rejection, startup recovery, cascade deletion, and later relational discovery. A frontend SQL handle would weaken the backend ownership boundary around provider events and recovery.
+
+**Migration:** On first launch, valid `workspace.json.chatConversations` records import in one transaction. The source key is removed only after success, and an import marker makes relaunch idempotent. Interrupted active runs recover as `interrupted`; malformed optional usage does not crash startup.
+
+**Verified:** Unit tests execute migration, rollback, stale revision rejection, cascade deletion, concurrent chats, interrupted-run recovery, and malformed usage. A packaged-app run migrated two chats and 29 messages without loss, completed a real resumed Codex turn, persisted 32 messages plus usage, and restored the original and new replies after quit/relaunch. Evidence: `docs/qa/daily-driver/chat-durable-store.md`.
+
+**Reversible?** The storage implementation is replaceable behind the Tauri commands, but the durable schema and migration guarantees are now product contracts.
