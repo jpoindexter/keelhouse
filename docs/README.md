@@ -33,6 +33,7 @@ Keelhouse is the product name. The repo, package, binary, app identifier, and lo
 - `composer-harness-research.md`: bottom composer and future harness scope.
 - `composer-harness.md`: v1 implemented composer permission, goal, profile, and attachment controls.
 - `harness-contract.md`: app-owned pane/session handle contract.
+- `agent-hooks.md`: permissioned loopback MCP endpoint, tool catalog, and security boundary.
 - `app-actions-minimal.md`: v1 app-owned action gate and audit contract.
 - `agent-session-handle.md`: v1 implemented pane/session handle layer.
 - `agent-activity.md`: v1 visible current/recent agent activity rows.

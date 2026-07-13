@@ -16,6 +16,7 @@ const mainTsx = read("app/src/main.tsx");
 const chatThreadSurface = read("app/src/ChatThreadSurface.tsx");
 const chatConversation = read("app/src/chatConversation.ts");
 const chatHarness = read("app/src-tauri/src/chat_harness.rs");
+const agentHooks = read("app/src-tauri/src/agent_hooks.rs");
 const toolDockMenu = read("app/src/ToolDockMenu.tsx");
 const toolTrayTabs = read("app/src/ToolTrayTabs.tsx");
 const settingsModal = read("app/src/SettingsModal.tsx");
@@ -171,6 +172,9 @@ assert(connectionSecrets.includes("resolve_connection_environment") && connectio
 assert(mcpProbe.includes('"initialize"') && mcpProbe.includes('"tools/list"') && mcpProbe.includes("spawn_blocking") && mcpProbe.includes("read_connection_secret"), "MCP health must execute a bounded backend protocol probe with Keychain auth");
 assert(connectionSecrets.includes('KEYCHAIN_SERVICE') && connectionSecrets.includes('keyring::Entry::new') && connectionSecrets.includes('.set_password(value)') && !connectionSecrets.includes('Command::new("/usr/bin/security")'), "Connection secrets must use the native Keychain API without putting values in process arguments");
 assert(mcpOAuth.includes('code_challenge_method", "S256"') && mcpOAuth.includes('("resource", prepared.resource.clone())') && mcpOAuth.includes('write_connection_secret(&token_key(server_id)') && mcpOAuth.includes('refresh_tokens_request') && mcpOAuth.includes('revoke_tokens'), "MCP OAuth must preserve PKCE, resource binding, Keychain token storage, refresh, and revocation");
+assert(agentHooks.includes('TcpListener::bind("127.0.0.1:0")') && agentHooks.includes('format!("Bearer {token}")') && agentHooks.includes('fs::Permissions::from_mode(0o600)'), "Agent hooks must stay loopback-only with a private ephemeral bearer configuration");
+assert(agentHooks.includes('"list_projects"') && agentHooks.includes('"get_workspace_state"') && agentHooks.includes('"focus_pane"') && agentHooks.includes('"open_file"') && agentHooks.includes('"create_shell"') && agentHooks.includes('"report_status"'), "Agent-hook MCP must expose the documented minimal tool catalog");
+assert(appTsx.includes('invoke<AgentHookRequest[]>("take_agent_hook_requests")') && appTsx.includes('focusTerminalPane(paneId, "agent")') && appTsx.includes('createTerminalPane(defaultTerminalLaunchProfile(), "agent")') && appTsx.includes('"agent",\n          );'), "Agent-hook actions must enter the renderer through the attributed app-action path");
 assert(appTsx.includes('storeRef.current?.set("aiConnectionSettings", next)') && !appTsx.includes('storeRef.current?.set("connectionSecret'), "Tauri Store may persist non-secret connection metadata but never secret values");
 assert(appTsx.includes("aiConnectionSettings.providerModels[provider].trim()"), "Provider model defaults must reach structured chat runs");
 assert(appTsx.includes('invoke("delete_connection_secret", { key })'), "Full local reset must remove known Keychain connection secrets before clearing metadata");

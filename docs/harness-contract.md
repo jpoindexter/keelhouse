@@ -11,7 +11,7 @@ This document defines the app-owned layer between the Codex-style composer and r
 - **Composer**: the bottom input/control surface. It sends text to a selected pane or triggers app-owned actions. It does not replace the terminal UI.
 - **App action**: a deterministic command the app owns, such as focus pane, open file, open diff, attach screenshot reference, interrupt process, or create pane.
 - **Activity event**: a user-visible record of what happened: prompt sent, command started, file changed, approval requested, action denied, pane exited, or stop sent.
-- **Direct harness**: optional future direct API/MCP agent orchestration. It is separate from terminal-backed panes and must never demote real CLI agents.
+- **Direct harness**: the local permissioned MCP surface in `app/src-tauri/src/agent_hooks.rs`. It exposes app-owned reads and requests app-owned actions without replacing terminal-backed panes or structured provider chats.
 
 ## Agent Session Handle
 
@@ -43,7 +43,7 @@ type AgentSessionHandle = {
 };
 ```
 
-The composer targets a handle, not a React component. The handle is also the boundary for future agent hooks and activity logging. The current implementation lives in `app/src/agentSessionHandle.ts`; `App.tsx` wraps the selected real pty pane with `send`, `interrupt`, `readTail`, and `close` operations.
+The composer targets a handle, not a React component. The handle is also the attribution boundary for agent hooks and activity logging. The current implementation lives in `app/src/agentSessionHandle.ts`; `App.tsx` wraps the selected real pty pane with `send`, `interrupt`, `readTail`, and `close` operations. Structured chats without a pane use a chat-scoped synthetic descriptor so hook activity remains attached to the correct project and chat.
 
 Current read-tail behavior returns text from the latest rendered terminal snapshot. Full scrollback/transcript readback belongs to TRANSCRIPTS and TERMINAL-FIND.
 
@@ -58,6 +58,8 @@ Permission modes apply to app-owned actions before they apply to external CLIs.
 - `fullAccess`: allow app-owned actions but still log them and keep hard blocks for destructive or out-of-scope actions.
 
 Each gated action records: `actionId`, `kind`, `target`, `risk`, `requestedBy`, `decision`, `reason`, `timestamp`, and optional `undoHint`. The current implementation lives in `app/src/appActions.ts`; `App.tsx` routes focus pane, open file, open browser preview, attach reference, interrupt process, restart process, terminate process, create pane, close pane, and composer app commands through it.
+
+The local MCP endpoint reuses this gate. It does not bypass permissions or interpret terminal text. See `docs/agent-hooks.md` for the endpoint, generated configuration, tool catalog, and verification boundary.
 
 ## Activity Events
 

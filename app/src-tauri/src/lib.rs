@@ -9,12 +9,17 @@
 // also flow to the terminal thread over the same channel; it encodes them (using
 // the live terminal's modes) and writes to the pty. Nothing non-Send escapes.
 
+mod agent_hooks;
 mod chat_harness;
 mod chat_store;
 mod connection_secrets;
 mod mcp_oauth;
 mod mcp_probe;
 
+use agent_hooks::{
+    agent_hook_status, resolve_agent_hook_request, start_agent_hook_server,
+    take_agent_hook_requests, update_agent_hook_snapshot,
+};
 use chat_harness::{respond_chat_approval, start_chat_run, stop_chat_run, ChatRunState};
 use chat_store::{
     delete_chat_conversation, delete_project_chat_conversations, load_chat_conversations,
@@ -2967,6 +2972,9 @@ pub fn run() {
             let chat_store = ChatStore::open(&app_data_dir.join("chats.sqlite3"))
                 .map_err(std::io::Error::other)?;
             app.manage(chat_store);
+            let agent_hook_state =
+                start_agent_hook_server(&app_data_dir).map_err(std::io::Error::other)?;
+            app.manage(agent_hook_state);
             if let Some(window) = app.get_webview_window("main") {
                 window.show()?;
                 window.set_focus()?;
@@ -2995,6 +3003,10 @@ pub fn run() {
             begin_mcp_oauth,
             mcp_oauth_status,
             disconnect_mcp_oauth,
+            agent_hook_status,
+            update_agent_hook_snapshot,
+            take_agent_hook_requests,
+            resolve_agent_hook_request,
             start_chat_run,
             stop_chat_run,
             respond_chat_approval,

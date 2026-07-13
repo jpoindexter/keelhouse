@@ -66,7 +66,8 @@ describe("SettingsModal", () => {
     expect(agentHtml).toContain("Default agent");
     expect(agentHtml).toContain("Permission mode");
     expect(agentHtml).toContain("Worktree policy");
-    expect(agentHtml).toContain("Execution unavailable until AGENT-HOOKS");
+    expect(agentHtml).toContain("Agent hook unavailable");
+    expect(agentHtml).toContain("Ephemeral bearer token · app-action approval · attributed results");
     expect(agentHtml).toContain("Environment policy");
     expect(agentHtml).toContain("Unavailable until AI-CONNECTIONS environment profiles");
     expect(agentHtml).toContain("Global default");

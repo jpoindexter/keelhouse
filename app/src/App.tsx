@@ -137,6 +137,19 @@ import {
 import type { AgentApprovalMode, AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
 import { AppIcon, paneStateAccessibleLabel, paneStateIconName } from "./icons";
 import type { AppIconName } from "./icons";
+
+type AgentHookRequest = {
+  requestId: string;
+  tool: "focus_pane" | "open_file" | "create_shell" | "report_status";
+  arguments: Record<string, unknown>;
+  requestedBy: "agent-hook";
+};
+
+type AgentHookStatus = {
+  endpoint: string;
+  configPath: string;
+  running: boolean;
+};
 import {
   comboMatches,
   normalizeKeybindingOverrides,
@@ -521,6 +534,7 @@ function App() {
   const aiConnectionSettingsRef = useRef<AiConnectionSettings>(DEFAULT_AI_CONNECTION_SETTINGS);
   const intentionallyTerminatedPaneIdsRef = useRef<Set<number>>(new Set());
   const terminalPanesRef = useRef<ManagedTerminalPane[]>([]);
+  const activeAgentSessionDescriptorRef = useRef<AgentSessionHandleDescriptor | null>(null);
   const fileNodeContextMenuItemsRef = useRef<(node: FileTreeNode) => ContextMenuItem[]>(() => []);
   const terminalPanesByContextRef = useRef<TerminalPanesByContext>({});
   const activeTerminalPaneByContextRef = useRef<ActiveTerminalPaneByContext>({});
@@ -583,6 +597,7 @@ function App() {
   const [editorCursor, setEditorCursor] = useState<CursorPosition>({ line: 1, column: 1 });
   const [recentProjects, setRecentProjects] = useState<string[]>([]);
   const [openProjects, setOpenProjects] = useState<OpenProject[]>([]);
+  const [agentHookStatus, setAgentHookStatus] = useState<AgentHookStatus | null>(null);
   const [projectSessions, setProjectSessions] = useState<ProjectSessionsByProject>({});
   const [activeSessionByProject, setActiveSessionByProjectState] = useState<ActiveSessionByProject>({});
   const [expandedSessionProjects, setExpandedSessionProjects] = useState<Record<string, boolean>>({});
@@ -890,18 +905,25 @@ function App() {
     () => agentSessionDescriptors.find((handle) => handle.paneId === activeTerminalPaneId) ?? null,
     [activeTerminalPaneId, agentSessionDescriptors],
   );
+  useEffect(() => {
+    activeAgentSessionDescriptorRef.current = activeAgentSessionDescriptor;
+  }, [activeAgentSessionDescriptor]);
   const selectedAgentActivityLog = useMemo(() => {
-    if (!activeAgentSessionDescriptor) return [];
+    if (!workspacePath || !activeSessionId) return [];
+    const paneIds = new Set([
+      `chat:${activeSessionId}`,
+      ...(activeAgentSessionDescriptor ? [activeAgentSessionDescriptor.id] : []),
+    ]);
     return filterAgentActivityEvents(
       agentActivityEvents.filter(
         (event) =>
-          event.projectId === activeAgentSessionDescriptor.projectId &&
-          event.projectSessionId === activeAgentSessionDescriptor.projectSessionId &&
-          event.paneId === activeAgentSessionDescriptor.id,
+          event.projectId === workspacePath &&
+          event.projectSessionId === activeSessionId &&
+          paneIds.has(event.paneId),
       ),
       agentActivityFilter,
     );
-  }, [activeAgentSessionDescriptor, agentActivityEvents, agentActivityFilter]);
+  }, [activeAgentSessionDescriptor, activeSessionId, agentActivityEvents, agentActivityFilter, workspacePath]);
   const activeTerminalProfile = activeTerminalPane?.profile ?? terminalLaunchProfile;
   const terminalPaneState = activeTerminalPane?.state ?? "idle";
   const terminalExitCode = activeTerminalPane?.exitCode ?? null;
@@ -1771,6 +1793,28 @@ function App() {
     });
   };
 
+  const activeAgentActivityHandle = (): AgentSessionHandleDescriptor | null => {
+    if (activeAgentSessionDescriptorRef.current) return activeAgentSessionDescriptorRef.current;
+    const projectId = workspacePathRef.current;
+    const projectSessionId = activeSessionForProject(projectId);
+    if (!projectId || !projectSessionId) return null;
+    return {
+      id: `chat:${projectSessionId}`,
+      paneId: -1,
+      projectId,
+      projectSessionId,
+      cwd: projectId,
+      label: "Structured chat",
+      agentProfileId: "codex",
+      agentProfileLabel: "Codex",
+      processState: "running",
+      approvalMode: composerHarnessBySessionRef.current[composerHarnessSessionKey(projectId, projectSessionId)]?.approvalMode ?? "ask",
+      exitCode: null,
+      createdAt: Date.now(),
+      activity: { label: "Agent hook", status: "running", updatedAt: Date.now() },
+    };
+  };
+
   const detectLocalDevServerFromSnapshot = (paneId: number, snapshot: Snapshot) => {
     const url = detectLocalDevServerUrl(terminalSnapshotText(snapshot));
     if (!url) return;
@@ -1820,7 +1864,7 @@ function App() {
 
   const gateAppAction = async (
     action: AppActionDescriptor,
-    handle: AgentSessionHandleDescriptor | null = activeAgentSessionDescriptor,
+    handle: AgentSessionHandleDescriptor | null = activeAgentActivityHandle(),
   ) => {
     const audit = await resolveAppAction(action, agentApprovalMode, (_action, message) => window.confirm(message));
     if (shouldLogAppActionAudit(audit)) {
@@ -2917,7 +2961,7 @@ function App() {
     logComposerHarnessEvent("Attachment removed", attachment.label);
   };
 
-  const focusTerminalPane = async (paneId: number) => {
+  const focusTerminalPane = async (paneId: number, requestedBy: "user" | "agent" = "user") => {
     if (paneId === activeTerminalPaneIdRef.current) return;
     const pane = terminalPanesRef.current.find((item) => item.id === paneId);
     const audit = await gateAppAction(createAppAction({
@@ -2925,7 +2969,7 @@ function App() {
       label: "Focus pane",
       target: pane ? terminalPaneLabelForDisplay(pane.label, pane.profile.label, pane.slot) : `pane:${paneId}`,
       risk: "low",
-      requestedBy: "user",
+      requestedBy,
     }));
     if (audit.decision !== "approved") return;
     try {
@@ -2947,7 +2991,10 @@ function App() {
     }
   };
 
-  const createTerminalPane = async (profile: LaunchProfile = terminalLaunchProfileRef.current) => {
+  const createTerminalPane = async (
+    profile: LaunchProfile = terminalLaunchProfileRef.current,
+    requestedBy: "user" | "agent" = "user",
+  ) => {
     const root = workspacePathRef.current ?? workspacePath;
     const sessionId = activeSessionForProject(root);
     if (!root || !sessionId || launchProfileChanging) return false;
@@ -2956,7 +3003,7 @@ function App() {
       label: "Create pane",
       target: `${profile.label} in ${root}`,
       risk: "medium",
-      requestedBy: "user",
+      requestedBy,
       undoHint: "Close the new pane.",
     }));
     if (audit.decision !== "approved") return false;
@@ -3372,7 +3419,11 @@ function App() {
     }
   };
 
-  const requestOpenEditorFile = async (file: FileTreeNode, options: OpenEditorFileOptions = {}) => {
+  const requestOpenEditorFile = async (
+    file: FileTreeNode,
+    options: OpenEditorFileOptions = {},
+    requestedBy: "user" | "agent" = "user",
+  ) => {
     const currentPath = selectedFileRef.current?.path ?? null;
     if (currentPath === file.path) {
       closeDiffReview();
@@ -3384,7 +3435,7 @@ function App() {
       label: "Open file",
       target: file.path,
       risk: "low",
-      requestedBy: "user",
+      requestedBy,
     }));
     if (audit.decision !== "approved") return false;
     await openEditorFileDirect(file, options);
@@ -4510,6 +4561,100 @@ function App() {
   saveEditorFileRef.current = saveEditorFile;
   openEditorSearchRef.current = openEditorSearch;
   closeActiveEditorTabRef.current = closeActiveEditorTab;
+
+  useEffect(() => {
+    void invoke("update_agent_hook_snapshot", {
+      snapshot: {
+        projects: openProjects.map((project) => ({ path: project.path, status: project.status })),
+        activeProjectPath: workspacePath,
+        activeChatId: activeSessionId,
+        panes: terminalPanes.map((pane, index) => ({
+          id: pane.id,
+          label: terminalPaneLabelForDisplay(pane.label, pane.profile.label, index),
+          state: pane.state,
+          cwd: pane.cwd,
+        })),
+        openFiles: editorTabs.map((file) => file.path),
+        selectedFile: selectedFile?.path ?? null,
+      },
+    }).catch(() => {});
+  }, [activeSessionId, editorTabs, openProjects, selectedFile?.path, terminalPanes, workspacePath]);
+
+  useEffect(() => {
+    void invoke<AgentHookStatus>("agent_hook_status").then(setAgentHookStatus).catch(() => setAgentHookStatus(null));
+    let disposed = false;
+    let polling = false;
+    const handleRequest = async (request: AgentHookRequest) => {
+      const respond = (ok: boolean, message: string) => invoke("resolve_agent_hook_request", {
+        requestId: request.requestId,
+        ok,
+        message,
+      }).catch(() => {});
+      try {
+        if (request.tool === "focus_pane") {
+          const paneId = typeof request.arguments.paneId === "number" ? request.arguments.paneId : -1;
+          if (!terminalPanesRef.current.some((pane) => pane.id === paneId)) throw new Error("Pane is not open in the active chat.");
+          await focusTerminalPane(paneId, "agent");
+          await respond(true, `Focused pane ${paneId}.`);
+          return;
+        }
+        if (request.tool === "open_file") {
+          const root = workspacePathRef.current;
+          const relativePath = typeof request.arguments.path === "string" ? request.arguments.path.trim() : "";
+          if (!root || !relativePath || relativePath.startsWith("/") || relativePath.split(/[\\/]/).includes("..")) {
+            throw new Error("open_file requires a workspace-relative path inside the active project.");
+          }
+          const opened = await requestOpenEditorFile(
+            fileNodeFromPath(`${root}/${relativePath.replace(/^\.\//, "")}`, "file"),
+            { focusEditor: true },
+            "agent",
+          );
+          if (!opened) throw new Error("The file-open request was denied.");
+          await respond(true, `Opened ${relativePath}.`);
+          return;
+        }
+        if (request.tool === "create_shell") {
+          const created = await createTerminalPane(defaultTerminalLaunchProfile(), "agent");
+          if (!created) throw new Error("The shell-pane request was denied or could not run.");
+          await respond(true, "Created a blank shell pane.");
+          return;
+        }
+        const status = typeof request.arguments.status === "string" ? request.arguments.status.trim().slice(0, 160) : "";
+        const detail = typeof request.arguments.detail === "string" ? request.arguments.detail.trim().slice(0, 1000) : "";
+        if (!status) throw new Error("report_status requires a status label.");
+        recordAgentActivity(activeAgentActivityHandle(), {
+          kind: "app",
+          label: status,
+          detail: detail || "Reported through the Keelhouse agent hook.",
+          status: "complete",
+        });
+        await respond(true, "Status recorded in the active chat activity log.");
+      } catch (error) {
+        await respond(false, String(error));
+      }
+    };
+    const pollRequests = async () => {
+      if (disposed || polling) return;
+      polling = true;
+      try {
+        const requests = await invoke<AgentHookRequest[]>("take_agent_hook_requests");
+        for (const request of requests) {
+          if (disposed) break;
+          await handleRequest(request);
+        }
+      } catch {
+        // The next interval retries if the backend is still starting.
+      } finally {
+        polling = false;
+      }
+    };
+    const interval = window.setInterval(() => void pollRequests(), 250);
+    void pollRequests();
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const continuePendingNavigation = async (navigation: PendingNavigation) => {
     if (navigation.kind === "file") {
@@ -6604,6 +6749,7 @@ function App() {
           approvalSetting={activeApprovalSetting}
           agentConnectionsStatus={agentConnectionsStatus}
           agentConnectionsRefreshing={agentConnectionsRefreshing}
+          agentHookStatus={agentHookStatus}
           browserSetting={activeBrowserSetting}
           aiConnectionSettings={aiConnectionSettings}
           connectionSecretPresence={connectionSecretPresence}

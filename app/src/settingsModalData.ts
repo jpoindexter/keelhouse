@@ -94,9 +94,9 @@ export const SETTINGS_ROWS: SettingsRowDef[] = [
   {
     id: "agents.hook-policy",
     categoryId: "agents",
-    label: "Lifecycle hook policy",
-    hint: "Safety boundary for project setup and cleanup automation.",
-    keywords: ["hook", "setup", "run", "cleanup", "teardown", "script", "approval"],
+    label: "Agent hook MCP",
+    hint: "Loopback endpoint and safety boundary for app-owned agent tools.",
+    keywords: ["hook", "mcp", "api", "agent", "tool", "endpoint", "approval"],
     scope: "project",
   },
   {

@@ -46,11 +46,13 @@ import {
 } from "./shortcuts";
 
 type SettingsProfileOption = { id: string; label: string; disabled?: boolean };
+type AgentHookStatus = { endpoint: string; configPath: string; running: boolean };
 
 type SettingsModalProps = {
   approvalSetting: ScopedSettingView<AgentApprovalMode>;
   agentConnectionsStatus?: AgentConnectionsStatus | null;
   agentConnectionsRefreshing?: boolean;
+  agentHookStatus?: AgentHookStatus | null;
   browserSetting: ScopedSettingView<string>;
   aiConnectionSettings?: AiConnectionSettings;
   connectionSecretPresence?: Record<string, boolean>;
@@ -102,6 +104,7 @@ export function SettingsModal({
   approvalSetting,
   agentConnectionsStatus = null,
   agentConnectionsRefreshing = false,
+  agentHookStatus = null,
   browserSetting,
   aiConnectionSettings = DEFAULT_AI_CONNECTION_SETTINGS,
   connectionSecretPresence = {},
@@ -287,10 +290,11 @@ export function SettingsModal({
     }
     if (row.id === "agents.hook-policy") {
       return (
-        <div className="settings-workspace__policy" aria-label="Lifecycle hook policy">
-          <span><strong>Status</strong><small>Execution unavailable until AGENT-HOOKS</small></span>
-          <span><strong>Lifecycle</strong><small>Setup · Run · Pre-cleanup · Teardown · Post-cleanup</small></span>
-          <span><strong>Safety</strong><small>Preview, explicit approval, attribution, and recovery required</small></span>
+        <div className="settings-workspace__policy" aria-label="Agent hook policy">
+          <span><strong>Status</strong><small>{agentHookStatus?.running ? "Loopback MCP endpoint active" : "Agent hook unavailable"}</small></span>
+          <span><strong>Endpoint</strong><small>{agentHookStatus?.endpoint ?? "Not running"}</small></span>
+          <span><strong>Configuration</strong><small>{agentHookStatus?.configPath ?? "Unavailable"}</small></span>
+          <span><strong>Safety</strong><small>Ephemeral bearer token · app-action approval · attributed results</small></span>
         </div>
       );
     }
