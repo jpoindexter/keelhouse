@@ -38,4 +38,15 @@ if [[ ! -f "$patch_marker" ]]; then
 fi
 
 cd "$APP_DIR"
-ZIG_LIB_DIR="$patched_lib" exec npx tauri build --bundles app "$@"
+ZIG_LIB_DIR="$patched_lib" npx tauri build --bundles app "$@"
+
+app_bundle="$TARGET_DIR/release/bundle/macos/Keelhouse.app"
+if [[ ! -d "$app_bundle" ]]; then
+  echo "Tauri completed without producing $app_bundle." >&2
+  exit 1
+fi
+
+# Tauri's local bundle can retain only the Mach-O linker signature. Seal the
+# complete app so Info.plist and icon resources are covered by the ad-hoc build.
+codesign --force --deep --sign - "$app_bundle"
+codesign --verify --deep --strict "$app_bundle"

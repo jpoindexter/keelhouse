@@ -2,7 +2,7 @@
 
 Status: v2 gate prepared and the 2026-07-13 composer/selection correction has refreshed packaged-native evidence. Jason's explicit sign-off remains before the contract is formally locked. Control grammar was added after the boxed-button drift; see `docs/chrome-delta-audit.md` and DECISIONS.md 2026-07-11.
 
-Keelhouse chrome follows the accepted `demo/keelhouse-chrome-demo.html` direction: graphite surfaces, steel-cyan accent, direct project/thread drawer, agent-first center, Files/Editor/Browser/Git right dock, and a bottom utility tray for Terminal/Processes/Logs/Browser Preview. The demo is binding at the control-grammar and shell-geometry levels, not only tokens.
+Keelhouse chrome follows the accepted `demo/keelhouse-chrome-demo.html` direction: graphite surfaces, steel-cyan accent, direct project/thread drawer, agent-first center, Files/Editor/Browser/Git right dock, and a bottom utility tray for Terminal/Processes/Logs. Browser exists once, in the right dock. The demo is binding at the control-grammar and shell-geometry levels, not only tokens.
 
 ## Control Grammar (v2, normative)
 
@@ -50,15 +50,18 @@ First open shows the demo layout: 332px Threads drawer, centered conversation+co
 ## Real App Port Signals
 
 - The side drawer uses mode-aware product nouns. The default Projects mode is `Project chats`, not a generic `Drawer`.
-- The center work surface is labelled as an agent conversation and remains mounted while utilities open. The bottom tray exposes Terminal, Processes, Logs, and Browser Preview; its splitter resizes vertically and its tabs collapse back to a 42px strip.
+- The center work surface is labelled as an agent conversation and remains mounted while utilities open. The bottom tray exposes Terminal, Processes, and Logs; its splitter resizes vertically and its tabs collapse back to a 42px strip. Right-clicking a utility or pane tab exposes lifecycle actions.
 - First open shows Files in the right dock. Files, Editor, Browser, and Git can be selected from the shared tray tabs; tools can dock left, right, or bottom or be hidden.
 
 ## Control Chrome Signals
 
 - Toolbar controls are flat by default: no enclosing segmented-control box around the agent surface or tray layout switchers.
 - Active toolbar state uses a small steel-cyan underline and subtle tint, not a filled rounded pill.
+- Terminal pane tabs stay flat with an underline active state; they never use rounded or half-capsule selection chrome.
 - Pane, browser, collapse, and lifecycle icon buttons use hover/focus feedback without default rectangular chrome.
-- Terminal toolbar metadata is deliberately reduced to avoid collisions with agent/tray controls; selected profile is already visible in the app titlebar and pane chips.
+- The primary titlebar contains global workspace controls only: drawer toggle, workspace identity, provider state, and overflow. Thread-local actions stay in the thread header or drawer.
+- The terminal toolbar retains the selected profile label but renders universal New, Find, Restart, Kill, and Close actions as 16px icons with `aria-label` and tooltip text. Toolbar controls keep a 12px outer inset and at least a 28px interaction box.
+- The status bar reports real workspace, provider, and active-surface state only. Placeholder integrations such as `Prettier` are prohibited.
 - Browser preview chrome responds to tray width; narrow trays hide the redundant Open button before controls overlap.
 
 ## Native Engineering Review
@@ -71,6 +74,8 @@ Native evidence:
 - `docs/qa/chrome-v2/native-900.png` — packaged minimum-width layout with the tool dock collapsed.
 - `docs/qa/chrome-v2/native-composer-permission.png` — packaged approval-mode menu.
 - `docs/qa/chrome-v2/native-composer-runtime.png` — packaged model/reasoning menu.
+- `docs/qa/interaction-contract/shell-simplified-desktop.png` — simplified packaged shell with one Browser surface and reduced global chrome.
+- `docs/qa/interaction-contract/shell-simplified-terminal.png` — raw Shell pane in the bottom tray with flat tabs and icon-only universal actions.
 
 The transient crash-recovery notice is dismissible status feedback, not persistent chrome; it was dismissed before sign-off captures. A restored Browser preference may show the target page's own white or error surface, but first-open/reset remains Files-first.
 

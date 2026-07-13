@@ -18,6 +18,13 @@ Keelhouse separates lightweight workbench preferences from durable chat history.
     "args": [],
     "useLoginShell": true
   },
+  "terminalLaunchProfile": {
+    "id": "shell",
+    "label": "Shell",
+    "command": "/bin/zsh",
+    "args": ["-l"],
+    "useLoginShell": false
+  },
   "activeFileByWorkspace": {
     "/absolute/path/to/workspace": "/absolute/path/to/workspace/src/file.ts"
   },
@@ -120,7 +127,7 @@ Keelhouse separates lightweight workbench preferences from durable chat history.
 }
 ```
 
-`folder` is the last workspace to reopen. `launchProfile` is the command the pane launches in that workspace. Built-in profile ids are `codex`, `gemini`, `claude`, and `shell`. Codex, Gemini, and Claude run through a login shell so shell-managed paths such as `nvm` are available; Shell launches `/bin/zsh -l` directly. Fresh state defaults to Codex to avoid consuming Claude Code usage during testing.
+`folder` is the last workspace to reopen. `launchProfile` is the selected structured-chat provider profile and defaults to Codex. `terminalLaunchProfile` is the profile used only when the user explicitly opens a raw terminal; it defaults to Shell (`/bin/zsh -l`). Built-in profile ids are `codex`, `gemini`, `claude`, and `shell`. Opening a terminal never starts an agent unless the user explicitly changes that terminal's profile.
 `activeFileByWorkspace` stores the last active editor file per canonical workspace root; stale paths are ignored instead of being opened.
 `openProjects` stores the project rail. `projectSessions` is the compatibility key for named chats under each project, and `activeSessionByProject` stores the selected chat id per project. `browserPreviewByProject` and `browserPreviewBySession` remember the lightweight preview URL for project/chat context.
 `paneLabelsBySession` stores user-edited terminal pane names by project-session key and pane slot. It restores labels when the same session/slot is recreated.
@@ -154,7 +161,7 @@ The app will create a fresh `workspace.json` after a folder is picked. This pref
 
 ## Repair Without Full Reset
 
-To restore the default Codex profile while keeping the last folder, edit only `launchProfile`:
+To restore the structured-chat Codex default while keeping the last folder, edit only `launchProfile`. To restore blank terminals, set `terminalLaunchProfile` to the Shell shape below:
 
 ```json
 "launchProfile": {
@@ -163,6 +170,16 @@ To restore the default Codex profile while keeping the last folder, edit only `l
   "command": "codex",
   "args": [],
   "useLoginShell": true
+}
+```
+
+```json
+"terminalLaunchProfile": {
+  "id": "shell",
+  "label": "Shell",
+  "command": "/bin/zsh",
+  "args": ["-l"],
+  "useLoginShell": false
 }
 ```
 

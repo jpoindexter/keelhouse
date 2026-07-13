@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   LAUNCH_PROFILES,
+  defaultTerminalLaunchProfile,
   launchProfileById,
   launchProfileCommandLine,
   launchProfileSummary,
   normalizeLaunchProfile,
+  normalizeTerminalLaunchProfile,
 } from "./launchProfiles";
 
 describe("launch profiles", () => {
@@ -25,6 +27,16 @@ describe("launch profiles", () => {
   it("falls back to Codex for missing or empty profile data", () => {
     expect(normalizeLaunchProfile(null)).toEqual(launchProfileById("codex"));
     expect(normalizeLaunchProfile({ id: "broken", command: "" })).toEqual(launchProfileById("codex"));
+  });
+
+  it("keeps the raw terminal blank by default", () => {
+    expect(defaultTerminalLaunchProfile()).toEqual(launchProfileById("shell"));
+    expect(normalizeTerminalLaunchProfile(null)).toEqual(launchProfileById("shell"));
+    expect(normalizeTerminalLaunchProfile({ id: "broken", command: "" })).toEqual(launchProfileById("shell"));
+  });
+
+  it("preserves an explicitly selected terminal agent profile", () => {
+    expect(normalizeTerminalLaunchProfile({ id: "gemini" })).toEqual(launchProfileById("gemini"));
   });
 
   it("keeps custom stored profiles valid for future settings", () => {

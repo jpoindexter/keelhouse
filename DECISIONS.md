@@ -362,3 +362,27 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 **Why:** Native comparison against the approved demo showed the alternate-center model was the remaining source of visual and conceptual disjointedness. A real packaged run now opens a live Codex PTY in the bottom tray while preserving the chat timeline and composer, switches to a real process list, and collapses back to the default 42px tab strip.
 
 **Verified:** `npm run build`, 197 frontend tests, 59 Rust tests, `npm run qa:chrome-contract`, package build, and native Computer Use checks for Terminal open, Processes switch, and collapse. Jason's explicit visual sign-off remains separate.
+
+## 2026-07-13 — One browser surface, shell-default terminal, and app-owned tab menus
+
+**Choice:** Keep Browser only in the Files/Editor/Browser/Git right dock. The bottom utility tray contains Terminal, Processes, and Logs. Opening Terminal creates `/bin/zsh -l` by default; agent CLIs require an explicit pane-profile choice. Utility tabs and terminal pane tabs use app-owned right-click menus for navigation and lifecycle actions, and active pane tabs use a flat underline rather than rounded capsule chrome.
+
+**Why:** Duplicating Browser in two trays made the tool model ambiguous, while auto-launching Codex in Terminal collapsed the distinction between structured chat and a raw shell. Browser-native right-click menus and rounded pane selections also broke the approved workbench grammar. One location per tool, explicit process launch, and direct lifecycle feedback match the user's Codex/VS Code mental model without copying either shell wholesale.
+
+**Reversible?** Tool placement and default profiles remain preferences, but changing either default requires an explicit product decision and matching interaction tests so the duplicate-surface and accidental-agent-launch regressions do not return.
+
+## 2026-07-13 — Reduce shell chrome to real state and universal glyphs
+
+**Choice:** Keep global titlebar controls limited to workspace navigation and provider state; keep thread actions with the thread; render universal terminal lifecycle commands as Lucide glyphs with accessible labels; preserve a text label only where it communicates a selected mode or profile. The status bar shows workspace, provider readiness, and active surface only. The native app mark is a single warm-white geometric `K` on graphite.
+
+**Why:** The previous shell repeated project/thread identity across bars, placed text commands against window edges, exposed placeholder status, and made the icon carry an illustrated crest. That visual noise made the product feel assembled from unrelated surfaces. One owner per action, consistent edge insets, and one simple silhouette make the shell scan like a native workbench without copying Codex or Zed wholesale.
+
+**Verified:** The rebuilt package was inspected with the Threads/chat/right-dock/bottom-tray layout populated. Terminal opens a raw shell, utility and pane context menus expose their real actions, Browser appears only in the right dock, and the simplified desktop/terminal states are captured under `docs/qa/interaction-contract/`. Jason's final aesthetic sign-off remains separate.
+
+## 2026-07-13 — Seal the complete local macOS bundle
+
+**Choice:** After Tauri builds `Keelhouse.app`, `package:mac` applies an ad-hoc signature to the complete bundle and immediately runs strict deep verification.
+
+**Why:** Tauri's local output retained a linker-signed Mach-O but did not seal `Info.plist` and `Resources/icon.icns`. The app could launch, yet `codesign --verify --deep --strict` correctly rejected the package. A package command must verify the distributable bundle, not only compile the executable.
+
+**Verified:** Rebuilding through `npm run package:mac` produces a bundle that passes strict deep `codesign` verification, and the bundled ICNS hash matches the generated source asset.

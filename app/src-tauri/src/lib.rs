@@ -1980,6 +1980,18 @@ fn watch_workspace_tree(
     Ok(())
 }
 
+/// Stop watching after the last active project is closed. Dropping the
+/// debouncer unregisters its recursive filesystem watcher.
+#[tauri::command]
+fn stop_workspace_watcher(state: State<PtyState>) -> Result<(), String> {
+    let mut guard = state
+        .watcher
+        .lock()
+        .map_err(|_| "Workspace watcher state is unavailable".to_string())?;
+    guard.take();
+    Ok(())
+}
+
 /// Turn a free-text label into a filesystem/branch-safe slug. Empty or fully
 /// non-alphanumeric input falls back to a short timestamp so callers always
 /// get a usable, non-colliding name.
@@ -2861,6 +2873,7 @@ pub fn run() {
             list_workspace_tree,
             search_workspace_text,
             watch_workspace_tree,
+            stop_workspace_watcher,
             read_text_file,
             read_chat_context_file,
             inspect_chat_image,

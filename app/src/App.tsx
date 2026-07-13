@@ -39,6 +39,7 @@ import {
   normalizeRecentProjects,
   newProjectSession,
   openProjectsFromRecent,
+  planProjectClose,
   pushRecentProject,
   removeProjectSession,
   removeOpenProject,
@@ -83,10 +84,12 @@ import type { EditorBufferSnapshot } from "./editorTabs";
 import {
   LAUNCH_PROFILES,
   defaultLaunchProfile,
+  defaultTerminalLaunchProfile,
   launchProfileById,
   launchProfileCommandLine,
   launchProfileMode,
   normalizeLaunchProfile,
+  normalizeTerminalLaunchProfile,
 } from "./launchProfiles";
 import type { LaunchProfile } from "./launchProfiles";
 import {
@@ -217,6 +220,7 @@ import {
 } from "./chatStore";
 import { ToolDockMenu } from "./ToolDockMenu";
 import { ToolTrayTabs } from "./ToolTrayTabs";
+import { ContextMenu, type ContextMenuItem, type ContextMenuState } from "./ContextMenu";
 import { paneContextBelongsToProject, paneContextKey, paneContextParts, removeProjectPaneContexts } from "./paneOwnership";
 import "./App.css";
 
@@ -288,7 +292,7 @@ type ActiveDiffReview = {
 type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
 type AgentSurfaceMode = "chat" | "terminal";
-type UtilityTrayMode = "terminal" | "processes" | "logs" | "browser";
+type UtilityTrayMode = "terminal" | "processes" | "logs";
 type SideDrawerMode = "projects" | "files" | "search" | "git" | "browser" | "settings";
 type DrawerSearchScope = "files" | "text";
 type DetectedLocalDevServer = {
@@ -313,17 +317,8 @@ type ProjectEditorSnapshot = {
 };
 type PendingNavigation =
   | { kind: "file"; file: FileTreeNode; options: OpenEditorFileOptions }
-  | { kind: "workspace"; path: string };
-type ContextMenuItem = {
-  id: string;
-  label: string;
-  shortcut?: string;
-  icon?: AppIconName;
-  disabled?: boolean;
-  danger?: boolean;
-  onSelect: () => void;
-};
-type ContextMenuState = { x: number; y: number; items: ContextMenuItem[] };
+  | { kind: "workspace"; path: string }
+  | { kind: "close-project"; projectPath: string };
 type CommandPaletteCommand = CommandPaletteCommandBase & {
   icon: AppIconName;
   run: () => void;
@@ -335,7 +330,6 @@ const FONT_SIZE = 15;
 // output containing Chinese/Japanese/Korean text) render instead of tofu.
 const FONT_FAMILY = '"JetBrains Mono", "PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo", monospace';
 const LINE_HEIGHT = 1.25;
-const AGENT_SURFACE_STORAGE_KEY = "keelhouse.agent.surface.v2";
 const COMPOSER_REASONING_OPTIONS: { value: ComposerReasoningEffort; label: string }[] = [
   { value: "default", label: "Default" },
   { value: "low", label: "Low" },
@@ -349,15 +343,6 @@ const composerApprovalLabel = (mode: AgentApprovalMode) =>
 
 const composerReasoningLabel = (effort: ComposerReasoningEffort) =>
   COMPOSER_REASONING_OPTIONS.find((option) => option.value === effort)?.label ?? "Default";
-const readStoredAgentSurfaceMode = (): AgentSurfaceMode => {
-  if (typeof window === "undefined") return "chat";
-  try {
-    const value = window.localStorage.getItem(AGENT_SURFACE_STORAGE_KEY);
-    return value === "terminal" ? "terminal" : "chat";
-  } catch {
-    return "chat";
-  }
-};
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 const dirname = (path: string) => path.replace(/[\\/][^\\/]*$/, "") || path;
@@ -488,8 +473,10 @@ function App() {
   const browserUrlRef = useRef(DEFAULT_BROWSER_PREVIEW_URL);
   const detectedLocalDevServerRef = useRef<DetectedLocalDevServer | null>(null);
   const launchProfileRef = useRef<LaunchProfile>(defaultLaunchProfile());
+  const terminalLaunchProfileRef = useRef<LaunchProfile>(defaultTerminalLaunchProfile());
   const intentionallyTerminatedPaneIdsRef = useRef<Set<number>>(new Set());
   const terminalPanesRef = useRef<ManagedTerminalPane[]>([]);
+  const fileNodeContextMenuItemsRef = useRef<(node: FileTreeNode) => ContextMenuItem[]>(() => []);
   const terminalPanesByContextRef = useRef<TerminalPanesByContext>({});
   const activeTerminalPaneByContextRef = useRef<ActiveTerminalPaneByContext>({});
   const paneLabelsBySessionRef = useRef<PaneLabelsBySession>({});
@@ -507,7 +494,6 @@ function App() {
   const editorViewStatesRef = useRef<Record<string, EditorViewState>>({});
   const editorBuffersRef = useRef<Record<string, EditorBuffer>>({});
   const sessionEditorSnapshotsRef = useRef<Record<string, ProjectEditorSnapshot>>({});
-  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const commandPaletteInputRef = useRef<HTMLInputElement | null>(null);
   const quickOpenInputRef = useRef<HTMLInputElement | null>(null);
   const pendingEditorFocusRef = useRef(false);
@@ -521,6 +507,7 @@ function App() {
   const selecting = useRef(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
   const [launchProfile, setLaunchProfile] = useState<LaunchProfile>(defaultLaunchProfile);
+  const [terminalLaunchProfile, setTerminalLaunchProfile] = useState<LaunchProfile>(defaultTerminalLaunchProfile);
   const [launchProfileChanging, setLaunchProfileChanging] = useState(false);
   const [terminalPanes, setTerminalPanes] = useState<ManagedTerminalPane[]>([]);
   const [activeTerminalPaneId, setActiveTerminalPaneId] = useState<number | null>(null);
@@ -580,6 +567,7 @@ function App() {
   const [sourceControlStatus, setSourceControlStatus] = useState<SourceControlStatus | null>(null);
   const [repoLocation, setRepoLocation] = useState<RepoLocation | null>(null);
   const [crashNotice, setCrashNotice] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [worktrees, setWorktrees] = useState<WorktreeRecord[]>([]);
   const [backgroundExits, setBackgroundExits] = useState<BackgroundExit[]>([]);
   const [paneTranscripts, setPaneTranscripts] = useState<PaneTranscript[]>([]);
@@ -600,6 +588,12 @@ function App() {
       delete document.documentElement.dataset.theme;
     }
   }, [appTheme]);
+
+  useEffect(() => {
+    if (!actionNotice) return;
+    const timeout = window.setTimeout(() => setActionNotice(null), 2600);
+    return () => window.clearTimeout(timeout);
+  }, [actionNotice]);
 
   useEffect(() => {
     if (!settingsOpen) return;
@@ -663,7 +657,7 @@ function App() {
     workbenchSizing,
     workbenchStyle,
   } = useWorkbenchLayout();
-  const [agentSurfaceMode, setAgentSurfaceMode] = useState<AgentSurfaceMode>(readStoredAgentSurfaceMode);
+  const [agentSurfaceMode, setAgentSurfaceMode] = useState<AgentSurfaceMode>("chat");
   const [utilityTrayMode, setUtilityTrayMode] = useState<UtilityTrayMode>("terminal");
   const [utilityTrayHeight, setUtilityTrayHeight] = useState(260);
   const [sideDrawerMode, setSideDrawerMode] = useState<SideDrawerMode>("projects");
@@ -709,13 +703,6 @@ function App() {
   const [diffReview, setDiffReview] = useState<ActiveDiffReview | null>(null);
   const [diffReviewLoading, setDiffReviewLoading] = useState(false);
   const [diffReviewError, setDiffReviewError] = useState<string | null>(null);
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(AGENT_SURFACE_STORAGE_KEY, agentSurfaceMode);
-    } catch {
-      // Local surface preference is best-effort.
-    }
-  }, [agentSurfaceMode]);
   const editorDirty = selectedFile != null && editorText !== savedEditorText;
   const dirtyTabPaths = useMemo(
     () => dirtyEditorTabPaths(editorTabs, editorBuffersRef.current, selectedFile?.path ?? null, editorDirty),
@@ -811,16 +798,14 @@ function App() {
       agentActivityFilter,
     );
   }, [activeAgentSessionDescriptor, agentActivityEvents, agentActivityFilter]);
-  const activeTerminalProfile = activeTerminalPane?.profile ?? launchProfile;
+  const activeTerminalProfile = activeTerminalPane?.profile ?? terminalLaunchProfile;
   const terminalPaneState = activeTerminalPane?.state ?? "idle";
   const terminalExitCode = activeTerminalPane?.exitCode ?? null;
   const terminalStatusLabel = terminalPaneStateLabel(terminalPaneState, terminalExitCode);
   const primarySurfaceState: TerminalPaneState = activeChatConversation.activeRunId ? "starting" : "idle";
   const primarySurfaceLabel = "Codex";
   const primarySurfaceStatusLabel = activeChatConversation.activeRunId ? "Working" : "Ready";
-  const utilityTrayStatusLabel = utilityTrayMode === "browser"
-    ? "Browser Preview"
-    : utilityTrayMode.charAt(0).toUpperCase() + utilityTrayMode.slice(1);
+  const utilityTrayStatusLabel = utilityTrayMode.charAt(0).toUpperCase() + utilityTrayMode.slice(1);
   const browserCanGoBack = browserHistoryCanGoBack(browserHistoryIndex);
   const browserCanGoForward = browserHistoryCanGoForward(browserHistory, browserHistoryIndex);
   const activeDetectedLocalDevServer =
@@ -1090,27 +1075,14 @@ function App() {
       setContextMenu({
         x: detail.x,
         y: detail.y,
-        items: fileNodeContextMenuItems(detail.node),
+        items: fileNodeContextMenuItemsRef.current(detail.node),
       });
     };
-    const closeMenu = () => setContextMenu(null);
-    const closeMenuOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setContextMenu(null);
-    };
     window.addEventListener("file-tree-context-menu", onContextMenu);
-    window.addEventListener("pointerdown", closeMenu);
-    window.addEventListener("keydown", closeMenuOnEscape);
     return () => {
       window.removeEventListener("file-tree-context-menu", onContextMenu);
-      window.removeEventListener("pointerdown", closeMenu);
-      window.removeEventListener("keydown", closeMenuOnEscape);
     };
-  }, [editorDirty, selectedFile, workspacePath]);
-
-  useEffect(() => {
-    if (!contextMenu) return;
-    contextMenuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
-  }, [contextMenu]);
+  }, []);
 
   useEffect(() => {
     if (!selectedFile || fileTree.length === 0) return;
@@ -1686,6 +1658,10 @@ function App() {
     launchProfileRef.current = launchProfile;
   }, [launchProfile]);
 
+  useEffect(() => {
+    terminalLaunchProfileRef.current = terminalLaunchProfile;
+  }, [terminalLaunchProfile]);
+
   const openWorkspaceDirect = async (
     path: string,
     profileOverride: LaunchProfile = launchProfileRef.current,
@@ -1709,7 +1685,7 @@ function App() {
       activeSessionByProjectRef.current = preparedActiveSessions;
       const existingPanes = terminalPanesForSession(path, requestedSessionId);
       const requestedLayout = requestedSessionId ? paneLayoutsBySessionRef.current[sessionSnapshotKey(path, requestedSessionId)] : null;
-      const fallbackLayout = [{ slot: 0, profileId: profile.id, label: savedPaneLabelForSlot(path, 0, requestedSessionId) }];
+      const fallbackLayout = [{ slot: 0, profileId: defaultTerminalLaunchProfile().id, label: savedPaneLabelForSlot(path, 0, requestedSessionId) }];
       const initialLayout = requestedLayout && requestedLayout.length > 0 ? requestedLayout : fallbackLayout;
       let root = path;
       let nextProjectPanes = existingPanes;
@@ -1930,6 +1906,76 @@ function App() {
     return openWorkspaceDirect(path);
   };
 
+  const closeProjectResources = async (projectPath: string) => {
+    const activeRunIds = Object.entries(chatConversationsRef.current)
+      .filter(([key, conversation]) => key.startsWith(`${projectPath}\n`) && conversation.activeRunId)
+      .map(([, conversation]) => conversation.activeRunId as string);
+    for (const runId of activeRunIds) await invoke("stop_chat_run", { runId });
+
+    for (const pane of terminalPanesForProject(projectPath)) {
+      intentionallyTerminatedPaneIdsRef.current.add(pane.id);
+      try {
+        await invoke("close_pane", { paneId: pane.id });
+      } catch (error) {
+        intentionallyTerminatedPaneIdsRef.current.delete(pane.id);
+        throw error;
+      }
+      delete terminalSnapshotsRef.current[pane.id];
+    }
+    terminalPanesByContextRef.current = removeProjectPaneContexts(terminalPanesByContextRef.current, projectPath);
+    activeTerminalPaneByContextRef.current = removeProjectPaneContexts(activeTerminalPaneByContextRef.current, projectPath);
+  };
+
+  const closeProjectDirect = async (projectPath: string) => {
+    const plan = planProjectClose(openProjectsRef.current, workspacePathRef.current, projectPath);
+    if (plan.remaining.length === openProjectsRef.current.length) return false;
+
+    try {
+      if (plan.wasActive && plan.fallbackPath) {
+        const switched = await openWorkspaceDirect(plan.fallbackPath);
+        if (!switched) return false;
+      }
+      await closeProjectResources(projectPath);
+      if (plan.wasActive && !plan.fallbackPath) {
+        await invoke("stop_workspace_watcher");
+        workspacePathRef.current = null;
+        setWorkspacePath(null);
+        setManagedTerminalPanes([]);
+        setFocusedTerminalPane(null);
+        latest.current = null;
+        setFileTree([]);
+        resetEditor();
+        await storeRef.current?.delete("folder");
+      }
+      await persistOpenProjects(removeOpenProject(openProjectsRef.current, projectPath));
+      await storeRef.current?.save();
+      setActionNotice(`Closed ${basename(projectPath)}`);
+      return true;
+    } catch (error) {
+      setLaunchError(`Could not close ${basename(projectPath)}: ${String(error)}`);
+      return false;
+    }
+  };
+
+  const requestCloseProject = async (project: OpenProject) => {
+    const runCount = Object.entries(chatConversationsRef.current)
+      .filter(([key, conversation]) => key.startsWith(`${project.path}\n`) && conversation.activeRunId)
+      .length;
+    const paneCount = terminalPanesForProject(project.path).filter((pane) => pane.state !== "exited").length;
+    if ((runCount > 0 || paneCount > 0) && !window.confirm(`Close ${basename(project.path)} and stop ${runCount + paneCount} running task${runCount + paneCount === 1 ? "" : "s"}?`)) {
+      return false;
+    }
+    if (project.path === workspacePathRef.current && dirtyTabPaths.length === 1 && selectedFileRef.current) {
+      setDraftDialogError(null);
+      setPendingNavigation({ kind: "close-project", projectPath: project.path });
+      return false;
+    }
+    if (project.path === workspacePathRef.current && dirtyTabPaths.length > 1 && !window.confirm(`Close ${basename(project.path)} with ${dirtyTabPaths.length} unsaved editor tabs?`)) {
+      return false;
+    }
+    return closeProjectDirect(project.path);
+  };
+
   const switchProjectSession = async (projectPath: string, sessionId: string) => {
     const currentRoot = workspacePathRef.current;
     const sameProject = currentRoot === projectPath;
@@ -1993,7 +2039,13 @@ function App() {
     const ownedPanes = terminalPanesForSession(projectPath, session.id);
     try {
       for (const pane of ownedPanes) {
-        await invoke("close_pane", { paneId: pane.id });
+        intentionallyTerminatedPaneIdsRef.current.add(pane.id);
+        try {
+          await invoke("close_pane", { paneId: pane.id });
+        } catch (error) {
+          intentionallyTerminatedPaneIdsRef.current.delete(pane.id);
+          throw error;
+        }
         delete terminalSnapshotsRef.current[pane.id];
       }
     } catch (err) {
@@ -2403,6 +2455,14 @@ function App() {
     await store?.save();
   };
 
+  const switchTerminalLaunchProfile = async (profile: LaunchProfile) => {
+    if (profile.id === terminalLaunchProfile.id || launchProfileChanging) return;
+    terminalLaunchProfileRef.current = profile;
+    setTerminalLaunchProfile(profile);
+    await storeRef.current?.set("terminalLaunchProfile", profile);
+    await storeRef.current?.save();
+  };
+
   const setComposerApprovalMode = async (approvalMode: AgentApprovalMode) => {
     const next = await updateActiveComposerHarness((state) => ({ ...state, approvalMode }));
     if (!next) return;
@@ -2582,7 +2642,7 @@ function App() {
     }
   };
 
-  const createTerminalPane = async (profile: LaunchProfile = launchProfileRef.current) => {
+  const createTerminalPane = async (profile: LaunchProfile = terminalLaunchProfileRef.current) => {
     const root = workspacePathRef.current ?? workspacePath;
     const sessionId = activeSessionForProject(root);
     if (!root || !sessionId || launchProfileChanging) return false;
@@ -2629,9 +2689,9 @@ function App() {
           },
         );
       }
-      launchProfileRef.current = profile;
-      setLaunchProfile(profile);
-      await storeRef.current?.set("launchProfile", profile);
+      terminalLaunchProfileRef.current = profile;
+      setTerminalLaunchProfile(profile);
+      await storeRef.current?.set("terminalLaunchProfile", profile);
       await storeRef.current?.save();
       setLaunchError(null);
       setTimeout(sendTerminalResize, 0);
@@ -2656,7 +2716,7 @@ function App() {
     const root = workspacePathRef.current ?? workspacePath;
     const sessionId = activeSessionForProject(root);
     const hasTerminal = Boolean(root && sessionId && terminalPanesForSession(root, sessionId).length > 0);
-    if (!hasTerminal && !await createTerminalPane(launchProfileRef.current)) return;
+    if (!hasTerminal && !await createTerminalPane(defaultTerminalLaunchProfile())) return;
     setUtilityTrayMode("terminal");
     setAgentSurfaceMode("terminal");
   };
@@ -2690,7 +2750,14 @@ function App() {
     }), activeAgentSessionDescriptor);
     if (audit.decision !== "approved") return false;
     try {
-      const result = await invoke<ClosePaneResponse>("close_pane", { paneId });
+      intentionallyTerminatedPaneIdsRef.current.add(paneId);
+      let result: ClosePaneResponse;
+      try {
+        result = await invoke<ClosePaneResponse>("close_pane", { paneId });
+      } catch (error) {
+        intentionallyTerminatedPaneIdsRef.current.delete(paneId);
+        throw error;
+      }
       const remaining = terminalPanesForSession(root, sessionId).filter((item) => item.id !== paneId);
       const nextActive = result.activePaneId != null && remaining.some((item) => item.id === result.activePaneId)
         ? result.activePaneId
@@ -2714,7 +2781,7 @@ function App() {
     }
   };
 
-  const createWorktreePane = async (profile: LaunchProfile = launchProfileRef.current) => {
+  const createWorktreePane = async (profile: LaunchProfile = terminalLaunchProfileRef.current) => {
     const root = workspacePathRef.current ?? workspacePath;
     const sessionId = activeSessionForProject(root);
     if (!root || !sessionId || launchProfileChanging) return;
@@ -2773,9 +2840,9 @@ function App() {
           { kind: "process", label: "Created worktree pane", detail: worktree.branch, status: "running" },
         );
       }
-      launchProfileRef.current = profile;
-      setLaunchProfile(profile);
-      await storeRef.current?.set("launchProfile", profile);
+      terminalLaunchProfileRef.current = profile;
+      setTerminalLaunchProfile(profile);
+      await storeRef.current?.set("terminalLaunchProfile", profile);
       await storeRef.current?.save();
       setLaunchError(null);
       setTimeout(sendTerminalResize, 0);
@@ -3101,6 +3168,7 @@ function App() {
 
   const copyPathToClipboard = async (path: string) => {
     await writeText(path);
+    setActionNotice(`Copied ${basename(path)} path`);
   };
 
   const openEditorSearch = () => {
@@ -3286,10 +3354,6 @@ function App() {
     setContextMenu({ x: event.clientX, y: event.clientY, items });
   };
 
-  const runContextMenuItem = (item: ContextMenuItem) => {
-    setContextMenu(null);
-    if (!item.disabled) item.onSelect();
-  };
 
   const jumpToTerminalFindHit = (hits: TerminalFindHit[], index: number | null) => {
     if (index == null || !hits[index]) return;
@@ -3356,109 +3420,85 @@ function App() {
     setQuickOpenActiveIndex(0);
   };
 
-  const moveContextMenuFocus = (event: ReactKeyboardEvent<HTMLDivElement>, direction: 1 | -1) => {
-    const buttons = Array.from(contextMenuRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
-    if (buttons.length === 0) return;
-    event.preventDefault();
-    const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement);
-    const fallbackIndex = direction === 1 ? 0 : buttons.length - 1;
-    const nextIndex = currentIndex === -1 ? fallbackIndex : (currentIndex + direction + buttons.length) % buttons.length;
-    buttons[nextIndex]?.focus();
-  };
 
-  const handleContextMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setContextMenu(null);
-    } else if (event.key === "ArrowDown") {
-      moveContextMenuFocus(event, 1);
-    } else if (event.key === "ArrowUp") {
-      moveContextMenuFocus(event, -1);
-    }
-  };
+  const gitFileContextMenuItems = (file: GitStatusFile): ContextMenuItem[] => [
+    menuItem("git.diff", "Open Diff", () => openGitDiff(file), { icon: "git" }),
+    menuItem("git.stage", "Stage File", () => runGitFileAction("stage", file), {
+      icon: "git",
+      disabled: !(file.index === "?" || file.worktree !== " "),
+    }),
+    menuItem("git.unstage", "Unstage File", () => runGitFileAction("unstage", file), {
+      icon: "git",
+      disabled: file.index === " " || file.index === "?",
+    }),
+    menuItem("git.discard", "Discard Unstaged Changes", () => runGitFileAction("discard", file), {
+      icon: "error",
+      danger: true,
+      disabled: !(file.index === "?" || file.worktree !== " "),
+    }),
+  ];
 
   const fileNodeContextMenuItems = (node: FileTreeNode): ContextMenuItem[] => {
-    const items: ContextMenuItem[] = [];
-    if (node.gitStatus) {
-      const statusFile = {
-        path: node.gitStatus.relativePath,
-        index: node.gitStatus.index,
-        worktree: node.gitStatus.worktree,
-      };
-      items.push(menuItem("git.diff", "Open Diff", () => void openGitDiff({
-        path: node.gitStatus!.relativePath,
-        index: node.gitStatus!.index,
-        worktree: node.gitStatus!.worktree,
-      }), { icon: "git" }));
-      items.push(menuItem("git.stage", "Stage File", () => void runGitFileAction("stage", statusFile), {
-        icon: "git",
-        disabled: !(node.gitStatus.index === "?" || node.gitStatus.worktree !== " "),
-      }));
-      items.push(menuItem("git.unstage", "Unstage File", () => void runGitFileAction("unstage", statusFile), {
-        icon: "git",
-        disabled: node.gitStatus.index === " " || node.gitStatus.index === "?",
-      }));
-      items.push(menuItem("git.discard", "Discard Unstaged Changes", () => void runGitFileAction("discard", statusFile), {
-        icon: "error",
-        danger: true,
-        disabled: !(node.gitStatus.index === "?" || node.gitStatus.worktree !== " "),
-      }));
-    }
+    const items = node.gitStatus
+      ? gitFileContextMenuItems({
+          path: node.gitStatus.relativePath,
+          index: node.gitStatus.index,
+          worktree: node.gitStatus.worktree,
+        })
+      : [];
     return [
       ...items,
-      menuItem("file.new", "New File", () => void createFileInRail(node), { icon: "filePlus" }),
-      menuItem("folder.new", "New Folder", () => void createFolderInRail(node), { icon: "folderPlus" }),
-      menuItem("file.rename", "Rename", () => void renameRailNode(node), { icon: "file" }),
-      menuItem("file.duplicate", "Duplicate", () => void duplicateRailNode(node), { icon: "file" }),
-      menuItem("file.reveal", "Reveal in Finder", () => void revealRailNode(node), { icon: "folderOpen" }),
-      menuItem("file.copy-path", "Copy Path", () => void copyPathToClipboard(node.path), { icon: "file" }),
-      menuItem("file.delete", "Delete", () => void deleteRailNode(node), { icon: "error", danger: true }),
+      menuItem("file.new", "New File", () => createFileInRail(node), { icon: "filePlus" }),
+      menuItem("folder.new", "New Folder", () => createFolderInRail(node), { icon: "folderPlus" }),
+      menuItem("file.rename", "Rename", () => renameRailNode(node), { icon: "file" }),
+      menuItem("file.duplicate", "Duplicate", () => duplicateRailNode(node), { icon: "file" }),
+      menuItem("file.reveal", "Reveal in Finder", () => revealRailNode(node), { icon: "folderOpen" }),
+      menuItem("file.copy-path", "Copy Path", () => copyPathToClipboard(node.path), { icon: "file" }),
+      menuItem("file.delete", "Delete", () => deleteRailNode(node), { icon: "error", danger: true }),
     ];
   };
+  fileNodeContextMenuItemsRef.current = fileNodeContextMenuItems;
 
   const workspaceContextMenuItems = (): ContextMenuItem[] => [
-    menuItem("workspace.open", "Open Folder", () => void pickWorkspace(), { icon: "folderOpen", shortcut: shortcutKeys("workspace.open") }),
-    menuItem("workspace.new-file", "New File", () => void createFileInRail(), { icon: "filePlus", disabled: !workspacePath }),
-    menuItem("workspace.new-folder", "New Folder", () => void createFolderInRail(), { icon: "folderPlus", disabled: !workspacePath }),
-    menuItem("workspace.reveal", "Reveal in Finder", () => workspacePath && void revealItemInDir(workspacePath), {
+    menuItem("workspace.open", "Open Folder", () => pickWorkspace(), { icon: "folderOpen", shortcut: shortcutKeys("workspace.open") }),
+    menuItem("workspace.new-file", "New File", () => createFileInRail(), { icon: "filePlus", disabled: !workspacePath }),
+    menuItem("workspace.new-folder", "New Folder", () => createFolderInRail(), { icon: "folderPlus", disabled: !workspacePath }),
+    menuItem("workspace.reveal", "Reveal in Finder", () => workspacePath ? revealItemInDir(workspacePath) : undefined, {
       icon: "folderOpen",
       disabled: !workspacePath,
     }),
-    menuItem("workspace.copy-path", "Copy Workspace Path", () => workspacePath && void copyPathToClipboard(workspacePath), {
+    menuItem("workspace.copy-path", "Copy Workspace Path", () => workspacePath ? copyPathToClipboard(workspacePath) : undefined, {
       icon: "workspace",
       disabled: !workspacePath,
     }),
   ];
 
   const projectRailContextMenuItems = (project: OpenProject): ContextMenuItem[] => [
-    menuItem("project.switch", "Switch to Project", () => void requestOpenWorkspace(project.path), {
+    menuItem("project.switch", "Switch to Project", () => requestOpenWorkspace(project.path), {
       icon: "workspace",
       disabled: project.path === workspacePath,
     }),
-    menuItem("project.reveal", "Reveal in Finder", () => void revealItemInDir(project.path), { icon: "folderOpen" }),
-    menuItem("project.copy-path", "Copy Path", () => void copyPathToClipboard(project.path), { icon: "file" }),
+    menuItem("project.reveal", "Reveal in Finder", () => revealItemInDir(project.path), { icon: "folderOpen" }),
+    menuItem("project.copy-path", "Copy Path", () => copyPathToClipboard(project.path), { icon: "file" }),
     menuItem(
       "project.close",
       "Close Project",
-      () => {
-        const nextOpen = removeOpenProject(openProjectsRef.current, project.path);
-        void persistOpenProjects(nextOpen);
-      },
-      { icon: "close", danger: true, disabled: project.path === workspacePath },
+      () => requestCloseProject(project),
+      { icon: "close", danger: true },
     ),
   ];
 
   const projectSessionContextMenuItems = (projectPath: string, session: ProjectSession): ContextMenuItem[] => [
-    menuItem("session.switch", "Switch to Chat", () => void switchProjectSession(projectPath, session.id), {
+    menuItem("session.switch", "Switch to Chat", () => switchProjectSession(projectPath, session.id), {
       icon: "file",
       disabled: projectPath === workspacePath && session.id === activeSessionId,
     }),
-    menuItem("session.rename", "Rename Chat", () => void renameProjectSession(projectPath, session), { icon: "file" }),
-    menuItem("session.copy-name", "Copy Chat Name", () => void writeText(session.title), { icon: "file" }),
+    menuItem("session.rename", "Rename Chat", () => renameProjectSession(projectPath, session), { icon: "file" }),
+    menuItem("session.copy-name", "Copy Chat Name", async () => { await writeText(session.title); setActionNotice("Copied chat name"); }, { icon: "file" }),
     menuItem(
       "session.archive",
       session.archived ? "Unarchive Chat" : "Archive Chat",
-      () => void archiveProjectSession(projectPath, session, !session.archived),
+      () => archiveProjectSession(projectPath, session, !session.archived),
       {
         icon: "close",
         disabled:
@@ -3466,7 +3506,7 @@ function App() {
           (projectSessionsRef.current[projectPath] ?? []).filter((s) => !s.archived).length <= 1,
       },
     ),
-    menuItem("session.delete", "Delete Chat", () => void deleteProjectSession(projectPath, session), {
+    menuItem("session.delete", "Delete Chat", () => deleteProjectSession(projectPath, session), {
       icon: "error",
       danger: true,
       disabled: (projectSessionsRef.current[projectPath] ?? []).length <= 1,
@@ -3480,14 +3520,14 @@ function App() {
   };
 
   const editorTabContextMenuItems = (tab: FileTreeNode): ContextMenuItem[] => [
-    menuItem("tab.open", "Open", () => void requestOpenEditorFile(tab, { focusEditor: true }), { icon: "file" }),
-    menuItem("tab.close", "Close Tab", () => void closeEditorTab(tab), { icon: "close", shortcut: shortcutKeys("editor.close-tab") }),
-    menuItem("tab.reveal", "Reveal in Finder", () => void revealRailNode(tab), { icon: "folderOpen" }),
-    menuItem("tab.copy-path", "Copy Path", () => void copyPathToClipboard(tab.path), { icon: "file" }),
+    menuItem("tab.open", "Open", () => requestOpenEditorFile(tab, { focusEditor: true }), { icon: "file" }),
+    menuItem("tab.close", "Close Tab", () => closeEditorTab(tab), { icon: "close", shortcut: shortcutKeys("editor.close-tab") }),
+    menuItem("tab.reveal", "Reveal in Finder", () => revealRailNode(tab), { icon: "folderOpen" }),
+    menuItem("tab.copy-path", "Copy Path", () => copyPathToClipboard(tab.path), { icon: "file" }),
   ];
 
   const editorContextMenuItems = (): ContextMenuItem[] => [
-    menuItem("editor.save", "Save", () => void saveEditorFile(), {
+    menuItem("editor.save", "Save", () => saveEditorFile(), {
       icon: "save",
       shortcut: shortcutKeys("editor.save"),
       disabled: !editorDirty || editorSaving || editorLoading,
@@ -3497,10 +3537,35 @@ function App() {
       shortcut: shortcutKeys("editor.find"),
       disabled: !selectedFile || editorLoading,
     }),
-    menuItem("editor.open-external", "Open Externally", () => void openSelectedFileExternally(), { icon: "file", disabled: !selectedFile }),
-    menuItem("editor.reveal", "Reveal in Finder", () => void revealSelectedFile(), { icon: "folderOpen", disabled: !selectedFile }),
-    menuItem("editor.copy-path", "Copy File Path", () => selectedFile && void copyPathToClipboard(selectedFile.path), { icon: "file", disabled: !selectedFile }),
+    menuItem("editor.open-external", "Open Externally", () => openSelectedFileExternally(), { icon: "file", disabled: !selectedFile }),
+    menuItem("editor.reveal", "Reveal in Finder", () => revealSelectedFile(), { icon: "folderOpen", disabled: !selectedFile }),
+    menuItem("editor.copy-path", "Copy File Path", () => selectedFile ? copyPathToClipboard(selectedFile.path) : undefined, { icon: "file", disabled: !selectedFile }),
   ];
+
+  const diffContextMenuItems = (): ContextMenuItem[] => {
+    if (!diffReview) return [];
+    return [
+      menuItem("diff.stage", "Stage File", () => runGitFileAction("stage", diffReview.file), {
+        icon: "git",
+        disabled: !diffReviewCanStage || diffReviewLoading,
+      }),
+      menuItem("diff.unstage", "Unstage File", () => runGitFileAction("unstage", diffReview.file), {
+        icon: "git",
+        disabled: !diffReviewCanUnstage || diffReviewLoading,
+      }),
+      menuItem("diff.discard", "Discard Unstaged Changes", () => runGitFileAction("discard", diffReview.file), {
+        icon: "error",
+        danger: true,
+        disabled: !diffReviewCanDiscard || diffReviewLoading,
+      }),
+      menuItem("diff.copy", "Copy Shown Diff", () => copyShownDiff(), {
+        icon: "copy",
+        disabled: diffReview.response.diff.length === 0,
+      }),
+      menuItem("diff.open", "Open File", () => openDiffFile(), { icon: "file", disabled: !diffReviewCanOpenFile }),
+      menuItem("diff.close", "Close Diff", closeDiffReview, { icon: "close" }),
+    ];
+  };
 
   const persistPaneTranscript = (
     projectId: string,
@@ -3562,15 +3627,15 @@ function App() {
   };
 
   const terminalContextMenuItems = (): ContextMenuItem[] => [
-    menuItem("terminal.new-pane", `New ${launchProfile.label} Pane`, () => void createTerminalPane(launchProfile), {
+    menuItem("terminal.new-pane", `New ${terminalLaunchProfile.label} Pane`, () => createTerminalPane(terminalLaunchProfile), {
       icon: "terminal",
       disabled: !workspacePath || launchProfileChanging,
     }),
-    menuItem("terminal.new-worktree-pane", "New Worktree Pane", () => void createWorktreePane(launchProfile), {
+    menuItem("terminal.new-worktree-pane", "New Worktree Pane", () => createWorktreePane(terminalLaunchProfile), {
       icon: "terminal",
       disabled: !workspacePath || launchProfileChanging,
     }),
-    menuItem("terminal.rename-pane", "Rename Selected Pane", () => activeTerminalPane && void renameTerminalPane(activeTerminalPane), {
+    menuItem("terminal.rename-pane", "Rename Selected Pane", () => activeTerminalPane ? renameTerminalPane(activeTerminalPane) : undefined, {
       icon: "terminal",
       disabled: !activeTerminalPane,
     }),
@@ -3578,42 +3643,133 @@ function App() {
       icon: "file",
       disabled: !activeTerminalPane,
     }),
-    menuItem("terminal.restart-pane", "Restart Selected Process", () => activeTerminalPane && void restartTerminalPane(activeTerminalPane), {
+    menuItem("terminal.restart-pane", "Restart Selected Process", () => activeTerminalPane ? restartTerminalPane(activeTerminalPane) : undefined, {
       icon: "reload",
       disabled: !activeTerminalPane || launchProfileChanging,
     }),
-    menuItem("terminal.terminate-pane", "Kill Selected Process", () => activeTerminalPane && void terminateTerminalPane(activeTerminalPane), {
+    menuItem("terminal.terminate-pane", "Kill Selected Process", () => activeTerminalPane ? terminateTerminalPane(activeTerminalPane) : undefined, {
       icon: "stop",
       danger: true,
       disabled: !activeTerminalPane || activeTerminalPane.state === "exited",
     }),
-    menuItem("terminal.close-pane", "Close Selected Pane", () => activeAgentSessionHandle && void activeAgentSessionHandle.close(), {
+    menuItem("terminal.close-pane", "Close Selected Pane", () => activeAgentSessionHandle ? activeAgentSessionHandle.close() : undefined, {
       icon: "close",
       danger: true,
       disabled: !activeAgentSessionHandle,
     }),
-    menuItem("terminal.remove-worktree", "Remove Worktree", () => activeTerminalPane && void closeWorktreePane(activeTerminalPane.id), {
+    menuItem("terminal.remove-worktree", "Remove Worktree", () => activeTerminalPane ? closeWorktreePane(activeTerminalPane.id) : undefined, {
       icon: "close",
       danger: true,
       disabled: !activeTerminalPane || !worktreeForPaneId(worktrees, activeTerminalPane ? String(activeTerminalPane.id) : null),
     }),
-    menuItem("terminal.copy", "Copy Selection", () => void copyTerminalSelection(), {
+    menuItem("terminal.copy", "Copy Selection", async () => { await copyTerminalSelection(); setActionNotice("Copied terminal selection"); }, {
       icon: "terminal",
       shortcut: shortcutKeys("terminal.copy-selection"),
       disabled: !terminalSelectedText(),
     }),
-    menuItem("terminal.paste", "Paste", () => void pasteIntoTerminal(), { icon: "terminal", shortcut: shortcutKeys("terminal.paste") }),
-    menuItem("terminal.copy-tail", "Copy Last 20 Lines", () => void copyActivePaneTail(), {
+    menuItem("terminal.paste", "Paste", () => pasteIntoTerminal(), { icon: "terminal", shortcut: shortcutKeys("terminal.paste"), disabled: !activeTerminalPane }),
+    menuItem("terminal.copy-tail", "Copy Last 20 Lines", async () => { await copyActivePaneTail(); setActionNotice("Copied last 20 lines"); }, {
       icon: "terminal",
       disabled: !activeAgentSessionHandle,
     }),
-    menuItem("terminal.clear", "Clear Terminal", () => void clearActiveTerminal(), { icon: "terminal", shortcut: shortcutKeys("terminal.clear") }),
-    menuItem("terminal.interrupt", "Interrupt Process", () => void interruptActivePane(), { icon: "stop", danger: true }),
-    menuItem("terminal.copy-cwd", "Copy Working Directory", () => workspacePath && void copyPathToClipboard(workspacePath), {
+    menuItem("terminal.clear", "Clear Terminal", () => clearActiveTerminal(), { icon: "terminal", shortcut: shortcutKeys("terminal.clear"), disabled: !activeTerminalPane }),
+    menuItem("terminal.interrupt", "Interrupt Process", () => interruptActivePane(), { icon: "stop", danger: true, disabled: !activeTerminalPane || activeTerminalPane.state === "exited" }),
+    menuItem("terminal.copy-cwd", "Copy Working Directory", () => workspacePath ? copyPathToClipboard(workspacePath) : undefined, {
       icon: "workspace",
       disabled: !workspacePath,
     }),
   ];
+
+  const terminalPaneContextMenuItems = (pane: ManagedTerminalPane): ContextMenuItem[] => [
+    menuItem("pane.focus", "Focus Pane", () => focusTerminalPane(pane.id), {
+      icon: "terminal",
+      disabled: pane.id === activeTerminalPaneId,
+    }),
+    menuItem("pane.rename", "Rename Pane", () => renameTerminalPane(pane), { icon: "terminal" }),
+    menuItem("pane.restart", "Restart Process", () => restartTerminalPane(pane), {
+      icon: "reload",
+      disabled: launchProfileChanging,
+    }),
+    menuItem("pane.kill", "Kill Process", () => terminateTerminalPane(pane), {
+      icon: "stop",
+      danger: true,
+      disabled: pane.state === "exited",
+    }),
+    menuItem("pane.close", "Close Pane", () => closeTerminalPane(pane.id), {
+      icon: "close",
+      danger: true,
+    }),
+    menuItem("pane.remove-worktree", "Remove Worktree", () => closeWorktreePane(pane.id), {
+      icon: "close",
+      danger: true,
+      disabled: !worktreeForPaneId(worktrees, String(pane.id)),
+    }),
+    menuItem("pane.copy-cwd", "Copy Working Directory", () => copyPathToClipboard(pane.cwd), { icon: "workspace" }),
+  ];
+
+  const copySelectedActivityLog = async () => {
+    const text = selectedAgentActivityLog.map((event) => [
+      new Date(event.timestamp).toISOString(),
+      event.kind,
+      event.label,
+      event.detail ?? event.target ?? "",
+      event.status,
+    ].join("\t")).join("\n");
+    if (!text) return;
+    await writeText(text);
+    setActionNotice("Copied activity log");
+  };
+
+  const utilityTrayTabContextMenuItems = (mode: UtilityTrayMode): ContextMenuItem[] => {
+    const label = mode.charAt(0).toUpperCase() + mode.slice(1);
+    const modeItems: ContextMenuItem[] = mode === "terminal"
+      ? [
+          menuItem("utility.terminal.new-shell", "New Shell Pane", () => createTerminalPane(defaultTerminalLaunchProfile()), {
+            icon: "terminal",
+            disabled: !workspacePath || launchProfileChanging,
+          }),
+          menuItem("utility.terminal.close-pane", "Close Selected Pane", () => activeTerminalPane ? closeTerminalPane(activeTerminalPane.id) : undefined, {
+            icon: "close",
+            danger: true,
+            disabled: !activeTerminalPane,
+          }),
+        ]
+      : mode === "processes"
+        ? [
+            menuItem("utility.processes.restart", "Restart Selected Process", () => activeTerminalPane ? restartTerminalPane(activeTerminalPane) : undefined, {
+              icon: "reload",
+              disabled: !activeTerminalPane || launchProfileChanging,
+            }),
+            menuItem("utility.processes.kill", "Kill Selected Process", () => activeTerminalPane ? terminateTerminalPane(activeTerminalPane) : undefined, {
+              icon: "stop",
+              danger: true,
+              disabled: !activeTerminalPane || activeTerminalPane.state === "exited",
+            }),
+          ]
+        : [
+            menuItem("utility.logs.copy", "Copy Activity Log", copySelectedActivityLog, {
+              icon: "logs",
+              disabled: selectedAgentActivityLog.length === 0,
+            }),
+          ];
+    return [
+      {
+        id: `utility.${mode}.show`,
+        label: `Show ${label}`,
+        icon: mode === "terminal" ? "terminal" : mode === "processes" ? "waiting" : "logs",
+        disabled: agentSurfaceMode === "terminal" && utilityTrayMode === mode,
+        onSelect: () => {
+          setUtilityTrayMode(mode);
+          setAgentSurfaceMode("terminal");
+        },
+      },
+      ...modeItems,
+      menuItem("utility.hide", "Hide Bottom Panel", () => setAgentSurfaceMode("chat"), {
+        icon: "chevronDown",
+        disabled: agentSurfaceMode !== "terminal",
+      }),
+    ];
+  };
 
   const browserContextMenuItems = (): ContextMenuItem[] => [
     menuItem("browser.back", "Back", () => goBrowserHistory(-1), {
@@ -3625,29 +3781,29 @@ function App() {
       disabled: !browserCanGoForward,
     }),
     menuItem("browser.reload", "Reload", reloadBrowserPreview, { icon: "reload" }),
-    menuItem("browser.open-external", "Open Externally", () => void openPath(browserUrl), { icon: "openExternal" }),
-    menuItem("browser.copy-url", "Copy URL", () => void writeText(browserUrl), { icon: "browser" }),
+    menuItem("browser.open-external", "Open Externally", () => openUrl(browserUrl), { icon: "openExternal" }),
+    menuItem("browser.copy-url", "Copy URL", async () => { await writeText(browserUrl); setActionNotice("Copied browser URL"); }, { icon: "browser" }),
   ];
 
   const composerContextMenuItems = (): ContextMenuItem[] => [
-    menuItem("composer.send", "Send Draft", () => void submitComposerDraft(), {
+    menuItem("composer.send", "Send Draft", () => submitComposerDraft(), {
       icon: "send",
       shortcut: shortcutKeys("composer.send"),
       disabled: composerSending || !composerDraft.trim(),
     }),
     menuItem("composer.clear", "Clear Draft", () => setComposerLocalState(activeComposerHarnessKey, "", composerHistory), { icon: "close", disabled: !composerDraft }),
-    menuItem("composer.attach-file", "Attach Local File", () => void attachLocalFileToComposer(), { icon: "filePlus" }),
-    menuItem("composer.attach-current", "Attach Current File", () => void attachSelectedFileToComposer(), {
+    menuItem("composer.attach-file", "Attach Local File", () => attachLocalFileToComposer(), { icon: "filePlus" }),
+    menuItem("composer.attach-current", "Attach Current File", () => attachSelectedFileToComposer(), {
       icon: "file",
       disabled: !selectedFile,
     }),
-    menuItem("composer.attach-preview", "Attach Browser Preview", () => void attachPreviewToComposer(), { icon: "browser" }),
-    menuItem("composer.stop", "Stop Selected Pane", () => void interruptActivePane(), {
+    menuItem("composer.attach-preview", "Attach Browser Preview", () => attachPreviewToComposer(), { icon: "browser" }),
+    menuItem("composer.stop", "Stop Chat Run", () => stopActiveChatRun(), {
       icon: "stop",
       danger: true,
-      disabled: !activeAgentSessionHandle,
+      disabled: !activeChatConversation.activeRunId,
     }),
-    menuItem("composer.copy-cwd", "Copy Target Workspace", () => workspacePath && void copyPathToClipboard(workspacePath), {
+    menuItem("composer.copy-cwd", "Copy Target Workspace", () => workspacePath ? copyPathToClipboard(workspacePath) : undefined, {
       icon: "workspace",
       disabled: !workspacePath,
     }),
@@ -3760,12 +3916,12 @@ function App() {
     },
     {
       id: "terminal.new-pane",
-      label: `New ${launchProfile.label} Pane`,
+      label: `New ${terminalLaunchProfile.label} Pane`,
       detail: workspacePath ? basename(workspacePath) : "Open a folder before creating a pane",
       icon: "terminal",
       disabled: !workspacePath || launchProfileChanging,
       keywords: ["agent", "terminal", "claude", "codex"],
-      run: () => void createTerminalPane(launchProfile),
+      run: () => void createTerminalPane(terminalLaunchProfile),
     },
     {
       id: "terminal.new-worktree-pane",
@@ -3774,7 +3930,7 @@ function App() {
       icon: "terminal",
       disabled: !workspacePath || launchProfileChanging,
       keywords: ["worktree", "branch", "parallel", "agent", "terminal"],
-      run: () => void createWorktreePane(launchProfile),
+      run: () => void createWorktreePane(terminalLaunchProfile),
     },
     {
       id: "terminal.remove-worktree",
@@ -3995,8 +4151,10 @@ function App() {
   const continuePendingNavigation = async (navigation: PendingNavigation) => {
     if (navigation.kind === "file") {
       await openEditorFileDirect(navigation.file, navigation.options);
-    } else {
+    } else if (navigation.kind === "workspace") {
       await openWorkspaceDirect(navigation.path);
+    } else {
+      await closeProjectDirect(navigation.projectPath);
     }
   };
 
@@ -4244,6 +4402,7 @@ function App() {
       const savedBrowserProjects = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewByProject"));
       const savedBrowserSessions = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewBySession"));
       const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
+      const savedTerminalProfile = normalizeTerminalLaunchProfile(await store.get<unknown>("terminalLaunchProfile"));
       const savedComposerHarness = normalizeComposerHarnessRecords(await store.get<unknown>("composerHarnessBySession"), savedProfile.id);
       const legacyChatConversations = normalizeChatConversationRecords(await store.get<unknown>("chatConversations"));
       if (Object.keys(legacyChatConversations).length > 0) {
@@ -4287,6 +4446,8 @@ function App() {
       paneLayoutsBySessionRef.current = savedPaneLayouts;
       launchProfileRef.current = savedProfile;
       setLaunchProfile(savedProfile);
+      terminalLaunchProfileRef.current = savedTerminalProfile;
+      setTerminalLaunchProfile(savedTerminalProfile);
       setRecentProjects(savedRecent);
       setOpenProjects(initialOpenProjects);
       setProjectSessions(initialProjectSessions);
@@ -4539,6 +4700,7 @@ function App() {
         <div className="titlebar-splitter" aria-hidden="true" />
         <div className="titlebar-agent-context" aria-label="Workspace context">
           <button className="titlebar-workspace" type="button" onClick={pickWorkspace} title="Open or switch project folder">
+            <AppIcon name="workspace" />
             <span>{activeWorkspaceName}</span>
           </button>
           {gitStatus?.branch ? <span className="titlebar-branch">{`⎇ ${gitStatus.branch}`}</span> : null}
@@ -4548,12 +4710,6 @@ function App() {
           <div className="titlebar-panel-toggles" aria-label="Toggle panels">
             <button className={`titlebar-action ${!sideDrawerCollapsed ? "titlebar-action--active" : ""}`} type="button" title="Toggle Threads" aria-label="Toggle Threads" aria-pressed={!sideDrawerCollapsed} onClick={() => setSideDrawerCollapsed((collapsed) => !collapsed)}>
               <AppIcon name="menu" />
-            </button>
-            <button className="titlebar-action" type="button" title="New thread" aria-label="New thread" disabled={!workspacePath} onClick={() => workspacePath && void createProjectSession(workspacePath)}>
-              <AppIcon name="plus" />
-            </button>
-            <button className="titlebar-action" type="button" title="Open externally" aria-label="Open workspace externally" disabled={!workspacePath} onClick={() => workspacePath && void openPath(workspacePath)}>
-              <AppIcon name="openExternal" />
             </button>
           </div>
           <span className={`titlebar-pill titlebar-pill--${primarySurfaceState}`} title={`${primarySurfaceLabel} · ${primarySurfaceStatusLabel}`}>
@@ -4977,7 +5133,7 @@ function App() {
                 <AppIcon name="reload" />
                 <span>Reload</span>
               </button>
-              <button className="rail-open-button" type="button" onClick={() => void openPath(browserUrl)}>
+              <button className="rail-open-button" type="button" onClick={() => void openUrl(browserUrl)}>
                 <AppIcon name="openExternal" />
                 <span>External</span>
               </button>
@@ -4992,11 +5148,11 @@ function App() {
           <section className="drawer-panel" aria-label="Settings">
             <div className="panel-title">Settings</div>
             <label className="drawer-field">
-              <span>Default pane profile</span>
+              <span>New terminal pane profile</span>
               <select
-                value={launchProfile.id}
+                value={terminalLaunchProfile.id}
                 disabled={launchProfileChanging}
-                onChange={(event) => void switchLaunchProfile(launchProfileById(event.currentTarget.value))}
+                onChange={(event) => void switchTerminalLaunchProfile(launchProfileById(event.currentTarget.value))}
               >
                 {LAUNCH_PROFILES.map((profile) => (
                   <option key={profile.id} value={profile.id}>
@@ -5187,7 +5343,14 @@ function App() {
             {workspacePath && gitStatus?.isRepository === false ? <div className="rail-status">This workspace is not a Git repository</div> : null}
             {gitStatus?.isRepository && gitStatus.files.length === 0 ? <div className="rail-status">Working tree clean</div> : null}
             {gitStatus?.files.map((file) => (
-              <button className="dock-file-row" type="button" key={`${file.index}${file.worktree}${file.path}`} title={`${gitStatusLabel(file)} · ${file.path}`} onClick={() => void openGitDiff(file)}>
+              <button
+                className="dock-file-row"
+                type="button"
+                key={`${file.index}${file.worktree}${file.path}`}
+                title={`${gitStatusLabel(file)} · ${file.path}`}
+                onClick={() => void openGitDiff(file)}
+                onContextMenu={(event) => openContextMenu(event, gitFileContextMenuItems(file))}
+              >
                 <AppIcon name={file.index === "?" ? "filePlus" : "git"} />
                 <span className="dock-file-row__name">{basename(file.path)}</span>
                 <span className="dock-file-row__path">{gitStatusLabel(file)}</span>
@@ -5386,7 +5549,7 @@ function App() {
             </nav>
           ) : null}
           {diffReview || diffReviewLoading || diffReviewError ? (
-            <div className="diff-view" aria-label="Diff review">
+            <div className="diff-view" aria-label="Diff review" onContextMenu={(event) => openContextMenu(event, diffContextMenuItems())}>
               {diffReviewLoading ? <div className="diff-empty">Loading diff…</div> : null}
               {diffReviewError ? (
                 <div className="editor-error editor-error--inline">
@@ -5564,7 +5727,7 @@ function App() {
                 Open
               </button>
             </form>
-            <button className="browser-button" type="button" title="Open preview externally" aria-label="Open preview externally" onClick={() => void openPath(browserUrl)}>
+            <button className="browser-button" type="button" title="Open preview externally" aria-label="Open preview externally" onClick={() => void openUrl(browserUrl)}>
               <AppIcon name="openExternal" />
             </button>
           </div>
@@ -5614,7 +5777,6 @@ function App() {
               </span>
             </div>
             <div className="terminal-actions">
-              <span className="thread-tab-context">{activeWorkspaceName}</span>
               <button className="terminal-tab-action" type="button" title="Open workspace externally" aria-label="Open workspace externally" disabled={!workspacePath} onClick={() => workspacePath && void openPath(workspacePath)}>
                 <AppIcon name="openExternal" />
               </button>
@@ -5872,7 +6034,6 @@ function App() {
               ["terminal", "terminal", "Terminal"],
               ["processes", "waiting", "Processes"],
               ["logs", "logs", "Logs"],
-              ["browser", "browser", "Browser Preview"],
             ] as const).map(([mode, icon, label]) => (
               <button
                 className={`utility-tray__tab ${utilityTrayMode === mode ? "utility-tray__tab--active" : ""}`}
@@ -5880,6 +6041,7 @@ function App() {
                 aria-pressed={agentSurfaceMode === "terminal" && utilityTrayMode === mode}
                 key={mode}
                 onClick={() => void openUtilityTray(mode)}
+                onContextMenu={(event) => openContextMenu(event, utilityTrayTabContextMenuItems(mode))}
               >
                 <AppIcon name={icon} />
                 <span>{label}</span>
@@ -5888,9 +6050,6 @@ function App() {
             <span className="utility-tray__spacer" />
             <button className="utility-tray__icon" type="button" title="Collapse tray" aria-label="Collapse utility tray" onClick={() => setAgentSurfaceMode("chat")}>
               <AppIcon name="chevronDown" />
-            </button>
-            <button className="utility-tray__icon" type="button" title="Close tray" aria-label="Close utility tray" onClick={() => setAgentSurfaceMode("chat")}>
-              <AppIcon name="close" />
             </button>
           </nav>
           <div className={`utility-tray__body utility-tray__body--${utilityTrayMode}`}>
@@ -5908,6 +6067,7 @@ function App() {
                       aria-pressed={pane.id === activeTerminalPaneId}
                       onClick={() => void focusTerminalPane(pane.id)}
                       onDoubleClick={() => void renameTerminalPane(pane)}
+                      onContextMenu={(event) => openContextMenu(event, terminalPaneContextMenuItems(pane))}
                     >
                       <AppIcon name={paneStateIconName(pane.state)} />
                       <span>{label}</span>
@@ -5916,26 +6076,25 @@ function App() {
                 })}
               </div>
               <span className="utility-tray__spacer" />
-              <label className="terminal-profile-picker">
-                <span className="terminal-profile-picker__label">New pane</span>
-                <select aria-label="New pane profile" value={launchProfile.id} disabled={launchProfileChanging} onChange={(event) => void switchLaunchProfile(launchProfileById(event.currentTarget.value))}>
+              <label className="terminal-profile-picker" title="New terminal profile">
+                <select aria-label="New pane profile" value={terminalLaunchProfile.id} disabled={launchProfileChanging} onChange={(event) => void switchTerminalLaunchProfile(launchProfileById(event.currentTarget.value))}>
                   {LAUNCH_PROFILES.map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
                 </select>
               </label>
-              <button className="terminal-new-pane" type="button" title={`New ${launchProfile.label} pane`} disabled={!workspacePath || launchProfileChanging} onClick={() => void createTerminalPane(launchProfile)}>
-                <AppIcon name="plus" /><span>New</span>
+              <button className="terminal-new-pane" type="button" title={`New ${terminalLaunchProfile.label} pane`} aria-label={`New ${terminalLaunchProfile.label} pane`} disabled={!workspacePath || launchProfileChanging} onClick={() => void createTerminalPane(terminalLaunchProfile)}>
+                <AppIcon name="plus" />
               </button>
-              <button className="terminal-new-pane" type="button" title="Find in terminal scrollback" disabled={!activeTerminalPane} onClick={() => setTerminalFindOpen((open) => !open)}>
-                <AppIcon name="search" /><span>Find</span>
+              <button className="terminal-new-pane" type="button" title="Find in terminal scrollback" aria-label="Find in terminal scrollback" disabled={!activeTerminalPane} onClick={() => setTerminalFindOpen((open) => !open)}>
+                <AppIcon name="search" />
               </button>
-              <button className="terminal-new-pane" type="button" title="Restart selected process" disabled={!activeTerminalPane || launchProfileChanging} onClick={() => void restartTerminalPane(activeTerminalPane)}>
-                <AppIcon name="reload" /><span>Restart</span>
+              <button className="terminal-new-pane" type="button" title="Restart selected process" aria-label="Restart selected process" disabled={!activeTerminalPane || launchProfileChanging} onClick={() => void restartTerminalPane(activeTerminalPane)}>
+                <AppIcon name="reload" />
               </button>
-              <button className="terminal-new-pane terminal-new-pane--danger" type="button" title="Kill selected process" disabled={!activeTerminalPane || activeTerminalPane.state === "exited"} onClick={() => void terminateTerminalPane(activeTerminalPane)}>
-                <AppIcon name="stop" /><span>Kill</span>
+              <button className="terminal-new-pane terminal-new-pane--danger" type="button" title="Kill selected process" aria-label="Kill selected process" disabled={!activeTerminalPane || activeTerminalPane.state === "exited"} onClick={() => void terminateTerminalPane(activeTerminalPane)}>
+                <AppIcon name="stop" />
               </button>
-              <button className="terminal-new-pane terminal-new-pane--danger" type="button" title="Close selected pane" disabled={!activeAgentSessionHandle} onClick={() => activeAgentSessionHandle && void activeAgentSessionHandle.close()}>
-                <AppIcon name="close" /><span>Close</span>
+              <button className="terminal-new-pane terminal-new-pane--danger" type="button" title="Close selected pane" aria-label="Close selected pane" disabled={!activeAgentSessionHandle} onClick={() => activeAgentSessionHandle && void activeAgentSessionHandle.close()}>
+                <AppIcon name="close" />
               </button>
             </div>
             {terminalFindOpen ? (
@@ -6006,9 +6165,6 @@ function App() {
                   <small>{event.status}</small>
                 </div>
               ))}
-            </div>
-            <div className="utility-tray__browser" aria-label="Browser preview tray">
-              <iframe key={`tray-${browserUrl}-${browserReloadNonce}`} title={`Browser preview tray: ${browserUrl}`} src={browserUrl} referrerPolicy="no-referrer" />
             </div>
           </div>
         </section>
@@ -6141,6 +6297,15 @@ function App() {
           </button>
         </div>
       ) : null}
+      {actionNotice ? (
+        <div className="context-action-notice" role="status">
+          <AppIcon name="check" />
+          <span>{actionNotice}</span>
+          <button className="editor-command" type="button" aria-label="Dismiss action notice" onClick={() => setActionNotice(null)}>
+            <AppIcon name="close" />
+          </button>
+        </div>
+      ) : null}
       {launchError ? (
         <div className="launch-error" role="alert">
           <span className="launch-error__message">{launchError}</span>
@@ -6165,32 +6330,11 @@ function App() {
         </div>
       ) : null}
       {contextMenu ? (
-        <div
-          ref={contextMenuRef}
-          className="context-menu"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          aria-label="Context menu"
-          role="menu"
-          onPointerDown={(event) => event.stopPropagation()}
-          onKeyDown={handleContextMenuKeyDown}
-        >
-          {contextMenu.items.map((item) => (
-            <button
-              className={item.danger ? "context-menu__item context-menu__item--danger" : "context-menu__item"}
-              type="button"
-              role="menuitem"
-              disabled={item.disabled}
-              key={item.id}
-              onClick={() => runContextMenuItem(item)}
-            >
-              <span className="context-menu__label">
-                {item.icon ? <AppIcon name={item.icon} /> : null}
-                <span>{item.label}</span>
-              </span>
-              {item.shortcut ? <span className="context-menu__shortcut">{item.shortcut}</span> : null}
-            </button>
-          ))}
-        </div>
+        <ContextMenu
+          state={contextMenu}
+          onDismiss={() => setContextMenu(null)}
+          onActionError={(item, error) => setLaunchError(`${item.label} failed: ${String(error)}`)}
+        />
       ) : null}
       {commandPaletteOpen ? (
         <div className="command-palette-backdrop" role="presentation" onPointerDown={closeCommandPalette}>
@@ -6316,7 +6460,6 @@ function App() {
           </span>
         </div>
         <div className="status-bar__group status-bar__group--center">
-          <span className="status-bar__item">{activeSessionTitle}</span>
           <span className="status-bar__item">
             <AppIcon name={paneStateIconName(primarySurfaceState)} />
             <span>{primarySurfaceLabel}</span>
@@ -6325,7 +6468,6 @@ function App() {
         </div>
         <div className="status-bar__group status-bar__group--right">
           <span className="status-bar__item">{agentSurfaceMode === "chat" ? "Chat" : utilityTrayStatusLabel}</span>
-          <span className="status-bar__item">Prettier</span>
         </div>
       </footer>
     </div>

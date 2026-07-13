@@ -78,6 +78,19 @@ export const setOpenProjectStatus = (
 
 export const removeOpenProject = (projects: OpenProject[], path: string) => projects.filter((project) => project.path !== path);
 
+export const planProjectClose = (
+  projects: OpenProject[],
+  activePath: string | null,
+  closingPath: string,
+) => {
+  const remaining = removeOpenProject(projects, closingPath);
+  return {
+    remaining,
+    wasActive: activePath === closingPath,
+    fallbackPath: activePath === closingPath ? remaining[0]?.path ?? null : activePath,
+  };
+};
+
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;

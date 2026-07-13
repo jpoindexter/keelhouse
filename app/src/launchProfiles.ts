@@ -7,6 +7,7 @@ export type LaunchProfile = {
 };
 
 export const DEFAULT_LAUNCH_PROFILE_ID = "codex";
+export const DEFAULT_TERMINAL_LAUNCH_PROFILE_ID = "shell";
 
 export const LAUNCH_PROFILES: LaunchProfile[] = [
   {
@@ -53,12 +54,30 @@ const withKnownLabel = (profile: LaunchProfile): LaunchProfile => ({
 
 export const defaultLaunchProfile = () => LAUNCH_PROFILES[0];
 
+export const defaultTerminalLaunchProfile = () =>
+  profileById.get(DEFAULT_TERMINAL_LAUNCH_PROFILE_ID) ?? LAUNCH_PROFILES[LAUNCH_PROFILES.length - 1];
+
 export const normalizeLaunchProfile = (value: unknown): LaunchProfile => {
   if (!isRecord(value)) return defaultLaunchProfile();
   const id = typeof value.id === "string" && value.id.trim() ? value.id : "";
   const known = profileById.get(id);
   if (known) return known;
   if (typeof value.command !== "string" || !value.command.trim()) return defaultLaunchProfile();
+  return {
+    id: id || value.command,
+    label: typeof value.label === "string" && value.label.trim() ? value.label : value.command,
+    command: value.command.trim(),
+    args: normalizeArgs(value.args),
+    useLoginShell: typeof value.useLoginShell === "boolean" ? value.useLoginShell : true,
+  };
+};
+
+export const normalizeTerminalLaunchProfile = (value: unknown): LaunchProfile => {
+  if (!isRecord(value)) return defaultTerminalLaunchProfile();
+  const id = typeof value.id === "string" && value.id.trim() ? value.id : "";
+  const known = profileById.get(id);
+  if (known) return known;
+  if (typeof value.command !== "string" || !value.command.trim()) return defaultTerminalLaunchProfile();
   return {
     id: id || value.command,
     label: typeof value.label === "string" && value.label.trim() ? value.label : value.command,

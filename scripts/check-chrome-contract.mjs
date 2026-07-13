@@ -77,7 +77,6 @@ for (const weight of [400, 500, 600, 700, 800]) {
 }
 assert(/\.layout-switcher\s*\{[^}]*border: 0;[^}]*background: transparent;/s.test(appCss), "Layout switcher must not render an enclosing segmented-control box");
 assert(/\.layout-switcher__button--active\s*\{[^}]*box-shadow: inset 0 -2px 0 var\(--color-accent-border\);/s.test(appCss), "Layout active state must use a flat underline accent");
-assert(/\.terminal-pane-button--active\s*\{[^}]*box-shadow: inset 0 -2px 0 var\(--color-accent-border\);/s.test(appCss), "Pane active state must use a flat underline accent");
 assert(/\.terminal-command,\s*\.terminal-mode\s*\{[^}]*display: none;/s.test(appCss), "Terminal toolbar must hide low-value command/mode text to avoid chrome crowding");
 assert(/\.terminal-title\s*\{[^}]*display: none;/s.test(appCss), "Terminal toolbar must not duplicate the selected profile label");
 assert(appCss.includes("container-type: inline-size;"), "Browser preview must use container-aware chrome behavior");
@@ -107,7 +106,11 @@ assert(tauriBackend.includes("fn resolve_workspace"), "The backend must expose a
 assert(appTsx.includes('className={`utility-tray ${agentSurfaceMode === "terminal"'), "Raw terminal must live in the approved bottom utility tray");
 assert(appTsx.includes('hidden={false}'), "Opening the bottom tray must keep the chat timeline visible");
 assert(appTsx.includes('className="agent-composer" aria-label="Agent composer"'), "Opening the bottom tray must keep the chat composer visible");
-assert(appTsx.includes('aria-label="Utility tray surfaces"'), "Bottom tray must expose Terminal, Processes, Logs, and Browser Preview modes");
+assert(appTsx.includes('aria-label="Utility tray surfaces"'), "Bottom tray must expose Terminal, Processes, and Logs modes");
+assert(!appTsx.includes('utilityTrayMode === "browser"'), "Browser must not be duplicated in the bottom utility tray");
+assert(appTsx.includes("utilityTrayTabContextMenuItems"), "Bottom utility tabs must expose app-owned context menus");
+assert(appTsx.includes("terminalPaneContextMenuItems"), "Terminal pane tabs must expose lifecycle context menus");
+assert(/\.terminal-pane-button--active\s*\{[^}]*border-bottom-color:\s*var\(--color-accent-border\);[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/s.test(appCss), "Active terminal pane tabs must use a flat underline, not rounded capsule chrome");
 assert(appTsx.includes('aria-label="Composer permission mode"'), "Composer must expose the real approval-mode menu");
 assert(appTsx.includes('aria-label="Composer goal"'), "Composer must expose its persisted goal control");
 assert(appTsx.includes('aria-label="Codex model override"'), "Composer must expose a real Codex model override");

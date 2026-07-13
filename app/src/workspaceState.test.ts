@@ -12,6 +12,7 @@ import {
   newProjectSession,
   openProjectsFromRecent,
   pushRecentProject,
+  planProjectClose,
   removeProjectSession,
   removeOpenProject,
   rememberActiveFile,
@@ -82,6 +83,27 @@ describe("workspace state helpers", () => {
       { path: "/b", status: "exited" },
     ]);
     expect(removeOpenProject(open, "/a")).toEqual([{ path: "/b", status: "exited" }]);
+  });
+
+  it("plans active and background project closes without losing the fallback", () => {
+    const open = openProjectsFromRecent(["/a", "/b", "/c"]);
+    expect(planProjectClose(open, "/a", "/a")).toEqual({
+      remaining: [
+        { path: "/b", status: "exited" },
+        { path: "/c", status: "exited" },
+      ],
+      wasActive: true,
+      fallbackPath: "/b",
+    });
+    expect(planProjectClose(open, "/a", "/b")).toEqual({
+      remaining: [
+        { path: "/a", status: "exited" },
+        { path: "/c", status: "exited" },
+      ],
+      wasActive: false,
+      fallbackPath: "/a",
+    });
+    expect(planProjectClose([{ path: "/a", status: "running" }], "/a", "/a").fallbackPath).toBeNull();
   });
 
   it("normalizes project sessions by project", () => {

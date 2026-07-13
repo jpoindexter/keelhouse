@@ -431,7 +431,7 @@
       "size": "S",
       "launch": "v0_5",
       "summary": "Stop hardcoding one command forever. Add simple profiles for Codex, Gemini, Claude, and shell so the pane can launch the desired CLI without burning the wrong quota during testing.",
-      "done": "Verified 2026-07-09: terminal header exposes Codex, Gemini, Claude, and Shell profiles; fresh state defaults to Codex; shows active command/mode details; successful changes restart the pane through open_workspace and persist to workspace.json; missing-command errors stay visible and do not overwrite the saved profile. Covered by npm build/test, cargo missing-command preflight tests, screenshot QA, selected/narrow visual inspection, and docs/local-state.md schema update.",
+      "done": "Corrected 2026-07-13: structured chat defaults to Codex while explicitly opened raw terminals default to blank Shell. launchProfile and terminalLaunchProfile persist independently; terminal agent launches require an explicit profile choice; missing-command errors remain visible without overwriting the saved profile.",
       "buildOrder": 26
     },
     {
@@ -492,7 +492,7 @@
       "size": "M",
       "launch": "v0_5",
       "summary": "macOS pointer workflows need right-click/Control-click affordances, not only visible buttons. Context menus should expose the same command registry as menu bar, shortcuts, and command palette where possible.",
-      "done": "Verified 2026-07-09: current surfaces expose right-click/Control-click menus for the workspace root, project/session rows, file explorer, editor tabs, editor text surface, browser preview, terminal pane, and composer/agent controls. Menus share shortcut labels where active, show disabled and danger states, reuse existing destructive confirmations/dirty guards, and are documented in docs/context-menus.md. Git-marked file rows can open read-only diffs, stage, unstage, and discard unstaged changes.",
+      "done": "Corrected 2026-07-13: one shared async, keyboard-accessible renderer covers workspace/project/chat, file, editor, browser, Git, composer, utility-tab, and terminal-pane surfaces. Close Project performs stop/remove/fallback lifecycle behavior; utility and pane tabs expose app-owned focus/restart/kill/close/hide actions; failures receive visible feedback.",
       "buildOrder": 31
     },
     {
@@ -1248,7 +1248,7 @@
       "track": "ui",
       "size": "M",
       "launch": "v1",
-      "summary": "Compose the center as one continuous structured chat with inline provider/app events and an anchored composer. Keep chat visible while Terminal/Processes/Logs/Browser Preview open in the demo's collapsible, resizable bottom utility tray; never infer provider structure from terminal text.",
+      "summary": "Compose the center as one continuous structured chat with inline provider/app events and an anchored composer. Keep chat visible while Terminal/Processes/Logs open in the demo's collapsible, resizable bottom utility tray; Browser remains in the right dock and provider structure is never inferred from terminal text.",
       "done": "Corrected and native-verified 2026-07-13: removed the separate Run/Activity center and the alternate-center raw-terminal mode. Structured chat remains primary; a real Codex PTY opens in the bottom tray, Processes shows live panes, and collapse returns to the 42px tab strip without changing chat.",
       "buildOrder": 84
     },
@@ -1297,7 +1297,7 @@
       "size": "M",
       "launch": "v1",
       "summary": "Keep useWorkbenchLayout docking (left/right/bottom, resizable, persisted) while the dock renders the approved Files, Editor, Browser, and Git tab strip with steel-cyan underline actives. Files and Git are real tray surfaces, not duplicate left-drawer modes; the left column remains project threads.",
-      "done": "Corrected 2026-07-13: Files/Editor/Browser/Git are functional right-dock tabs with active-tab close behavior. Terminal/Processes/Logs/Browser Preview are functional bottom-tray tabs; the tray is collapsible and vertically resizable. Native checks executed Terminal open, Processes switch, and collapse while preserving chat.",
+      "done": "Corrected 2026-07-13: Files/Editor/Browser/Git are functional right-dock tabs. Terminal/Processes/Logs are functional bottom-tray tabs; Browser Preview duplication was removed. Utility and terminal-pane tabs have app-owned context menus, and pane selection uses a flat underline rather than rounded capsule chrome.",
       "buildOrder": 88
     },
     {
@@ -1334,7 +1334,7 @@
       "launch": "v1",
       "summary": "Extend scripts/check-chrome-contract.mjs so boxed-button drift cannot recur silently: forbid the boxed control background on toolbar/composer/editor/browser button classes, require the text-action grammar classes, assert composer card values, run-surface centered column, sidebar section-label treatment, and tray tab-strip actives, and require docs/qa/chrome-delta side-by-side artifacts (demo reference captures plus matching app captures at 1440/1024/900). Blind-audit 2026-07-11 additions: refresh the stale pre-convergence editor-QA fixture to current chrome; titlebar crumb overflow rules (project truncates before branch, branch ellipsis over ~30 chars, detached HEAD shows short SHA); overlay side-by-side captures for context menu and palette; assert the shipped font-stack decision from CHROME-FONT-LOCK. Executes after CHROME-EYEBALL-SIGNOFF so the gate locks a human-approved state.",
       "done": "The gate fails on reintroduction of boxed toolbar buttons (verified by a temporary revert); demo-reference PNGs are checked in and asserted; the editor fixture renders current chrome; crumb overflow rules implemented and tested with long branch names and detached HEAD; npm run qa:chrome-contract is green on the converged chrome.",
-      "progress": "Corrected again 2026-07-13 to enforce the approved demo structure: 36/42/38/24px chrome rhythm, 332px Threads drawer, stable 430px desktop dock, 860px reading-axis cap, 12px/78px composer, persistent chat, and bottom utility tray. The stale no-tray/alternate-center assertions were removed. 197 frontend tests, 59 Rust tests, production/package builds, qa:chrome-contract, and packaged native Terminal/Processes/collapse checks pass. Formal lock remains after CHROME-EYEBALL-SIGNOFF.",
+      "progress": "Corrected again 2026-07-13 to enforce the approved demo structure: 36/42/38/24px chrome rhythm, persistent chat, Browser only in the right dock, and a Terminal/Processes/Logs bottom tray. The gate rejects duplicate Browser Preview, missing tab context menus, and rounded active pane tabs. Packaged QA executed utility-tab and terminal-pane menus, verified raw Terminal starts /bin/zsh -l, and captured the simplified global-only titlebar, inset icon toolbar, and real-only status strip. Formal lock remains after CHROME-EYEBALL-SIGNOFF.",
       "buildOrder": 90.2
     },
     {
