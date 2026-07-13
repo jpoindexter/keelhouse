@@ -13,7 +13,9 @@ const assert = (condition, message) => {
 const appCss = read("app/src/App.css");
 const appTsx = read("app/src/App.tsx");
 const mainTsx = read("app/src/main.tsx");
-const agentRunSurface = read("app/src/AgentRunSurface.tsx");
+const chatThreadSurface = read("app/src/ChatThreadSurface.tsx");
+const chatConversation = read("app/src/chatConversation.ts");
+const chatHarness = read("app/src-tauri/src/chat_harness.rs");
 const toolDockMenu = read("app/src/ToolDockMenu.tsx");
 const toolTrayTabs = read("app/src/ToolTrayTabs.tsx");
 const workbenchLayout = read("app/src/workbenchLayout.ts");
@@ -48,7 +50,7 @@ const rejectedWarmAccent = /#e07a4f|#251b16|#d9a079|var\(--orange\)|orange accen
 const checkedText = [
   ["app/src/App.css", appCss],
   ["app/src/App.tsx", appTsx],
-  ["app/src/AgentRunSurface.tsx", agentRunSurface],
+  ["app/src/ChatThreadSurface.tsx", chatThreadSurface],
   ["app/src/ToolDockMenu.tsx", toolDockMenu],
   ["demo/keelhouse-chrome-demo.html", demo],
 ];
@@ -84,14 +86,23 @@ assert(appCss.includes(".agent-thread-event"), "App CSS must include thread-styl
 assert(/\.agent-composer__card\s*\{[^}]*border:\s*1px solid #343642;[^}]*border-radius:\s*12px;[^}]*background:\s*#1b1c23;/s.test(appCss), "Composer must preserve the approved elevated-card grammar");
 assert(appCss.includes("--run-column-width: calc(100% - var(--run-column-pad));"), "Run and composer surfaces must share the centered column width token");
 assert(/\.project-rail__heading\s*\{[^}]*font-size:\s*11px;[^}]*font-weight:\s*600;[^}]*text-transform:\s*uppercase;/s.test(appCss), "Project section labels must preserve the compact uppercase rhythm");
-assert(agentRunSurface.includes("agent-thread-event"), "Agent run surface must render provenance activity rows");
-assert(!agentRunSurface.includes("agent-activity-log__title\">Activity"), "Agent events must stay inline instead of becoming a separate Activity dashboard");
+assert(chatThreadSurface.includes('className="chat-thread"'), "Chat surface must render a persistent message timeline");
+assert(chatThreadSurface.includes('message.role === "user"'), "Chat surface must distinguish user messages from Codex responses");
+assert(chatThreadSurface.includes("agent-thread-event"), "Chat surface must render provenance activity rows");
+assert(!chatThreadSurface.includes("agent-activity-log__title\">Activity"), "Agent events must stay inline instead of becoming a separate Activity dashboard");
+assert(chatConversation.includes("providerThreadId"), "Each chat must persist its own provider thread identity");
+assert(chatConversation.includes("activeRunId"), "Each chat must own its active run independently");
+assert(chatHarness.includes("codex exec --json"), "Structured Codex chat must use JSON events instead of terminal transcript scraping");
+assert(chatHarness.includes("codex exec resume --json"), "Structured Codex chat must resume the selected chat's provider thread");
+assert(appTsx.includes('route.kind === "chat"'), "Normal composer prompts must route to structured chat, not a pty paste path");
+assert(appTsx.includes('invoke<ResolveWorkspaceResponse>("resolve_workspace"'), "Opening a chat must resolve its project without spawning a hidden terminal");
+assert(tauriBackend.includes("fn resolve_workspace"), "The backend must expose a no-pty project open path for chat mode");
 assert(!appTsx.includes('className="terminal-tray"'), "Agent chat and raw terminal must not be duplicated as a persistent bottom tray");
 assert(appTsx.includes('title={agentSurfaceMode === "terminal" ? "Return to agent chat" : "Open raw terminal"}'), "Titlebar terminal icon must clearly switch between agent chat and the raw terminal");
 assert(appTsx.includes('aria-label="Agent composer" hidden={agentSurfaceMode !== "chat"}'), "Raw terminal mode must hide the agent composer instead of stacking chat controls over the TUI");
 assert(appTsx.includes("drawerActiveTitle"), "App drawer header must be mode-aware, not a generic Drawer label");
 assert(!appTsx.includes("<span>Drawer</span>"), "App drawer header must not render a generic Drawer label");
-assert(appTsx.includes("Project threads"), "Projects drawer must present project sessions as threads");
+assert(appTsx.includes("Project chats"), "Projects drawer must present independent chats under each project");
 assert(appTsx.includes("Agent conversation with optional raw terminal"), "Agent surface must label raw terminal as an optional alternate view");
 assert(!appTsx.includes('className="agent-surface-switcher"'), "The agent header must not duplicate the titlebar chat/terminal toggle");
 assert(!editorQaFixture.includes("agent-surface-switcher"), "Editor QA fixture must not retain the removed chat/terminal switcher");
@@ -123,7 +134,7 @@ assert(appCss.includes(".command-palette__row--active"), "Command palette must h
 assert(appTsx.includes("quickOpenOpen"), "App chrome must expose a Cmd+P quick-open surface");
 assert(appTsx.includes("search_workspace_text"), "Search drawer must call the workspace text search command");
 assert(appTsx.includes("search-scope-tabs"), "Search drawer must expose Files/Text scopes");
-assert(editorQaFixture.includes("Project threads drawer"), "Editor QA fixture must reflect the project-thread drawer");
+assert(editorQaFixture.includes("Project chats drawer"), "Editor QA fixture must reflect the project-chat drawer");
 assert(!editorQaFixture.includes(">Drawer<"), "Editor QA fixture must not show a generic Drawer label");
 assert(editorQaFixture.includes("workbench--tools-editor"), "Editor QA fixture must include the current single-editor tray mode");
 assert(editorQaFixture.includes("tool-tray-switcher"), "Editor QA fixture must render tool tray tabs");

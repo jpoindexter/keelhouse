@@ -42,7 +42,7 @@ export const SETTINGS_ROWS: SettingsRowDef[] = [
     id: "general.permission",
     categoryId: "general",
     label: "Permission mode",
-    hint: "How composer-driven app actions are approved for the active session.",
+    hint: "How composer-driven app actions are approved for the active chat.",
     keywords: ["ask", "approve", "full access", "approval", "gate"],
   },
   {
@@ -70,7 +70,7 @@ export const SETTINGS_ROWS: SettingsRowDef[] = [
     id: "browser.url",
     categoryId: "browser",
     label: "Preview URL",
-    hint: "Remembered per project and session; Enter applies.",
+    hint: "Remembered per project and chat; Enter applies.",
     keywords: ["localhost", "preview", "address", "url"],
   },
   {
@@ -119,7 +119,7 @@ export const SETTINGS_ROWS: SettingsRowDef[] = [
     id: "app.reset",
     categoryId: "app",
     label: "Reset all local data",
-    hint: "Clear saved projects, sessions, transcripts, layout, and local state files. Cannot be undone.",
+    hint: "Clear saved projects, chats, transcripts, layout, and local state files. Cannot be undone.",
     keywords: ["reset", "clear", "uninstall", "wipe", "delete", "local data"],
   },
   {

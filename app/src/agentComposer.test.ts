@@ -16,7 +16,7 @@ describe("agent composer routing", () => {
 
   it("routes normal drafts to the pty without trimming the payload", () => {
     expect(routeComposerDraft("  explain this file\nwith bullets  ")).toEqual({
-      kind: "pty",
+      kind: "chat",
       text: "  explain this file\nwith bullets  ",
     });
   });
@@ -53,7 +53,7 @@ describe("app command discoverability", () => {
 
   it("flags unknown single-token > input instead of sending it to the pty", () => {
     expect(routeComposerDraft(">sve")).toEqual({ kind: "unknown-app", input: ">sve" });
-    expect(routeComposerDraft("> please do this")).toEqual({ kind: "pty", text: "> please do this" });
+    expect(routeComposerDraft("> please do this")).toEqual({ kind: "chat", text: "> please do this" });
   });
 
   it("lists every app command with aliases in the help text", () => {

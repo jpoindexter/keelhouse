@@ -1094,21 +1094,22 @@
       "track": "workspace",
       "size": "S",
       "launch": "v2",
-      "summary": "Only after project sessions and transcripts exist, add a way to hide old sessions without turning the product into archived chats.",
-      "done": "A completed project session can be archived/restored; archived sessions retain transcript references and metadata, stay out of the main rail, and are labeled as work sessions rather than chats. Executed 2026-07-12: optional archived flag on ProjectSession (normalized on load, backward-compatible), Archive/Unarchive session context action with last-active-session protection, rail hides archived by default with a Show archived (n) toggle; pure helpers (setProjectSessionArchived/activeSessionsForRail/archivedSessionCount) tested (146 vitest).",
+      "summary": "Hide completed project chats without losing their messages, provider thread ids, transcript references, or workspace context.",
+      "done": "A completed project chat can be archived/restored and stays out of the main rail while retaining messages, provider identity, transcript references, and metadata. Executed 2026-07-12 as session metadata; 2026-07-13 chat-model correction requires the same archive flag to preserve chatConversations records.",
       "buildOrder": 80
     },
     {
       "id": "DIRECT-AGENT-HARNESS",
-      "title": "Optional direct API agent harness",
-      "column": "later",
-      "tier": "sand",
+      "title": "Codex-style multi-chat harness",
+      "column": "next",
+      "tier": "rock",
       "track": "core",
-      "size": "M",
-      "launch": "v2",
-      "summary": "Research-backed future lane: app-owned direct API/MCP agent workflows using human review, resumable state, and tracing, without replacing real Claude/Codex terminal panes.",
-      "done": "A feature-flagged direct agent can run app-owned tools/MCP with approval gates, state restore/resume, tracing/activity log entries, and clear separation from terminal-backed Claude/Codex panes.",
-      "buildOrder": 92
+      "size": "L",
+      "launch": "v1",
+      "summary": "Primary product correction from native QA: project rows contain multiple independent Codex-style chats, not terminal sessions wearing chat chrome. Persist user/assistant/tool messages and provider thread ids; render structured provider events; keep raw PTYs as an optional alternate view and adapter fallback.",
+      "done": "The packaged app creates two same-project chats, receives structured Codex output in both through existing OAuth, switches without mixed messages, resumes each provider thread for a second turn, stops a live run, restores chat histories after relaunch, and never renders raw terminal text as a chat message. Gemini/Claude adapter gaps are explicit and route to raw terminal.",
+      "progress": "2026-07-13 implementation checkpoint: frontend chat records/reducer persist independently of pane state; Codex JSONL start/resume/stop bridge added in Tauri; center renders user, assistant, tool, status, and error messages; rail/title/status copy now says chats and follows chat-run state. Raw terminal starts lazily behind its titlebar icon instead of spawning a hidden PTY per chat. Fast-run ownership is established before provider launch. npm run build, 178 frontend tests, qa:chrome-contract, 46 Rust tests, and package:mac pass. Packaged multi-chat, resume, stop, and relaunch proof remains pending because macOS is locked.",
+      "buildOrder": 90.2
     },
     {
       "id": "REUSE-AUDIT",
@@ -1204,7 +1205,7 @@
       "size": "S",
       "launch": "v1",
       "summary": "First-open default becomes the demo layout: threads drawer open, centered conversation and composer, right dock open on Files, and statusbar. Raw terminal is available from the persistent titlebar icon instead of occupying a duplicate bottom tray. Changes the default workbench layout from hidden; returning users keep their persisted layout. Supersedes the 2026-07-10 hidden-first-open correction with a DECISIONS.md entry. Blind-audit 2026-07-11 additions: if the default agent launch fails on first open, the conversation shows an inline recovery banner (error, Open Folder/Settings pointers, shell-profile fallback); a discoverable Reset-layout-to-demo action exists for returning users.",
-      "done": "Corrected and reverified 2026-07-12: versioned layout preferences open with the approved project-thread sidebar, continuous agent conversation and composer, Files-first right dock, and statusbar. The macOS titlebar uses native overlay chrome; its terminal icon switches the center to the raw TUI without rendering a second tray. Reset interface restores this default after panels or the sidebar are closed. Narrow windows default to chat while persistent icons reopen one full-width tool view.",
+      "done": "Corrected and reverified 2026-07-12: versioned layout preferences open with the approved project-chat sidebar, continuous agent conversation and composer, Files-first right dock, and statusbar. The macOS titlebar uses native overlay chrome; its terminal icon switches the center to the raw TUI without rendering a second tray. Reset interface restores this default after panels or the sidebar are closed. Narrow windows default to chat while persistent icons reopen one full-width tool view.",
       "buildOrder": 89
     },
     {

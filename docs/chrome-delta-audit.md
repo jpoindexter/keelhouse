@@ -28,7 +28,7 @@ Why this exists: the shipped chrome passed `npm run qa:chrome-contract` while vi
 
 ## Boundary re-affirmed
 
-The demo's structured thinking/working-plan/edited-file/approval cards require real agent events (AGENT-HOOKS adapters). Keelhouse never infers provider chat/tool/thinking structure from terminal text. Until hooks land, Run stays terminal-backed inside the demo's card composition (RUN-CARDS-ADAPTER, v2).
+The demo's structured thinking/working-plan/edited-file/approval cards require real agent events. Keelhouse never infers provider chat/tool/thinking structure from terminal text. The 2026-07-13 Codex JSON adapter now supplies user, assistant, command, file, status, and error events; richer approval cards and non-Codex providers still require explicit adapters (RUN-CARDS-ADAPTER).
 
 ## Lesson for gates
 

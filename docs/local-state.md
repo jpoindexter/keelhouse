@@ -100,6 +100,21 @@ Current schema:
       ]
     }
   },
+  "chatConversations": {
+    "/absolute/path/to/workspace\nsession-lt72gs": {
+      "provider": "codex",
+      "providerThreadId": "019f5a64-56ac-7e73-b554-138e0e8352b4",
+      "messages": [
+        {
+          "id": "user-mexample",
+          "role": "user",
+          "text": "Run the tests and fix the first failure.",
+          "timestamp": 1783530000000
+        }
+      ],
+      "updatedAt": 1783530000000
+    }
+  },
   "agentActivityEvents": [
     {
       "id": "pane:4:command:1783530000000",
@@ -122,10 +137,11 @@ Current schema:
 
 `folder` is the last workspace to reopen. `launchProfile` is the command the pane launches in that workspace. Built-in profile ids are `codex`, `gemini`, `claude`, and `shell`. Codex, Gemini, and Claude run through a login shell so shell-managed paths such as `nvm` are available; Shell launches `/bin/zsh -l` directly. Fresh state defaults to Codex to avoid consuming Claude Code usage during testing.
 `activeFileByWorkspace` stores the last active editor file per canonical workspace root; stale paths are ignored instead of being opened.
-`openProjects` stores the project rail. `projectSessions` stores named task/workbench session rows under each project, and `activeSessionByProject` stores the selected session id per project. `browserPreviewByProject` and `browserPreviewBySession` remember the lightweight preview URL for project/session context.
+`openProjects` stores the project rail. `projectSessions` is the compatibility key for named chats under each project, and `activeSessionByProject` stores the selected chat id per project. `browserPreviewByProject` and `browserPreviewBySession` remember the lightweight preview URL for project/chat context.
 `paneLabelsBySession` stores user-edited terminal pane names by project-session key and pane slot. It restores labels when the same session/slot is recreated.
-`sessionEditorSnapshots` stores per-session editor tabs, active file, dirty buffers, and CodeMirror view state. `paneLayoutsBySession` stores per-session pane slots, launch profile ids, and labels. Relaunch creates fresh panes from this layout; it does not restore live process memory or transcripts.
-`composerHarnessBySession` stores composer permission mode, goal text, selected profile id, and attachment references by project-session key. Attachments are references only; file contents and screenshots are not copied into local state.
+`sessionEditorSnapshots` stores per-chat editor tabs, active file, dirty buffers, and CodeMirror view state. `paneLayoutsBySession` stores optional raw-terminal pane slots, launch profile ids, and labels. Chat mode does not spawn those panes; opening Raw terminal recreates them without restoring live process memory or transcripts.
+`composerHarnessBySession` stores composer permission mode, goal text, selected profile id, and attachment references by project-chat key. Attachments are references only; file contents and screenshots are not copied into local state.
+`chatConversations` stores independent structured histories and the Codex provider thread id for each project-chat key. Active run ids are intentionally not restored after relaunch.
 `agentActivityEvents` stores up to 200 user-safe activity rows across projects, sessions, and panes. Rows are normalized on startup; unknown kinds/statuses, malformed ids, and invalid timestamps are dropped. Current event kinds are `prompt`, `process`, `command`, `file`, `tool`, `git`, `approval`, `browser`, `app`, `error`, and `complete`.
 
 ## Reset Path

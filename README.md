@@ -13,7 +13,7 @@ Use this language consistently:
 - **Category:** native agent workbench
 - **Audience:** one developer running multiple CLI agents across multiple projects
 - **Promise:** keep terminal-agent speed without paying the VS Code window/resource tax
-- **Non-goals:** not a VS Code clone, generic terminal, plugin marketplace, or custom chat UI
+- **Non-goals:** not a VS Code clone, generic terminal, plugin marketplace, or general-purpose consumer chat app
 
 Read the product language guide in `docs/product-positioning.md`.
 
@@ -36,7 +36,7 @@ Current active slice: see `STATE.md`. The roadmap source is `roadmap.json`, rend
 - Lightweight browser preview tray for localhost apps, docs, auth flows, and generated pages.
 - Codex-quality chrome: icons, activity rows, permission-aware composer, settings, and source-control surfaces.
 
-Keelhouse is not a VS Code clone, generic terminal emulator, general browser, plugin marketplace, or custom chat UI.
+Keelhouse is not a VS Code clone, generic terminal emulator, general browser, plugin marketplace, or general-purpose consumer chat app. Its chat model is project-scoped and built for coding-agent work.
 
 ## Quick Start
 

@@ -9,6 +9,9 @@
 // also flow to the terminal thread over the same channel; it encodes them (using
 // the live terminal's modes) and writes to the pty. Nothing non-Send escapes.
 
+mod chat_harness;
+
+use chat_harness::{start_chat_run, stop_chat_run, ChatRunState};
 use ignore::WalkBuilder;
 use libghostty_vt::key::{Action, Encoder, Event, Key, Mods, OptionAsAlt};
 use libghostty_vt::paste;
@@ -278,6 +281,12 @@ struct PaneExit {
 struct OpenWorkspaceResponse {
     root: String,
     pane_id: u64,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ResolveWorkspaceResponse {
+    root: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -1984,6 +1993,13 @@ fn source_control_status() -> SourceControlStatusResponse {
 /// Open a workspace folder by spawning a pane in `path` using the selected launch
 /// profile. Existing panes stay alive so other projects can keep running.
 #[tauri::command]
+fn resolve_workspace(path: String) -> Result<ResolveWorkspaceResponse, String> {
+    Ok(ResolveWorkspaceResponse {
+        root: validate_workspace_path(&path)?,
+    })
+}
+
+#[tauri::command]
 fn open_workspace(
     app: AppHandle,
     state: State<PtyState>,
@@ -2611,6 +2627,7 @@ pub fn run() {
                 watcher: Mutex::new(None),
                 next_pane_id: Mutex::new(0),
             });
+            app.manage(ChatRunState::default());
             if let Some(window) = app.get_webview_window("main") {
                 window.show()?;
                 window.set_focus()?;
@@ -2630,7 +2647,10 @@ pub fn run() {
             create_project_worktree,
             remove_project_worktree,
             source_control_status,
+            start_chat_run,
+            stop_chat_run,
             reset_local_state,
+            resolve_workspace,
             open_workspace,
             create_pane,
             focus_pane,

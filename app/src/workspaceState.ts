@@ -102,7 +102,7 @@ export const defaultProjectSession = (updatedAt: number = Date.now()): ProjectSe
 
 export const newProjectSession = (existing: ProjectSession[], updatedAt: number = Date.now()): ProjectSession => ({
   id: `session-${Math.max(0, Math.floor(updatedAt)).toString(36)}`,
-  title: existing.length === 0 ? "Current work" : `New session ${existing.length + 1}`,
+  title: existing.length === 0 ? "New chat" : `New chat ${existing.length + 1}`,
   status: "running",
   updatedAt,
 });

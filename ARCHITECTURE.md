@@ -13,9 +13,27 @@ The technical design that doesn't fit the one-page PRD. Stack is locked (DECISIO
 | Terminal render | Canvas 2D (v0) | Ship-ugly. WebGL only if perf demands it (measure first). |
 | Editor (v0.5) | CodeMirror 6 | Lighter than Monaco, good for the VS Code-shell replacement slice, real syntax highlighting. |
 | State | React state / Zustand | Keep it boring for v0. |
-| Persistence | Tauri Store plugin (v0/v0.5), then `tauri-plugin-sql` (SQLite) when state turns relational | JSON is enough for last folder/profile/recent projects; SQL waits for multi-project session state. |
+| Persistence | Tauri Store plugin now, then `tauri-plugin-sql` (SQLite) when chat history turns relational | JSON is enough for bounded local chat records, provider thread ids, layout, and recent projects; SQL waits for search/export/branching pressure. |
 
-## Data flow (one pane)
+## Primary chat flow
+
+The center surface is not a terminal transcript. A chat is keyed by `project root + chat id` and persists app-owned user/assistant/tool messages plus the provider's resumable thread id.
+
+```text
+[composer prompt]
+      ↓ Tauri command (stdin; prompt is not placed in argv)
+[codex exec --json / exec resume --json]
+      ↓ JSONL stdout events
+[Rust chat_harness event bridge]
+      ↓ chat-run-event
+[typed frontend reducer]
+      → persisted chat timeline
+      → independent run/stop/error state per chat
+```
+
+Codex is the first structured adapter and reuses the user's local OAuth. Provider-native JSON owns message/tool semantics; terminal text is never parsed into chat structure. Gemini and Claude remain explicit raw-terminal fallbacks until equivalent adapters are implemented.
+
+## Raw terminal flow (one pane)
 
 ```
 [agent process: claude / codex]
@@ -37,7 +55,7 @@ The technical design that doesn't fit the one-page PRD. Stack is locked (DECISIO
 [portable-pty master write] → agent stdin
 ```
 
-**Ownership boundary:** backend owns ptys + terminal state; frontend owns rendering + input capture; IPC is the seam. Per pane: one pty + one `Terminal` instance + one render surface.
+**Ownership boundary:** backend owns provider processes, ptys, and terminal state; frontend owns persisted chat presentation, rendering, and input capture. Structured provider events and terminal grids are separate IPC channels. Per raw-terminal pane: one pty + one `Terminal` instance + one render surface.
 
 ## Terminal foundation status
 

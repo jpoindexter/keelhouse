@@ -4829,6 +4829,130 @@ body,
   background: #14151b;
 }
 
+.chat-thread {
+  width: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: 28px max(28px, calc((100% - var(--run-column-width)) / 2)) 24px;
+}
+
+.chat-empty {
+  display: grid;
+  min-height: 100%;
+  align-content: center;
+  gap: 18px;
+  color: #a6a8b6;
+}
+
+.chat-empty > strong {
+  color: #ececf4;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chat-empty__suggestions {
+  display: grid;
+  gap: 1px;
+  border-top: 1px solid #30323d;
+}
+
+.chat-empty__suggestions button {
+  min-height: 42px;
+  border: 0;
+  border-bottom: 1px solid #30323d;
+  border-radius: 0;
+  background: transparent;
+  color: #a6a8b6;
+  font: 13px/1.45 var(--font-ui);
+  text-align: left;
+  padding: 8px 2px;
+}
+
+.chat-empty__suggestions button:hover,
+.chat-empty__suggestions button:focus-visible {
+  color: #ececf4;
+}
+
+.chat-message {
+  display: grid;
+  gap: 7px;
+  max-width: 75ch;
+  margin-bottom: 24px;
+  color: #ececf4;
+}
+
+.chat-message > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a6a8b6;
+  font-size: 11px;
+}
+
+.chat-message > header strong {
+  color: inherit;
+  font-weight: 600;
+}
+
+.chat-message--user {
+  margin-left: auto;
+  border-left: 2px solid #67c3d1;
+  background: #1b1c23;
+  padding: 12px 14px;
+}
+
+.chat-message--assistant {
+  margin-right: auto;
+}
+
+.chat-message--status {
+  margin: -8px 0 18px;
+  color: #a6a8b6;
+  font-size: 12px;
+}
+
+.chat-message--status .chat-message__text {
+  display: none;
+}
+
+.chat-message--error {
+  border-left: 2px solid var(--color-danger);
+  color: #ffd6dd;
+  padding-left: 12px;
+}
+
+.chat-message__text {
+  font: 13px/1.65 var(--font-ui);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-message__running {
+  color: #9bd9e3;
+}
+
+.chat-tool {
+  border-top: 1px solid #30323d;
+  border-bottom: 1px solid #30323d;
+  color: #a6a8b6;
+}
+
+.chat-tool summary {
+  cursor: default;
+  font: 12px/1.4 var(--font-ui);
+  padding: 8px 0;
+}
+
+.chat-tool pre {
+  overflow: auto;
+  max-height: 280px;
+  margin: 0;
+  color: #d3d4df;
+  font: 11px/1.55 "SF Mono", Menlo, Monaco, Consolas, monospace;
+  padding: 0 0 10px;
+  white-space: pre-wrap;
+}
+
 .agent-run-output__transcript {
   width: calc(100% - 56px);
   margin: 0 auto;

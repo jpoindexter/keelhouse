@@ -306,3 +306,13 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 **Verified:** Source contract rejects a persistent `terminal-tray` and duplicate `agent-surface-switcher`; native visual and interaction verification remains part of CHROME-EYEBALL-SIGNOFF.
 
 **Reversible?** Yes, but restoring a simultaneous terminal requires a distinct process or workflow and an explicit product decision. It must not mirror the active conversation shell.
+
+## 2026-07-13 — Codex-style chats replace terminal-backed pseudo-chat
+
+**Choice:** The primary object is now a persisted chat, grouped under its project like Codex. Each chat owns user/assistant/tool messages and a resumable provider thread id. Codex uses structured `codex exec --json` events with the user's existing OAuth; raw PTYs remain an optional alternate view and a fallback for Gemini/Claude until their structured adapters ship.
+
+**Why:** Native QA exposed the abstraction mismatch directly: the center looked like chat but displayed the same shell process available behind the Terminal control. Jason expected Codex behavior — multiple independent chats — not terminal sessions with chat chrome. The earlier “not a custom chat thread” PRD rule caused the implementation to optimize for the wrong object.
+
+**Supersedes:** The 2026-07-12 terminal-backed-conversation choice above and any wording that defines a project row as a non-chat workbench session. Terminal pane isolation remains useful for raw-terminal state, but it no longer defines chat identity or chat history.
+
+**Verification boundary:** Build/tests prove the bridge and reducer only. This decision is not complete until the packaged app creates two same-project chats, receives structured Codex output in both, switches without mixed messages, resumes each provider thread, stops a run, and restores histories after relaunch.

@@ -2,7 +2,7 @@
 
 Status: v2 guardrail prepared; final lock remains pending CHROME-EYEBALL-SIGNOFF. Control grammar was added after the boxed-button drift; see `docs/chrome-delta-audit.md` and DECISIONS.md 2026-07-11.
 
-Keelhouse chrome follows the accepted `demo/keelhouse-chrome-demo.html` direction: graphite surfaces, steel-cyan accent, direct project/session drawer, agent-first center, and editor/browser/git/raw terminal as optional trays. The demo is binding at the control-grammar level, not only tokens.
+Keelhouse chrome follows the accepted `demo/keelhouse-chrome-demo.html` direction: graphite surfaces, steel-cyan accent, direct project/chat drawer, agent-first center, and editor/browser/git/raw terminal as optional trays. The demo is binding at the control-grammar level, not only tokens.
 
 ## Control Grammar (v2, normative)
 
@@ -16,7 +16,7 @@ Actives: tabs use `inset 0 2px 0` (or `-2px`) steel-cyan underline + subtle tint
 
 ## First-Open Layout (v2)
 
-First open shows the demo layout: threads drawer, centered conversation+composer column (`min(860px, 100% - 56px)`), right dock open on Files with its tab strip, and statusbar. Returning users keep persisted layouts. Trays remain movable/closable; raw terminal replaces the center conversation only while its titlebar icon is active.
+First open shows the demo layout: chats drawer, centered conversation+composer column (`min(860px, 100% - 56px)`), right dock open on Files with its tab strip, and statusbar. Returning users keep persisted layouts. Trays remain movable/closable; raw terminal replaces the center conversation only while its titlebar icon is active.
 
 ## Required Tokens
 
@@ -38,14 +38,14 @@ First open shows the demo layout: threads drawer, centered conversation+composer
 
 ## Agent Run Surface
 
-- The agent conversation is the default surface and shows the visible terminal-backed transcript; raw terminal remains an alternate view for direct TUI interaction.
+- The structured agent chat is the default surface; raw terminal remains an alternate view for direct TUI interaction.
 - Observable prompt, approval, file, command, error, browser, git, and app events appear as inline provenance in the conversation.
-- Keelhouse does not infer structured chat, tool events, or thinking from terminal text. Those require an explicit adapter or hook.
+- Keelhouse does not infer structured chat, tool events, or thinking from terminal text. Codex JSON events provide the first explicit adapter; other providers route to raw terminal until their adapters land.
 - The composer stays pinned below output and activity.
 
 ## Real App Port Signals
 
-- The side drawer uses mode-aware product nouns. The default Projects mode is `Project threads`, not a generic `Drawer`.
+- The side drawer uses mode-aware product nouns. The default Projects mode is `Project chats`, not a generic `Drawer`.
 - The center work surface is labelled as an agent conversation with an optional raw terminal. One persistent titlebar icon switches between them; no in-thread switcher or bottom Terminal tray may duplicate that mode.
 - First open shows Files in the right dock. Files, Editor, Browser, and Git can be selected from the shared tray tabs; tools can dock left, right, or bottom or be hidden.
 

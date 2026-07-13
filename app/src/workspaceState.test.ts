@@ -120,7 +120,7 @@ describe("workspace state helpers", () => {
   it("creates, promotes, and updates project sessions", () => {
     const existing = [{ id: "one", title: "Current work", status: "exited" as const, updatedAt: 1 }];
     const next = newProjectSession(existing, 72);
-    expect(next).toEqual({ id: "session-20", title: "New session 2", status: "running", updatedAt: 72 });
+    expect(next).toEqual({ id: "session-20", title: "New chat 2", status: "running", updatedAt: 72 });
     const sessionsByProject = upsertProjectSession({ "/a": existing }, "/a", next);
     expect(sessionsByProject["/a"]).toEqual([next, existing[0]]);
     expect(setProjectSessionStatus(sessionsByProject, "/a", "one", "attention", 80)["/a"]).toEqual([

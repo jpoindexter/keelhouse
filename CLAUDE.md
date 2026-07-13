@@ -70,17 +70,17 @@ There is no unified test suite across languages — treat `npm run build` + `npm
 [portable-pty master write] → agent stdin
 ```
 
-**Ownership boundary:** backend owns ptys + terminal state (one `Terminal` instance per pane); frontend owns rendering + input capture; Tauri IPC is the seam. Everything in `app/src-tauri/src/lib.rs` (single file, `#[tauri::command]` functions) is the backend surface: pane lifecycle (`open_workspace`, `create_pane`, `focus_pane`, `close_pane`, `terminate_pane`, `restart_pane`), terminal I/O (`send_key`, `paste`, `resize_pty`, `scroll_pty`), filesystem (`list_workspace_tree`, `read_text_file`, `write_text_file`, `create_workspace_file`/`folder`, `rename_workspace_path`, `delete_workspace_path`, `duplicate_workspace_path`, `search_workspace_text`, `watch_workspace_tree`), and Git (`git_status`, `git_file_diff`, `git_file_action`).
+**Ownership boundary:** backend owns ptys, terminal state, and structured provider processes; frontend owns chat state, rendering, and input capture; Tauri IPC is the seam. `app/src-tauri/src/lib.rs` exposes pane lifecycle, terminal I/O, filesystem, and Git commands. `app/src-tauri/src/chat_harness.rs` owns structured Codex start/resume/stop and emits JSON run events.
 
-Frontend state modules under `app/src/` are one-concern-per-file and largely mirror backend commands 1:1 (e.g. `workspaceState.ts`, `terminalPane.ts`, `editorTabs.ts`, `agentSessionHandle.ts`, `agentActivity.ts`, `composerHarness.ts`, `appActions.ts`, `fileGitStatus.ts`, `diffView.ts`). Persistent app state (recent/open projects, sessions, pane labels, editor view state, composer harness state, activity log) lives in the Tauri Store JSON file at `~/Library/Application Support/com.jasonpoindexter.agent-cli/workspace.json` — schema documented in `docs/local-state.md`.
+Frontend state modules under `app/src/` are one-concern-per-file and largely mirror backend commands 1:1 (e.g. `workspaceState.ts`, `chatConversation.ts`, `terminalPane.ts`, `editorTabs.ts`, `agentActivity.ts`, `composerHarness.ts`, `appActions.ts`, `fileGitStatus.ts`, `diffView.ts`). Persistent app state (projects, chats, provider thread IDs, pane labels, editor view state, composer harness state, activity log) lives in the Tauri Store JSON file at `~/Library/Application Support/com.jasonpoindexter.agent-cli/workspace.json` — schema documented in `docs/local-state.md`.
 
 ### Product surfaces
 
-- **Run (default main surface):** readable terminal-backed view of the selected agent pane's visible PTY output, plus a separate app-owned Activity strip/timeline (`agentActivity.ts`, `agentActivityEvents` in the store) and the bottom composer. Never invents provider-native chat/tool/thinking structure from terminal text — that requires an explicit adapter/hook.
+- **Chat (default main surface):** Codex-style persistent conversation with independent user/assistant messages, structured tool events, run status, and provider thread identity. It consumes `codex exec --json` events through `chat_harness.rs`; it never scrapes terminal text or invents hidden reasoning.
 - **Raw terminal:** the real Canvas 2D + Ghostty grid for exact TUI interaction (scrollback, selection, bracketed paste, keyboard chords).
 - **Editor / Browser preview:** hidden by default, opened via the Tools menu, dock left/right/bottom with draggable splitters and persisted layout. CodeMirror 6-backed editor; iframe-based preview scoped to localhost/docs/generated pages.
-- **Project/session drawer:** left drawer switches between Projects, Files, Search, Git, Browser, Settings modes. A project session is a saved workbench context (editor tabs, browser URL, agent panes, pane labels/status) — not an editor tab, not a chat thread.
-- **Composer:** routes prompts to the selected real terminal pane via the pty paste path (not a custom chat UI); also runs a small set of app commands (`>save`, `>find`, `>open`, `>clear`). Permission mode (Ask/Approve safe/Full access) gates app-owned actions through `appActions.ts`.
+- **Project/chat drawer:** left drawer switches between Projects, Files, Search, Git, Browser, Settings modes. Each chat owns structured messages and one provider thread while restoring task-scoped editor, browser, and optional raw-terminal state.
+- **Composer:** normal prompts start or resume the selected structured Codex chat. `>save`, `>find`, `>open`, and `>clear` remain app commands. Gemini and Claude stay available through Raw terminal until they have structured adapters.
 
 ### Stack (locked, see DECISIONS.md 2026-07-07)
 

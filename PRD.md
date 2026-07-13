@@ -1,6 +1,6 @@
 # PRD — Keelhouse
 
-**One-liner:** Keelhouse is a lean native macOS agent cockpit for Jason's actual VS Code workflow: project/session rail, real Codex/Gemini/Claude CLI terminals with a composer/harness as the main surface, plus fast resizable file explorer, editor, and browser trays — built on Ghostty's terminal engine, without the IDE chrome he does not use.
+**One-liner:** Keelhouse is a lean native macOS agent workbench for Jason's actual VS Code workflow: Codex-style project/chat history and structured agent conversations as the main surface, plus optional raw Codex/Gemini/Claude terminals and fast resizable file explorer, editor, Git, and browser trays — without the IDE chrome he does not use.
 
 **Naming:** `agent-cli` remains the repo/package slug while the product name is Keelhouse.
 
@@ -22,14 +22,14 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 
 - Open and switch project folders quickly, including recent projects.
 - Keep multiple projects open in one window through a persistent left project/workspace rail, similar in spirit to Codex's sidebar, with clear active-project state.
-- Show task-scoped project sessions under each project in the left rail, similar to Codex chat rows. A session is a saved workbench context: project, editor tabs, browser URL, agent panes, pane labels/status, and transcript references. It is not an editor tab and not a custom chat thread.
+- Show multiple independent chats under each project in the left rail, matching the Codex interaction model. Each chat persists its message history, provider thread id, workbench context, editor tabs, browser URL, optional raw-terminal panes, and activity references.
 - Browse the project tree with sensible ignores, file watching, and safe handling for symlinks, large files, and binary files.
 - Open, edit, find/replace, save, and close source files in a robust CodeMirror editor with line numbers, syntax highlighting, indentation, undo/redo, path/breadcrumb context, file tabs, dirty-state, restored scroll/selection, and external-change protection.
 - Open a lightweight browser/web preview for localhost apps, docs, auth flows, and agent-produced pages without switching context.
 - Run real Codex/Gemini/Claude/shell sessions in real ptys, with correct env/PATH/auth handling.
 - Keep the terminal robust enough for daily agent work: Ghostty-backed VT fidelity, alternate-screen TUIs, ANSI/truecolor styling, resize, scrollback, selection/copy/paste, bracketed paste, common keyboard chords, fast-output responsiveness, and clear pane lifecycle state.
-- Keep terminal panes as the source-of-truth agent interface. Add a Codex-style composer/harness for routing prompts/instructions to the selected agent pane or app-level actions; do not replace Claude/Codex's real terminal UI with a custom chat clone.
-- Make the selected agent pane, composer, and visible activity timeline the primary workbench surface. Default to a readable terminal-backed conversation; expose raw terminal as an explicit alternate center view for exact TUI interaction. The code editor and browser preview are first-class tools, but they behave like movable, resizable trays around the agent cockpit rather than the default main screen. Trays open, close, and dock freely, but first open defaults to the demo layout: threads drawer, centered conversation and composer, and a tabbed right dock. Do not duplicate the active shell in a persistent bottom Terminal tray.
+- Make a structured, persisted chat timeline and composer the primary workbench surface. Provider adapters own user messages, assistant messages, tool activity, resumable thread ids, stop state, and errors; never infer that structure from terminal text.
+- Expose raw terminal as an explicit alternate center view for exact TUI interaction and providers without a structured adapter. The code editor, Git, files, and browser preview remain movable, resizable trays around the chat. First open defaults to the chat rail, centered conversation/composer, and tabbed right dock. Do not mirror the raw terminal inside the chat timeline.
 - Use VS Code/Codex-like application structure for the shell: compact top status/action bar, persistent side drawer, draggable workbench trays, and bottom status strip. Adapt the pattern to Keelhouse state and actions; do not copy fake window controls, fake browser navigation, decorative activity rails, or controls that imply unavailable behavior.
 - Run multiple agent panes per project, and allow different open projects to run different agents at the same time. Each pane needs a visible name/task label, status, cwd, command, restart, and kill controls.
 - Let agents hook into the app through a built-in, permissioned MCP/API surface for app-owned actions such as listing projects, reading open files, opening diffs, focusing panes, creating panes, and reporting task status.
@@ -54,7 +54,7 @@ Drop categories that imply an account/chat product or novelty feature: Profile, 
 
 ## Navigation Parity
 
-Use Codex's project/chat sidebar as a reference for information density, grouping, recency labels, active-row styling, and icon rhythm. Translate chats into project sessions: "New chat" becomes "New session", chat rows become named task sessions under each project, and "Show more" collapses older sessions. Search stays. Plugins and account/profile chrome are dropped. Scheduled/background sessions and archived sessions are parked until project sessions, transcripts, and agent hooks exist. Detailed mapping lives in `docs/navigation-parity.md`.
+Use Codex's project/chat sidebar as the interaction reference for information density, grouping, recency labels, active-row styling, and icon rhythm. "New chat" creates an independent provider conversation under the active project; the first prompt generates an editable title; "Show more" collapses older chats. Search stays. Plugins and account/profile chrome are dropped. Scheduled/background runs remain parked until chat persistence and agent hooks are proven. Detailed mapping lives in `docs/navigation-parity.md`.
 
 ## Reference Product Guardrails
 
@@ -124,7 +124,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 
 - [x] A persistent left project/workspace rail opens at least 3 projects in one window and shows active, running, exited, and attention-needed states.
 - [x] Each project can show multiple task sessions in the rail; selecting one restores the current implemented editor context without pretending dead processes are live.
-- [ ] Each task session owns an independent live pane set; switching same-project sessions must not share or relabel another session's processes.
+- [ ] Each chat owns independent messages, provider thread id, run state, and optional raw-terminal pane set; switching same-project chats must not mix either structured messages or terminal processes.
 - [x] Browser/web preview opens localhost apps, docs, auth flows, and generated pages inside the workbench.
 - [x] Each project can run multiple named agent/shell panes, and different projects can run different agents concurrently.
 - [x] Pane lifecycle controls and icon badges cover thinking, running, waiting, errored, exited, restart, terminate, and attention-needed states.
@@ -178,6 +178,6 @@ The file rail and editor are not optional product garnish; they are the reason t
 - Not an arbitrary agent plugin host: built-in MCP/API hooks may expose app-owned commands, but agents should not run unreviewed extension code inside the app.
 - Not a task database: pane names/status/transcripts exist only to orient agent work, not to become project management software.
 - Not a Codex settings clone: copy the useful structure, search, icons, and developer/AI connection surfaces; do not copy account, billing, pets, archived-chat, or custom-chat settings.
-- Not a Codex chat clone: project sessions may look like chat rows in the rail, but the underlying object is a workbench session, not a custom LLM conversation thread.
+- Not a general-purpose chat/account product: the Codex-style conversation is project-scoped and action-oriented; social profiles, billing, novelty personas, and unrelated chat features stay out of scope.
 - Not a general integration hub: GitHub/GitLab/source-control integrations are allowed because they support code review and shipping; unrelated services stay parked unless they directly improve agent supervision.
 - Not decorative UI bloat: chrome polish means consistent workbench surfaces, states, and legibility; it does not mean marketing pages, ornamental graphics, or feature chrome that does not support the workflow.

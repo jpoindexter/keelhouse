@@ -196,7 +196,16 @@ import {
 } from "./paneTranscripts";
 import { nextTerminalFindIndex, terminalFindCountLabel, terminalFindHitLabel } from "./terminalFind";
 import type { TerminalFindHit } from "./terminalFind";
-import { AgentRunSurface } from "./AgentRunSurface";
+import { ChatThreadSurface } from "./ChatThreadSurface";
+import {
+  appendUserChatMessage,
+  applyChatRunEnvelope,
+  chatTitleFromPrompt,
+  emptyChatConversation,
+  normalizeChatConversationRecords,
+  startChatRun,
+} from "./chatConversation";
+import type { ChatConversation, ChatConversationRecords, ChatRunEnvelope } from "./chatConversation";
 import { ToolDockMenu } from "./ToolDockMenu";
 import { ToolTrayTabs } from "./ToolTrayTabs";
 import { paneContextBelongsToProject, paneContextKey, paneContextParts, removeProjectPaneContexts } from "./paneOwnership";
@@ -210,6 +219,7 @@ type Snapshot = { cols: number; rows: number; cx: number; cy: number; cvis: bool
 type GridPayload = { paneId: number; snapshot: Snapshot };
 type PaneExit = { paneId: number; command: string; code: number; message: string };
 type OpenWorkspaceResponse = { root: string; paneId: number };
+type ResolveWorkspaceResponse = { root: string };
 type OpenPaneResponse = { paneId: number };
 type ClosePaneResponse = { activePaneId: number | null };
 type WorktreeResponse = { path: string; branch: string };
@@ -450,6 +460,7 @@ function App() {
   const browserPreviewByProjectRef = useRef<BrowserPreviewRecords>({});
   const browserPreviewBySessionRef = useRef<BrowserPreviewRecords>({});
   const composerHarnessBySessionRef = useRef<ComposerHarnessRecords>({});
+  const chatConversationsRef = useRef<ChatConversationRecords>({});
   const browserUrlRef = useRef(DEFAULT_BROWSER_PREVIEW_URL);
   const detectedLocalDevServerRef = useRef<DetectedLocalDevServer | null>(null);
   const launchProfileRef = useRef<LaunchProfile>(defaultLaunchProfile());
@@ -479,8 +490,6 @@ function App() {
   const editorLoadSeq = useRef(0);
   const latest = useRef<Snapshot | null>(null);
   const frame = useRef<number | null>(null);
-  const transcriptFrame = useRef<number | null>(null);
-  const pendingTerminalTranscript = useRef("");
   const metrics = useRef({ cw: 9, ch: 19 });
   const renderPerfRef = useRef(createRenderPerfState());
   const ipcSampleCounter = useRef(0);
@@ -491,7 +500,6 @@ function App() {
   const [launchProfileChanging, setLaunchProfileChanging] = useState(false);
   const [terminalPanes, setTerminalPanes] = useState<ManagedTerminalPane[]>([]);
   const [activeTerminalPaneId, setActiveTerminalPaneId] = useState<number | null>(null);
-  const [activeTerminalTranscript, setActiveTerminalTranscript] = useState("");
   const [paneLabelsBySession, setPaneLabelsBySession] = useState<PaneLabelsBySession>({});
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
@@ -522,6 +530,7 @@ function App() {
   const [browserPreviewByProject, setBrowserPreviewByProject] = useState<BrowserPreviewRecords>({});
   const [browserPreviewBySession, setBrowserPreviewBySession] = useState<BrowserPreviewRecords>({});
   const [composerHarnessBySession, setComposerHarnessBySession] = useState<ComposerHarnessRecords>({});
+  const [chatConversations, setChatConversations] = useState<ChatConversationRecords>({});
   const [browserUrl, setBrowserUrl] = useState(DEFAULT_BROWSER_PREVIEW_URL);
   const [browserAddress, setBrowserAddress] = useState(DEFAULT_BROWSER_PREVIEW_URL);
   const [browserHistory, setBrowserHistory] = useState([DEFAULT_BROWSER_PREVIEW_URL]);
@@ -714,6 +723,12 @@ function App() {
       : defaultComposerHarnessState(launchProfile.id),
     [activeComposerHarnessKey, composerHarnessBySession, launchProfile.id],
   );
+  const activeChatConversation = useMemo<ChatConversation>(
+    () => activeComposerHarnessKey
+      ? chatConversations[activeComposerHarnessKey] ?? emptyChatConversation(0)
+      : emptyChatConversation(0),
+    [activeComposerHarnessKey, chatConversations],
+  );
   const activeTerminalPane = useMemo(
     () => terminalPanes.find((pane) => pane.id === activeTerminalPaneId) ?? null,
     [activeTerminalPaneId, terminalPanes],
@@ -751,6 +766,13 @@ function App() {
   const terminalPaneState = activeTerminalPane?.state ?? "idle";
   const terminalExitCode = activeTerminalPane?.exitCode ?? null;
   const terminalStatusLabel = terminalPaneStateLabel(terminalPaneState, terminalExitCode);
+  const primarySurfaceState: TerminalPaneState = agentSurfaceMode === "chat"
+    ? activeChatConversation.activeRunId ? "starting" : "idle"
+    : terminalPaneState;
+  const primarySurfaceLabel = agentSurfaceMode === "chat" ? "Codex" : activeTerminalProfile.label;
+  const primarySurfaceStatusLabel = agentSurfaceMode === "chat"
+    ? activeChatConversation.activeRunId ? "Working" : "Ready"
+    : terminalStatusLabel;
   const browserCanGoBack = browserHistoryCanGoBack(browserHistoryIndex);
   const browserCanGoForward = browserHistoryCanGoForward(browserHistory, browserHistoryIndex);
   const activeDetectedLocalDevServer =
@@ -1194,6 +1216,37 @@ function App() {
   const browserPreviewSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
   const composerHarnessSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
 
+  const updateChatConversation = (
+    key: string,
+    updater: (conversation: ChatConversation) => ChatConversation,
+  ) => {
+    const previous = chatConversationsRef.current[key] ?? emptyChatConversation();
+    const nextConversation = updater(previous);
+    const next = { ...chatConversationsRef.current, [key]: nextConversation };
+    chatConversationsRef.current = next;
+    setChatConversations(next);
+    void storeRef.current?.set("chatConversations", next);
+    void storeRef.current?.save();
+    return nextConversation;
+  };
+
+  useEffect(() => {
+    let disposed = false;
+    let removeListener: (() => void) | null = null;
+    void listen<ChatRunEnvelope>("chat-run-event", (event) => {
+      updateChatConversation(event.payload.chatId, (conversation) =>
+        applyChatRunEnvelope(conversation, event.payload)
+      );
+    }).then((remove) => {
+      if (disposed) remove();
+      else removeListener = remove;
+    });
+    return () => {
+      disposed = true;
+      removeListener?.();
+    };
+  }, []);
+
   const persistComposerHarnessRecords = async (records: ComposerHarnessRecords) => {
     composerHarnessBySessionRef.current = records;
     setComposerHarnessBySession(records);
@@ -1325,19 +1378,9 @@ function App() {
     setTerminalPanes(panes);
   };
 
-  const publishTerminalTranscript = (snapshot: Snapshot | null) => {
-    pendingTerminalTranscript.current = snapshot ? terminalSnapshotText(snapshot) : "";
-    if (transcriptFrame.current != null) return;
-    transcriptFrame.current = requestAnimationFrame(() => {
-      transcriptFrame.current = null;
-      setActiveTerminalTranscript(pendingTerminalTranscript.current);
-    });
-  };
-
   const setFocusedTerminalPane = (paneId: number | null) => {
     activeTerminalPaneIdRef.current = paneId;
     setActiveTerminalPaneId(paneId);
-    publishTerminalTranscript(paneId == null ? null : terminalSnapshotsRef.current[paneId] ?? null);
   };
 
   const activeSessionForProject = (root: string | null) =>
@@ -1573,7 +1616,7 @@ function App() {
       let nextActivePaneId = activePaneForSession(path, requestedSessionId, existingPanes);
       if (existingPanes.length > 0 && nextActivePaneId != null) {
         await invoke("focus_pane", { paneId: nextActivePaneId });
-      } else {
+      } else if (agentSurfaceMode === "terminal") {
         const firstLayout = initialLayout[0] ?? fallbackLayout[0];
         const firstProfile = launchProfileById(firstLayout.profileId);
         const result = await invoke<OpenWorkspaceResponse>("open_workspace", { path, profile: firstProfile });
@@ -1611,6 +1654,11 @@ function App() {
             },
           ];
         }
+      } else {
+        const result = await invoke<ResolveWorkspaceResponse>("resolve_workspace", { path });
+        root = result.root;
+        nextProjectPanes = [];
+        nextActivePaneId = null;
       }
       const contextKey = paneContextKey(root, requestedSessionId);
       if (!contextKey || !requestedSessionId) throw new Error("Workspace session context is unavailable");
@@ -1686,6 +1734,9 @@ function App() {
         const nextComposerHarness = Object.fromEntries(
           Object.entries(composerHarnessBySessionRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
         );
+        const nextChatConversations = Object.fromEntries(
+          Object.entries(chatConversationsRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
+        );
         const nextSessionSnapshots = Object.fromEntries(
           Object.entries(sessionEditorSnapshotsRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
         );
@@ -1701,6 +1752,7 @@ function App() {
         browserPreviewByProjectRef.current = nextBrowserProjects;
         browserPreviewBySessionRef.current = nextBrowserSessions;
         composerHarnessBySessionRef.current = nextComposerHarness;
+        chatConversationsRef.current = nextChatConversations;
         sessionEditorSnapshotsRef.current = nextSessionSnapshots;
         paneLayoutsBySessionRef.current = nextPaneLayouts;
         setRecentProjects(nextRecent);
@@ -1710,6 +1762,7 @@ function App() {
         setBrowserPreviewByProject(nextBrowserProjects);
         setBrowserPreviewBySession(nextBrowserSessions);
         setComposerHarnessBySession(nextComposerHarness);
+        setChatConversations(nextChatConversations);
         await store?.set("recentFolders", nextRecent);
         await store?.set("openProjects", nextOpen);
         await store?.set("projectSessions", nextSessions);
@@ -1717,6 +1770,7 @@ function App() {
         await store?.set("browserPreviewByProject", nextBrowserProjects);
         await store?.set("browserPreviewBySession", nextBrowserSessions);
         await store?.set("composerHarnessBySession", nextComposerHarness);
+        await store?.set("chatConversations", nextChatConversations);
         await store?.set("sessionEditorSnapshots", nextSessionSnapshots);
         await store?.set("paneLayoutsBySession", nextPaneLayouts);
         if (workspacePathRef.current === path) {
@@ -1816,7 +1870,7 @@ function App() {
   };
 
   const renameProjectSession = async (projectPath: string, session: ProjectSession) => {
-    const title = window.prompt("Session name", session.title)?.trim();
+    const title = window.prompt("Chat name", session.title)?.trim();
     if (!title || title === session.title) return;
     const nextSessions = {
       ...projectSessionsRef.current,
@@ -1830,7 +1884,7 @@ function App() {
   const deleteProjectSession = async (projectPath: string, session: ProjectSession) => {
     const existing = projectSessionsRef.current[projectPath] ?? [];
     if (existing.length <= 1) return;
-    const ok = window.confirm(`Delete session "${session.title}"? Editor context saved only in this app session will be removed.`);
+    const ok = window.confirm(`Delete chat "${session.title}"? Its messages and saved workspace context will be removed.`);
     if (!ok) return;
     const contextKey = paneContextKey(projectPath, session.id);
     const ownedPanes = terminalPanesForSession(projectPath, session.id);
@@ -1840,7 +1894,7 @@ function App() {
         delete terminalSnapshotsRef.current[pane.id];
       }
     } catch (err) {
-      setLaunchError(`Could not close session panes: ${String(err)}`);
+      setLaunchError(`Could not close this chat's terminal panes: ${String(err)}`);
       return;
     }
     if (contextKey) {
@@ -1859,10 +1913,15 @@ function App() {
     delete nextBrowserSessions[browserPreviewSessionKey(projectPath, session.id)];
     const nextComposerHarness = { ...composerHarnessBySessionRef.current };
     delete nextComposerHarness[composerHarnessSessionKey(projectPath, session.id)];
+    const nextChatConversations = { ...chatConversationsRef.current };
+    delete nextChatConversations[composerHarnessSessionKey(projectPath, session.id)];
+    chatConversationsRef.current = nextChatConversations;
+    setChatConversations(nextChatConversations);
     browserPreviewBySessionRef.current = nextBrowserSessions;
     setBrowserPreviewBySession(nextBrowserSessions);
     await storeRef.current?.set("browserPreviewBySession", nextBrowserSessions);
     await persistComposerHarnessRecords(nextComposerHarness);
+    await storeRef.current?.set("chatConversations", nextChatConversations);
     await persistProjectSessions(nextSessions, nextActiveSessions);
     if (workspacePathRef.current === projectPath && activeSessionId === session.id) {
       await openWorkspaceDirect(projectPath, launchProfileRef.current, { captureCurrentSession: false });
@@ -2087,7 +2146,7 @@ function App() {
   };
 
   const submitComposerDraft = async () => {
-    if (composerSending) return;
+    if (composerSending || activeChatConversation.activeRunId) return;
     const route = routeComposerDraft(composerDraft);
     if (route.kind === "empty") return;
     if (route.kind === "unknown-app") {
@@ -2098,25 +2157,43 @@ function App() {
     setComposerError(null);
     setComposerNotice(null);
     try {
-      if (route.kind === "pty") {
+      if (route.kind === "chat") {
         if (!workspacePathRef.current) {
-          setComposerError("Open a workspace before sending to an agent.");
+          setComposerError("Open a workspace before starting a chat.");
           return;
         }
-        if (!activeAgentSessionHandle) {
-          setComposerError("Create or select a terminal pane before sending.");
+        const chatId = activeComposerHarnessKey;
+        if (!chatId) {
+          setComposerError("Create or select a chat before sending.");
           return;
         }
         const payload = composerPromptPayload(route.text, activeComposerHarness);
-        await activeAgentSessionHandle.send(payload);
-        recordAgentActivity(activeAgentSessionHandle, {
-          kind: "prompt",
-          label: "Prompt sent",
-          detail: activeComposerHarness.attachments.length > 0
-            ? `${activeAgentSessionHandle.label} · ${activeComposerHarness.attachments.length} attachment${activeComposerHarness.attachments.length === 1 ? "" : "s"}`
-            : activeAgentSessionHandle.label,
-          target: activeComposerHarness.goal || undefined,
-          status: "thinking",
+        const previousConversation = chatConversationsRef.current[chatId] ?? emptyChatConversation();
+        const runId = `chat-run-${crypto.randomUUID()}`;
+        updateChatConversation(chatId, (conversation) =>
+          startChatRun(appendUserChatMessage(conversation, route.text), runId)
+        );
+        const session = projectSessionsRef.current[workspacePathRef.current]?.find((item) => item.id === activeSessionId);
+        if (session && (session.title === "Current work" || /^New (session|chat)( \d+)?$/.test(session.title))) {
+          const title = chatTitleFromPrompt(route.text);
+          const nextSessions = {
+            ...projectSessionsRef.current,
+            [workspacePathRef.current]: (projectSessionsRef.current[workspacePathRef.current] ?? []).map((item) =>
+              item.id === session.id ? { ...item, title, updatedAt: Date.now() } : item
+            ),
+          };
+          void persistProjectSessions(nextSessions, activeSessionByProjectRef.current);
+        }
+        await invoke("start_chat_run", {
+          request: {
+            runId,
+            chatId,
+            projectPath: workspacePathRef.current,
+            provider: "codex",
+            providerThreadId: previousConversation.providerThreadId ?? null,
+            prompt: payload,
+            approvalMode: activeComposerHarness.approvalMode,
+          },
         });
       } else {
         const ok = await runComposerAppCommand(route.command);
@@ -2141,8 +2218,28 @@ function App() {
       setComposerDraft("");
     } catch (err) {
       setComposerError(String(err));
+      const chatId = activeComposerHarnessKey;
+      if (chatId) {
+        updateChatConversation(chatId, (conversation) => applyChatRunEnvelope(conversation, {
+          runId: "launch-error",
+          chatId,
+          provider: "codex",
+          stream: "lifecycle",
+          event: { type: "run.completed", exitCode: 1, message: String(err) },
+        }));
+      }
     } finally {
       setComposerSending(false);
+    }
+  };
+
+  const stopActiveChatRun = async () => {
+    const runId = activeChatConversation.activeRunId;
+    if (!runId) return;
+    try {
+      await invoke("stop_chat_run", { runId });
+    } catch (err) {
+      setComposerError(String(err));
     }
   };
 
@@ -2172,14 +2269,6 @@ function App() {
     const next = await updateActiveComposerHarness((state) => ({ ...state, approvalMode }));
     if (!next) return;
     logComposerHarnessEvent("Permission mode changed", approvalMode);
-  };
-
-  const setComposerProfile = async (profileId: string) => {
-    const profile = launchProfileById(profileId);
-    const next = await updateActiveComposerHarness((state) => ({ ...state, selectedProfileId: profile.id }));
-    if (!next) return;
-    await switchLaunchProfile(profile);
-    logComposerHarnessEvent("Profile selected", profile.label);
   };
 
   const setComposerGoal = async (goal: string, options: { log?: boolean } = {}) => {
@@ -2277,7 +2366,7 @@ function App() {
   const createTerminalPane = async (profile: LaunchProfile = launchProfileRef.current) => {
     const root = workspacePathRef.current ?? workspacePath;
     const sessionId = activeSessionForProject(root);
-    if (!root || !sessionId || launchProfileChanging) return;
+    if (!root || !sessionId || launchProfileChanging) return false;
     const audit = await gateAppAction(createAppAction({
       kind: "create-pane",
       label: "Create pane",
@@ -2286,7 +2375,7 @@ function App() {
       requestedBy: "user",
       undoHint: "Close the new pane.",
     }));
-    if (audit.decision !== "approved") return;
+    if (audit.decision !== "approved") return false;
     setLaunchProfileChanging(true);
     try {
       const result = await invoke<OpenPaneResponse>("create_pane", { path: root, profile });
@@ -2329,13 +2418,27 @@ function App() {
       setTimeout(sendTerminalResize, 0);
       await updateOpenProjectStatus(root, projectStatusForRoot(root));
       await updateActiveSessionStatus(root, terminalPaneProjectStatus(nextPanes));
+      return true;
     } catch (err) {
       setLaunchError(String(err));
       await updateOpenProjectStatus(root, "attention");
       await updateActiveSessionStatus(root, "attention");
+      return false;
     } finally {
       setLaunchProfileChanging(false);
     }
+  };
+
+  const toggleRawTerminal = async () => {
+    if (agentSurfaceMode === "terminal") {
+      setAgentSurfaceMode("chat");
+      return;
+    }
+    const root = workspacePathRef.current ?? workspacePath;
+    const sessionId = activeSessionForProject(root);
+    const hasTerminal = Boolean(root && sessionId && terminalPanesForSession(root, sessionId).length > 0);
+    if (!hasTerminal && !await createTerminalPane(launchProfileRef.current)) return;
+    setAgentSurfaceMode("terminal");
   };
 
   const closeTerminalPane = async (paneId: number) => {
@@ -2552,14 +2655,16 @@ function App() {
   };
 
   const projectRailStatus = (project: OpenProject): ProjectRailStatus => {
-    if (project.path !== workspacePath) return project.status;
-    return activeProjectStatus();
+    const conversations = Object.entries(chatConversations).filter(([key]) => key.startsWith(`${project.path}\n`));
+    if (conversations.some(([, conversation]) => conversation.activeRunId)) return "running";
+    if (conversations.some(([, conversation]) => conversation.messages[conversation.messages.length - 1]?.role === "error")) return "attention";
+    return "exited";
   };
 
   const projectRailStatusLabel = (status: ProjectRailStatus) => {
     if (status === "running") return "Running";
     if (status === "attention") return "Needs attention";
-    return "Exited";
+    return "Idle";
   };
 
   const projectRailStatusIcon = (status: ProjectRailStatus): AppIconName => {
@@ -2570,8 +2675,12 @@ function App() {
 
   const projectSessionsFor = (projectPath: string) => projectSessions[projectPath] ?? [];
 
-  const projectSessionStatus = (projectPath: string, session: ProjectSession): ProjectRailStatus =>
-    projectPath === workspacePath && session.id === activeSessionId ? activeSessionStatus() : session.status;
+  const projectSessionStatus = (projectPath: string, session: ProjectSession): ProjectRailStatus => {
+    const conversation = chatConversations[`${projectPath}\n${session.id}`];
+    if (conversation?.activeRunId) return "running";
+    if (conversation?.messages[conversation.messages.length - 1]?.role === "error") return "attention";
+    return "exited";
+  };
 
   const visibleOpenProjects = openProjects.length > 0
     ? openProjects
@@ -3107,15 +3216,15 @@ function App() {
   ];
 
   const projectSessionContextMenuItems = (projectPath: string, session: ProjectSession): ContextMenuItem[] => [
-    menuItem("session.switch", "Switch to Session", () => void switchProjectSession(projectPath, session.id), {
+    menuItem("session.switch", "Switch to Chat", () => void switchProjectSession(projectPath, session.id), {
       icon: "file",
       disabled: projectPath === workspacePath && session.id === activeSessionId,
     }),
-    menuItem("session.rename", "Rename Session", () => void renameProjectSession(projectPath, session), { icon: "file" }),
-    menuItem("session.copy-name", "Copy Session Name", () => void writeText(session.title), { icon: "file" }),
+    menuItem("session.rename", "Rename Chat", () => void renameProjectSession(projectPath, session), { icon: "file" }),
+    menuItem("session.copy-name", "Copy Chat Name", () => void writeText(session.title), { icon: "file" }),
     menuItem(
       "session.archive",
-      session.archived ? "Unarchive Session" : "Archive Session",
+      session.archived ? "Unarchive Chat" : "Archive Chat",
       () => void archiveProjectSession(projectPath, session, !session.archived),
       {
         icon: "close",
@@ -3124,7 +3233,7 @@ function App() {
           (projectSessionsRef.current[projectPath] ?? []).filter((s) => !s.archived).length <= 1,
       },
     ),
-    menuItem("session.delete", "Delete Session", () => void deleteProjectSession(projectPath, session), {
+    menuItem("session.delete", "Delete Chat", () => void deleteProjectSession(projectPath, session), {
       icon: "error",
       danger: true,
       disabled: (projectSessionsRef.current[projectPath] ?? []).length <= 1,
@@ -3903,6 +4012,7 @@ function App() {
       const savedBrowserSessions = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewBySession"));
       const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
       const savedComposerHarness = normalizeComposerHarnessRecords(await store.get<unknown>("composerHarnessBySession"), savedProfile.id);
+      const savedChatConversations = normalizeChatConversationRecords(await store.get<unknown>("chatConversations"));
       const savedPaneLabels = normalizePaneLabelsBySession(await store.get<unknown>("paneLabelsBySession"));
       const savedSessionSnapshots = normalizeSessionEditorSnapshots(await store.get<unknown>("sessionEditorSnapshots"));
       const savedPaneLayouts = normalizePaneLayoutsBySession(await store.get<unknown>("paneLayoutsBySession"));
@@ -3928,6 +4038,7 @@ function App() {
       browserPreviewByProjectRef.current = savedBrowserProjects;
       browserPreviewBySessionRef.current = savedBrowserSessions;
       composerHarnessBySessionRef.current = savedComposerHarness;
+      chatConversationsRef.current = savedChatConversations;
       paneLabelsBySessionRef.current = savedPaneLabels;
       sessionEditorSnapshotsRef.current = savedSessionSnapshots;
       paneLayoutsBySessionRef.current = savedPaneLayouts;
@@ -3940,6 +4051,7 @@ function App() {
       setBrowserPreviewByProject(savedBrowserProjects);
       setBrowserPreviewBySession(savedBrowserSessions);
       setComposerHarnessBySession(savedComposerHarness);
+      setChatConversations(savedChatConversations);
       setPaneLabelsBySession(savedPaneLabels);
       setAgentActivityEvents(savedAgentActivity);
       const last = await store.get<string>("folder");
@@ -4064,7 +4176,6 @@ function App() {
       detectLocalDevServerFromSnapshot(ev.payload.paneId, ev.payload.snapshot);
       if (ev.payload.paneId === activeTerminalPaneIdRef.current) {
         latest.current = ev.payload.snapshot;
-        publishTerminalTranscript(ev.payload.snapshot);
         requestPaint();
       }
     });
@@ -4159,7 +4270,6 @@ function App() {
       window.removeEventListener("resize", sendTerminalResize);
       resizeObserver.disconnect();
       if (frame.current != null) cancelAnimationFrame(frame.current);
-      if (transcriptFrame.current != null) cancelAnimationFrame(transcriptFrame.current);
     };
   }, []);
 
@@ -4169,18 +4279,18 @@ function App() {
     : null;
   const activeWorkspaceName = workspacePath ? basename(workspacePath) : "Open workspace";
   const activeSessionTitle = activeSessionId
-    ? projectSessionsFor(workspacePath ?? "").find((session) => session.id === activeSessionId)?.title ?? "New session"
-    : "No session";
+    ? projectSessionsFor(workspacePath ?? "").find((session) => session.id === activeSessionId)?.title ?? "New chat"
+    : "No chat";
   const activeDrawerMode = DRAWER_MODES.find((mode) => mode.id === sideDrawerMode) ?? DRAWER_MODES[0];
-  const drawerActiveTitle = sideDrawerMode === "projects" ? "Project threads" : activeDrawerMode.label;
+  const drawerActiveTitle = sideDrawerMode === "projects" ? "Project chats" : activeDrawerMode.label;
 
   return (
     <div className={`app-shell ${sideDrawerCollapsed ? "app-shell--side-drawer-collapsed" : ""}`} style={appShellStyle}>
       <header className="app-titlebar" aria-label="Application chrome" data-tauri-drag-region>
         <div className="titlebar-identity">
-          <button className="titlebar-search" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Search threads and commands") }>
+          <button className="titlebar-search" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Search chats and commands") }>
             <AppIcon name="search" />
-            <span>Search threads…</span>
+            <span>Search chats…</span>
           </button>
         </div>
         <div className="titlebar-splitter" aria-hidden="true" />
@@ -4211,14 +4321,14 @@ function App() {
               title={agentSurfaceMode === "terminal" ? "Return to agent chat" : "Open raw terminal"}
               aria-label={agentSurfaceMode === "terminal" ? "Return to agent chat" : "Open raw terminal"}
               aria-pressed={agentSurfaceMode === "terminal"}
-              onClick={() => setAgentSurfaceMode(agentSurfaceMode === "terminal" ? "chat" : "terminal")}
+              onClick={() => void toggleRawTerminal()}
             >
               <AppIcon name="terminal" />
             </button>
           </div>
-          <span className={`titlebar-pill titlebar-pill--${terminalPaneState}`} title={`${activeTerminalProfile.label} · ${terminalStatusLabel}`}>
-            <AppIcon name={paneStateIconName(terminalPaneState)} />
-            <span>{activeTerminalProfile.label}</span>
+          <span className={`titlebar-pill titlebar-pill--${primarySurfaceState}`} title={`${primarySurfaceLabel} · ${primarySurfaceStatusLabel}`}>
+            <AppIcon name={paneStateIconName(primarySurfaceState)} />
+            <span>{primarySurfaceLabel}</span>
           </span>
           <button className="titlebar-action" type="button" onClick={openCommandPalette} title={shortcutTitle("chrome.command-palette", "Command palette")} aria-label="Command palette">
             <AppIcon name="search" />
@@ -4230,13 +4340,13 @@ function App() {
       </header>
       <aside className={`file-rail ${sideDrawerCollapsed ? "file-rail--collapsed" : ""}`} aria-label={`${drawerActiveTitle} drawer`}>
         <div className="drawer-toolbar">
-          <span>{sideDrawerMode === "projects" ? "Threads" : drawerActiveTitle}</span>
+          <span>{sideDrawerMode === "projects" ? "Chats" : drawerActiveTitle}</span>
           {sideDrawerMode === "projects" ? (
             <button
               className="drawer-collapse-button"
               type="button"
-              title="New thread"
-              aria-label="New thread"
+              title="New chat"
+              aria-label="New chat"
               disabled={!workspacePath}
               onClick={() => workspacePath && void createProjectSession(workspacePath)}
             >
@@ -4376,7 +4486,7 @@ function App() {
                       <span className="project-row__state" aria-hidden="true" />
                     )}
                   </button>
-                  <div className="session-list" aria-label={`${basename(project.path)} sessions`}>
+                  <div className="session-list" aria-label={`${basename(project.path)} chats`}>
                     {visibleSessions.map((session) => {
                       const sessionStatus = projectSessionStatus(project.path, session);
                       const sessionActive = active && session.id === activeSessionId;
@@ -4386,7 +4496,7 @@ function App() {
                           type="button"
                           key={session.id}
                           aria-current={sessionActive ? "page" : undefined}
-                          aria-label={`${sessionActive ? "Active session" : "Switch to session"} ${session.title}, ${projectRailStatusLabel(sessionStatus)}`}
+                          aria-label={`${sessionActive ? "Active chat" : "Switch to chat"} ${session.title}, ${projectRailStatusLabel(sessionStatus)}`}
                           title={`${session.title} · ${projectRailStatusLabel(sessionStatus)}`}
                           onPointerDown={(event) => {
                             if (event.button !== 0) return;
@@ -4411,7 +4521,7 @@ function App() {
                         className="session-row session-row--more"
                         type="button"
                         aria-expanded={sessionsExpanded}
-                        aria-label={sessionsExpanded ? `Show fewer sessions in ${basename(project.path)}` : `Show ${hiddenSessionCount} more sessions in ${basename(project.path)}`}
+                        aria-label={sessionsExpanded ? `Show fewer chats in ${basename(project.path)}` : `Show ${hiddenSessionCount} more chats in ${basename(project.path)}`}
                         onPointerDown={(event) => {
                           if (event.button !== 0) return;
                           event.preventDefault();
@@ -4444,7 +4554,7 @@ function App() {
             })}
           </nav>
         ) : null}
-        {!sideDrawerCollapsed && sideDrawerMode === "projects" && visibleOpenProjects.length === 0 ? <div className="rail-status">Open a folder to start a project session</div> : null}
+        {!sideDrawerCollapsed && sideDrawerMode === "projects" && visibleOpenProjects.length === 0 ? <div className="rail-status">Open a folder to start a chat</div> : null}
         {!sideDrawerCollapsed && sideDrawerMode === "search" ? (
           <section className="drawer-panel" aria-label="Search workspace">
             <div className="panel-title panel-title--with-action">
@@ -4682,7 +4792,12 @@ function App() {
             </label>
             <label className="drawer-field">
               <span>Agent surface</span>
-              <select value={agentSurfaceMode} onChange={(event) => setAgentSurfaceMode(event.currentTarget.value as AgentSurfaceMode)}>
+              <select
+                value={agentSurfaceMode}
+                onChange={(event) => event.currentTarget.value === "terminal"
+                  ? void toggleRawTerminal()
+                  : setAgentSurfaceMode("chat")}
+              >
                 <option value="chat">Conversation</option>
                 <option value="terminal">Raw terminal</option>
               </select>
@@ -5438,12 +5553,11 @@ function App() {
                 }}
               />
             </div>
-            <AgentRunSurface
+            <ChatThreadSurface
+              conversation={activeChatConversation}
               events={selectedAgentActivityLog}
-              hasPane={Boolean(activeTerminalPane)}
               hidden={agentSurfaceMode !== "chat"}
-              metaLabel={activeTerminalPane ? activeTerminalProfile.label : undefined}
-              transcript={activeTerminalTranscript}
+              onSuggestion={setComposerDraft}
             />
           </div>
           <div className="agent-composer" aria-label="Agent composer" hidden={agentSurfaceMode !== "chat"} onContextMenu={(event) => openContextMenu(event, composerContextMenuItems())}>
@@ -5454,7 +5568,7 @@ function App() {
                   <span>{activeTerminalProfile.label}</span>
                 </strong>
                 <span>{workspacePath ? basename(workspacePath) : "No workspace"}</span>
-                <span>{activeSessionId ?? "No session"}</span>
+                <span>{activeSessionId ?? "No chat"}</span>
                 <span>{activeTerminalPaneLabel ?? "No pane"}</span>
               </div>
               <details className="agent-composer__settings">
@@ -5477,18 +5591,9 @@ function App() {
                     </select>
                   </label>
                   <label className="agent-composer__field">
-                    <span>Profile</span>
-                    <select
-                      aria-label="Composer profile"
-                      value={activeComposerHarness.selectedProfileId}
-                      disabled={!activeComposerHarnessKey || launchProfileChanging}
-                      onChange={(event) => void setComposerProfile(event.currentTarget.value)}
-                    >
-                      {LAUNCH_PROFILES.map((profile) => (
-                        <option key={profile.id} value={profile.id}>
-                          {profile.label}
-                        </option>
-                      ))}
+                    <span>Provider</span>
+                    <select aria-label="Chat provider" value="codex" disabled>
+                      <option value="codex">Codex</option>
                     </select>
                   </label>
                   <label className="agent-composer__field agent-composer__field--goal">
@@ -5549,7 +5654,7 @@ function App() {
                     {activeComposerHarness.approvalMode === "fullAccess" ? "Full access" : activeComposerHarness.approvalMode === "approveSafe" ? "Approve safe" : "Ask"}
                   </span>
                   <span className="agent-composer__meta">Goal</span>
-                  <span className="agent-composer__meta">{activeTerminalProfile.label}</span>
+                  <span className="agent-composer__meta">Codex</span>
                   {activeComposerHarness.attachments.map((attachment) => (
                     <span className="agent-composer__attachment" key={attachment.id} title={attachment.target}>
                       <span>{attachment.label}</span>
@@ -5567,10 +5672,10 @@ function App() {
                   <button
                     className="agent-composer__button agent-composer__button--danger"
                     type="button"
-                    aria-label="Stop selected pane"
-                    title="Stop selected pane (Ctrl+C)"
-                    disabled={!activeAgentSessionHandle}
-                    onClick={() => void interruptActivePane()}
+                    aria-label="Stop current chat run"
+                    title="Stop current chat run"
+                    disabled={!activeChatConversation.activeRunId}
+                    onClick={() => void stopActiveChatRun()}
                   >
                     <AppIcon name="stop" />
                   </button>
@@ -5579,7 +5684,7 @@ function App() {
                     type="button"
                     aria-label={composerSending ? "Sending" : "Send"}
                     title={shortcutTitle("composer.send", "Send")}
-                    disabled={composerSending || !composerDraft.trim()}
+                    disabled={composerSending || Boolean(activeChatConversation.activeRunId) || !composerDraft.trim()}
                     onClick={() => void submitComposerDraft()}
                   >
                     <AppIcon name={composerSending ? "loading" : "send"} />
@@ -5622,7 +5727,7 @@ function App() {
           }}
           keybindingOverrides={keybindingOverrides}
           onResetLocalData={() => {
-            if (!window.confirm("Reset all local data? This clears saved projects, sessions, transcripts, layout, and local state files. This cannot be undone.")) return;
+            if (!window.confirm("Reset all local data? This clears saved projects, chats, transcripts, layout, and local state files. This cannot be undone.")) return;
             void (async () => {
               const store = storeRef.current;
               if (store) {
@@ -5694,7 +5799,7 @@ function App() {
               <div className="settings-modal__grid">
                 <nav className="settings-modal__nav" aria-label="Saved transcripts">
                   {sessionTranscripts.length === 0 ? (
-                    <div className="settings-modal__empty">No saved transcripts for this session yet.</div>
+                    <div className="settings-modal__empty">No saved terminal transcripts for this chat yet.</div>
                   ) : (
                     sessionTranscripts.map((transcript) => (
                       <button
@@ -5903,9 +6008,9 @@ function App() {
         <div className="status-bar__group status-bar__group--center">
           <span className="status-bar__item">{activeSessionTitle}</span>
           <span className="status-bar__item">
-            <AppIcon name={paneStateIconName(terminalPaneState)} />
-            <span>{activeTerminalProfile.label}</span>
-            <span>{terminalStatusLabel}</span>
+            <AppIcon name={paneStateIconName(primarySurfaceState)} />
+            <span>{primarySurfaceLabel}</span>
+            <span>{primarySurfaceStatusLabel}</span>
           </span>
         </div>
         <div className="status-bar__group status-bar__group--right">

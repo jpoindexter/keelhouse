@@ -15,6 +15,8 @@ Implementation checkpoint: 2026-07-12.
 
 ## Live Criterion Still Pending
 
+As of the 2026-07-13 Codex-style chat correction, this criterion applies only to optional raw-terminal panes. It no longer defines chat identity or blocks structured chat history. The higher-priority native gate is `codex-multi-chat.md`.
+
 The packaged app must execute this sequence after macOS is unlocked:
 
 1. Open a same-project thread with multiple live panes.

@@ -1,6 +1,6 @@
 export type ComposerRoute =
   | { kind: "empty" }
-  | { kind: "pty"; text: string }
+  | { kind: "chat"; text: string }
   | { kind: "app"; command: ComposerAppCommand }
   | { kind: "unknown-app"; input: string };
 
@@ -35,7 +35,7 @@ export const routeComposerDraft = (draft: string): ComposerRoute => {
   if (command) return { kind: "app", command };
   // A single ">"-prefixed token is an app-command attempt, not agent input.
   if (text.startsWith(">") && !/\s/.test(text)) return { kind: "unknown-app", input: text };
-  return { kind: "pty", text: draft };
+  return { kind: "chat", text: draft };
 };
 
 export const composerHistoryAfterSubmit = (history: string[], draft: string, limit = 20) => {
