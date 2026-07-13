@@ -1,6 +1,6 @@
 import type { AppIconName } from "./icons";
 
-export type SettingsCategoryId = "general" | "appearance" | "layout" | "agents" | "app" | "browser" | "git" | "shortcuts";
+export type SettingsCategoryId = "general" | "appearance" | "layout" | "agents" | "connections" | "app" | "browser" | "git" | "shortcuts";
 
 export type SettingsCategoryGroupId = "personal" | "workbench" | "integrations";
 
@@ -34,6 +34,7 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
   { id: "layout", label: "Layout", description: "Tool placement and interface restoration.", groupId: "workbench", icon: "layout" },
   { id: "agents", label: "Agents", description: "Default provider and approval behavior for chats.", groupId: "workbench", icon: "agent" },
   { id: "browser", label: "Browser preview", description: "Project and chat preview behavior.", groupId: "workbench", icon: "browser" },
+  { id: "connections", label: "Connections", description: "AI providers, project environment, and MCP servers.", groupId: "integrations", icon: "connection" },
   { id: "git", label: "Git", description: "Repository health and source-host links.", groupId: "integrations", icon: "git" },
   { id: "app", label: "App configuration", description: "Local storage, ignored folders, and reset controls.", groupId: "integrations", icon: "settings" },
 ];
@@ -105,6 +106,14 @@ export const SETTINGS_ROWS: SettingsRowDef[] = [
     hint: "Current project shell inheritance and credential-display boundary.",
     keywords: ["environment", "env", "path", "shell", "secret", "credential", "override"],
     scope: "project",
+  },
+  {
+    id: "connections.manage",
+    categoryId: "connections",
+    label: "AI and MCP connections",
+    hint: "Provider model defaults, Keychain-backed API credentials, project environment, and MCP server entries.",
+    keywords: ["provider", "api key", "credential", "keychain", "model", "mcp", "oauth", "environment", "env"],
+    scope: "global",
   },
   {
     id: "layout.dock",

@@ -35,7 +35,7 @@ describe("SettingsModal", () => {
   it("renders grouped real categories as a dedicated settings workspace", () => {
     const html = render();
 
-    for (const label of ["Personal", "Workbench", "Integrations", "General", "Appearance", "Agents", "Layout", "Browser preview", "Git"]) {
+    for (const label of ["Personal", "Workbench", "Integrations", "General", "Appearance", "Agents", "Layout", "Browser preview", "Connections", "Git"]) {
       expect(html).toContain(label);
     }
     for (const dropped of ["Pets", "Usage", "Profile</span>", "MCP servers"]) {

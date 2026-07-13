@@ -11,7 +11,7 @@ import {
 describe("settings modal data", () => {
   it("only exposes categories whose rows exist and map to real behavior", () => {
     const ids = SETTINGS_CATEGORIES.map((category) => category.id);
-    expect(ids).toEqual(["general", "appearance", "shortcuts", "layout", "agents", "browser", "git", "app"]);
+    expect(ids).toEqual(["general", "appearance", "shortcuts", "layout", "agents", "browser", "connections", "git", "app"]);
     expect(SETTINGS_CATEGORY_GROUPS.map((group) => group.id)).toEqual(["personal", "workbench", "integrations"]);
     for (const id of ids) {
       expect(settingsRowsForCategory(SETTINGS_ROWS, id).length).toBeGreaterThan(0);
@@ -31,7 +31,7 @@ describe("settings modal data", () => {
     expect(byKeyword.map((row) => row.id)).toEqual(["browser.url"]);
     const byLabel = filterSettingsRows(SETTINGS_ROWS, "permission");
     expect(byLabel.map((row) => row.id)).toEqual(["agents.permission"]);
-    expect(filterSettingsRows(SETTINGS_ROWS, "oauth").map((row) => row.id)).toEqual(["agents.connections"]);
+    expect(filterSettingsRows(SETTINGS_ROWS, "oauth").map((row) => row.id)).toEqual(["agents.connections", "connections.manage"]);
     expect(filterSettingsRows(SETTINGS_ROWS, "zzz-none")).toEqual([]);
   });
 });

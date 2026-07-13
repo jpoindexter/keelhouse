@@ -11,12 +11,17 @@
 
 mod chat_harness;
 mod chat_store;
+mod connection_secrets;
 
 use chat_harness::{respond_chat_approval, start_chat_run, stop_chat_run, ChatRunState};
 use chat_store::{
     delete_chat_conversation, delete_project_chat_conversations, load_chat_conversations,
     migrate_chat_conversations, reset_chat_store, save_chat_conversation, search_chat_messages,
     ChatStore,
+};
+use connection_secrets::{
+    connection_secret_status, delete_connection_secret, set_connection_secret,
+    validate_connection_target,
 };
 use ignore::WalkBuilder;
 use libghostty_vt::key::{Action, Encoder, Event, Key, Mods, OptionAsAlt};
@@ -2944,6 +2949,10 @@ pub fn run() {
             remove_project_worktree,
             source_control_status,
             agent_connections_status,
+            connection_secret_status,
+            set_connection_secret,
+            delete_connection_secret,
+            validate_connection_target,
             start_chat_run,
             stop_chat_run,
             respond_chat_approval,

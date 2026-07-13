@@ -12,6 +12,13 @@ import { buildIssuesUrl, buildPipelinesUrl, buildPullRequestsUrl, buildRepoUrl, 
 import type { ToolTrayMode, WorkbenchLayoutMode } from "./workbenchLayout";
 import type { ScopedSettingView, SettingsScope } from "./scopedSettings";
 import type { LaunchProfile } from "./launchProfiles";
+import { ConnectionSettingsPanel } from "./ConnectionSettingsPanel";
+import {
+  DEFAULT_AI_CONNECTION_SETTINGS,
+  type AiConnectionSettings,
+  type ConnectionTargetStatus,
+  type McpServerConfig,
+} from "./connectionSettings";
 import {
   COMMAND_PALETTE_SOURCE_OPTIONS,
   DEFAULT_COMMAND_PALETTE_SOURCES,
@@ -43,6 +50,8 @@ type SettingsModalProps = {
   agentConnectionsStatus?: AgentConnectionsStatus | null;
   agentConnectionsRefreshing?: boolean;
   browserSetting: ScopedSettingView<string>;
+  aiConnectionSettings?: AiConnectionSettings;
+  connectionSecretPresence?: Record<string, boolean>;
   commandPaletteSources?: CommandPaletteSourceSettings;
   customTerminalProfiles?: LaunchProfile[];
   gitBranch: string | null;
@@ -61,9 +70,14 @@ type SettingsModalProps = {
   trayMode: ToolTrayMode;
   sessionTitle?: string;
   workspaceName?: string;
+  workspacePath?: string;
   onApprovalModeChange: (scope: SettingsScope, mode: AgentApprovalMode) => void;
   onRefreshAgentConnections?: () => void;
   onBrowserUrlCommit: (scope: SettingsScope, url: string) => void;
+  onAiConnectionSettingsChange?: (settings: AiConnectionSettings) => void;
+  onDeleteConnectionSecret?: (key: string) => Promise<void>;
+  onSaveConnectionSecret?: (key: string, value: string) => Promise<void>;
+  onValidateConnectionTarget?: (server: McpServerConfig) => Promise<ConnectionTargetStatus>;
   onCommandPaletteSourceChange?: (source: CommandPaletteSourceId, enabled: boolean) => void;
   onAddCustomTerminalProfile?: (label: string, command: string) => void;
   onClose: () => void;
@@ -84,6 +98,8 @@ export function SettingsModal({
   agentConnectionsStatus = null,
   agentConnectionsRefreshing = false,
   browserSetting,
+  aiConnectionSettings = DEFAULT_AI_CONNECTION_SETTINGS,
+  connectionSecretPresence = {},
   commandPaletteSources = DEFAULT_COMMAND_PALETTE_SOURCES,
   customTerminalProfiles = [],
   gitBranch,
@@ -102,9 +118,14 @@ export function SettingsModal({
   trayMode,
   sessionTitle = "Current chat",
   workspaceName = "Current project",
+  workspacePath = "",
   onApprovalModeChange,
   onRefreshAgentConnections,
   onBrowserUrlCommit,
+  onAiConnectionSettingsChange,
+  onDeleteConnectionSecret,
+  onSaveConnectionSecret,
+  onValidateConnectionTarget,
   onCommandPaletteSourceChange,
   onAddCustomTerminalProfile,
   onClose,
@@ -272,6 +293,19 @@ export function SettingsModal({
           <span><strong>Overrides</strong><small>Unavailable until AI-CONNECTIONS environment profiles</small></span>
           <span><strong>Secrets</strong><small>Credential values are never displayed in settings or process health</small></span>
         </div>
+      );
+    }
+    if (row.id === "connections.manage") {
+      return (
+        <ConnectionSettingsPanel
+          settings={aiConnectionSettings}
+          workspacePath={workspacePath}
+          secretPresence={connectionSecretPresence}
+          onChange={(next) => onAiConnectionSettingsChange?.(next)}
+          onDeleteSecret={onDeleteConnectionSecret ?? (async () => {})}
+          onSaveSecret={onSaveConnectionSecret ?? (async () => {})}
+          onValidateTarget={onValidateConnectionTarget ?? (async () => ({ ok: false, message: "Validation unavailable." }))}
+        />
       );
     }
     if (row.id === "shortcuts.palette-sources") {

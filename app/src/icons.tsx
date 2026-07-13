@@ -28,6 +28,7 @@ import {
   PanelsTopLeft,
   Plus,
   Pin,
+  Plug,
   RotateCw,
   Save,
   Search,
@@ -53,6 +54,7 @@ export type AppIconName =
   | "chevronUp"
   | "close"
   | "complete"
+  | "connection"
   | "copy"
   | "error"
   | "file"
@@ -95,6 +97,7 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   chevronUp: ChevronUp,
   close: X,
   complete: CheckCircle2,
+  connection: Plug,
   copy: Copy,
   error: AlertCircle,
   file: FileText,

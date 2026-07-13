@@ -35,3 +35,4 @@ tauri-plugin-window-state = "2.4.1"
 tauri-plugin-notification = "2.3.3"
 libc = "0.2"
 image = { version = "0.25.10", default-features = false, features = ["png"] }
+keyring = "4.1.4"

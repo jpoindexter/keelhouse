@@ -175,6 +175,7 @@ Amended by the same audit: FIRST-OPEN-LAYOUT (spawn-failure recovery banner, res
 - **KEYBINDINGS-CONFIG:** configurable app shortcut overrides after defaults stabilize, including conflict detection and a visible shortcut reference.
 - **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost and preserve the chrome token contract.
 - **AI-CONNECTIONS:** settings for providers, API keys, MCP servers, CLI auth, env vars, model defaults, and permission policy.
+  - 2026-07-14 foundation: added typed provider/MCP/project-environment records, provider model defaults, native macOS Keychain storage for provider keys/bearer tokens/secret environment values, write-only secret IPC, reset cleanup, and stdio/HTTP target validation. Remaining: process injection, live MCP discovery, OAuth PKCE/token lifecycle, and packaged credential validation. See `docs/ai-connections.md`.
 - **AGENT-HOOKS:** built-in MCP/API surface so agents can inspect app state and request app-owned actions.
 - **TRANSCRIPTS:** save/review completed pane output.
 - **NOTIFICATIONS:** background agent exit/attention badges and optional macOS notifications.

@@ -201,6 +201,18 @@ import {
   structuredChatProviderId,
   type AgentConnectionsStatus,
 } from "./agentConnections";
+import {
+  CONNECTION_PROVIDER_IDS,
+  DEFAULT_AI_CONNECTION_SETTINGS,
+  environmentSecretKey,
+  mcpSecretKey,
+  normalizeAiConnectionSettings,
+  providerSecretKey,
+  type AiConnectionSettings,
+  type ConnectionSecretStatus,
+  type ConnectionTargetStatus,
+  type McpServerConfig,
+} from "./connectionSettings";
 import { parseRemoteUrl, type RepoLocation } from "./sourceControlLinks";
 import { imeCaretStyle } from "./terminalIme";
 import { buildSnapshot, createRenderPerfState, recordFrameTime, recordIpcPayloadBytes } from "./renderPerf";
@@ -600,6 +612,8 @@ function App() {
   const [sourceControlStatus, setSourceControlStatus] = useState<SourceControlStatus | null>(null);
   const [agentConnectionsStatus, setAgentConnectionsStatus] = useState<AgentConnectionsStatus | null>(null);
   const [agentConnectionsRefreshing, setAgentConnectionsRefreshing] = useState(false);
+  const [aiConnectionSettings, setAiConnectionSettings] = useState<AiConnectionSettings>(DEFAULT_AI_CONNECTION_SETTINGS);
+  const [connectionSecretPresence, setConnectionSecretPresence] = useState<Record<string, boolean>>({});
   const [repoLocation, setRepoLocation] = useState<RepoLocation | null>(null);
   const [crashNotice, setCrashNotice] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -2552,7 +2566,7 @@ function App() {
             prompt: preparedContext.prompt,
             images: preparedContext.images,
             approvalMode: activeComposerHarness.approvalMode,
-            model: activeComposerHarness.model.trim() || null,
+            model: activeComposerHarness.model.trim() || aiConnectionSettings.providerModels[provider].trim() || null,
             reasoningEffort: activeComposerHarness.reasoningEffort === "default" ? null : activeComposerHarness.reasoningEffort,
           },
         });
@@ -2674,6 +2688,39 @@ function App() {
     setCustomLaunchProfiles(next);
     await storeRef.current?.set("customLaunchProfiles", next);
     await storeRef.current?.save();
+  };
+
+  const connectionSecretKeys = (settings: AiConnectionSettings) => [
+    ...CONNECTION_PROVIDER_IDS.map(providerSecretKey),
+    ...settings.mcpServers.filter((server) => server.authMode === "bearer").map((server) => mcpSecretKey(server.id)),
+    ...Object.values(settings.environmentByProject).flat().filter((variable) => variable.secret).map((variable) => environmentSecretKey(variable.id)),
+  ];
+
+  const refreshConnectionSecretPresence = async (settings: AiConnectionSettings) => {
+    const statuses = await Promise.all(connectionSecretKeys(settings).map(async (key) => {
+      try {
+        return await invoke<ConnectionSecretStatus>("connection_secret_status", { key });
+      } catch {
+        return { key, present: false };
+      }
+    }));
+    setConnectionSecretPresence(Object.fromEntries(statuses.map((status) => [status.key, status.present])));
+  };
+
+  const saveAiConnectionSettings = async (next: AiConnectionSettings) => {
+    setAiConnectionSettings(next);
+    await storeRef.current?.set("aiConnectionSettings", next);
+    await storeRef.current?.save();
+  };
+
+  const saveConnectionSecret = async (key: string, value: string) => {
+    const status = await invoke<ConnectionSecretStatus>("set_connection_secret", { key, value });
+    setConnectionSecretPresence((current) => ({ ...current, [status.key]: status.present }));
+  };
+
+  const deleteConnectionSecret = async (key: string) => {
+    const status = await invoke<ConnectionSecretStatus>("delete_connection_secret", { key });
+    setConnectionSecretPresence((current) => ({ ...current, [status.key]: false }));
   };
 
   const removeCustomTerminalProfile = async (profileId: string) => {
@@ -4690,6 +4737,9 @@ function App() {
       const savedCustomProfiles = normalizeCustomLaunchProfiles(await store.get<unknown>("customLaunchProfiles"));
       customLaunchProfilesRef.current = savedCustomProfiles;
       setCustomLaunchProfiles(savedCustomProfiles);
+      const savedAiConnectionSettings = normalizeAiConnectionSettings(await store.get<unknown>("aiConnectionSettings"));
+      setAiConnectionSettings(savedAiConnectionSettings);
+      void refreshConnectionSecretPresence(savedAiConnectionSettings);
       const savedTerminalProfile = normalizeTerminalLaunchProfile(await store.get<unknown>("terminalLaunchProfile"));
       const savedComposerHarness = normalizeComposerHarnessRecords(await store.get<unknown>("composerHarnessBySession"), savedProfile.id);
       const storedScopedSettings = await store.get<unknown>("scopedSettings");
@@ -6523,6 +6573,8 @@ function App() {
           agentConnectionsStatus={agentConnectionsStatus}
           agentConnectionsRefreshing={agentConnectionsRefreshing}
           browserSetting={activeBrowserSetting}
+          aiConnectionSettings={aiConnectionSettings}
+          connectionSecretPresence={connectionSecretPresence}
           commandPaletteSources={commandPaletteSources}
           customTerminalProfiles={customLaunchProfiles}
           gitBranch={gitStatus?.branch ?? null}
@@ -6542,6 +6594,7 @@ function App() {
           sessionTitle={activeSessionTitle}
           trayMode={toolTrayMode}
           workspaceName={activeWorkspaceName}
+          workspacePath={workspacePath ?? ""}
           onApprovalModeChange={(scope, mode) => {
             if (scope === "chat") void setComposerApprovalMode(mode);
             else void updateScopedSetting(scope, "approvalMode", mode);
@@ -6561,6 +6614,13 @@ function App() {
               setBrowserLocation(effective);
             })();
           }}
+          onAiConnectionSettingsChange={(next) => void saveAiConnectionSettings(next)}
+          onDeleteConnectionSecret={deleteConnectionSecret}
+          onSaveConnectionSecret={saveConnectionSecret}
+          onValidateConnectionTarget={(server: McpServerConfig) => invoke<ConnectionTargetStatus>("validate_connection_target", {
+            kind: server.transport,
+            target: server.target,
+          })}
           onCommandPaletteSourceChange={(source: CommandPaletteSourceId, enabled) => {
             const next = { ...commandPaletteSources, [source]: enabled };
             setCommandPaletteSources(next);
@@ -6572,6 +6632,9 @@ function App() {
           onResetLocalData={() => {
             if (!window.confirm("Reset all local data? This clears saved projects, chats, transcripts, layout, and local state files. This cannot be undone.")) return;
             void (async () => {
+              await Promise.all(connectionSecretKeys(aiConnectionSettings).map((key) =>
+                invoke("delete_connection_secret", { key }).catch(() => null)
+              ));
               const store = storeRef.current;
               if (store) {
                 await store.clear();
