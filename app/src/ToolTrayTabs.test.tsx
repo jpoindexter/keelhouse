@@ -32,6 +32,7 @@ describe("ToolTrayTabs", () => {
 
     expect(html).toContain('title="Show Files panel"');
     expect(html).toContain('title="Hide Browser panel"');
+    expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('aria-label="Hide tool tray"');
   });
 });

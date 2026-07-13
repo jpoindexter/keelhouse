@@ -165,7 +165,8 @@ assert(editorQaFixture.includes("tool-tray-switcher"), "Editor QA fixture must r
 assert(/\.workbench--tools-editor \.browser-preview,\s*\.workbench--tools-browser \.editor-area\s*\{[^}]*display: none;/s.test(appCss), "Single tool tray modes must hide the unused editor/browser tray");
 assert(/\.tool-tray-switcher__button--active\s*\{[^}]*box-shadow: inset 0 -2px 0 var\(--color-accent-border\);/s.test(appCss), "Tool tray active state must use a flat underline accent");
 assert(appCss.includes("container-name: tool-tabs;"), "Tool tray tabs must own a container for narrow-dock behavior");
-assert(/@container tool-tabs \(max-width: 420px\)\s*\{[\s\S]*?\.tool-tray-tabs__tab span\s*\{[^}]*display: none;/s.test(appCss), "Narrow tool trays must collapse labels before tabs overlap");
+assert(/@container tool-tabs \(max-width: 560px\)\s*\{[\s\S]*?\.tool-tray-tabs__tab span\s*\{[^}]*display: none;[\s\S]*?\.tool-tray-tabs__tab--active span\s*\{[^}]*display: block;/s.test(appCss), "Narrow tool trays must collapse inactive labels before tabs overlap");
+assert(/@container tool-tabs \(max-width: 360px\)\s*\{[\s\S]*?\.tool-tray-tabs__tab--active span\s*\{[^}]*display: none;/s.test(appCss), "Minimum-width tool trays must collapse every label");
 assert(/@media \(max-width: 920px\)\s*\{[\s\S]*?\.settings-workspace__mobile-label,\s*\.settings-workspace__category-select\s*\{[^}]*display: block;/s.test(appCss), "Settings compact navigation must activate within the native 900px minimum width");
 assert(demo.includes("--accent: #67c3d1;"), "Accepted chrome demo must use steel-cyan #67c3d1");
 assert(demo.includes("--accent-strong: #9bd9e3;"), "Accepted chrome demo must use steel-cyan strong #9bd9e3");

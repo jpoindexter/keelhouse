@@ -6255,13 +6255,13 @@ body,
 .tool-tray-tabs {
   height: 38px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr) auto;
+  grid-template-columns: repeat(4, minmax(38px, 1fr)) 34px;
   container-name: tool-tabs;
   container-type: inline-size;
   gap: 0;
   border-bottom: 1px solid #2b2d36;
   background: #1d1e25;
-  padding-inline-end: 8px;
+  padding-inline-end: 0;
 }
 
 .tool-tray-tabs__tab {
@@ -6283,6 +6283,10 @@ body,
   white-space: nowrap;
 }
 
+.tool-tray-tabs__tab > svg {
+  flex: 0 0 auto;
+}
+
 .tool-tray-tabs__tab--active {
   background: transparent;
   box-shadow: inset 0 2px 0 #67c3d1;
@@ -6298,13 +6302,33 @@ body,
   height: 38px;
 }
 
-@container tool-tabs (max-width: 420px) {
+@container tool-tabs (max-width: 560px) {
+  .tool-tray-tabs__tab {
+    gap: 0;
+  }
+
   .tool-tray-tabs__tab span {
     display: none;
   }
 
-  .tool-tray-tabs__tab {
+  .tool-tray-tabs__tab--active {
+    gap: 7px;
+    padding-inline: 10px;
+  }
+
+  .tool-tray-tabs__tab--active span {
+    display: block;
+  }
+}
+
+@container tool-tabs (max-width: 360px) {
+  .tool-tray-tabs__tab--active {
     gap: 0;
+    padding-inline: 0;
+  }
+
+  .tool-tray-tabs__tab--active span {
+    display: none;
   }
 }
 
