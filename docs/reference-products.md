@@ -10,6 +10,7 @@ Use these products as references for Keelhouse, not as copy targets. The goal is
 4. **[parallel-code](https://github.com/johannesjo/parallel-code)** is the closest worktree/review workflow reference: isolated git worktrees, multiple agents, built-in diff review, and one-click merge.
 5. **[Clave](https://github.com/codika-io/clave)** is a useful native macOS session-layout reference for multiple Claude Code sessions, split/grid layouts, session groups, remote sessions, and usage visibility.
 6. **[Orbit Editor](https://github.com/ashish200729/orbiteditor)** is a workflow reference, not a shell reference. It is a VS Code/Void fork, so Keelhouse should reject its editor-first activity-bar chrome, but borrow its agent mechanics: normal/plan/agent modes, checkpoints, tool approval cards, subagent status cards, MCP/provider settings, and plan-to-build flows.
+7. **Super Engineering** is a closed-source native Rust/GPUI reference for shell restraint and settings architecture. Borrow its quiet persistent chrome, full searchable settings workspace, global/workspace/project scopes, agent profiles, command sources, and explicit worktree lifecycle settings. Do not borrow its worktree-first product model, pale palette, sparse home screen, or rounded onboarding-card treatment. Live and package findings are recorded in `docs/super-engineering-chrome-audit.md`.
 
 ## What To Borrow
 
@@ -19,6 +20,7 @@ Use these products as references for Keelhouse, not as copy targets. The goal is
 - External-agent protocol boundary for future direct integrations; ACP is worth tracking, but Keelhouse v1 remains real-pty first.
 - Worktree isolation and diff review once the local multi-pane loop is reliable.
 - Orbit-style agent workflow mechanics: explicit modes, checkpoints, approval cards, plan cards, and visible subagent lifecycle/status.
+- Super-style settings architecture: stable navigation, search, inheritance by scope, provider profiles, rebindable shortcuts, command-palette sources, and explicit setup/run/cleanup lifecycle slots.
 
 ## What Not To Borrow
 

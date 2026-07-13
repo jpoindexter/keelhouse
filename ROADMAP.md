@@ -26,7 +26,8 @@ Added 2026-07-08. The roadmap is now detailed enough to invite building breadth 
 
 ## Done so far (research + verification — see DECISIONS.md)
 
-- ~~OSS landscape survey~~ · ~~zellij trial (parked — wrong interaction model)~~ · ~~Superconductor/cmux evaluated~~ · ~~Hashmark extraction audit~~ · ~~editor-fidelity spike (PASS)~~ · ~~cmux fork-decision audit~~
+- ~~OSS landscape survey~~ · ~~zellij trial (parked — wrong interaction model)~~ · ~~Super Engineering/cmux evaluated~~ · ~~Hashmark extraction audit~~ · ~~editor-fidelity spike (PASS)~~ · ~~cmux fork-decision audit~~
+  - 2026-07-13 Super Engineering live/package audit: borrow quiet persistent chrome, a dedicated searchable settings workspace, global/workspace/project scope, provider profiles, configurable palette sources, worktree policy, and explicit setup/run/pre-cleanup/teardown/post-cleanup slots. Keep Keelhouse's chat-first center, dark palette, resizable trays, and accessible DOM; reject the pale home, rounded onboarding cards, and worktree-first object model. See `docs/super-engineering-chrome-audit.md`.
 - ~~**libghostty-vt spike — PASSED 2026-07-07.**~~ Real pty → real Ghostty parsing → correct cell readback (`spike-ghostty-vt/`). Proves the terminal *engine* choice.
 - ~~**SPIKE-2: render + input loop — PASSED 2026-07-08.**~~ Full loop in a real Tauri window, now promoted into `app/`: pty → libghostty-vt → grid snapshot over IPC → canvas paint; keydown → bytes → pty. Verified: zsh prompt renders, typing echoes, arrows/ctrl-c work, Cmd+V paste works, Cmd+K clears, Option word-nav/delete works, canvas drag selection highlights text, Cmd+C copies selected terminal text. **The rock is dead** — no unproven architecture remains.
 - ~~**REFERENCE-PRODUCT-AUDIT — PASSED 2026-07-09.**~~ Zed is the closest chrome-quality reference, not a layout to copy; Keelhouse must translate that level of craft into an agent-first cockpit. From `awesome-agent-orchestrators`, ConstellAgent, herdr, parallel-code, and Clave are the closest targeted references. Orbit is useful for agent workflow mechanics, not shell chrome. See `docs/reference-products.md`.
@@ -169,7 +170,7 @@ Amended by the same audit: FIRST-OPEN-LAYOUT (spawn-failure recovery banner, res
 - **SEARCH:** file quick-open and ripgrep-backed text search.
   - 2026-07-09 slice: added real `Cmd+P` Quick Open for workspace files and upgraded the Search drawer to Files/Text scopes. Text search calls `search_workspace_text`, which uses `rg --json --fixed-strings --ignore-case` when available and falls back to the existing ignore-aware walker. Results show file, line, column, and snippet, then open the file and jump to the matching line.
 - **TERMINAL-FIND:** search active terminal output/scrollback.
-- **SETTINGS-PARITY:** Codex-style searchable settings shell, keeping only useful workbench categories and dropping account/chat novelty categories.
+- **SETTINGS-PARITY** (reopened 2026-07-13): replace the cramped modal with a dedicated searchable settings workspace. Keep only useful workbench categories, add global/workspace/project inheritance, provider profiles, command-palette sources, searchable/rebindable shortcuts, worktree policy, and explicit project lifecycle hooks. The current six-category modal remains the functional foundation, not parity proof.
 - **SETTINGS:** inspectable config for agent commands, ignored folders, font/theme, layout, AI connections, and shortcut overrides.
 - **KEYBINDINGS-CONFIG:** configurable app shortcut overrides after defaults stabilize, including conflict detection and a visible shortcut reference.
 - **THEME:** color themes across chrome, terminal, rail, and editor; start with mono-ghost and preserve the chrome token contract.

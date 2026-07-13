@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-07-12T21:53:25Z",
+  "capturedAt": "2026-07-13T19:11:20Z",
   "app": "Packaged arm64 Keelhouse.app",
   "status": "partial-live-proof",
   "measurementNote": "Project-switch timings include Computer Use action and accessibility-tree refresh overhead; they are conservative upper-bound observations, not low-level event timings.",
@@ -21,19 +21,37 @@
       ]
     },
     "geminiTui": {
-      "status": "executed",
-      "launchMs": 3207,
-      "details": "Gemini started in a packaged pane and rendered its folder-trust prompt. No trust choice or prompt was submitted.",
+      "status": "failed-auth-health-check",
+      "launchMs": 3603,
+      "details": "Gemini started in a packaged pane and rendered trust/auth UI. A separate non-persistent prompt smoke failed with HTTP 400 API_KEY_INVALID. No credential was stored or copied into evidence.",
       "screenshot": "docs/qa/daily-driver/gemini-tui.png"
     },
     "oneProjectEditAgentPreview": {
-      "status": "not-executed",
-      "gap": "The complete edit + agent prompt + detected browser preview workflow still needs a timed packaged run."
+      "status": "passed",
+      "codexCompletionMs": 38224,
+      "localServerReadyMs": 4183,
+      "browserNavigationMs": 1367,
+      "details": "Structured Codex changed exactly one requested heading in exactly one file. The packaged editor rendered the changed source, a blank Shell pane served it on port 4173, and the embedded Browser rendered the changed heading.",
+      "evidence": [
+        "docs/qa/daily-driver/one-project-codex-edit.png",
+        "docs/qa/daily-driver/one-project-editor.png",
+        "docs/qa/daily-driver/one-project-browser-preview.png"
+      ]
     },
     "twoAgentSameProject": {
       "status": "passed",
       "details": "Structured Codex chats preserve independent provider runs. Optional raw terminals also passed packaged isolation: pre-relaunch PIDs 59144/62755, post-relaunch PIDs 84110/89143, independent labels/output, and switch-back without restart.",
       "evidence": "docs/qa/daily-driver/session-pane-isolation.md"
+    },
+    "controlledComparison": {
+      "status": "blocked-by-targeting",
+      "keelhouseLaunchMs": 1435,
+      "details": "A controlled Keelhouse workload was captured. A separate extension-free VS Code process launched, but macOS accessibility targeting selected the user's existing VS Code windows, so equivalent integrated-terminal state was not driven or certified.",
+      "evidence": "docs/qa/daily-driver/controlled-keelhouse.png"
     }
+  },
+  "stateRestore": {
+    "status": "passed",
+    "details": "The isolated test profile was restored byte-for-byte; before and after checksums matched."
   }
 }

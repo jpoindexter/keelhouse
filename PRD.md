@@ -10,7 +10,7 @@
 
 Jason works across 5-10 active projects. The real workflow is not "use VS Code as an IDE"; it is: open a project folder in VS Code, use the left file explorer, edit files in the editor, run one or more Codex/Gemini/Claude CLI sessions in integrated terminals pointed at that project, and preview local web work in a browser. When a second or third project is active, it becomes another VS Code window with its own folder and agent terminal(s).
 
-VS Code is useful here as a workbench: Explorer, editor, integrated terminal, shortcut muscle memory, theming/settings, and enough browser/web preview for local app work. But the center of gravity is not the code editor; Jason spends most of the session talking to and supervising real agents, then pulls code/browser surfaces in as needed. Everything else is resource-heavy chrome around that agent-first loop. Existing tools each contribute part of the answer: cmux is a strong external reference; zellij proved too static; Superconductor is closed source; Hashmark is directly reusable prior art for multi-chat persistence, structured streams, approvals, MCP, and orchestration, but its editor/orchestrator chrome and unsafe shortcuts are not the Keelhouse product shape. See `docs/reuse-audit.md`.
+VS Code is useful here as a workbench: Explorer, editor, integrated terminal, shortcut muscle memory, theming/settings, and enough browser/web preview for local app work. But the center of gravity is not the code editor; Jason spends most of the session talking to and supervising real agents, then pulls code/browser surfaces in as needed. Everything else is resource-heavy chrome around that agent-first loop. Existing tools each contribute part of the answer: cmux is a strong external reference; zellij proved too static; Super Engineering is a closed-source reference for quiet native chrome and scoped settings architecture; Hashmark is directly reusable prior art for multi-chat persistence, structured streams, approvals, MCP, and orchestration, but its editor/orchestrator chrome and unsafe shortcuts are not the Keelhouse product shape. See `docs/reuse-audit.md` and `docs/super-engineering-chrome-audit.md`.
 
 ## Core Job
 
@@ -51,6 +51,8 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 ## Settings Parity
 
 Use Codex's settings structure as a reference for navigation density, iconography, search, and grouping, but only keep categories that serve this app's workbench job. Kept categories: General, Appearance, App configuration, Behavior, Keyboard shortcuts, MCP servers, Browser preview, Agent hooks, Connections, Git, Environments, and Worktrees.
+
+Use Super Engineering's settings workspace as the structural reference: settings are a dedicated searchable surface, not a cramped modal, and applicable values state whether they are global, workspace, or project scoped. Agent providers and profiles, command-palette sources, shortcut overrides, worktree policy, and setup/run/cleanup hooks share this inheritance model. Keelhouse keeps chat as the default session surface and raw terminal as an explicit alternate.
 
 Drop categories that imply an account/chat product or novelty feature: Profile, Pets, Usage & billing, Archived chats, and Chat Settings. Park Appshots and Computer use as future visual-context/permissioned automation ideas; they should not appear in the settings UI until browser preview and agent hooks are already real. Detailed mapping lives in `docs/settings-parity.md`.
 

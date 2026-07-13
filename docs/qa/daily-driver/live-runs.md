@@ -2,11 +2,13 @@
 
 Captured 2026-07-12 through 2026-07-13 in the arm64 packaged `Keelhouse.app`.
 
-- **Executed:** a 4,000-line shell burst; overlapping 2,000-line output in two shells; four-pane performance capture; three-project switch and restoration; Gemini TUI startup.
+- **Executed:** a 4,000-line shell burst; overlapping 2,000-line output in two shells; four-pane performance capture; three-project switch and restoration; one-project edit + Codex + editor + local server + embedded browser preview; Gemini TUI startup.
 - **Project switching:** Greg 1.55s, NeuroNav 1.16s, and agent cli 0.92s. These include Computer Use and accessibility refresh overhead, so they are conservative upper bounds.
-- **Gemini:** launched in 3.21s and rendered the folder-trust prompt. No trust choice or prompt was submitted. Evidence: `gemini-tui.png`.
+- **One-project workflow (executed 2026-07-13):** a disposable project opened in the packaged app; structured Codex changed exactly one requested heading in exactly one file in 38.224s; the editor rendered the changed source; a blank Shell pane started `python3 -m http.server 4173`; the server was reachable in 4.183s; the embedded Browser rendered the changed heading and a controlled `about:blank` to local-page navigation completed in 1.367s. Evidence: `one-project-codex-edit.png`, `one-project-editor.png`, and `one-project-browser-preview.png`.
+- **Gemini:** the TUI launched in 3.603s and rendered trust/auth UI. A non-persistent `gemini -p` API smoke then failed with HTTP 400 `API_KEY_INVALID`; no credential was stored or copied into evidence. This is a real AI-CONNECTIONS health-check failure, not a passed prompt/response smoke. Earlier launch-only evidence remains at `gemini-tui.png`.
 - **Structured two-chat workflow (executed 2026-07-13):** two same-project Codex chats ran concurrently, kept independent message/provider histories, and restored after relaunch. Stopping Chat A returned it to Ready within 1.8 seconds while Chat B remained Running and completed normally. The first attempt exposed wrapper-only cancellation; the rebuilt package now terminates the selected chat's full process group. Evidence: `codex-multi-chat.md` and `codex-multi-chat-native.png`.
 - **Raw-terminal boundary:** Raw terminal replaced the center chat surface and toggled back without becoming duplicate chat content. Optional raw-terminal isolation also passed: two same-project chats owned independent labelled shells before and after relaunch. Evidence: `session-pane-isolation.md`.
-- **Still required:** timed one-project edit + agent + browser-preview run, complete three-project relaunch timing, full Gemini prompt/response smoke, and a controlled equivalent VS Code comparison.
+- **State safety:** the isolated test profile was restored byte-for-byte after the run; its before/after checksum matched.
+- **Still required:** complete three-project relaunch timing, a successful authenticated Gemini prompt/response smoke, and a controlled equivalent VS Code comparison. A separate extension-free VS Code process launched, but macOS accessibility targeting resolved to the user's existing VS Code windows, so equivalent integrated-terminal state could not be driven or certified.
 
 Raw observations are in `live-runs.json`; render measurements are in `../perf-budget/`.

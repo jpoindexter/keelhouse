@@ -19,6 +19,10 @@ This app should borrow the Codex settings shape where it supports the lean VS Co
 | Environments | Environments | Per-project env vars, PATH/login-shell behavior, secret handling. |
 | Worktrees | Worktrees | Defaults for creating, naming, cleaning, and launching agent panes in worktrees. |
 
+## Scope Model
+
+Settings that can vary by project use explicit `Global`, `Workspace`, and `Project` scopes. The UI shows the inherited source and offers a deliberate override/reset action. This applies to agent profiles, model/routing defaults, permission policy, commands, environment variables, hooks, worktree policy, and project lifecycle scripts. Appearance and app-update behavior remain global unless a real workflow proves otherwise.
+
 ## Drop
 
 | Codex setting | Reason |
@@ -26,8 +30,8 @@ This app should borrow the Codex settings shape where it supports the lean VS Co
 | Profile | Single-user local tool; identity belongs inside external provider/CLI auth checks. |
 | Pets | Pure novelty; not part of the coding workflow. |
 | Usage & billing | Billing belongs to upstream AI providers, not this local workbench. |
-| Archived chats | The app runs real terminal agents; use pane transcripts, not chat archives. |
-| Chat Settings | Do not build a custom chat product. Keep only composer routing settings. |
+| Archived chats | Archive belongs in the project/chat navigation model, not a settings category. |
+| Chat Settings | Per-chat draft, context, model, permission, and run state live with the selected chat; global defaults live under Agents. |
 
 ## Park
 
@@ -39,16 +43,21 @@ This app should borrow the Codex settings shape where it supports the lean VS Co
 ## Done Criteria
 
 - Settings has a searchable left-nav layout with grouped sections and icons.
+- Settings is a dedicated full-height workspace with Back to app, not a small modal over active work.
 - Every setting maps to a real app behavior or external connection check.
+- Scoped settings show whether the effective value is global, workspace, project, or inherited.
+- Keyboard shortcuts can be searched and rebound; command-palette sources can be enabled or disabled.
 - Dropped categories do not appear in the UI.
 - Parked categories remain documented but invisible unless promoted.
 
-## Modal Chrome Spec (recorded 2026-07-11 with OVERLAY-PARITY; ships with SETTINGS)
+## Workspace Chrome Spec (revised 2026-07-13)
 
-The settings surface follows the accepted demo's overlay chrome exactly (`demo/keelhouse-chrome-demo.html`, `?overlay=settings` scene):
+The first modal was a useful functional slice but is not the final settings architecture. The replacement follows the accepted Keelhouse control grammar and the useful structural findings from `docs/super-engineering-chrome-audit.md`:
 
-- Modal: `min(900px, calc(100vw - 72px))` wide, `min(560px, calc(100vh - 96px))` tall, 10px radius, 1px `#343642` border, `--menu-bg` background, overlay shadow, on the shared blurred scrim.
-- Header: 42px, title left, flat × close right, hairline bottom border.
-- Two-column grid: 230px left nav / flexible content. Nav buttons are 30px flat rows; active = `#252732` + 3px steel-cyan left stripe (same active grammar as palette rows and sidebar rows).
-- Setting rows: 48px minimum, `label + hint` left (hint 12px muted), control right, hairline separators.
-- Controls: 28px select-like fields on `#15161d` with 4px radius; all buttons follow the app control grammar (flat text-actions, single filled primary per surface at most).
+- Full window content area below native/titlebar chrome; no blurred workbench visible behind it.
+- A stable 230px searchable left navigation with grouped section labels and a flat `Back to app` command.
+- Active navigation uses background-only selection. No decorative side stripe, capsule, or boxed icon button.
+- Content uses a readable maximum width, section headings, hairline grouping, and 48px minimum setting rows.
+- Global/workspace/project tabs appear only on categories that support scoping.
+- Controls keep the existing 28px field grammar. Destructive actions remain explicit and confirmed; one filled primary action per surface at most.
+- At narrow widths, navigation collapses into a category menu without clipping labels or controls.

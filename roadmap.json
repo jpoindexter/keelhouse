@@ -119,7 +119,7 @@
       "size": "S",
       "launch": "v1",
       "summary": "Lock which external products are useful references so Keelhouse does not drift into a VS Code clone or generic orchestrator.",
-      "done": "Verified 2026-07-09: Zed is the closest chrome-quality reference, but Keelhouse must translate that craft into an agent-first cockpit instead of copying an editor-first IDE. From awesome-agent-orchestrators, ConstellAgent, herdr, parallel-code, and Clave are the closest targeted references. Orbit is useful for agent workflow mechanics, not shell chrome. See docs/reference-products.md.",
+      "done": "Verified 2026-07-13: Zed remains the closest open-source chrome-quality reference, but Keelhouse translates that craft into an agent-first cockpit instead of copying an editor-first IDE. ConstellAgent, herdr, parallel-code, and Clave remain targeted workflow references; Orbit is useful for agent mechanics, not shell chrome. A live/package audit added Super Engineering as a closed-source reference for quiet persistent chrome, scoped settings, profiles, command sources, and worktree lifecycle policy. See docs/reference-products.md and docs/super-engineering-chrome-audit.md.",
       "buildOrder": 1
     },
     {
@@ -925,7 +925,7 @@
       "launch": "v1",
       "summary": "Prove this is lighter than the VS Code workflow it replaces across 1-project, 2-agent, and 3-project task runs. Blind-audit 2026-07-11 addition: a concrete render-perf gate before v1 — measure IPC payload size at fast-output rates, Canvas 2D frame time at 1, 2, and 4 concurrent panes, and a jank threshold (frame-drop rate), so the deferred dirty-region/WebGL decisions trigger from data instead of surprise.",
       "done": "Static budgets green plus recorded render-perf numbers (IPC payload, frame times at 1/2/4 panes, jank rate) with thresholds; packaged Keelhouse vs VS Code memory/CPU comparison recorded with DAILY-DRIVER-LIVE.",
-      "progress": "2026-07-12: render-perf gate built and live-verified. The original one-pane dev capture recorded 16 paints (3.8ms average, 53ms p95/max, 6.25% jank). Packaged runs now add: two panes with 117 paints (1.66ms average, ~1ms p95, 63ms max, 1.71% jank; 7 IPC samples averaging 108KB) and four panes under overlapping shell output with 300 paints (~0.54ms average, 1ms p95/max, 0% jank; 220 IPC samples averaging 108KB). Inter Latin subsets keep production CSS at 87,989 bytes. A repeatable process-tree sampler records current Keelhouse and VS Code workloads, but the comparison remains observational rather than equivalent. Card stays next until controlled equivalent workflows and a packaged one-pane capture are recorded.",
+      "progress": "2026-07-12/13: render-perf gate built and live-verified. The original one-pane dev capture recorded 16 paints (3.8ms average, 53ms p95/max, 6.25% jank). Packaged runs add: two panes with 117 paints (1.66ms average, ~1ms p95, 63ms max, 1.71% jank; 7 IPC samples averaging 108KB) and four panes under overlapping shell output with 300 paints (~0.54ms average, 1ms p95/max, 0% jank; 220 IPC samples averaging 108KB). Inter Latin subsets keep production CSS at 87,989 bytes. A controlled Keelhouse package launch measured 1.435s and its project/browser/two-shell workload is captured. A separate extension-free VS Code process launched, but macOS accessibility targeting resolved to the user's existing VS Code windows, so equivalent integrated-terminal state was not driven or certified. Card stays next until the controlled comparison and a packaged one-pane render capture are recorded.",
       "buildOrder": 90.5
     },
     {
@@ -942,15 +942,16 @@
     },
     {
       "id": "SETTINGS-PARITY",
-      "title": "Codex-style settings parity",
-      "column": "done",
-      "tier": "pebble",
+      "title": "Scoped settings workspace parity",
+      "column": "next",
+      "tier": "rock",
       "track": "ui",
-      "size": "M",
-      "launch": "v2",
-      "summary": "Borrow Codex's searchable left-nav settings shape and icon density, but keep only categories that serve the lean VS Code replacement workflow.",
-      "done": "Settings has searchable grouped sections for General, Appearance, App configuration, Behavior, Keyboard shortcuts, MCP servers, Browser preview, Agent hooks, Connections, Git, Environments, and Worktrees; Profile, Pets, Usage & billing, Archived chats, and Chat Settings are absent; Appshots and Computer use remain parked. Executed 2026-07-11: searchable settings modal per the docs/settings-parity.md chrome spec with only real categories (General agent/permission, Layout dock/tray/reset, Browser preview URL, Git health); opens via drawer Settings button, settings.open palette command, and Cmd+, (chrome.settings shortcut registered); dropped/deferred categories absent; helpers+component tested (132 vitest); visual proof captured in dev shell.",
-      "buildOrder": 68
+      "size": "L",
+      "launch": "v1",
+      "summary": "Replace the cramped settings modal with a dedicated searchable settings workspace. Keep Codex's navigation density and Super Engineering's explicit global/workspace/project scopes, but render only capabilities Keelhouse actually supports.",
+      "done": "Cmd+, and Settings open a dedicated full-height workspace with Back to app, search, stable grouped navigation, and responsive content. Applicable agent profiles, commands, worktree policy, hooks, environments, and connection values show their global/workspace/project scope and inheritance. Keyboard shortcuts are searchable/rebindable; command-palette sources are configurable. Existing General, Appearance, Layout, Browser, Git, notifications, reset, and shortcut behavior remains functional. Unsupported account, billing, marketplace, and novelty categories stay absent. Native screenshots at desktop and narrow widths plus interaction tests prove navigation, scope changes, search, and return-to-workbench behavior.",
+      "progress": "2026-07-13 live delta audit: the current 900x560 modal has six coarse categories and mostly active-workspace state. Super Engineering demonstrates the useful structural correction: a dedicated settings workspace, stable grouped sidebar, search, global/workspace/project tabs, provider profiles, configurable palette sources, worktree policy, and explicit setup/run/pre-cleanup/teardown/post-cleanup slots. Keep Keelhouse's dark palette and chat-first defaults; reject Super's pale home screen and worktree-first model. Audit: docs/super-engineering-chrome-audit.md.",
+      "buildOrder": 91.05
     },
     {
       "id": "SETTINGS",
@@ -998,7 +999,7 @@
       "launch": "v2",
       "summary": "Users need to hook up real AI tooling: Claude/Codex CLI auth, provider API keys, model defaults, MCP servers, environment variables, permission defaults, and health checks.",
       "done": "Settings can configure Claude/Codex command profiles, provider/API credentials via OS-safe storage, MCP server entries, env vars, default models, permission policy, and validation checks that explain missing auth or broken connections.",
-      "progress": "Hashmark reuse source identified 2026-07-13: app/src-tauri/src/mcp.rs and mcp_oauth.rs cover stdio/HTTP transport, discovery, bearer auth, and OAuth metadata/token flow. Adapt the protocol/state-machine concepts only; replace blocking reads and keep secrets in OS-safe storage.",
+      "progress": "Hashmark reuse source identified 2026-07-13: app/src-tauri/src/mcp.rs and mcp_oauth.rs cover stdio/HTTP transport, discovery, bearer auth, and OAuth metadata/token flow. Adapt the protocol/state-machine concepts only; replace blocking reads and keep secrets in OS-safe storage. Super Engineering's live settings audit adds the UI contract: provider visibility, local CLI profiles, model/config refresh, default routing, and global/workspace/project inheritance all live inside the shared SETTINGS-PARITY workspace rather than the composer chrome. Packaged Gemini QA exposed a real missing-health-check path: the TUI reached trust/auth UI, but a non-persistent prompt failed with HTTP 400 API_KEY_INVALID. AI-CONNECTIONS must detect and explain invalid credentials before launch without exposing secret material.",
       "buildOrder": 91.1
     },
     {
@@ -1011,7 +1012,7 @@
       "launch": "v2",
       "summary": "Give Claude/Codex-style agents a first-class way to cooperate with the app without making a plugin platform: inspect projects/panes/open files, request focus/split/new-pane actions, open diffs, and report task status through app-owned commands.",
       "done": "A local permissioned MCP/API endpoint exposes documented app-owned commands; actions that mutate files, git state, panes, or project layout require visible approval/undo where appropriate; every agent action is attributed in the UI/log.",
-      "progress": "Hashmark reuse source identified 2026-07-13: app/src-tauri/src/harness.rs demonstrates tool discovery/dispatch, pending approvals, limited always-allow state, and spawned-agent attribution. Keelhouse keeps its provider adapters and appActions gate rather than copying Hashmark's second LLM tool loop.",
+      "progress": "Hashmark reuse source identified 2026-07-13: app/src-tauri/src/harness.rs demonstrates tool discovery/dispatch, pending approvals, limited always-allow state, and spawned-agent attribution. Keelhouse keeps its provider adapters and appActions gate rather than copying Hashmark's second LLM tool loop. Super Engineering contributes a clearer project lifecycle vocabulary for local hooks: setup, run, pre-cleanup, teardown, and post-cleanup. Keelhouse must add preview, approval, attribution, and failure recovery before enabling those slots.",
       "buildOrder": 91.3
     },
     {
@@ -1385,7 +1386,7 @@
       "buildOrder": 90.4,
       "summary": "Blind-audit 2026-07-11: DAILY-DRIVER-METRICS is a readiness gate, not proof — the North Star (replace VS Code for three workflows) has never been measured live. Run the three scenarios end-to-end in the packaged/dev Tauri app with no fixtures: one-project edit+agent+preview, two-agent same-project, three-project switch/relaunch. Time pane switch, prompt send latency, and project switch; record memory/CPU baselines and compare against the equivalent VS Code session. Include one real Gemini TUI smoke since the gemini profile has never been render-verified. Define fail thresholds before running.",
       "done": "docs/qa/daily-driver/ contains timed live-run records for all three workflows with pane-switch/send/switch latencies, memory/CPU vs VS Code comparison, and a Gemini TUI render check; thresholds documented and met or failures filed as cards; STATE.md wording separates readiness evidence from live proof.",
-      "progress": "2026-07-12/13 packaged partial: real 4,000-line output, overlapping shell output, four-pane instrumentation, three-project switching/restoration, and Gemini TUI startup were executed. Gemini rendered its trust prompt in 3.21s without submitting trust or a prompt. Project switches confirmed at conservative 1.55s/1.16s/0.92s bounds. The structured two-chat workflow is now executed: independent provider history, concurrent runs, selected-run cancellation within 1.8s, unaffected second-chat completion, raw-terminal boundary, and quit/relaunch restore. Remaining: timed one-project edit+agent+preview, complete three-project relaunch timing, Gemini prompt/response, and controlled equivalent VS Code comparison. Evidence: docs/qa/daily-driver/live-runs.md and codex-multi-chat.md."
+      "progress": "2026-07-12/13 packaged partial: real 4,000-line output, overlapping shell output, four-pane instrumentation, three-project switching/restoration, and the structured two-chat workflow were executed. Independent provider history, concurrent runs, selected-run cancellation within 1.8s, unaffected second-chat completion, raw-terminal boundary, and quit/relaunch restore passed. The one-project workflow now also passed: Codex made the exact one-file edit in 38.224s, the editor rendered it, a blank Shell served it in 4.183s, and the embedded Browser navigated/rendered it in 1.367s. Gemini launched in 3.603s but its prompt smoke failed API credential validation. Remaining: complete three-project relaunch timing, successful authenticated Gemini prompt/response, and controlled equivalent VS Code comparison; the first isolated VS Code attempt was not certifiable because macOS accessibility targeting selected existing windows. Evidence: docs/qa/daily-driver/live-runs.md and codex-multi-chat.md."
     },
     {
       "id": "A11Y-CHROME-AUDIT",
@@ -1410,7 +1411,7 @@
       "buildOrder": 90.1,
       "summary": "Blind-audit 2026-07-11: the re-convergence loop was fully self-referential — the same session diagnosed, planned, implemented, and verified; Jason's eye never formally approved the result, and the demo's three-control grammar was never audited for whether it scales to a real app's control count. Jason reviews the running app side-by-side with the demo at 1440/1024/900 (populated states from RUN-CONTENT-DENSITY-QA), confirms or corrects the direction, and any grammar exceptions (surfaces that legitimately need more control density than the demo shows) are documented in docs/chrome-contract.md. Runs before CHROME-CONTRACT-V2 locks the gate.",
       "done": "Sign-off recorded (date + verdict + corrections) in docs/chrome-contract.md; grammar exceptions documented; any corrections filed as cards before CHROME-CONTRACT-V2 executes.",
-      "progress": "Jason rejected the first Codex-derived pass and the alternate-center terminal model, then pointed back to demo/keelhouse-chrome-demo.html as the literal shell contract. The corrected native package now matches its Threads/chat/right-dock/bottom-tray hierarchy and functional composer; live Terminal open, Processes switch, and collapse pass. Jason's explicit verdict on the latest package is still required, so this card remains next."
+      "progress": "Jason rejected the first Codex-derived pass and the alternate-center terminal model, then pointed back to demo/keelhouse-chrome-demo.html as the literal shell contract. The corrected native package now matches its Threads/chat/right-dock/bottom-tray hierarchy and functional composer; live Terminal open, Processes switch, and collapse pass. A 2026-07-13 live Super Engineering comparison identified three corrections to judge in the next sign-off: less permanent titlebar information, compact non-blocking toast rhythm, and a dedicated settings workspace. Keep the Keelhouse layout, dark palette, chat-first center, and resizable trays; reject Super's pale home, rounded action cards, and worktree-first center. Jason's explicit verdict on the latest package is still required, so this card remains next."
     },
     {
       "id": "CHROME-FONT-LOCK",
