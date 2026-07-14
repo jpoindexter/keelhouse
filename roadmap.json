@@ -1220,6 +1220,78 @@
       "buildOrder": 91.37
     },
     {
+      "id": "CHAT-HISTORY-MINIMAP",
+      "title": "Conversation history minimap",
+      "column": "next",
+      "tier": "pebble",
+      "track": "ui",
+      "size": "M",
+      "launch": "v2",
+      "summary": "Add the thin transcript history rail Jason selected from Codex: density-scaled ticks for user, assistant, tool, file, approval, error, and running blocks, with a visible viewport marker, compact hover preview, and direct message navigation.",
+      "done": "A 3,000-message chat renders a stable minimap without shifting the transcript or composer; tick shape and iconography distinguish important states without color alone; hover or keyboard focus shows role, time, and truncated content/status; click or Enter scrolls the exact message into view; the viewport marker tracks scrolling; bookmarks, errors, approvals, and active runs remain discoverable; 900px layout, reduced motion, screen-reader labels, and measured scroll/render performance pass in the packaged app.",
+      "buildOrder": 91.39
+    },
+    {
+      "id": "CHAT-ACTION-MENU",
+      "title": "Complete chat action menu",
+      "column": "next",
+      "tier": "pebble",
+      "track": "ui",
+      "size": "S",
+      "launch": "v2",
+      "summary": "Make one command-registry-backed chat menu expose every supported lifecycle action consistently from the rail and conversation header: switch, rename, stop, fork, pin, archive, delete, export, and open in a separate window when available.",
+      "done": "Rail and header menus expose the same enabled and disabled chat actions with standard icons, shortcuts, destructive confirmations, and no inert rows; Stop targets only the selected run; Rename, Fork, Pin, Archive, and Delete persist; Export and Open in New Window route to their dedicated implementations; mouse, keyboard, Control-click, and narrow-window packaged workflows pass.",
+      "buildOrder": 91.38
+    },
+    {
+      "id": "CHAT-TRANSCRIPT-EXPORT",
+      "title": "Export structured chat transcripts",
+      "column": "next",
+      "tier": "pebble",
+      "track": "workspace",
+      "size": "M",
+      "launch": "v2",
+      "summary": "Export app-owned structured conversations rather than raw terminal output. Preserve message order, safe Markdown, tool and approval summaries, timestamps, provider/model metadata, lineage, and attachment references without leaking credentials or hidden reasoning.",
+      "done": "A chat exports deterministic Markdown and JSON through a native save flow; the output preserves visible user/assistant/tool/error/approval content and fork lineage, labels omitted binary attachments, redacts configured secrets, excludes hidden reasoning and raw credentials, handles cancelled/incomplete runs, and round-trip fixture tests plus a packaged export/open inspection pass.",
+      "buildOrder": 91.41
+    },
+    {
+      "id": "WORKSPACE-STATUS-SIGNALS",
+      "title": "Truthful workspace status signals",
+      "column": "next",
+      "tier": "pebble",
+      "track": "workspace",
+      "size": "M",
+      "launch": "v2",
+      "summary": "Finish the accepted demo's status intent with real Keelhouse state only: branch and sync health, source host, active file, pending approvals, running tools, and actionable diagnostics. Do not add fake formatter, error, or provider labels.",
+      "done": "Status controls are backed by live project/chat state, update after switching projects and chats, open the relevant Git/file/approval/tool surface, collapse without overlap at 900px, communicate warning/error states without color alone, and never display fabricated Prettier, diagnostics, sync, or activity values; packaged project-switch and stale-state tests pass.",
+      "buildOrder": 91.42
+    },
+    {
+      "id": "CLONE-REPOSITORY",
+      "title": "Clone and open repositories",
+      "column": "next",
+      "tier": "pebble",
+      "track": "workspace",
+      "size": "M",
+      "launch": "v2",
+      "summary": "Complete the demo's Create workflow with a native clone flow for GitHub, GitLab, and generic Git URLs, using the user's existing Git/credential helpers and opening the resulting folder as a normal Keelhouse project.",
+      "done": "Clone Repository accepts and validates SSH/HTTPS URLs, chooses a destination, shows command/destination before execution, streams progress and actionable auth/network errors, supports cancellation and retry, prevents destructive destination collisions, stores no credentials, opens a successful clone as a project, and passes packaged GitHub/GitLab/local-bare-repo workflows.",
+      "buildOrder": 91.43
+    },
+    {
+      "id": "MULTI-WINDOW-CHAT",
+      "title": "Open chats in separate native windows",
+      "column": "later",
+      "tier": "rock",
+      "track": "workspace",
+      "size": "L",
+      "launch": "v2",
+      "summary": "Support the demo's Open in New Window action without returning to one-heavy-window-per-project. A second Tauri window may host a selected project/chat while preserving one durable chat identity and explicit ownership of raw terminal panes and workbench layout.",
+      "done": "Open in New Window creates or focuses a native window for the selected chat; edits, messages, run state, and provider events do not duplicate or race; each raw pane has one visible owning window; closing one window does not terminate unrelated chats; frame/layout restoration, crash recovery, deep-link focus, multiple-display behavior, and two-window packaged relaunch tests pass.",
+      "buildOrder": 91.44
+    },
+    {
       "id": "REUSE-AUDIT",
       "title": "Mine old projects for reusable pieces",
       "column": "done",

@@ -21,6 +21,7 @@ When Jason is moving between active projects and parallel coding agents, he want
 The app must cover the parts of VS Code Jason actually uses. Default behavior should preserve VS Code muscle memory for files, editor, terminal focus, project switching, search, save, close, and command execution unless there is a clear reason to differ.
 
 - Open and switch project folders quickly, including recent projects.
+- Clone Git repositories through a previewed native flow that uses existing Git credentials, reports progress and errors, and opens successful clones as normal projects.
 - Keep multiple projects open in one window through a persistent left project/workspace rail, similar in spirit to Codex's sidebar, with clear active-project state.
 - Show multiple independent chats under each project in the left rail, matching the Codex interaction model. Each chat persists its message history, provider thread id, workbench context, editor tabs, browser URL, optional raw-terminal panes, and activity references.
 - Browse the project tree with sensible ignores, file watching, and safe handling for symlinks, large files, and binary files.
@@ -31,8 +32,11 @@ The app must cover the parts of VS Code Jason actually uses. Default behavior sh
 - Make a structured, persisted chat timeline and composer the primary workbench surface. Provider adapters own user messages, assistant messages, tool activity, resumable thread ids, stop state, and errors; never infer that structure from terminal text.
 - Persist production chat history in a migrated SQLite store: chats, provider thread ids, messages/blocks, run status, usage, forks, and bookmarks. Keep lightweight workbench preferences in Tauri Store.
 - Reach Codex-grade chat behavior: safe Markdown/code rendering, progressive output, compact tool rows, real provider approvals, retry/error recovery, scroll anchoring, per-chat drafts/history, inspectable context chips, search, pinning, and bookmarks.
+- Navigate long chats with a compact transcript minimap that previews and jumps to exact persisted messages without becoming a decorative activity rail.
+- Expose one coherent chat action model across the rail and conversation header: rename, stop, fork, pin, archive, delete, structured transcript export, and open in a separate native window where supported.
 - Expose raw terminal as an explicit alternate center view for exact TUI interaction and providers without a structured adapter. The code editor, Git, files, and browser preview remain movable, resizable trays around the chat. First open defaults to the chat rail, centered conversation/composer, and tabbed right dock. Do not mirror the raw terminal inside the chat timeline.
 - Use VS Code/Codex-like application structure for the shell: compact top status/action bar, persistent side drawer, draggable workbench trays, and bottom status strip. Adapt the pattern to Keelhouse state and actions; do not copy fake window controls, fake browser navigation, decorative activity rails, or controls that imply unavailable behavior.
+- Keep status chrome truthful and actionable: only show branch/sync, source host, active file, pending approval, running-tool, and diagnostic state when backed by current project/chat evidence.
 - Run multiple agent panes per project, and allow different open projects to run different agents at the same time. Each pane needs a visible name/task label, status, cwd, command, restart, and kill controls.
 - Let agents hook into the app through a built-in, permissioned MCP/API surface for app-owned actions such as listing projects, reading open files, opening diffs, focusing panes, creating panes, and reporting task status.
 - Switch across multiple active projects without separate heavyweight VS Code windows.

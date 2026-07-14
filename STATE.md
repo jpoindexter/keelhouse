@@ -182,6 +182,8 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 **AGENT-ORCHESTRATION (IMPLEMENTED 2026-07-14; PACKAGED MULTI-CHILD FLOW PENDING):** Parallel work now creates 2-8 normal durable child chats through a previewed composer/command-palette flow. Child metadata owns lineage, provider/model/permission, hard wall-clock budget, target files, and shared or isolated worktree state. Rail context menus stop one child, return an attributed result, and clean up a stopped worktree. Rust terminates only the over-budget process group; conflict and capacity validation plus setup/launch recovery are covered locally. The locked macOS session prevents real packaged multi-child execution and relaunch proof. See `docs/agent-orchestration.md`.
 
+**DEMO FEATURE PARITY AUDIT (ROADMAP CAPTURED 2026-07-14):** the accepted HTML contract and the current React/Tauri shell were compared feature by feature. Six uncovered product slices are now explicit roadmap cards in dependency order: CHAT-HISTORY-MINIMAP, CHAT-ACTION-MENU, CHAT-TRANSCRIPT-EXPORT, WORKSPACE-STATUS-SIGNALS, CLONE-REPOSITORY, and MULTI-WINDOW-CHAT. Duplicate bottom Browser Preview, fake Prettier/diagnostic counts, decorative status values, and a second file-preview surface remain intentional exclusions. Evidence: `docs/demo-feature-parity-audit-2026-07-14.md`.
+
 **RUN-CARDS-ADAPTER (IMPLEMENTED 2026-07-14; PACKAGED HOOK FLOW PENDING):** Structured thinking, plan, file, approval, command, and tool cards now require explicit `provider`, `app-action`, or `agent-hook` provenance. Provider and hook adapters assign card kinds mechanically; file cards retain Review targets; SQLite migration v5 preserves the fields across relaunch. Tests reject terminal-text inference and cover provider/hook mapping plus persistence. The locked macOS session prevents the final packaged hook-connected visual and Review execution. See `docs/run-cards-adapter.md`.
 
 **TERMINAL-INTL-INPUT (IMPLEMENTED 2026-07-14; NATIVE COMPOSITION PENDING):** The cursor-positioned IME textarea and CJK fallback chain remain intact. A follow-up audit fixed the initial `Dead`/`Process` event being prevented before WebKit entered composition; unit tests cover that boundary and preserve ASCII/navigation routing. The locked session prevents the remaining Option-dead-key, CJK round-trip, and fallback-glyph visual checks. See `docs/terminal-robustness.md`.
@@ -194,6 +196,8 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 4. **AI-CONNECTIONS / AGENT-HOOKS:** harden provider auth, MCP/OAuth, app actions, health checks, profiles, environment overrides, and lifecycle hooks inside the completed shared settings scope model.
 5. **TERMINAL-INTL-INPUT / OUTSIDE-REVIEW:** finish remaining terminal and external-review gates.
 6. **CHAT-FORK-CHECKPOINT / CLAUDE-STRUCTURED-ADAPTER / AGENT-ORCHESTRATION / RUN-CARDS-ADAPTER:** execute the packaged fork/checkpoint, Claude lifecycle, multi-child orchestration, and hook-connected run-card workflows.
+7. **CHAT-ACTION-MENU / CHAT-HISTORY-MINIMAP / CHAT-TRANSCRIPT-EXPORT:** complete the conversation controls first, then add long-history navigation and portable structured transcripts on top of the durable chat store.
+8. **WORKSPACE-STATUS-SIGNALS / CLONE-REPOSITORY / MULTI-WINDOW-CHAT:** finish truthful shell telemetry and project acquisition before taking on the higher-risk multi-window ownership model.
 
 ## Gotchas
 
