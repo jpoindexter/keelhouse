@@ -49,11 +49,10 @@ capture() {
   local viewport="$2"
   playwright screenshot \
     --browser chromium \
-    --channel chrome \
     --viewport-size "$viewport" \
     --wait-for-selector '.app-shell' \
     --wait-for-timeout 500 \
-    "http://localhost:$port" \
+    "http://localhost:$port/?qa=1" \
     "$OUT_DIR/$name.png"
 }
 

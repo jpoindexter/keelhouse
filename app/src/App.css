@@ -184,6 +184,13 @@ body,
   text-align: left;
 }
 
+.titlebar-search span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .titlebar-search:hover {
   color: var(--color-text-strong);
 }

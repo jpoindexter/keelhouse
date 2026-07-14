@@ -13,6 +13,8 @@ const assert = (condition, message) => {
 const appCss = read("app/src/App.css");
 const appTsx = read("app/src/App.tsx");
 const mainTsx = read("app/src/main.tsx");
+const browserQa = read("app/src/browserQa.ts");
+const shellQaScript = read("scripts/capture-app-shell-qa.sh");
 const chatThreadSurface = read("app/src/ChatThreadSurface.tsx");
 const chatConversation = read("app/src/chatConversation.ts");
 const chatHarness = read("app/src-tauri/src/chat_harness.rs");
@@ -145,6 +147,7 @@ assert(workbenchLayout.includes("trayPercent: 39"), "Approved desktop dock must 
 assert(appCss.includes('grid-template-columns: var(--side-drawer-width) 6px minmax(420px, 1fr) 6px var(--dock-width, 430px);'), "Desktop shell must preserve the approved 332/6/center/6/430 geometry");
 assert(/\.titlebar-workspace\s*\{[^}]*overflow:\s*hidden;[^}]*min-width:\s*0;[^}]*flex:\s*1 1 0;/s.test(appCss), "Workspace crumb must truncate before colliding with branch context");
 assert(/\.titlebar-branch\s*\{[^}]*overflow:\s*hidden;[^}]*max-width:\s*30ch;[^}]*text-overflow:\s*ellipsis;/s.test(appCss), "Long branch names must ellipsize at the chrome contract limit");
+assert(/\.titlebar-search span\s*\{[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s.test(appCss), "Titlebar search must stay on one line when adjacent panels are visible");
 assert(tauriBackend.includes('format!("@ {sha}")'), "Detached HEAD must show a useful short SHA in the titlebar");
 assert(appCss.includes("grid-template-rows: 38px minmax(0, 1fr) 6px var(--utility-tray-height, 42px);"), "Workbench must reserve the approved resizable bottom utility tray");
 assert(appTsx.includes('aria-label="Reset interface"'), "Threads header must expose an always-visible interface reset");
@@ -208,6 +211,10 @@ assert(/\.tool-tray-switcher__button--active\s*\{[^}]*box-shadow: inset 0 -2px 0
 assert(appCss.includes("container-name: tool-tabs;"), "Tool tray tabs must own a container for narrow-dock behavior");
 assert(/@container tool-tabs \(max-width: 720px\)\s*\{[\s\S]*?\.tool-tray-tabs__tab span\s*\{[^}]*display: none;[\s\S]*?\.tool-tray-tabs__tab--active span\s*\{[^}]*display: block;/s.test(appCss), "Medium tool trays must collapse inactive labels before tabs overlap");
 assert(/@container tool-tabs \(max-width: 480px\)\s*\{[\s\S]*?\.tool-tray-tabs__tab--active span\s*\{[^}]*display: none;/s.test(appCss), "Minimum-width tool trays must collapse every label");
+assert(mainTsx.includes('new URLSearchParams(window.location.search).get("qa") === "1"'), "App entrypoint must expose the explicit browser-QA bootstrap");
+assert(browserQa.includes('mockIPC(createBrowserQaIpcHandler(), { shouldMockEvents: true })'), "Browser QA must use the official Tauri mock boundary");
+assert(shellQaScript.includes('"http://localhost:$port/?qa=1"'), "App-shell capture must request the deterministic browser-QA fixture");
+assert(!shellQaScript.includes("--channel chrome"), "App-shell capture must use bundled headless Chromium instead of GUI-only Chrome");
 assert(/@media \(max-width: 920px\)\s*\{[\s\S]*?\.settings-workspace__mobile-label,\s*\.settings-workspace__category-select\s*\{[^}]*display: block;/s.test(appCss), "Settings compact navigation must activate within the native 900px minimum width");
 assert(demo.includes("--accent: #67c3d1;"), "Accepted chrome demo must use steel-cyan #67c3d1");
 assert(demo.includes("--accent-strong: #9bd9e3;"), "Accepted chrome demo must use steel-cyan strong #9bd9e3");

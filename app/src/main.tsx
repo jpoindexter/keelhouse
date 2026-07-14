@@ -6,10 +6,19 @@ import "@fontsource/inter/latin-800.css";
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+const bootstrap = async () => {
+  if (new URLSearchParams(window.location.search).get("qa") === "1") {
+    const { setupBrowserQa } = await import("./browserQa");
+    setupBrowserQa();
+  }
+
+  const { default: App } = await import("./App");
+  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+};
+
+void bootstrap();

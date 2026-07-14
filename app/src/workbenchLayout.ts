@@ -11,6 +11,12 @@ export const DEFAULT_TOOL_TRAY_MODE: ToolTrayMode = "files";
 export const DEFAULT_WORKBENCH_SIZING: WorkbenchSizing = { trayPercent: 39, toolSplitPercent: 58 };
 export const DEFAULT_SIDE_DRAWER_WIDTH = 332;
 
+export const normalizeStoredSideDrawerWidth = (value: string | null) => {
+  if (value == null || value.trim() === "") return DEFAULT_SIDE_DRAWER_WIDTH;
+  const width = Number(value);
+  return Number.isFinite(width) ? Math.min(Math.max(width, 220), 420) : DEFAULT_SIDE_DRAWER_WIDTH;
+};
+
 export const effectiveWorkbenchLayout = (
   layout: WorkbenchLayoutMode,
   viewportWidth: number,

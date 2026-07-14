@@ -6,6 +6,7 @@ import {
   DEFAULT_WORKBENCH_LAYOUT,
   DEFAULT_WORKBENCH_SIZING,
   effectiveWorkbenchLayout,
+  normalizeStoredSideDrawerWidth,
   runColumnWidth,
   usableAgentWidth,
 } from "./workbenchLayout";
@@ -54,5 +55,19 @@ describe("workbench layout contract", () => {
     expect(runColumnWidth(agentWidth)).toBeGreaterThanOrEqual(600);
     // Wide windows keep the demo's 860px cap and 56px breathing room.
     expect(runColumnWidth(1400)).toBe(860);
+  });
+});
+
+describe("normalizeStoredSideDrawerWidth", () => {
+  it("uses the product default when no stored width exists", () => {
+    expect(normalizeStoredSideDrawerWidth(null)).toBe(DEFAULT_SIDE_DRAWER_WIDTH);
+    expect(normalizeStoredSideDrawerWidth("")).toBe(DEFAULT_SIDE_DRAWER_WIDTH);
+    expect(normalizeStoredSideDrawerWidth("not-a-number")).toBe(DEFAULT_SIDE_DRAWER_WIDTH);
+  });
+
+  it("restores valid widths and clamps stale values", () => {
+    expect(normalizeStoredSideDrawerWidth("300")).toBe(300);
+    expect(normalizeStoredSideDrawerWidth("100")).toBe(220);
+    expect(normalizeStoredSideDrawerWidth("500")).toBe(420);
   });
 });

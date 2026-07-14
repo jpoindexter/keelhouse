@@ -13,6 +13,7 @@ import {
   DEFAULT_WORKBENCH_LAYOUT,
   DEFAULT_WORKBENCH_SIZING,
   effectiveWorkbenchLayout,
+  normalizeStoredSideDrawerWidth,
 } from "./workbenchLayout";
 import type { ToolTrayMode, WorkbenchLayoutMode, WorkbenchSizing } from "./workbenchLayout";
 
@@ -60,8 +61,7 @@ const readStoredToolTrayMode = (): ToolTrayMode => {
 
 const readStoredSideDrawerWidth = () => {
   try {
-    const value = Number(window.localStorage.getItem(SIDE_DRAWER_WIDTH_STORAGE_KEY));
-    return Number.isFinite(value) ? clamp(value, 220, 420) : DEFAULT_SIDE_DRAWER_WIDTH;
+    return normalizeStoredSideDrawerWidth(window.localStorage.getItem(SIDE_DRAWER_WIDTH_STORAGE_KEY));
   } catch {
     return DEFAULT_SIDE_DRAWER_WIDTH;
   }

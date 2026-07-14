@@ -8,6 +8,8 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 ## Done
 
+- **NARROW APP-SHELL QA (BROWSER EXECUTED 2026-07-14; NATIVE PENDING):** `npm run qa:shell` now boots the real React shell through Tauri's official browser mocks instead of hanging on GUI Chrome or crashing on missing native metadata. Populated 1440x900, 1024x640, and 900x640 captures prove tool labels collapse before collision and the narrow app hides secondary tools rather than crushing chat. The evidence also found and fixed a fresh-install drawer parser bug (`Number(null)` produced 220px instead of the declared 332px) and titlebar search wrapping. Evidence: `docs/qa/app-shell/`. Packaged WebKit resize remains unexecuted while macOS is locked.
+
 - **SPIKE-2 (proven):** full terminal loop in a real Tauri window — pty → `libghostty-vt` (real Ghostty VT parsing, in Rust) → grid snapshot over Tauri IPC → Canvas 2D paint; keydown → Ghostty key `Encoder` → pty. Verified by hand: shell renders, typing/arrows/ctrl-c work, `claude`'s fullscreen TUI renders clean.
 - **Shortcuts (proven):** real key encoder (arrows, ctrl, Option-as-Meta word-nav, Fn, Shift+Enter, re-encodes on cursor/kitty mode change); Cmd+V paste (clipboard plugin, bracketed-aware); mouse drag selection + highlight; Cmd+C copy from selection; Cmd+K clear (native menu item).
 - **Deep research → docs + planning:** `docs/vision-to-reality-2026-07-08.html` (6 areas, 24/25 claims verified). Library choices locked in PRD/ROADMAP/DECISIONS (2026-07-08 entries).
