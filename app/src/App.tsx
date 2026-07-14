@@ -5710,9 +5710,6 @@ function App() {
             <button className="titlebar-action" type="button" title="Open workspace externally" aria-label="Open workspace externally" disabled={!workspacePath} onClick={() => workspacePath && void openPath(workspacePath)}>
               <AppIcon name="openExternal" />
             </button>
-            <button className="titlebar-action" type="button" title="Thread settings" aria-label="Thread settings" onClick={() => setSettingsOpen(true)}>
-              <AppIcon name="settings" />
-            </button>
             <ToolDockMenu
               layout={renderedWorkbenchLayout}
               toolMode={toolTrayMode}

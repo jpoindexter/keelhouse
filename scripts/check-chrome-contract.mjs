@@ -165,6 +165,8 @@ assert(appTsx.includes('aria-label="Toggle Threads"'), "Titlebar must expose the
 assert((appTsx.match(/aria-label="Toggle Threads"/g) ?? []).length === 1, "Threads must have one visible chrome toggle");
 assert(!appTsx.includes('aria-label="Hide Threads"'), "Threads header must not duplicate the titlebar toggle");
 assert(appTsx.includes('aria-label="Toggle Tools"'), "Titlebar must expose the approved tool tray toggle");
+assert(!appTsx.includes('aria-label="Thread settings"'), "Titlebar must not duplicate the global settings action");
+assert(appTsx.includes('aria-label="Open settings and more"'), "Titlebar must keep one global settings and more entry point");
 assert(appTsx.includes('aria-label="Toggle Terminal tray"'), "Titlebar must expose the approved bottom terminal tray toggle");
 assert(appTsx.includes('onClick={() => void toggleRawTerminal()}'), "Bottom terminal tray toggle must use the existing raw-terminal lifecycle path");
 assert(icons.includes("panelBottom: PanelBottom"), "Bottom terminal tray toggle must use the standard PanelBottom icon");
