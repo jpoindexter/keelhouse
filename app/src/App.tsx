@@ -6957,8 +6957,15 @@ function App() {
               </button>
             ))}
             <span className="utility-tray__spacer" />
-            <button className="utility-tray__icon" type="button" title="Collapse tray" aria-label="Collapse utility tray" onClick={() => setAgentSurfaceMode("chat")}>
-              <AppIcon name="chevronDown" />
+            <button
+              className="utility-tray__icon"
+              type="button"
+              title={agentSurfaceMode === "terminal" ? "Collapse tray" : "Expand tray"}
+              aria-label={agentSurfaceMode === "terminal" ? "Collapse utility tray" : "Expand utility tray"}
+              aria-expanded={agentSurfaceMode === "terminal"}
+              onClick={() => void openUtilityTray(utilityTrayMode)}
+            >
+              <AppIcon name={agentSurfaceMode === "terminal" ? "chevronDown" : "chevronUp"} />
             </button>
           </nav>
           <div className={`utility-tray__body utility-tray__body--${utilityTrayMode}`}>

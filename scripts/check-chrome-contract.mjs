@@ -123,6 +123,9 @@ assert(appTsx.includes('className={`utility-tray ${agentSurfaceMode === "termina
 assert(appTsx.includes('hidden={false}'), "Opening the bottom tray must keep the chat timeline visible");
 assert(appTsx.includes('className="agent-composer" aria-label="Agent composer"'), "Opening the bottom tray must keep the chat composer visible");
 assert(appTsx.includes('aria-label="Utility tray surfaces"'), "Bottom tray must expose Terminal, Processes, and Logs modes");
+assert(appTsx.includes('aria-label={agentSurfaceMode === "terminal" ? "Collapse utility tray" : "Expand utility tray"}'), "Bottom tray chevron must describe its current open or closed action");
+assert(appTsx.includes('onClick={() => void openUtilityTray(utilityTrayMode)}'), "Bottom tray chevron must toggle the selected utility surface in both directions");
+assert(appTsx.includes('name={agentSurfaceMode === "terminal" ? "chevronDown" : "chevronUp"}'), "Bottom tray chevron direction must reflect tray state");
 assert(!appTsx.includes('utilityTrayMode === "browser"'), "Browser must not be duplicated in the bottom utility tray");
 assert(appTsx.includes("utilityTrayTabContextMenuItems"), "Bottom utility tabs must expose app-owned context menus");
 assert(appTsx.includes("terminalPaneContextMenuItems"), "Terminal pane tabs must expose lifecycle context menus");
