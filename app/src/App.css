@@ -6934,14 +6934,14 @@ body,
 }
 
 .tool-tray-tabs {
-  height: 38px;
+  height: 40px;
   display: grid;
   grid-template-columns: repeat(4, minmax(38px, 1fr)) 34px;
   container-name: tool-tabs;
   container-type: inline-size;
   gap: 0;
   border-bottom: 1px solid #2b2d36;
-  background: #1d1e25;
+  background: #1b1c23;
   padding-inline-end: 0;
 }
 
@@ -6949,9 +6949,10 @@ body,
   min-width: 0;
   overflow: hidden;
   width: auto;
-  height: 38px;
-  padding: 0;
-  border-right: 1px solid #232530;
+  height: 40px;
+  gap: 6px;
+  padding-inline: 9px;
+  border-right: 0;
   color: #a6a8b6;
   font-size: 13px;
   font-weight: 400;
@@ -6974,13 +6975,20 @@ body,
   color: #ececf4;
 }
 
+.tool-tray-tabs__tab:hover,
+.tool-tray-tabs__icon:hover {
+  background: #252732;
+  color: #ececf4;
+}
+
 .tool-tray-tabs__spacer {
   display: none;
 }
 
 .tool-tray-tabs__icon {
   width: 34px;
-  height: 38px;
+  height: 40px;
+  border-radius: 0;
 }
 
 @container tool-tabs (max-width: 720px) {
@@ -7197,25 +7205,74 @@ body,
   }
 }
 
-/* Chrome convergence: structural parity with demo/keelhouse-chrome-demo.html. */
+/* Chrome convergence: one continuous native titlebar, with pane boundaries used
+   only for orientation. The dock keeps its own compact tab strip below it. */
 .app-titlebar {
-  height: 36px;
+  height: 40px;
+  align-items: stretch;
+  border-bottom-color: #2b2d36;
   background: #1b1c23;
+}
+
+.titlebar-identity {
+  gap: 0;
+  padding-left: 76px;
+  background: transparent;
+}
+
+.titlebar-search {
+  padding-inline: 12px;
+}
+
+.titlebar-splitter {
+  border-right: 1px solid #2b2d36;
+  border-left: 0;
+  background: transparent;
+}
+
+.titlebar-agent-context {
+  gap: 9px;
+  padding-inline: 14px;
+  background: transparent;
+}
+
+.titlebar-workspace {
+  font-weight: 600;
 }
 
 .titlebar-actions {
-  gap: 8px;
-  padding: 0 12px;
-  background: #1b1c23;
+  gap: 6px;
+  padding-inline: 12px;
+  background: transparent;
 }
 
 .titlebar-panel-toggles {
-  gap: 4px;
+  gap: 2px;
 }
 
 .titlebar-action {
   width: 28px;
   height: 28px;
+  border-radius: 3px;
+  color: #a6a8b6;
+}
+
+.titlebar-action:hover {
+  background: #252732;
+  color: #ececf4;
+}
+
+.titlebar-action--active {
+  color: #9bd9e3;
+}
+
+.titlebar-pill {
+  height: 28px;
+  gap: 6px;
+  color: #9bd9e3;
+  font-size: 13px;
+  font-weight: 600;
+  padding-inline: 3px;
 }
 
 .titlebar-workspace .app-icon {
