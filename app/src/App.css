@@ -6631,6 +6631,10 @@ body,
   flex: 0 0 auto;
 }
 
+.agent-composer__menu[open] {
+  z-index: 31;
+}
+
 .agent-composer__menu > summary {
   list-style: none;
 }
@@ -7480,7 +7484,7 @@ body,
 
 .agent-composer__card {
   grid-template-rows: minmax(78px, 1fr) minmax(34px, auto);
-  overflow: hidden;
+  overflow: visible;
   border-color: #343642;
   border-radius: 12px;
   background: #1b1c23;

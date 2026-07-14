@@ -14,6 +14,7 @@
     "qa:daily-driver": "node ../scripts/collect-daily-driver-metrics.mjs",
     "qa:perf-budget": "node ../scripts/collect-perf-budget.mjs",
     "qa:runtime-perf": "node ../scripts/capture-runtime-comparison.mjs",
+    "qa:module-size": "node ../scripts/check-module-size.mjs",
     "package:mac": "PATH=/opt/homebrew/opt/zig@0.15/bin:$PATH ../scripts/build-macos-app.sh",
     "tauri": "tauri"
   },

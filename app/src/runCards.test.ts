@@ -57,4 +57,20 @@ describe("run card provenance", () => {
     expect(source).not.toContain("terminalSnapshotText");
     expect(source).not.toContain("paneTranscripts");
   });
+
+  it("reveals the editor tray after Review opens a file or diff", () => {
+    const source = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const reviewAction = source.slice(source.indexOf("const reviewRunCardFile"), source.indexOf("const gitActionLabel"));
+
+    expect(reviewAction).toContain('setToolTrayMode("editor")');
+    expect(reviewAction).toContain('setWorkbenchLayout("right")');
+  });
+
+  it("binds hook status cards to the durable chat handle", () => {
+    const source = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const hookHandler = source.slice(source.indexOf('if (request.tool === "create_shell")'), source.indexOf('await respond(true, "Status recorded'));
+
+    expect(hookHandler).toContain("recordAgentActivity(activeChatActivityHandle()");
+    expect(hookHandler).not.toContain("recordAgentActivity(activeAgentActivityHandle()");
+  });
 });

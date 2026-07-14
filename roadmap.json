@@ -1005,14 +1005,14 @@
     {
       "id": "AGENT-HOOKS",
       "title": "Built-in agent MCP/API hooks",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "core",
       "size": "M",
       "launch": "v2",
       "summary": "Give Claude/Codex-style agents a first-class way to cooperate with the app without making a plugin platform: inspect projects/panes/open files, request focus/split/new-pane actions, open diffs, and report task status through app-owned commands.",
       "done": "A local permissioned MCP/API endpoint exposes documented app-owned commands; actions that mutate files, git state, panes, or project layout require visible approval/undo where appropriate; every agent action is attributed in the UI/log.",
-      "progress": "Implementation checkpoint 2026-07-14: Keelhouse now starts a random loopback Streamable HTTP MCP endpoint, writes a mode-0600 bearer configuration, publishes list_projects/get_workspace_state plus focus_pane/open_file/create_shell/report_status, snapshots live project/chat/pane/file state, routes actions through the existing appActions approval and attribution boundary, and filters stale queued actions. Rust tests cover the tool catalog, private config, and request queue. The packaged endpoint executed initialize, tools/list, and get_workspace_state and rejected missing auth with HTTP 401. Remaining before Done: unlock macOS and execute one packaged attributed UI action; locked sessions intentionally time out rather than mutating an inactive UI. See docs/agent-hooks.md.",
+      "progress": "Completed 2026-07-14: Keelhouse starts a random loopback Streamable HTTP MCP endpoint, writes a mode-0600 bearer configuration, publishes list_projects/get_workspace_state plus focus_pane/open_file/create_shell/report_status, snapshots live project/chat/pane/file state, routes actions through appActions approval and attribution, and filters stale queued actions. The packaged endpoint executed authenticated reads, rejected missing auth with HTTP 401, and completed create_shell through the native approval sheet; OK returned success, created a blank shell pane, and rendered attributed approval/process rows. See docs/agent-hooks.md.",
       "buildOrder": 91.3
     },
     {
@@ -1329,6 +1329,19 @@
       "buildOrder": 90
     },
     {
+      "id": "MODULARITY-300-200-50",
+      "title": "Eliminate 300/200/50 module debt",
+      "column": "now",
+      "tier": "rock",
+      "track": "quality",
+      "size": "L",
+      "launch": "v2",
+      "summary": "Keep the app repairable by limiting source files to 300 lines, React component files to 200 lines, and functions/components/hooks to 50 lines. Extract behavior along existing ownership boundaries without changing the approved chrome or runtime behavior.",
+      "done": "npm run qa:module-size passes with an empty legacy baseline; App.tsx, App.css, settings, chat, context-menu, workbench-layout, and workspace-state owners all meet 300/200/50; focused tests and packaged smoke preserve chat, trays, terminal, editor, browser, menus, and session restore.",
+      "progress": "2026-07-14: added a TypeScript-AST-backed qa:module-size ratchet, documented the rule, and captured 13 legacy debt files. New violations and any growth in file length, long-function count, or longest function now fail. Newly added composerMenus source and tests comply. Remaining: extract the 13 baseline files to zero without changing behavior.",
+      "buildOrder": 90.15
+    },
+    {
       "id": "CHROME-CONTRACT-V2",
       "title": "Chrome contract gate v2",
       "column": "next",
@@ -1344,14 +1357,14 @@
     {
       "id": "RUN-CARDS-ADAPTER",
       "title": "Structured run cards via hooks",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "core",
       "size": "M",
       "launch": "v2",
       "summary": "The demo's structured thinking, working-plan, edited-file-with-Review, and approval cards, fed by real agent events through AGENT-HOOKS adapters and never inferred from terminal text. Reuses the card components shipped in RUN-SURFACE-COMPOSITION. Blind-audit 2026-07-11 addition: the boundary gets a mechanical provenance gate — an automated check that every rendered run card traces to an explicit event source (appActions/agentActivityEvents/hook payloads), so a future regex-on-terminal-text regression fails loudly; PRD carries the v1/v2 expectation caveat so the demo's structured cards are not read as a v1 promise.",
       "done": "With a hook-connected agent, real events render as demo-spec cards; without hooks, Run remains terminal-backed with no fabricated structure; a provenance test fails if any card renders from terminal-text parsing.",
-      "progress": "Implementation checkpoint 2026-07-14: provider, app-action, and agent-hook events now carry explicit provenance plus typed thinking/plan/file/approval/command/tool card kinds. File cards preserve targets and open Review into Git diff or editor. SQLite migration v5 persists attribution. Automated tests reject terminal-text fabrication and cover provider/hook mapping plus durable round trips. The locked macOS session prevents the remaining packaged hook-connected visual and Review execution, so the card stays open in Next.",
+      "progress": "Completed 2026-07-14: provider, app-action, and agent-hook events carry explicit provenance plus typed thinking/plan/file/approval/command/tool card kinds. File cards preserve targets and open Review into Git diff or editor. SQLite migration v5 persists attribution. Tests reject terminal-text fabrication and cover provider/hook mapping plus durable round trips. Packaged MCP report_status calls rendered real plan/file/command cards; Review revealed README.md in Editor, and a chat-bound hook card survived kill/relaunch. See docs/run-cards-adapter.md.",
       "buildOrder": 91.4
     },
     {

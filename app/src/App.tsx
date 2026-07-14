@@ -3,7 +3,7 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { readImage, readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { open } from "@tauri-apps/plugin-dialog";
+import { confirm as confirmDialog, open } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { load } from "@tauri-apps/plugin-store";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
@@ -15,6 +15,7 @@ import type { NodeRendererProps, TreeApi } from "react-arborist";
 import { DraftNavigationDialog } from "./DraftNavigationDialog";
 import { EditorSaveError } from "./EditorSaveError";
 import { OrchestrationDialog } from "./OrchestrationDialog";
+import { closeOtherOpenComposerMenus } from "./composerMenus";
 import {
   browserHistoryCanGoBack,
   browserHistoryCanGoForward,
@@ -524,6 +525,14 @@ function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<FileTreeNode
     </div>
   );
 }
+
+const handleComposerMenuToggle = (event: FormEvent<HTMLDetailsElement>) => {
+  const current = event.currentTarget;
+  const menus = current
+    .closest(".agent-composer__bar")
+    ?.querySelectorAll<HTMLDetailsElement>("details.agent-composer__menu[open]");
+  closeOtherOpenComposerMenus(current, menus ?? []);
+};
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1119,12 +1128,20 @@ function App() {
     const normalized = relativePath.trim().replace(/^\.\//, "");
     const changedFile = gitStatus?.files.find((file) => file.path === normalized);
     if (changedFile) {
-      await openGitDiff(changedFile);
+      const opened = await openGitDiff(changedFile);
+      if (opened) {
+        if (workbenchLayout === "hidden") setWorkbenchLayout("right");
+        setToolTrayMode("editor");
+      }
       return;
     }
     const root = workspacePathRef.current;
     if (root && normalized) {
-      await requestOpenEditorFile(fileNodeFromPath(`${root}/${normalized}`, "file"), { focusEditor: true });
+      const opened = await requestOpenEditorFile(fileNodeFromPath(`${root}/${normalized}`, "file"), { focusEditor: true });
+      if (opened) {
+        if (workbenchLayout === "hidden") setWorkbenchLayout("right");
+        setToolTrayMode("editor");
+      }
     }
   };
 
@@ -1891,8 +1908,7 @@ function App() {
     });
   };
 
-  const activeAgentActivityHandle = (): AgentSessionHandleDescriptor | null => {
-    if (activeAgentSessionDescriptorRef.current) return activeAgentSessionDescriptorRef.current;
+  const activeChatActivityHandle = (): AgentSessionHandleDescriptor | null => {
     const projectId = workspacePathRef.current;
     const projectSessionId = activeSessionForProject(projectId);
     if (!projectId || !projectSessionId) return null;
@@ -1912,6 +1928,9 @@ function App() {
       activity: { label: "Agent hook", status: "running", updatedAt: Date.now() },
     };
   };
+
+  const activeAgentActivityHandle = (): AgentSessionHandleDescriptor | null =>
+    activeAgentSessionDescriptorRef.current ?? activeChatActivityHandle();
 
   const detectLocalDevServerFromSnapshot = (paneId: number, snapshot: Snapshot) => {
     const url = detectLocalDevServerUrl(terminalSnapshotText(snapshot));
@@ -1964,7 +1983,7 @@ function App() {
     action: AppActionDescriptor,
     handle: AgentSessionHandleDescriptor | null = activeAgentActivityHandle(),
   ) => {
-    const audit = await resolveAppAction(action, agentApprovalMode, (_action, message) => window.confirm(message));
+    const audit = await resolveAppAction(action, agentApprovalMode, (_action, message) => confirmDialog(message));
     if (shouldLogAppActionAudit(audit)) {
       recordAgentActivity(handle, {
         kind: "approval",
@@ -2244,7 +2263,7 @@ function App() {
   const requestOpenWorkspace = async (path: string) => {
     setBackgroundExits((exits) => clearBackgroundExitsForProject(exits, path));
     if (dirtyTabPaths.length > 1) {
-      const ok = window.confirm(`Switch workspace and discard ${dirtyTabPaths.length} unsaved editor tabs?`);
+      const ok = await confirmDialog(`Switch workspace and discard ${dirtyTabPaths.length} unsaved editor tabs?`);
       if (!ok) return false;
     } else if (dirtyTabPaths.length === 1) {
       const dirtyTab = editorTabs.find((tab) => tab.path === dirtyTabPaths[0]);
@@ -2318,7 +2337,7 @@ function App() {
       .filter(([key, conversation]) => key.startsWith(`${project.path}\n`) && conversation.activeRunId)
       .length;
     const paneCount = terminalPanesForProject(project.path).filter((pane) => pane.state !== "exited").length;
-    if ((runCount > 0 || paneCount > 0) && !window.confirm(`Close ${basename(project.path)} and stop ${runCount + paneCount} running task${runCount + paneCount === 1 ? "" : "s"}?`)) {
+    if ((runCount > 0 || paneCount > 0) && !await confirmDialog(`Close ${basename(project.path)} and stop ${runCount + paneCount} running task${runCount + paneCount === 1 ? "" : "s"}?`)) {
       return false;
     }
     if (project.path === workspacePathRef.current && dirtyTabPaths.length === 1 && selectedFileRef.current) {
@@ -2326,7 +2345,7 @@ function App() {
       setPendingNavigation({ kind: "close-project", projectPath: project.path });
       return false;
     }
-    if (project.path === workspacePathRef.current && dirtyTabPaths.length > 1 && !window.confirm(`Close ${basename(project.path)} with ${dirtyTabPaths.length} unsaved editor tabs?`)) {
+    if (project.path === workspacePathRef.current && dirtyTabPaths.length > 1 && !await confirmDialog(`Close ${basename(project.path)} with ${dirtyTabPaths.length} unsaved editor tabs?`)) {
       return false;
     }
     return closeProjectDirect(project.path);
@@ -2402,7 +2421,7 @@ function App() {
   const deleteProjectSession = async (projectPath: string, session: ProjectSession) => {
     const existing = projectSessionsRef.current[projectPath] ?? [];
     if (existing.length <= 1) return;
-    const ok = window.confirm(`Delete chat "${session.title}"? Its messages and saved workspace context will be removed.`);
+    const ok = await confirmDialog(`Delete chat "${session.title}"? Its messages and saved workspace context will be removed.`);
     if (!ok) return;
     const contextKey = paneContextKey(projectPath, session.id);
     const ownedPanes = terminalPanesForSession(projectPath, session.id);
@@ -3926,7 +3945,7 @@ function App() {
     if (
       affectedSelectedFile &&
       editorDirty &&
-      !window.confirm("Rename this item and discard the unsaved editor buffer?")
+      !await confirmDialog("Rename this item and discard the unsaved editor buffer?")
     ) {
       return;
     }
@@ -3960,8 +3979,8 @@ function App() {
     if (!root) return;
     const affectedSelectedFile = selectedFileIsWithin(node);
     const message = `Delete ${node.kind === "directory" ? "folder" : "file"} "${node.name}"? This cannot be undone.`;
-    if (!window.confirm(message)) return;
-    if (affectedSelectedFile && editorDirty && !window.confirm("The selected file has unsaved changes. Delete anyway?")) return;
+    if (!await confirmDialog(message)) return;
+    if (affectedSelectedFile && editorDirty && !await confirmDialog("The selected file has unsaved changes. Delete anyway?")) return;
     setFileOpError(null);
     try {
       await invoke("delete_workspace_path", { root, path: node.path });
@@ -4245,7 +4264,7 @@ function App() {
         setLaunchError(`Save or discard the dirty editor buffer before restore: ${protectedDirtyPath}`);
         return;
       }
-      if (!window.confirm(checkpointPreviewMessage(preview))) return;
+      if (!await confirmDialog(checkpointPreviewMessage(preview))) return;
       const audit = await gateAppAction(createAppAction({
         kind: "restore-checkpoint",
         label: "Restore workspace checkpoint",
@@ -5025,7 +5044,7 @@ function App() {
   const closeEditorTab = async (tab: FileTreeNode) => {
     captureCurrentEditorViewState();
     captureCurrentEditorBuffer();
-    if (tabIsDirty(tab.path) && !window.confirm(`Close ${tab.name} and discard unsaved changes?`)) return;
+    if (tabIsDirty(tab.path) && !await confirmDialog(`Close ${tab.name} and discard unsaved changes?`)) return;
     const result = removeEditorTab(editorTabs, selectedFileRef.current?.path ?? null, tab.path);
     setEditorTabs(result.tabs);
     delete editorBuffersRef.current[tab.path];
@@ -5123,7 +5142,7 @@ function App() {
           ? request.arguments.targets.filter((target): target is string => typeof target === "string" && Boolean(target.trim())).map((target) => target.trim()).slice(0, 24)
           : [];
         if (!status) throw new Error("report_status requires a status label.");
-        recordAgentActivity(activeAgentActivityHandle(), {
+        recordAgentActivity(activeChatActivityHandle(), {
           kind: runCardKind === "file" ? "file" : runCardKind === "approval" ? "approval" : "tool",
           label: status,
           detail: detail || "Reported through the Keelhouse agent hook.",
@@ -6969,7 +6988,7 @@ function App() {
                   >
                     <AppIcon name="plus" />
                   </button>
-                  <details className="agent-composer__menu agent-composer__menu--permission">
+                  <details className="agent-composer__menu agent-composer__menu--permission" onToggle={handleComposerMenuToggle}>
                     <summary className={`agent-composer__control ${activeComposerHarness.approvalMode === "fullAccess" ? "agent-composer__control--warning" : ""}`}>
                       <AppIcon name="shield" />
                       <span>{composerApprovalLabel(activeComposerHarness.approvalMode)}</span>
@@ -6999,7 +7018,7 @@ function App() {
                       ))}
                     </div>
                   </details>
-                  <details className="agent-composer__menu agent-composer__menu--goal">
+                  <details className="agent-composer__menu agent-composer__menu--goal" onToggle={handleComposerMenuToggle}>
                     <summary className={`agent-composer__control ${activeComposerHarness.goal ? "agent-composer__control--active" : ""}`}>
                       <AppIcon name="target" />
                       <span>Goal</span>
@@ -7045,7 +7064,7 @@ function App() {
                   ) : null}
                 </div>
                 <div className="agent-composer__actions">
-                  <details className="agent-composer__menu agent-composer__menu--runtime">
+                  <details className="agent-composer__menu agent-composer__menu--runtime" onToggle={handleComposerMenuToggle}>
                     <summary className="agent-composer__control agent-composer__control--runtime">
                       <AppIcon name="agent" />
                       <span>{activeComposerProviderLabel}</span>
@@ -7381,8 +7400,8 @@ function App() {
           onAddCustomTerminalProfile={(label, command) => void addCustomTerminalProfile(label, command)}
           keybindingOverrides={keybindingOverrides}
           onResetLocalData={() => {
-            if (!window.confirm("Reset all local data? This clears saved projects, chats, transcripts, layout, and local state files. This cannot be undone.")) return;
             void (async () => {
+              if (!await confirmDialog("Reset all local data? This clears saved projects, chats, transcripts, layout, and local state files. This cannot be undone.")) return;
               await Promise.all(connectionSecretKeys(aiConnectionSettings).map((key) =>
                 invoke("delete_connection_secret", { key }).catch(() => null)
               ));

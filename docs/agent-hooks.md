@@ -35,4 +35,4 @@ Mutating requests are queued for the renderer and are discarded if their caller 
 
 ## Verification
 
-Rust tests cover the fixed tool catalog, private bearer configuration, and stale-request filtering. The packaged app has executed authenticated `initialize`, `tools/list`, and `get_workspace_state`, and rejected an unauthenticated request with HTTP 401. Packaged action execution remains open until the Mac is unlocked and an attributed action can be observed in the native UI.
+Rust tests cover the fixed tool catalog, private bearer configuration, and stale-request filtering. The packaged app executed authenticated `initialize`, `tools/list`, and `get_workspace_state`, rejected an unauthenticated request with HTTP 401, and completed a real `create_shell` request through the native approval sheet. Selecting **OK** returned `ok: true`, created a blank shell pane, and added attributed `Action approved` and `Created pane` rows to the active chat.

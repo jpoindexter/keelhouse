@@ -24,4 +24,4 @@ Messages without both fields remain ordinary tool output. `runCards.test.ts` enf
 
 ## Verification
 
-Automated tests cover provider thinking, command, file, plan, and approval attribution; hook attribution; terminal-text rejection; SQLite migration and round-trip persistence; and renderer source restrictions. The remaining Done criterion is a packaged, hook-connected run that visually exercises real cards and the file Review action.
+Automated tests cover provider thinking, command, file, plan, and approval attribution; hook attribution; terminal-text rejection; SQLite migration and round-trip persistence; and renderer source restrictions. Packaged verification sent real `report_status` plan, file, and command events through the authenticated MCP hook. The file card's **Review** action revealed the Editor with `README.md`, and a hook card bound to the stable chat handle remained visible after the packaged app was killed and relaunched.

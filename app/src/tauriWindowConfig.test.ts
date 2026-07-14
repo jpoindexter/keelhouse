@@ -30,4 +30,11 @@ describe("native first-open window", () => {
 
     expect(capability.permissions).toContain("dialog:allow-confirm");
   });
+
+  it("awaits the official Tauri confirmation API instead of the injected window shim", () => {
+    const app = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+
+    expect(app).toContain('confirm as confirmDialog');
+    expect(app).not.toContain("window.confirm(");
+  });
 });

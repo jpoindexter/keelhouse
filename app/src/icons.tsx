@@ -3,7 +3,6 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  Bot,
   Bookmark,
   Brain,
   CheckCircle2,
@@ -13,6 +12,7 @@ import {
   Circle,
   Clock3,
   Copy,
+  Cpu,
   FilePlus2,
   FileText,
   Folder,
@@ -87,7 +87,7 @@ export type AppIconName =
   | "workspace";
 
 export const ICONS: Record<AppIconName, IconComponent> = {
-  agent: Bot,
+  agent: Cpu,
   back: ArrowLeft,
   browser: Globe2,
   bookmark: Bookmark,

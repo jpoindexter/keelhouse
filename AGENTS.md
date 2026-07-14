@@ -30,6 +30,8 @@ Pin Zig to `0.15.2` for Ghostty-related Rust work; default `0.16` is known to br
 
 Use the existing style in each app/spike. TypeScript uses ES modules, React function components, two-space indentation, double quotes, `PascalCase` components, and `camelCase` helpers. Rust uses `rustfmt`, explicit `expect(...)` context where failures are unrecoverable in spikes, and small focused functions. Keep comments sparse; explain terminal, pty, rendering, or decision constraints.
 
+Apply the 300/200/50 rule to app source: at most 300 lines per source file, 200 per React component file, and 50 per function, component, or hook. Run `cd app && npm run qa:module-size`. Existing violations are a ratcheted migration baseline and must not grow; new files receive no exception.
+
 ## Testing Guidelines
 
 There is no unified test suite yet. Treat `npm run build` in `app/` and `cargo test` in `app/src-tauri/` as minimum verification for touched app code. For terminal/rendering work, prefer real-path checks: pty bytes, Ghostty parsing, canvas paint, keyboard roundtrip, and paste/resize behavior. Name future tests after behavior, for example `keyboard_roundtrip_handles_ctrl_l`.
