@@ -14,6 +14,7 @@ import { Tree } from "react-arborist";
 import type { NodeRendererProps, TreeApi } from "react-arborist";
 import { DraftNavigationDialog } from "./DraftNavigationDialog";
 import { EditorSaveError } from "./EditorSaveError";
+import { OrchestrationDialog } from "./OrchestrationDialog";
 import {
   browserHistoryCanGoBack,
   browserHistoryCanGoForward,
@@ -256,6 +257,7 @@ import type { TerminalFindHit } from "./terminalFind";
 import { ChatThreadSurface } from "./ChatThreadSurface";
 import {
   appendUserChatMessage,
+  appendToolChatMessage,
   applyChatRunEnvelope,
   chatProviderLabel,
   chatTitleFromPrompt,
@@ -283,6 +285,12 @@ import {
 import { mergeChatDiscoveryResults, type ChatSearchResult, type ChatSearchViewResult } from "./chatDiscovery";
 import { ToolDockMenu } from "./ToolDockMenu";
 import { ToolTrayTabs } from "./ToolTrayTabs";
+import {
+  buildOrchestrationPreview,
+  childPrompt,
+  orchestrationTargets,
+  type OrchestrationChildDraft,
+} from "./chatOrchestration";
 import { ContextMenu, type ContextMenuItem, type ContextMenuState } from "./ContextMenu";
 import { paneContextBelongsToProject, paneContextKey, paneContextParts, removeProjectPaneContexts } from "./paneOwnership";
 import "./App.css";
@@ -629,6 +637,9 @@ function App() {
   const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
   const [commandPaletteActiveIndex, setCommandPaletteActiveIndex] = useState(0);
   const [commandPaletteSources, setCommandPaletteSources] = useState({ ...DEFAULT_COMMAND_PALETTE_SOURCES });
+  const [orchestrationOpen, setOrchestrationOpen] = useState(false);
+  const [orchestrationLaunching, setOrchestrationLaunching] = useState(false);
+  const [orchestrationError, setOrchestrationError] = useState<string | null>(null);
   const [terminalFindOpen, setTerminalFindOpen] = useState(false);
   const [terminalFindQuery, setTerminalFindQuery] = useState("");
   const [terminalFindHits, setTerminalFindHits] = useState<TerminalFindHit[]>([]);
@@ -2711,6 +2722,7 @@ function App() {
             approvalMode: activeComposerHarness.approvalMode,
             model: activeComposerHarness.model.trim() || aiConnectionSettings.providerModels[provider].trim() || null,
             reasoningEffort: activeComposerHarness.reasoningEffort === "default" ? null : activeComposerHarness.reasoningEffort,
+            budgetSeconds: null,
             environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, workspacePathRef.current),
           },
         });
@@ -2761,6 +2773,217 @@ function App() {
     } catch (err) {
       setComposerError(String(err));
     }
+  };
+
+  const launchOrchestration = async (drafts: OrchestrationChildDraft[]) => {
+    const projectPath = workspacePathRef.current;
+    const parentSessionId = activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, projectPath);
+    if (!projectPath || !parentSessionId) {
+      setOrchestrationError("Open a project chat before launching child chats.");
+      return;
+    }
+    const activeRunCount = Object.values(chatConversationsRef.current).filter((conversation) => conversation.activeRunId).length;
+    const preview = buildOrchestrationPreview(drafts, activeRunCount);
+    if (preview.errors.length > 0) {
+      setOrchestrationError(preview.errors[0]);
+      return;
+    }
+    const parentSession = projectSessionsRef.current[projectPath]?.find((session) => session.id === parentSessionId);
+    if (!parentSession) {
+      setOrchestrationError("The parent chat is no longer available.");
+      return;
+    }
+    const audit = await gateAppAction(createAppAction({
+      kind: "launch-orchestration",
+      label: `Launch ${preview.children.length} parallel child chats`,
+      target: `${basename(projectPath)} · ${parentSession.title}`,
+      risk: "medium",
+      requestedBy: "user",
+      reason: "Each child is durable, independently cancellable, and bounded by a wall-clock budget.",
+    }));
+    if (audit.decision !== "approved") return;
+
+    setOrchestrationLaunching(true);
+    setOrchestrationError(null);
+    try {
+    const dispatchId = `dispatch-${crypto.randomUUID()}`;
+    const now = Date.now();
+    const parentChatId = composerHarnessSessionKey(projectPath, parentSessionId);
+    const parentConversation = updateChatConversation(parentChatId, (conversation) => appendToolChatMessage(
+      conversation,
+      "Parallel dispatch",
+      `${preview.children.length} child chats prepared. Open any child from the project rail to inspect or stop it.`,
+      dispatchId,
+      now,
+    ));
+    const parentMessageId = parentConversation.messages[parentConversation.messages.length - 1]?.id ?? dispatchId;
+    let nextSessions = projectSessionsRef.current;
+    let nextConversations = chatConversationsRef.current;
+    let nextHarnessRecords = composerHarnessBySessionRef.current;
+    const launches: Array<{ chatId: string; runId: string; projectPath: string; child: OrchestrationChildDraft }> = [];
+    const setupErrors: string[] = [];
+    let launchedCount = 0;
+
+    for (const [index, child] of preview.children.entries()) {
+      const sessionId = `session-${crypto.randomUUID()}`;
+      const chatId = composerHarnessSessionKey(projectPath, sessionId);
+      const runId = `chat-run-${crypto.randomUUID()}`;
+      let childProjectPath = projectPath;
+      let worktree: WorktreeResponse | null = null;
+      let setupError: string | null = null;
+      if (child.worktreeMode === "isolated") {
+        try {
+          worktree = await invoke<WorktreeResponse>("create_project_worktree", {
+            root: projectPath,
+            label: `${child.title || `child-${index + 1}`}-${dispatchId.slice(-8)}`,
+          });
+          childProjectPath = worktree.path;
+        } catch (error) {
+          setupError = `Could not create isolated worktree: ${String(error)}`;
+          setupErrors.push(`${child.title}: ${setupError}`);
+        }
+      }
+      const prompt = childPrompt(child, index, preview.children.length, parentSession.title);
+      const baseConversation = {
+        ...emptyChatConversation(now + index + 1, child.provider),
+        fork: { parentChatId, parentMessageId, forkedAt: now + index + 1 },
+      };
+      let conversation = appendUserChatMessage(baseConversation, prompt, now + index + 1);
+      if (setupError) {
+        conversation = applyChatRunEnvelope(startChatRun(conversation, runId, now + index + 2), {
+          runId,
+          chatId,
+          provider: child.provider,
+          stream: "lifecycle",
+          event: { type: "run.completed", exitCode: 1, message: setupError },
+        }, now + index + 3);
+      } else {
+        conversation = startChatRun(conversation, runId, now + index + 2);
+        launches.push({ chatId, runId, projectPath: childProjectPath, child });
+      }
+      const session: ProjectSession = {
+        id: sessionId,
+        title: child.title || `Agent ${index + 1}`,
+        status: setupError ? "attention" : "running",
+        updatedAt: now + index + 1,
+        parentSessionId,
+        parentMessageId,
+        forkedAt: now + index + 1,
+        orchestration: {
+          dispatchId,
+          parentSessionId,
+          index,
+          count: preview.children.length,
+          task: child.task,
+          provider: child.provider,
+          ...(child.model ? { model: child.model } : {}),
+          approvalMode: child.approvalMode,
+          budgetSeconds: child.budgetSeconds,
+          targets: orchestrationTargets(child.targetFiles),
+          worktreeMode: child.worktreeMode,
+          ...(worktree ? { worktreePath: worktree.path, worktreeBranch: worktree.branch } : {}),
+        },
+      };
+      nextSessions = upsertProjectSession(nextSessions, projectPath, session);
+      nextConversations = { ...nextConversations, [chatId]: conversation };
+      nextHarnessRecords = {
+        ...nextHarnessRecords,
+        [chatId]: {
+          ...defaultComposerHarnessState(child.provider),
+          approvalMode: child.approvalMode,
+          model: child.model,
+        },
+      };
+      await saveDurableChatConversation(chatId, conversation);
+    }
+
+    chatConversationsRef.current = nextConversations;
+    setChatConversations(nextConversations);
+    await persistComposerHarnessRecords(nextHarnessRecords);
+    await persistProjectSessions(nextSessions, activeSessionByProjectRef.current);
+    setOrchestrationOpen(false);
+
+    for (const launch of launches) {
+      try {
+        await invoke("start_chat_run", {
+          request: {
+            runId: launch.runId,
+            chatId: launch.chatId,
+            projectPath: launch.projectPath,
+            provider: launch.child.provider,
+            providerThreadId: null,
+            prompt: childPrompt(launch.child, preview.children.indexOf(launch.child), preview.children.length, parentSession.title),
+            images: [],
+            approvalMode: launch.child.approvalMode,
+            model: launch.child.model || aiConnectionSettingsRef.current.providerModels[launch.child.provider].trim() || null,
+            reasoningEffort: null,
+            budgetSeconds: launch.child.budgetSeconds,
+            environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, projectPath),
+          },
+        });
+        launchedCount += 1;
+      } catch (error) {
+        updateChatConversation(launch.chatId, (conversation) => applyChatRunEnvelope(conversation, {
+          runId: launch.runId,
+          chatId: launch.chatId,
+          provider: launch.child.provider,
+          stream: "lifecycle",
+          event: { type: "run.completed", exitCode: 1, message: String(error) },
+        }));
+        setupErrors.push(`${launch.child.title}: ${String(error)}`);
+      }
+    }
+    setActionNotice(setupErrors.length > 0
+      ? `Launched ${launchedCount} child chats; ${setupErrors.length} need attention`
+      : `Launched ${launchedCount} parallel child chats`);
+    } catch (error) {
+      setOrchestrationError(`Could not launch parallel child chats: ${String(error)}`);
+    } finally {
+      setOrchestrationLaunching(false);
+    }
+  };
+
+  const stopChildChatRun = async (projectPath: string, session: ProjectSession) => {
+    const runId = chatConversationsRef.current[composerHarnessSessionKey(projectPath, session.id)]?.activeRunId;
+    if (!runId) return;
+    await invoke("stop_chat_run", { runId });
+    setActionNotice(`Stopping ${session.title}`);
+  };
+
+  const returnChildResult = async (projectPath: string, session: ProjectSession) => {
+    const metadata = session.orchestration;
+    if (!metadata || metadata.returnedAt) return;
+    const childConversation = chatConversationsRef.current[composerHarnessSessionKey(projectPath, session.id)];
+    const result = [...(childConversation?.messages ?? [])].reverse().find((message) => message.role === "assistant");
+    if (!result) {
+      setActionNotice("This child has no assistant result yet");
+      return;
+    }
+    const parentChatId = composerHarnessSessionKey(projectPath, metadata.parentSessionId);
+    updateChatConversation(parentChatId, (conversation) => appendToolChatMessage(
+      conversation,
+      `${session.title} result`,
+      result.text,
+      `${metadata.dispatchId}:${session.id}:result`,
+    ));
+    await updateProjectSessionMetadata(projectPath, session.id, {
+      orchestration: { ...metadata, returnedAt: Date.now() },
+    });
+    setActionNotice(`Returned ${session.title} to its parent chat`);
+  };
+
+  const removeChildWorktree = async (projectPath: string, session: ProjectSession) => {
+    const metadata = session.orchestration;
+    if (!metadata?.worktreePath || !metadata.worktreeBranch) return;
+    await invoke("remove_project_worktree", {
+      root: projectPath,
+      worktreePath: metadata.worktreePath,
+      branch: metadata.worktreeBranch,
+    });
+    await updateProjectSessionMetadata(projectPath, session.id, {
+      orchestration: { ...metadata, worktreePath: undefined, worktreeBranch: undefined },
+    });
+    setActionNotice(`Removed ${session.title} worktree`);
   };
 
   const resolveChatApproval = async (
@@ -4043,6 +4266,29 @@ function App() {
     }),
     menuItem("session.rename", "Rename Chat", () => renameProjectSession(projectPath, session), { icon: "file" }),
     menuItem("session.copy-name", "Copy Chat Name", async () => { await writeText(session.title); setActionNotice("Copied chat name"); }, { icon: "file" }),
+    ...(session.orchestration ? [
+      menuItem("session.stop-child", "Stop Child Run", () => stopChildChatRun(projectPath, session), {
+        icon: "stop",
+        danger: true,
+        disabled: !chatConversationsRef.current[composerHarnessSessionKey(projectPath, session.id)]?.activeRunId,
+      }),
+      menuItem("session.return-child", session.orchestration.returnedAt ? "Result Returned" : "Return Result to Parent", () => returnChildResult(projectPath, session), {
+        icon: "send",
+        disabled: Boolean(session.orchestration.returnedAt)
+          || Boolean(chatConversationsRef.current[composerHarnessSessionKey(projectPath, session.id)]?.activeRunId)
+          || !chatConversationsRef.current[composerHarnessSessionKey(projectPath, session.id)]?.messages.some((message) => message.role === "assistant"),
+      }),
+      ...(session.orchestration.worktreePath ? [menuItem(
+        "session.remove-child-worktree",
+        "Remove Child Worktree",
+        () => removeChildWorktree(projectPath, session),
+        {
+          icon: "close",
+          danger: true,
+          disabled: Boolean(chatConversationsRef.current[composerHarnessSessionKey(projectPath, session.id)]?.activeRunId),
+        },
+      )] : []),
+    ] : []),
     menuItem("session.capture-checkpoint", session.checkpointId ? "Replace Workspace Checkpoint" : "Capture Workspace Checkpoint", () => captureSessionCheckpoint(projectPath, session), {
       icon: "save",
       disabled: projectPath !== workspacePath,
@@ -4375,6 +4621,13 @@ function App() {
       disabled: !selectedFile,
     }),
     menuItem("composer.attach-preview", "Attach Browser Preview", () => attachPreviewToComposer(), { icon: "browser" }),
+    menuItem("composer.parallel", "Run Parallel Child Chats", () => {
+      setOrchestrationError(null);
+      setOrchestrationOpen(true);
+    }, {
+      icon: "agent",
+      disabled: !workspacePath || !activeSessionId || Boolean(activeChatConversation.activeRunId),
+    }),
     menuItem("composer.stop", "Stop Chat Run", () => stopActiveChatRun(), {
       icon: "stop",
       danger: true,
@@ -4391,6 +4644,18 @@ function App() {
     ? terminalPaneLabel(activeTerminalPane, activeTerminalPaneCommandIndex >= 0 ? activeTerminalPaneCommandIndex : activeTerminalPane.slot)
     : null;
   const commandPaletteCommands: CommandPaletteCommand[] = [
+    {
+      id: "chat.parallel",
+      label: "Run Parallel Child Chats",
+      detail: "Preview and launch 2-8 bounded child chats",
+      icon: "agent",
+      disabled: !workspacePath || !activeSessionId || Boolean(activeChatConversation.activeRunId),
+      keywords: ["agents", "orchestration", "parallel", "children", "dispatch"],
+      run: () => {
+        setOrchestrationError(null);
+        setOrchestrationOpen(true);
+      },
+    },
     {
       id: "workspace.open",
       label: "Open Folder",
@@ -5617,7 +5882,7 @@ function App() {
                           key={session.id}
                           aria-current={sessionActive ? "page" : undefined}
                           aria-label={`${sessionActive ? "Active chat" : "Switch to chat"} ${session.title}, ${projectRailStatusLabel(sessionStatus)}`}
-                          title={`${session.title} · ${projectRailStatusLabel(sessionStatus)}${session.checkpointId ? " · Workspace checkpoint saved" : ""}`}
+                          title={`${session.title} · ${projectRailStatusLabel(sessionStatus)}${session.orchestration ? ` · Child ${session.orchestration.index + 1} of ${session.orchestration.count} · ${chatProviderLabel(session.orchestration.provider)} · ${session.orchestration.worktreeMode === "isolated" ? "isolated worktree" : "shared project"}${session.orchestration.returnedAt ? " · result returned" : ""}` : ""}${session.checkpointId ? " · Workspace checkpoint saved" : ""}`}
                           onPointerDown={(event) => {
                             if (event.button !== 0) return;
                             event.preventDefault();
@@ -5626,7 +5891,11 @@ function App() {
                           onContextMenu={(event) => openContextMenu(event, projectSessionContextMenuItems(project.path, session))}
                         >
                           <span className="session-row__copy">
-                            {session.parentSessionId ? <AppIcon className="session-row__fork" name="git" label="Forked chat" /> : null}
+                            {session.orchestration
+                              ? <AppIcon className="session-row__fork" name="agent" label={`Child ${session.orchestration.index + 1} of ${session.orchestration.count}`} />
+                              : session.parentSessionId
+                                ? <AppIcon className="session-row__fork" name="git" label="Forked chat" />
+                                : null}
                             <span>{session.title}</span>
                           </span>
                           <span className="session-row__state">
@@ -7213,6 +7482,22 @@ function App() {
           </span>
         </div>
       ) : null}
+      <OrchestrationDialog
+        open={orchestrationOpen}
+        projectPath={workspacePath ?? ""}
+        parentTitle={projectSessions[workspacePath ?? ""]?.find((session) => session.id === activeSessionId)?.title ?? "Current chat"}
+        provider={activeComposerProvider ?? activeChatConversation.provider}
+        approvalMode={activeComposerHarness.approvalMode}
+        activeRunCount={Object.values(chatConversations).filter((conversation) => conversation.activeRunId).length}
+        launching={orchestrationLaunching}
+        error={orchestrationError}
+        onClose={() => {
+          if (orchestrationLaunching) return;
+          setOrchestrationOpen(false);
+          setOrchestrationError(null);
+        }}
+        onLaunch={(children) => void launchOrchestration(children)}
+      />
       {contextMenu ? (
         <ContextMenu
           state={contextMenu}

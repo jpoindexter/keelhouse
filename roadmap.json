@@ -1209,13 +1209,14 @@
     {
       "id": "AGENT-ORCHESTRATION",
       "title": "Parallel chat orchestration",
-      "column": "later",
+      "column": "next",
       "tier": "rock",
       "track": "core",
       "size": "L",
       "launch": "v2",
       "summary": "Adapt Hashmark's spawn-agent and parallel-dispatch concepts after independent chats are durable. A parent chat can delegate bounded tasks into linked child chats, optionally isolated by worktree, without hiding ownership or multiplying agents accidentally.",
       "done": "A user can preview and launch 2-8 linked child chats with explicit task, project/worktree, provider, model, permission, and budget; lineage and status are visible in the rail; cancel affects only selected children; results can return to the parent as attributed summaries; concurrency/resource limits, duplicate-file conflict warnings, and failure recovery are tested.",
+      "progress": "Implementation checkpoint 2026-07-14: composer context menu and command palette open a preview-first 2-8 child dispatch. Each durable child chat persists parent/dispatch lineage, provider, model, permission, 30-3600 second budget, intended files, and shared/isolated workspace ownership. The rail exposes child position/status; context menus stop only the selected run, return an attributed result to the parent, and remove stopped child worktrees. Rust enforces wall-clock budgets with process-group termination; validation blocks more than eight concurrent runs and warns on shared-file conflicts. Setup/launch failures stay attached to the affected child while siblings continue. Remaining before Done: execute packaged multi-child launch, selective cancel, result return, relaunch persistence, failure recovery, and worktree cleanup after macOS unlock. See docs/agent-orchestration.md.",
       "buildOrder": 91.37
     },
     {

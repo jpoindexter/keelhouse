@@ -33,6 +33,8 @@ The center surface is not a terminal transcript. A chat is keyed by `project roo
 
 Codex and Claude are structured adapters that reuse the user's local OAuth. Provider-native JSON owns message/tool semantics; terminal text is never parsed into chat structure. Gemini remains an explicit raw-terminal fallback until an equivalent adapter is implemented. Claude's packaged authenticated lifecycle is still a verification gate, not a completed behavior claim.
 
+Parallel orchestration composes these same adapters. A parent creates normal durable child chats, each with its own run id, provider process, budget, persistence, and optional Git worktree. The frontend owns preview/conflict policy and lineage presentation; Rust owns per-run process-group termination and wall-clock enforcement. No hidden supervisor loop shares mutable provider state across children.
+
 ## Raw terminal flow (one pane)
 
 ```

@@ -1,9 +1,26 @@
 export const MAX_RECENT_PROJECTS = 8;
 export const MAX_OPEN_PROJECTS = 8;
-export const MAX_PROJECT_SESSIONS = 6;
+export const MAX_PROJECT_SESSIONS = 100;
 
 export type ProjectRailStatus = "running" | "exited" | "attention";
 export type ProjectSessionStatus = ProjectRailStatus;
+
+export type ProjectSessionOrchestration = {
+  dispatchId: string;
+  parentSessionId: string;
+  index: number;
+  count: number;
+  task: string;
+  provider: "codex" | "claude";
+  model?: string;
+  approvalMode: "ask" | "approveSafe" | "fullAccess";
+  budgetSeconds: number;
+  targets: string[];
+  worktreeMode: "shared" | "isolated";
+  worktreePath?: string;
+  worktreeBranch?: string;
+  returnedAt?: number;
+};
 
 export type OpenProject = {
   path: string;
@@ -23,6 +40,7 @@ export type ProjectSession = {
   checkpointId?: string;
   checkpointCreatedAt?: number;
   recoveryCheckpointId?: string;
+  orchestration?: ProjectSessionOrchestration;
 };
 
 export type ProjectSessionsByProject = Record<string, ProjectSession[]>;
@@ -134,6 +152,38 @@ const normalizeProjectSession = (value: unknown): ProjectSession | null => {
   const title = typeof item.title === "string" ? item.title.trim() : "";
   const updatedAt = typeof item.updatedAt === "number" && Number.isFinite(item.updatedAt) ? item.updatedAt : 0;
   if (!id || !title) return null;
+  const orchestrationItem = typeof item.orchestration === "object" && item.orchestration != null && !Array.isArray(item.orchestration)
+    ? item.orchestration as Record<string, unknown>
+    : null;
+  const orchestration = orchestrationItem
+    && typeof orchestrationItem.dispatchId === "string" && orchestrationItem.dispatchId.trim()
+    && typeof orchestrationItem.parentSessionId === "string" && orchestrationItem.parentSessionId.trim()
+    && typeof orchestrationItem.index === "number" && Number.isInteger(orchestrationItem.index) && orchestrationItem.index >= 0
+    && typeof orchestrationItem.count === "number" && Number.isInteger(orchestrationItem.count) && orchestrationItem.count >= 2 && orchestrationItem.count <= 8
+    && typeof orchestrationItem.task === "string" && orchestrationItem.task.trim()
+    && (orchestrationItem.provider === "codex" || orchestrationItem.provider === "claude")
+    && (orchestrationItem.approvalMode === "ask" || orchestrationItem.approvalMode === "approveSafe" || orchestrationItem.approvalMode === "fullAccess")
+    && typeof orchestrationItem.budgetSeconds === "number" && Number.isInteger(orchestrationItem.budgetSeconds)
+    && orchestrationItem.budgetSeconds >= 30 && orchestrationItem.budgetSeconds <= 3600
+    && Array.isArray(orchestrationItem.targets)
+    && (orchestrationItem.worktreeMode === "shared" || orchestrationItem.worktreeMode === "isolated")
+    ? {
+        dispatchId: orchestrationItem.dispatchId.trim(),
+        parentSessionId: orchestrationItem.parentSessionId.trim(),
+        index: orchestrationItem.index,
+        count: orchestrationItem.count,
+        task: orchestrationItem.task.trim(),
+        provider: orchestrationItem.provider,
+        ...(typeof orchestrationItem.model === "string" && orchestrationItem.model.trim() ? { model: orchestrationItem.model.trim() } : {}),
+        approvalMode: orchestrationItem.approvalMode,
+        budgetSeconds: orchestrationItem.budgetSeconds,
+        targets: Array.from(new Set(orchestrationItem.targets.filter((target): target is string => typeof target === "string" && Boolean(target.trim())).map((target) => target.trim()))),
+        worktreeMode: orchestrationItem.worktreeMode,
+        ...(typeof orchestrationItem.worktreePath === "string" && orchestrationItem.worktreePath.trim() ? { worktreePath: orchestrationItem.worktreePath.trim() } : {}),
+        ...(typeof orchestrationItem.worktreeBranch === "string" && orchestrationItem.worktreeBranch.trim() ? { worktreeBranch: orchestrationItem.worktreeBranch.trim() } : {}),
+        ...(typeof orchestrationItem.returnedAt === "number" && Number.isFinite(orchestrationItem.returnedAt) && orchestrationItem.returnedAt > 0 ? { returnedAt: Math.floor(orchestrationItem.returnedAt) } : {}),
+      } satisfies ProjectSessionOrchestration
+    : undefined;
   return {
     id,
     title,
@@ -161,6 +211,7 @@ const normalizeProjectSession = (value: unknown): ProjectSession | null => {
     ...(typeof item.recoveryCheckpointId === "string" && item.recoveryCheckpointId.trim()
       ? { recoveryCheckpointId: item.recoveryCheckpointId.trim() }
       : {}),
+    ...(orchestration ? { orchestration } : {}),
   };
 };
 

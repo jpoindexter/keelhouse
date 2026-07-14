@@ -215,6 +215,22 @@ export const appendUserChatMessage = (
   timestamp: now,
 });
 
+export const appendToolChatMessage = (
+  conversation: ChatConversation,
+  title: string,
+  text: string,
+  itemId: string,
+  now = Date.now(),
+): ChatConversation => pushMessage(conversation, {
+  id: messageId("tool", now, itemId),
+  role: "tool",
+  title,
+  text: text.trim(),
+  itemId,
+  status: "complete",
+  timestamp: now,
+});
+
 export const chatTitleFromPrompt = (prompt: string, maxLength = 52): string => {
   const normalized = prompt.replace(/\s+/g, " ").trim();
   if (normalized.length <= maxLength) return normalized;

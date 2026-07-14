@@ -21,7 +21,8 @@ export type AppActionKind =
   | "find-in-file"
   | "open-folder"
   | "clear-terminal"
-  | "restore-checkpoint";
+  | "restore-checkpoint"
+  | "launch-orchestration";
 
 export type AppActionRisk = "low" | "medium" | "high" | "destructive" | "blocked";
 export type AppActionRequestedBy = "user" | "composer" | "agent" | "system";

@@ -169,6 +169,8 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 
 **CLAUDE-STRUCTURED-ADAPTER (IMPLEMENTED 2026-07-14; PACKAGED PROVIDER FLOW PENDING):** Claude Code now runs behind the provider-neutral structured chat contract with stdin NDJSON prompts, new/resumed session ids, partial text/thinking, tool results, shared approvals, usage, compaction, plans, questions, and selected-run cancellation. Capability and malformed/partial event fixtures pass, and the installed Claude Code 2.1.197 CLI plus existing OAuth status were inspected without consuming a prompt. The card remains open until authenticated packaged start/resume/approval/stop/usage/relaunch flows execute with explicit quota approval. See `docs/claude-structured-adapter.md`.
 
+**AGENT-ORCHESTRATION (IMPLEMENTED 2026-07-14; PACKAGED MULTI-CHILD FLOW PENDING):** Parallel work now creates 2-8 normal durable child chats through a previewed composer/command-palette flow. Child metadata owns lineage, provider/model/permission, hard wall-clock budget, target files, and shared or isolated worktree state. Rail context menus stop one child, return an attributed result, and clean up a stopped worktree. Rust terminates only the over-budget process group; conflict and capacity validation plus setup/launch recovery are covered locally. The locked macOS session prevents real packaged multi-child execution and relaunch proof. See `docs/agent-orchestration.md`.
+
 ## Next (ordered)
 
 1. **CHROME-EYEBALL-SIGNOFF:** Jason reviews the corrected packaged shell at 1440/1024/900 and records approval or corrections, including the Super-derived quiet-titlebar/toast direction.
@@ -177,7 +179,7 @@ Build **Keelhouse** — a native macOS Tauri 2 app that replaces Jason's VS Code
 4. **DAILY-DRIVER-LIVE / PERF-BUDGET:** one-project edit + Codex + editor + local server + embedded browser now passes; complete three-project relaunch timing, successful Gemini auth smoke, packaged one-pane render capture, and controlled equivalent VS Code comparison.
 5. **AI-CONNECTIONS / AGENT-HOOKS:** harden provider auth, MCP/OAuth, app actions, health checks, profiles, environment overrides, and lifecycle hooks inside the completed shared settings scope model.
 6. **SOURCE-CONTROL-CONNECTIONS / TERMINAL-INTL-INPUT / OUTSIDE-REVIEW:** finish remaining integration, terminal, and external-review gates.
-7. **CHAT-FORK-CHECKPOINT / CLAUDE-STRUCTURED-ADAPTER / AGENT-ORCHESTRATION / RUN-CARDS-ADAPTER:** execute the packaged fork/checkpoint and Claude lifecycle workflows, then extend the provider-neutral contract with child orchestration and mechanically attributed run cards.
+7. **CHAT-FORK-CHECKPOINT / CLAUDE-STRUCTURED-ADAPTER / AGENT-ORCHESTRATION / RUN-CARDS-ADAPTER:** execute the packaged fork/checkpoint, Claude lifecycle, and multi-child orchestration workflows, then add mechanically attributed run cards.
 
 ## Gotchas
 

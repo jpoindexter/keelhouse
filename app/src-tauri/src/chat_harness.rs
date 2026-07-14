@@ -9,7 +9,7 @@ use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{channel, RecvTimeoutError, Sender, TryRecvError};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State};
 
 use crate::claude_adapter::{
@@ -58,6 +58,7 @@ pub(crate) struct ChatRunRequest {
     approval_mode: String,
     model: Option<String>,
     reasoning_effort: Option<String>,
+    budget_seconds: Option<u64>,
     #[serde(default)]
     environment: Vec<ConnectionEnvironmentInput>,
 }
@@ -121,6 +122,15 @@ fn validate_runtime_overrides(request: &ChatRunRequest) -> Result<(), String> {
     if let Some(effort) = request.reasoning_effort.as_deref() {
         if !matches!(effort, "low" | "medium" | "high" | "xhigh") {
             return Err("The provider reasoning effort is invalid.".into());
+        }
+    }
+    Ok(())
+}
+
+fn validate_run_budget(budget_seconds: Option<u64>) -> Result<(), String> {
+    if let Some(seconds) = budget_seconds {
+        if !(30..=3600).contains(&seconds) {
+            return Err("Chat run budget must be between 30 and 3600 seconds.".into());
         }
     }
     Ok(())
@@ -428,6 +438,7 @@ fn start_codex_chat_run(
     if request.prompt.trim().is_empty() {
         return Err("Chat prompt is empty.".into());
     }
+    validate_run_budget(request.budget_seconds)?;
     let thread_request = thread_open_request(&request)?;
     validate_image_inputs(&request)?;
     let run_id = validate_run_id(request.run_id.trim())?.to_string();
@@ -532,8 +543,10 @@ fn start_codex_chat_run(
     let runs = state.runs.clone();
     std::thread::spawn(move || {
         let mut stopped = false;
+        let mut timed_out = false;
         let mut turn_finished = false;
         let mut exit_code = 0;
+        let started_at = Instant::now();
         while !turn_finished {
             match stop_rx.try_recv() {
                 Ok(()) => {
@@ -543,6 +556,15 @@ fn start_codex_chat_run(
                     break;
                 }
                 Err(TryRecvError::Disconnected | TryRecvError::Empty) => {}
+            }
+            if request
+                .budget_seconds
+                .is_some_and(|seconds| started_at.elapsed() >= Duration::from_secs(seconds))
+            {
+                close_pending_approvals(&app, &base, &stdin, &pending_approvals);
+                timed_out = true;
+                terminate_chat_process(&mut child, process_group_id);
+                break;
             }
             let expired = pending_approvals
                 .lock()
@@ -689,8 +711,14 @@ fn start_codex_chat_run(
                 stream: "lifecycle".into(),
                 event: Some(json!({
                     "type": "run.completed",
-                    "exitCode": if stopped { 130 } else { exit_code },
-                    "message": if stopped { "Codex run stopped." } else { "Codex app-server turn exited." },
+                    "exitCode": if timed_out { 124 } else if stopped { 130 } else { exit_code },
+                    "message": if timed_out {
+                        format!("Codex run reached its {} second budget.", request.budget_seconds.unwrap_or_default())
+                    } else if stopped {
+                        "Codex run stopped.".to_string()
+                    } else {
+                        "Codex app-server turn exited.".to_string()
+                    },
                 })),
                 ..base
             },
@@ -761,6 +789,7 @@ fn start_claude_chat_run(
         return Err("Chat prompt is empty.".into());
     }
     validate_runtime_overrides(&request)?;
+    validate_run_budget(request.budget_seconds)?;
     validate_image_inputs(&request)?;
     validate_claude_capabilities(&claude_help()?)?;
     let run_id = validate_run_id(request.run_id.trim())?.to_string();
@@ -859,8 +888,10 @@ fn start_claude_chat_run(
     std::thread::spawn(move || {
         let mut adapter = ClaudeStreamAdapter::default();
         let mut stopped = false;
+        let mut timed_out = false;
         let mut turn_finished = false;
         let mut exit_code = 0;
+        let started_at = Instant::now();
         while !turn_finished {
             match stop_rx.try_recv() {
                 Ok(()) => {
@@ -870,6 +901,15 @@ fn start_claude_chat_run(
                     break;
                 }
                 Err(TryRecvError::Disconnected | TryRecvError::Empty) => {}
+            }
+            if request
+                .budget_seconds
+                .is_some_and(|seconds| started_at.elapsed() >= Duration::from_secs(seconds))
+            {
+                close_pending_approvals(&app, &base, &stdin, &pending_approvals);
+                timed_out = true;
+                terminate_chat_process(&mut child, process_group_id);
+                break;
             }
             let expired = pending_approvals
                 .lock()
@@ -969,8 +1009,14 @@ fn start_claude_chat_run(
                 stream: "lifecycle".into(),
                 event: Some(json!({
                     "type": "run.completed",
-                    "exitCode": if stopped { 130 } else { exit_code },
-                    "message": if stopped { "Claude run stopped." } else { "Claude structured turn exited." },
+                    "exitCode": if timed_out { 124 } else if stopped { 130 } else { exit_code },
+                    "message": if timed_out {
+                        format!("Claude run reached its {} second budget.", request.budget_seconds.unwrap_or_default())
+                    } else if stopped {
+                        "Claude run stopped.".to_string()
+                    } else {
+                        "Claude structured turn exited.".to_string()
+                    },
                 })),
                 ..base
             },
@@ -1074,8 +1120,18 @@ mod tests {
             approval_mode: mode.into(),
             model: None,
             reasoning_effort: None,
+            budget_seconds: None,
             environment: Vec::new(),
         }
+    }
+
+    #[test]
+    fn validates_optional_chat_run_budget() {
+        assert!(validate_run_budget(None).is_ok());
+        assert!(validate_run_budget(Some(30)).is_ok());
+        assert!(validate_run_budget(Some(3600)).is_ok());
+        assert!(validate_run_budget(Some(29)).is_err());
+        assert!(validate_run_budget(Some(3601)).is_err());
     }
 
     #[cfg(unix)]

@@ -134,6 +134,7 @@ Jason. Solo dev, senior, 15yr, ND (dyslexia/ADHD/aphantasia). Needs concrete and
 - [x] Pane lifecycle controls and icon badges cover thinking, running, waiting, errored, exited, restart, terminate, and attention-needed states.
 - [x] Agent activity rows show observable app-owned prompts, file saves, commands, pane lifecycle, approvals, errors, and completion per pane/session.
 - [ ] Provider-native structured messages, tool events, approvals, and user-safe planning summaries are supplied by explicit adapters, persist durably, and never use terminal-text heuristics.
+- [ ] A parent chat can preview and launch 2-8 durable child chats with explicit provider, permission, budget, file boundary, and shared/worktree ownership; each child can be inspected or stopped independently and return an attributed result.
 - [x] Each pane/session exposes an app-owned agent session handle with send, interrupt, readTail, close, state, cwd, profile, approval mode, and activity metadata.
 - [x] App-owned actions use a minimal action gate with risk class, approval decision, audit event, and undo/rollback hint where possible.
 - [ ] Composer harness supports per-chat drafts/history, permission mode, goal state, model/provider selector, inspectable context chips, attachments, and approval logging for app-owned and provider actions.
