@@ -20,7 +20,8 @@ export type AppActionKind =
   | "save-file"
   | "find-in-file"
   | "open-folder"
-  | "clear-terminal";
+  | "clear-terminal"
+  | "restore-checkpoint";
 
 export type AppActionRisk = "low" | "medium" | "high" | "destructive" | "blocked";
 export type AppActionRequestedBy = "user" | "composer" | "agent" | "system";

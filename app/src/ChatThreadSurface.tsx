@@ -14,6 +14,7 @@ type ChatThreadSurfaceProps = {
   onRetry: (prompt: string) => void;
   onApprovalDecision?: (message: ChatMessage, decision: "accept" | "acceptForSession" | "decline") => void;
   onToggleBookmark?: (message: ChatMessage) => void;
+  onForkMessage?: (message: ChatMessage) => void;
   focusMessageId?: string | null;
 };
 
@@ -83,7 +84,7 @@ function useElapsedNow(active: boolean) {
   return now;
 }
 
-export function ChatThreadSurface({ conversation, events, hidden = false, onSuggestion, onRetry, onApprovalDecision, onToggleBookmark, focusMessageId = null }: ChatThreadSurfaceProps) {
+export function ChatThreadSurface({ conversation, events, hidden = false, onSuggestion, onRetry, onApprovalDecision, onToggleBookmark, onForkMessage, focusMessageId = null }: ChatThreadSurfaceProps) {
   const threadRef = useRef<HTMLDivElement | null>(null);
   const autoFollowRef = useRef(true);
   const userScrollIntentRef = useRef(false);
@@ -268,6 +269,15 @@ export function ChatThreadSurface({ conversation, events, hidden = false, onSugg
                         <div className="chat-message__actions">
                           <button type="button" aria-label={copiedMessageId === message.id ? "Message copied" : "Copy message"} onClick={() => void copyMessage(message)}>
                             <AppIcon name={copiedMessageId === message.id ? "check" : "copy"} />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Fork chat from this message"
+                            title="Fork chat from this message"
+                            disabled={Boolean(conversation.activeRunId)}
+                            onClick={() => onForkMessage?.(message)}
+                          >
+                            <AppIcon name="git" />
                           </button>
                           <button
                             className={message.bookmarked ? "chat-message__bookmark chat-message__bookmark--active" : "chat-message__bookmark"}

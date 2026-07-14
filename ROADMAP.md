@@ -148,7 +148,7 @@ A 16-framework blind-spot audit of the chrome re-convergence and roadmap coverag
 - **MOTION-POLISH** (v2): the micro-motion criteria from `docs/chrome-ui-polish.md`, reduced-motion-guarded.
 - **APP-COMMANDS-DISCOVERABLE** (v2): `>help`, palette rows for `>` commands.
 - **OUTSIDE-REVIEW** (v2): one targeted external pass on chrome quality / agent workflow before public daily-driver claims.
-- **CHAT-FORK-CHECKPOINT** (v2): adapt Hashmark's chat lineage and restore UX, but replace its `git add -A` / `reset --hard` / `clean -fd` checkpoint implementation with non-index-mutating capture and previewed restore.
+- **CHAT-FORK-CHECKPOINT** (v2): implementation checkpoint 2026-07-14 adds durable message-bounded forks plus private, non-index-mutating workspace snapshots; restore has an exact preview token, dirty-buffer guards, explicit approval, and retained recovery checkpoint. Automated index-invariance tests pass. Packaged fork/relaunch/restore/recovery execution remains before Done; see `docs/chat-forks-and-checkpoints.md`.
 - **CLAUDE-STRUCTURED-ADAPTER** (v2): adapt Hashmark's Claude `stream-json` event parser behind Keelhouse's provider-neutral contract; preserve OAuth and approvals, and reject `--dangerously-skip-permissions` plus prompt-in-argv behavior.
 - **AGENT-ORCHESTRATION** (v2): parent/child chat lineage, previewed parallel dispatch, worktree isolation, resource limits, selective cancellation, and attributed result handoff based on Hashmark's spawn/dispatch concepts.
 - **UNINSTALL-RESET** (v3): on-disk artifact inventory, settings full-reset, uninstall cleanup docs.

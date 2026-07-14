@@ -137,6 +137,34 @@ describe("ChatThreadSurface behavior", () => {
     expect(onRetry).toHaveBeenCalledWith("Check the project");
   });
 
+  it("offers message-bounded chat forks only when the provider is idle", () => {
+    const onForkMessage = vi.fn();
+    const view = render(
+      <ChatThreadSurface
+        conversation={conversation("Ready")}
+        events={[]}
+        onForkMessage={onForkMessage}
+        onRetry={() => {}}
+        onSuggestion={() => {}}
+      />,
+    );
+    const forkButtons = screen.getAllByRole("button", { name: "Fork chat from this message" });
+    expect(forkButtons).toHaveLength(2);
+    fireEvent.click(forkButtons[1]);
+    expect(onForkMessage).toHaveBeenCalledWith(expect.objectContaining({ id: "assistant-1" }));
+
+    view.rerender(
+      <ChatThreadSurface
+        conversation={conversation("Working", { activeRunId: "run-1", runStatus: "running" })}
+        events={[]}
+        onForkMessage={onForkMessage}
+        onRetry={() => {}}
+        onSuggestion={() => {}}
+      />,
+    );
+    expect(screen.getAllByRole("button", { name: "Fork chat from this message" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
+  });
+
   it("keeps nonfatal provider diagnostics without offering a false retry", () => {
     const completedWithDiagnostic = conversation("Completed response", {
       messages: [

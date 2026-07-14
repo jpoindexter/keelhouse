@@ -4,11 +4,50 @@ import {
   applyChatRunEnvelope,
   chatTitleFromPrompt,
   emptyChatConversation,
+  forkChatConversation,
   normalizeChatConversationRecords,
   startChatRun,
 } from "./chatConversation";
+import type { ChatConversation } from "./chatConversation";
 
 describe("chat conversations", () => {
+  it("forks history through the selected message with independent provider state", () => {
+    const source: ChatConversation = {
+      provider: "codex",
+      providerThreadId: "provider-thread-1",
+      messages: [
+        { id: "user-1", role: "user", text: "First", timestamp: 1 },
+        { id: "assistant-1", role: "assistant", text: "Answer", timestamp: 2 },
+        { id: "user-2", role: "user", text: "Second", timestamp: 3 },
+      ],
+      updatedAt: 3,
+      revision: 7,
+      runStatus: "complete",
+      usage: { inputTokens: 9, cachedInputTokens: 2, outputTokens: 4 },
+    };
+
+    expect(forkChatConversation(source, "/repo\nsource", "assistant-1", 20)).toEqual({
+      provider: "codex",
+      messages: source.messages.slice(0, 2),
+      updatedAt: 20,
+      revision: 0,
+      runStatus: "idle",
+      fork: {
+        parentChatId: "/repo\nsource",
+        parentMessageId: "assistant-1",
+        forkedAt: 20,
+      },
+    });
+  });
+
+  it("rejects fork targets that are missing, non-conversational, or still running", () => {
+    const running = startChatRun(emptyChatConversation(1), "run-1", 2);
+    expect(forkChatConversation(running, "source", running.messages[0].id, 3)).toBeNull();
+    const complete = { ...running, activeRunId: undefined, runStatus: "complete" as const };
+    expect(forkChatConversation(complete, "source", running.messages[0].id, 3)).toBeNull();
+    expect(forkChatConversation(complete, "source", "missing", 3)).toBeNull();
+  });
+
   it("keeps user messages and provider thread ids independent from terminal panes", () => {
     const user = appendUserChatMessage(emptyChatConversation(1), "Inspect the repo", 2);
     const running = startChatRun(user, "run-1", 3);
@@ -240,6 +279,24 @@ describe("chat conversations", () => {
         runStatus: "interrupted",
         messages: [{ id: "user-1", role: "user", text: "Hello", timestamp: 3, itemId: undefined, title: undefined, status: undefined }],
       },
+    });
+  });
+
+  it("normalizes durable fork lineage", () => {
+    const restored = normalizeChatConversationRecords({
+      "/repo\nfork": {
+        provider: "codex",
+        messages: [{ id: "user-1", role: "user", text: "Hello", timestamp: 3 }],
+        updatedAt: 4,
+        revision: 0,
+        runStatus: "idle",
+        fork: { parentChatId: "/repo\nsource", parentMessageId: "assistant-1", forkedAt: 2 },
+      },
+    });
+    expect(restored["/repo\nfork"].fork).toEqual({
+      parentChatId: "/repo\nsource",
+      parentMessageId: "assistant-1",
+      forkedAt: 2,
     });
   });
 

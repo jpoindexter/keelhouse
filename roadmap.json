@@ -1183,13 +1183,14 @@
     {
       "id": "CHAT-FORK-CHECKPOINT",
       "title": "Chat forks and safe checkpoints",
-      "column": "later",
+      "column": "next",
       "tier": "rock",
       "track": "core",
       "size": "L",
       "launch": "v2",
       "summary": "Adapt Hashmark's session lineage and restore UX, but replace its index-mutating checkpoint implementation. Fork a chat from a message and optionally restore workspace state through a previewed, non-index-mutating snapshot path.",
       "done": "Fork from a user or assistant message creates a clearly linked chat with copied history only through that point and an independent provider thread; checkpoints never change the user's index when captured; restore previews affected files, protects dirty editor buffers, requires explicit approval, has a recovery path, and never runs unpreviewed reset --hard or clean -fd.",
+      "progress": "Implementation checkpoint 2026-07-14: completed user/assistant messages now fork into durable linked chats with history copied only through the selected message and no inherited provider thread/run/usage state. Forks attempt a private app-data workspace checkpoint. Capture reads Git status and file bytes without changing the index; restore requires an exact tokenized write/delete preview, blocks affected dirty editor buffers in frontend and Rust, creates a recovery checkpoint first, applies direct atomic file operations, and retains recovery in the chat menu. Rust tests compare git write-tree before/after capture and restore; static coverage rejects add/reset/clean/apply in the checkpoint module. Remaining before Done: execute the packaged fork/relaunch/restore/recovery workflow after macOS is unlocked. See docs/chat-forks-and-checkpoints.md.",
       "buildOrder": 91.35
     },
     {

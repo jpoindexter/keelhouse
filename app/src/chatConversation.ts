@@ -27,6 +27,12 @@ export type ChatUsage = {
 
 export type ChatRunStatus = "idle" | "running" | "complete" | "error" | "interrupted";
 
+export type ChatForkLineage = {
+  parentChatId: string;
+  parentMessageId: string;
+  forkedAt: number;
+};
+
 export type ChatConversation = {
   provider: ChatProvider;
   providerThreadId?: string;
@@ -36,6 +42,7 @@ export type ChatConversation = {
   revision: number;
   runStatus: ChatRunStatus;
   usage?: ChatUsage;
+  fork?: ChatForkLineage;
 };
 
 export type ChatConversationRecords = Record<string, ChatConversation>;
@@ -82,6 +89,18 @@ const normalizeRunStatus = (value: unknown, staleActiveRun: boolean): ChatRunSta
   return value === "running" || value === "complete" || value === "error" || value === "interrupted"
     ? value
     : "idle";
+};
+
+const normalizeForkLineage = (value: unknown): ChatForkLineage | undefined => {
+  if (!isRecord(value)) return undefined;
+  const parentChatId = textValue(value.parentChatId).trim();
+  const parentMessageId = textValue(value.parentMessageId).trim();
+  const forkedAt = typeof value.forkedAt === "number" && Number.isFinite(value.forkedAt)
+    ? Math.max(0, Math.floor(value.forkedAt))
+    : 0;
+  return parentChatId && parentMessageId && forkedAt
+    ? { parentChatId, parentMessageId, forkedAt }
+    : undefined;
 };
 
 const normalizeMessage = (value: unknown): ChatMessage | null => {
@@ -147,8 +166,34 @@ export const normalizeChatConversationRecords = (value: unknown): ChatConversati
       revision: nonNegativeInteger(entry.revision) + (staleActiveRun ? 1 : 0),
       runStatus: normalizeRunStatus(entry.runStatus, staleActiveRun),
       usage: normalizeUsage(entry.usage),
+      fork: normalizeForkLineage(entry.fork),
     }]];
   }));
+};
+
+export const forkChatConversation = (
+  conversation: ChatConversation,
+  parentChatId: string,
+  parentMessageId: string,
+  now = Date.now(),
+): ChatConversation | null => {
+  if (conversation.activeRunId) return null;
+  const targetIndex = conversation.messages.findIndex((message) => message.id === parentMessageId);
+  if (targetIndex < 0) return null;
+  const target = conversation.messages[targetIndex];
+  if (target.role !== "user" && target.role !== "assistant") return null;
+  return {
+    provider: conversation.provider,
+    messages: conversation.messages.slice(0, targetIndex + 1).map((message) => ({ ...message })),
+    updatedAt: now,
+    revision: 0,
+    runStatus: "idle",
+    fork: {
+      parentChatId,
+      parentMessageId,
+      forkedAt: now,
+    },
+  };
 };
 
 const pushMessage = (conversation: ChatConversation, message: ChatMessage): ChatConversation => ({

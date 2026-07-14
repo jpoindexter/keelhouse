@@ -15,6 +15,7 @@ mod chat_store;
 mod connection_secrets;
 mod mcp_oauth;
 mod mcp_probe;
+mod workspace_checkpoints;
 
 use agent_hooks::{
     agent_hook_status, resolve_agent_hook_request, start_agent_hook_server,
@@ -56,6 +57,9 @@ use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, State};
+use workspace_checkpoints::{
+    create_workspace_checkpoint, preview_workspace_checkpoint, restore_workspace_checkpoint,
+};
 
 const INIT_COLS: u16 = 80;
 const INIT_ROWS: u16 = 24;
@@ -3017,6 +3021,9 @@ pub fn run() {
             delete_chat_conversation,
             delete_project_chat_conversations,
             reset_chat_store,
+            create_workspace_checkpoint,
+            preview_workspace_checkpoint,
+            restore_workspace_checkpoint,
             reset_local_state,
             resolve_workspace,
             open_workspace,

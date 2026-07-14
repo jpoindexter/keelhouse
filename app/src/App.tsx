@@ -259,6 +259,7 @@ import {
   applyChatRunEnvelope,
   chatTitleFromPrompt,
   emptyChatConversation,
+  forkChatConversation,
   normalizeChatConversationRecords,
   startChatRun,
 } from "./chatConversation";
@@ -272,6 +273,12 @@ import {
   saveDurableChatConversation,
   searchDurableChatMessages,
 } from "./chatStore";
+import {
+  checkpointPreviewMessage,
+  createWorkspaceCheckpoint,
+  previewWorkspaceCheckpoint,
+  restoreWorkspaceCheckpoint,
+} from "./workspaceCheckpoints";
 import { mergeChatDiscoveryResults, type ChatSearchResult, type ChatSearchViewResult } from "./chatDiscovery";
 import { ToolDockMenu } from "./ToolDockMenu";
 import { ToolTrayTabs } from "./ToolTrayTabs";
@@ -1450,6 +1457,62 @@ function App() {
     }));
     setChatSearchRevision((revision) => revision + 1);
     setActionNotice(bookmarked ? "Bookmarked message" : "Removed bookmark");
+  };
+
+  const forkChatFromMessage = async (message: ChatMessage) => {
+    const projectPath = workspacePathRef.current;
+    const sourceSessionId = activeProjectSessionId(
+      activeSessionByProjectRef.current,
+      projectSessionsRef.current,
+      projectPath,
+    );
+    if (!projectPath || !sourceSessionId) return;
+    const sourceChatId = composerHarnessSessionKey(projectPath, sourceSessionId);
+    const sourceConversation = chatConversationsRef.current[sourceChatId] ?? emptyChatConversation();
+    if (sourceConversation.activeRunId) {
+      setActionNotice("Wait for this response to finish before forking the chat");
+      return;
+    }
+    const existing = projectSessionsRef.current[projectPath] ?? [];
+    const sourceSession = existing.find((session) => session.id === sourceSessionId);
+    let checkpointError: string | null = null;
+    const checkpoint = await createWorkspaceCheckpoint(
+      projectPath,
+      `Fork from ${sourceSession?.title ?? "chat"}`,
+    ).catch((error) => {
+      checkpointError = String(error);
+      return null;
+    });
+    let now = Date.now();
+    while (existing.some((session) => session.id === `session-${now.toString(36)}`)) now += 1;
+    const baseSession = newProjectSession(existing, now);
+    const session: ProjectSession = {
+      ...baseSession,
+      title: `Fork of ${sourceSession?.title ?? "chat"}`,
+      status: "exited",
+      parentSessionId: sourceSessionId,
+      parentMessageId: message.id,
+      forkedAt: now,
+      checkpointId: checkpoint?.id,
+      checkpointCreatedAt: checkpoint?.createdAt,
+    };
+    const forkedConversation = forkChatConversation(sourceConversation, sourceChatId, message.id, now);
+    if (!forkedConversation) {
+      setLaunchError("This message cannot be used to fork the chat.");
+      return;
+    }
+    const forkedChatId = composerHarnessSessionKey(projectPath, session.id);
+    const nextSessions = upsertProjectSession(projectSessionsRef.current, projectPath, session);
+    const nextConversations = { ...chatConversationsRef.current, [forkedChatId]: forkedConversation };
+    await saveDurableChatConversation(forkedChatId, forkedConversation);
+    chatConversationsRef.current = nextConversations;
+    setChatConversations(nextConversations);
+    await persistProjectSessions(nextSessions, activeSessionByProjectRef.current);
+    await persistBrowserPreviewUrl(projectPath, session.id, browserUrlRef.current);
+    await switchProjectSession(projectPath, session.id);
+    setActionNotice(checkpointError
+      ? `Forked chat without workspace checkpoint: ${checkpointError}`
+      : `Forked ${sourceSession?.title ?? "chat"}`);
   };
 
   useEffect(() => {
@@ -3851,6 +3914,101 @@ function App() {
     ),
   ];
 
+  const updateProjectSessionMetadata = async (
+    projectPath: string,
+    sessionId: string,
+    metadata: Partial<ProjectSession>,
+  ) => {
+    const next = {
+      ...projectSessionsRef.current,
+      [projectPath]: (projectSessionsRef.current[projectPath] ?? []).map((session) =>
+        session.id === sessionId ? { ...session, ...metadata, updatedAt: Date.now() } : session,
+      ),
+    };
+    await persistProjectSessions(next, activeSessionByProjectRef.current);
+  };
+
+  const captureSessionCheckpoint = async (projectPath: string, session: ProjectSession) => {
+    if (projectPath !== workspacePathRef.current) {
+      setLaunchError("Switch to this project before capturing its workspace checkpoint.");
+      return;
+    }
+    try {
+      const checkpoint = await createWorkspaceCheckpoint(projectPath, `Chat checkpoint: ${session.title}`);
+      await updateProjectSessionMetadata(projectPath, session.id, {
+        checkpointId: checkpoint.id,
+        checkpointCreatedAt: checkpoint.createdAt,
+      });
+      setActionNotice(`Captured ${checkpoint.fileCount} changed file${checkpoint.fileCount === 1 ? "" : "s"}`);
+    } catch (error) {
+      setLaunchError(`Could not capture workspace checkpoint: ${String(error)}`);
+    }
+  };
+
+  const restoreSessionCheckpoint = async (
+    projectPath: string,
+    session: ProjectSession,
+    checkpointId: string,
+  ) => {
+    if (projectPath !== workspacePathRef.current) {
+      setLaunchError("Switch to this project before restoring its workspace checkpoint.");
+      return;
+    }
+    try {
+      const preview = await previewWorkspaceCheckpoint(projectPath, checkpointId);
+      if (preview.files.length === 0) {
+        setActionNotice("Workspace already matches this checkpoint");
+        return;
+      }
+      const affectedAbsolutePaths = new Set(preview.files.map((file) => `${projectPath}/${file.path}`));
+      const protectedDirtyPath = dirtyTabPaths.find((path) => affectedAbsolutePaths.has(path));
+      if (protectedDirtyPath) {
+        setLaunchError(`Save or discard the dirty editor buffer before restore: ${protectedDirtyPath}`);
+        return;
+      }
+      if (!window.confirm(checkpointPreviewMessage(preview))) return;
+      const audit = await gateAppAction(createAppAction({
+        kind: "restore-checkpoint",
+        label: "Restore workspace checkpoint",
+        target: `${preview.files.length} files in ${projectPath}`,
+        risk: "high",
+        requestedBy: "user",
+        undoHint: "Restore the recovery checkpoint created before this operation.",
+      }));
+      if (audit.decision !== "approved") return;
+      const relativeDirtyPaths = dirtyTabPaths
+        .filter((path) => path.startsWith(`${projectPath}/`))
+        .map((path) => path.slice(projectPath.length + 1));
+      const result = await restoreWorkspaceCheckpoint(
+        projectPath,
+        checkpointId,
+        preview.previewToken,
+        relativeDirtyPaths,
+      );
+      for (const path of affectedAbsolutePaths) delete editorBuffersRef.current[path];
+      setEditorBufferRevision((revision) => revision + 1);
+      const activeFile = selectedFileRef.current;
+      if (activeFile && affectedAbsolutePaths.has(activeFile.path)) {
+        const action = preview.files.find((file) => `${projectPath}/${file.path}` === activeFile.path)?.action;
+        if (action === "delete") {
+          setSelectedFile(null);
+          setEditorText("");
+          setSavedEditorText("");
+        } else {
+          await openEditorFileDirect(activeFile);
+        }
+      }
+      await updateProjectSessionMetadata(projectPath, session.id, {
+        recoveryCheckpointId: result.recoveryCheckpointId,
+      });
+      refreshFileTree();
+      await refreshGitStatus();
+      setActionNotice(`Restored ${result.restoredFiles} files; recovery checkpoint is ready`);
+    } catch (error) {
+      setLaunchError(`Could not restore workspace checkpoint: ${String(error)}`);
+    }
+  };
+
   const projectSessionContextMenuItems = (projectPath: string, session: ProjectSession): ContextMenuItem[] => [
     menuItem("session.switch", "Switch to Chat", () => switchProjectSession(projectPath, session.id), {
       icon: "file",
@@ -3858,6 +4016,22 @@ function App() {
     }),
     menuItem("session.rename", "Rename Chat", () => renameProjectSession(projectPath, session), { icon: "file" }),
     menuItem("session.copy-name", "Copy Chat Name", async () => { await writeText(session.title); setActionNotice("Copied chat name"); }, { icon: "file" }),
+    menuItem("session.capture-checkpoint", session.checkpointId ? "Replace Workspace Checkpoint" : "Capture Workspace Checkpoint", () => captureSessionCheckpoint(projectPath, session), {
+      icon: "save",
+      disabled: projectPath !== workspacePath,
+    }),
+    ...(session.checkpointId ? [menuItem(
+      "session.restore-checkpoint",
+      "Restore Workspace Checkpoint",
+      () => restoreSessionCheckpoint(projectPath, session, session.checkpointId as string),
+      { icon: "reload", disabled: projectPath !== workspacePath },
+    )] : []),
+    ...(session.recoveryCheckpointId ? [menuItem(
+      "session.restore-recovery",
+      "Restore Recovery Checkpoint",
+      () => restoreSessionCheckpoint(projectPath, session, session.recoveryCheckpointId as string),
+      { icon: "reload", disabled: projectPath !== workspacePath },
+    )] : []),
     menuItem(
       "session.pin",
       session.pinnedAt ? "Unpin Chat" : "Pin Chat",
@@ -5416,7 +5590,7 @@ function App() {
                           key={session.id}
                           aria-current={sessionActive ? "page" : undefined}
                           aria-label={`${sessionActive ? "Active chat" : "Switch to chat"} ${session.title}, ${projectRailStatusLabel(sessionStatus)}`}
-                          title={`${session.title} · ${projectRailStatusLabel(sessionStatus)}`}
+                          title={`${session.title} · ${projectRailStatusLabel(sessionStatus)}${session.checkpointId ? " · Workspace checkpoint saved" : ""}`}
                           onPointerDown={(event) => {
                             if (event.button !== 0) return;
                             event.preventDefault();
@@ -5425,6 +5599,7 @@ function App() {
                           onContextMenu={(event) => openContextMenu(event, projectSessionContextMenuItems(project.path, session))}
                         >
                           <span className="session-row__copy">
+                            {session.parentSessionId ? <AppIcon className="session-row__fork" name="git" label="Forked chat" /> : null}
                             <span>{session.title}</span>
                           </span>
                           <span className="session-row__state">
@@ -6375,6 +6550,7 @@ function App() {
               onRetry={(prompt) => void submitComposerDraft(prompt)}
               onApprovalDecision={(message, decision) => void resolveChatApproval(message, decision)}
               onToggleBookmark={toggleChatMessageBookmark}
+              onForkMessage={(message) => void forkChatFromMessage(message)}
               focusMessageId={focusedChatMessageId}
             />
           </div>

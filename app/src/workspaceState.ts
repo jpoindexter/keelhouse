@@ -17,6 +17,12 @@ export type ProjectSession = {
   updatedAt: number;
   archived?: boolean;
   pinnedAt?: number;
+  parentSessionId?: string;
+  parentMessageId?: string;
+  forkedAt?: number;
+  checkpointId?: string;
+  checkpointCreatedAt?: number;
+  recoveryCheckpointId?: string;
 };
 
 export type ProjectSessionsByProject = Record<string, ProjectSession[]>;
@@ -136,6 +142,24 @@ const normalizeProjectSession = (value: unknown): ProjectSession | null => {
     ...(item.archived === true ? { archived: true } : {}),
     ...(typeof item.pinnedAt === "number" && Number.isFinite(item.pinnedAt) && item.pinnedAt > 0
       ? { pinnedAt: Math.floor(item.pinnedAt) }
+      : {}),
+    ...(typeof item.parentSessionId === "string" && item.parentSessionId.trim()
+      ? { parentSessionId: item.parentSessionId.trim() }
+      : {}),
+    ...(typeof item.parentMessageId === "string" && item.parentMessageId.trim()
+      ? { parentMessageId: item.parentMessageId.trim() }
+      : {}),
+    ...(typeof item.forkedAt === "number" && Number.isFinite(item.forkedAt) && item.forkedAt > 0
+      ? { forkedAt: Math.floor(item.forkedAt) }
+      : {}),
+    ...(typeof item.checkpointId === "string" && item.checkpointId.trim()
+      ? { checkpointId: item.checkpointId.trim() }
+      : {}),
+    ...(typeof item.checkpointCreatedAt === "number" && Number.isFinite(item.checkpointCreatedAt) && item.checkpointCreatedAt > 0
+      ? { checkpointCreatedAt: Math.floor(item.checkpointCreatedAt) }
+      : {}),
+    ...(typeof item.recoveryCheckpointId === "string" && item.recoveryCheckpointId.trim()
+      ? { recoveryCheckpointId: item.recoveryCheckpointId.trim() }
       : {}),
   };
 };

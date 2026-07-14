@@ -1053,6 +1053,11 @@ body,
   white-space: nowrap;
 }
 
+.session-row__fork {
+  flex: 0 0 auto;
+  color: var(--color-text-subtle);
+}
+
 .session-row__time {
   flex: 0 0 auto;
   color: var(--color-text-subtle);

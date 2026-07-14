@@ -114,6 +114,7 @@ describe("workspace state helpers", () => {
           { id: "one", title: "Build auth", status: "running", updatedAt: 10 },
           { id: "one", title: "Duplicate", status: "attention", updatedAt: 11 },
           { id: "two", title: "  Review diff  ", status: "unknown", updatedAt: Number.NaN },
+          { id: "fork", title: "Fork", status: "exited", updatedAt: 12, parentSessionId: "one", parentMessageId: "message-1", forkedAt: 11, checkpointId: "checkpoint-1", checkpointCreatedAt: 10, recoveryCheckpointId: "checkpoint-2" },
           { id: "", title: "Bad", status: "running", updatedAt: 12 },
         ],
         "": [{ id: "bad", title: "Bad", status: "running", updatedAt: 1 }],
@@ -123,6 +124,7 @@ describe("workspace state helpers", () => {
       "/a": [
         { id: "one", title: "Build auth", status: "running", updatedAt: 10 },
         { id: "two", title: "Review diff", status: "exited", updatedAt: 0 },
+        { id: "fork", title: "Fork", status: "exited", updatedAt: 12, parentSessionId: "one", parentMessageId: "message-1", forkedAt: 11, checkpointId: "checkpoint-1", checkpointCreatedAt: 10, recoveryCheckpointId: "checkpoint-2" },
       ],
     });
   });

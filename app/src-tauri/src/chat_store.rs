@@ -38,6 +38,14 @@ pub(crate) struct StoredChatMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct StoredChatForkLineage {
+    pub parent_chat_id: String,
+    pub parent_message_id: String,
+    pub forked_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct StoredChatConversation {
     pub provider: String,
     #[serde(default)]
@@ -53,6 +61,8 @@ pub(crate) struct StoredChatConversation {
     pub run_status: Option<String>,
     #[serde(default)]
     pub usage: Option<Value>,
+    #[serde(default)]
+    pub fork: Option<StoredChatForkLineage>,
 }
 
 #[derive(Debug, Serialize)]
@@ -313,6 +323,9 @@ fn migrate_schema(connection: &Connection) -> Result<(), String> {
                     CHECK(run_status IN ('idle','running','complete','error','interrupted')),
                 usage_json TEXT,
                 revision INTEGER NOT NULL DEFAULT 0,
+                fork_parent_chat_id TEXT,
+                fork_parent_message_id TEXT,
+                forked_at INTEGER,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
              );
@@ -396,6 +409,35 @@ fn migrate_schema(connection: &Connection) -> Result<(), String> {
             [],
         )
         .map_err(db_error("Could not record approval attribution migration"))?;
+    for (name, definition) in [
+        ("fork_parent_chat_id", "fork_parent_chat_id TEXT"),
+        ("fork_parent_message_id", "fork_parent_message_id TEXT"),
+        ("forked_at", "forked_at INTEGER"),
+    ] {
+        let exists = connection
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM pragma_table_info('chat_conversations') WHERE name = ?1)",
+                [name],
+                |row| row.get::<_, i64>(0),
+            )
+            .map_err(db_error("Could not inspect chat fork migration"))?
+            != 0;
+        if !exists {
+            connection
+                .execute(
+                    &format!("ALTER TABLE chat_conversations ADD COLUMN {definition}"),
+                    [],
+                )
+                .map_err(db_error("Could not add chat fork lineage"))?;
+        }
+    }
+    connection
+        .execute(
+            "INSERT OR IGNORE INTO chat_schema_migrations(version, description, applied_at)
+             VALUES (4, 'durable chat fork lineage', unixepoch() * 1000)",
+            [],
+        )
+        .map_err(db_error("Could not record chat fork migration"))?;
     Ok(())
 }
 
@@ -511,8 +553,9 @@ fn save_in_transaction(
         .execute(
             "INSERT INTO chat_conversations (
                 chat_id, project_path, session_id, provider, provider_thread_id,
-                active_run_id, run_status, usage_json, revision, created_at, updated_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)
+                active_run_id, run_status, usage_json, revision, fork_parent_chat_id,
+                fork_parent_message_id, forked_at, created_at, updated_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)
              ON CONFLICT(chat_id) DO UPDATE SET
                 project_path = excluded.project_path,
                 session_id = excluded.session_id,
@@ -522,6 +565,9 @@ fn save_in_transaction(
                 run_status = excluded.run_status,
                 usage_json = excluded.usage_json,
                 revision = excluded.revision,
+                fork_parent_chat_id = excluded.fork_parent_chat_id,
+                fork_parent_message_id = excluded.fork_parent_message_id,
+                forked_at = excluded.forked_at,
                 updated_at = excluded.updated_at",
             params![
                 chat_id,
@@ -533,6 +579,12 @@ fn save_in_transaction(
                 run_status,
                 usage_json,
                 conversation.revision,
+                conversation.fork.as_ref().map(|fork| &fork.parent_chat_id),
+                conversation
+                    .fork
+                    .as_ref()
+                    .map(|fork| &fork.parent_message_id),
+                conversation.fork.as_ref().map(|fork| fork.forked_at),
                 conversation.updated_at,
             ],
         )
@@ -632,7 +684,8 @@ fn load_all_from(
     let mut statement = transaction
         .prepare(
             "SELECT chat_id, provider, provider_thread_id, active_run_id, run_status,
-                    usage_json, revision, updated_at
+                    usage_json, revision, updated_at, fork_parent_chat_id,
+                    fork_parent_message_id, forked_at
              FROM chat_conversations ORDER BY updated_at ASC",
         )
         .map_err(db_error("Could not prepare chat load"))?;
@@ -651,6 +704,20 @@ fn load_all_from(
                         .and_then(|value| serde_json::from_str(&value).ok()),
                     revision: row.get(6)?,
                     updated_at: row.get(7)?,
+                    fork: match (
+                        row.get::<_, Option<String>>(8)?,
+                        row.get::<_, Option<String>>(9)?,
+                        row.get::<_, Option<i64>>(10)?,
+                    ) {
+                        (Some(parent_chat_id), Some(parent_message_id), Some(forked_at)) => {
+                            Some(StoredChatForkLineage {
+                                parent_chat_id,
+                                parent_message_id,
+                                forked_at,
+                            })
+                        }
+                        _ => None,
+                    },
                 },
             ))
         })
@@ -785,6 +852,7 @@ mod tests {
             revision,
             run_status: Some("complete".into()),
             usage: Some(serde_json::json!({"inputTokens": 3, "outputTokens": 4})),
+            fork: None,
         }
     }
 
@@ -876,6 +944,26 @@ mod tests {
             loaded["/repo\nchat-2"].usage.as_ref().unwrap()["outputTokens"],
             4
         );
+    }
+
+    #[test]
+    fn persists_chat_fork_lineage_without_reusing_provider_state() {
+        let store = store();
+        let mut forked = conversation("forked answer", 1);
+        forked.provider_thread_id = None;
+        forked.usage = None;
+        forked.fork = Some(StoredChatForkLineage {
+            parent_chat_id: "/repo\nsource-chat".into(),
+            parent_message_id: "assistant-2".into(),
+            forked_at: 200,
+        });
+        store.save("/repo\nfork-chat", &forked).unwrap();
+
+        let loaded = store.load_all().unwrap();
+        let restored = &loaded["/repo\nfork-chat"];
+        assert_eq!(restored.provider_thread_id, None);
+        assert_eq!(restored.usage, None);
+        assert_eq!(restored.fork, forked.fork);
     }
 
     #[test]
@@ -1005,12 +1093,12 @@ mod tests {
         let connection = store.connection.lock().unwrap();
         let migration: i64 = connection
             .query_row(
-                "SELECT COUNT(*) FROM chat_schema_migrations WHERE version IN (2, 3)",
+                "SELECT COUNT(*) FROM chat_schema_migrations WHERE version IN (2, 3, 4)",
                 [],
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(migration, 2);
+        assert_eq!(migration, 3);
     }
 
     #[test]

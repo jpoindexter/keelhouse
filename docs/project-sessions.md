@@ -8,7 +8,9 @@ PROJECT-SESSIONS originally translated Codex chat rows into task-scoped workbenc
 - Each open project gets at least one default session row.
 - Project rows now show nested session rows with active, running, exited, and attention states.
 - `New session` creates a named task context and selects it.
-- Session context menus support switch, rename, copy name, and delete. The last session in a project cannot be deleted.
+- Chat context menus support switch, rename, copy name, pin/archive/delete, and safe workspace checkpoint capture/restore. The last live chat in a project cannot be deleted or archived.
+- Completed user and assistant messages expose a branch action. A fork is a linked durable chat with message-bounded history and an independent provider thread.
+- Forked chats carry a non-index-mutating workspace checkpoint when capture succeeds; restore is previewed, protects dirty buffers, and creates a retained recovery checkpoint.
 - Session lists show three rows by default and expose `Show more` / `Show fewer` when older sessions are hidden.
 - Selecting a session snapshots the current session's editor tabs, active file, buffers, and editor view state, then restores the selected session's in-memory editor context.
 - Switching projects selects that project's active session and uses the same real workspace-load path as the project rail.
