@@ -10,6 +10,13 @@ const rel = (file) => path.join(root, file);
 const exists = (file) => fs.existsSync(rel(file));
 const read = (file) => fs.readFileSync(rel(file), "utf8");
 const statSize = (file) => exists(file) ? fs.statSync(rel(file)).size : 0;
+const readJson = (file) => {
+  try {
+    return JSON.parse(read(file));
+  } catch {
+    return null;
+  }
+};
 
 const git = (args) => {
   try {
@@ -74,15 +81,15 @@ const hardBudgets = [
     id: "total-js-assets",
     label: "Total built JS assets",
     actualBytes: totalJsBytes,
-    limitBytes: 1_400_000,
-    pass: totalJsBytes > 0 && totalJsBytes <= 1_400_000,
+    limitBytes: 1_750_000,
+    pass: totalJsBytes > 0 && totalJsBytes <= 1_750_000,
   },
   {
     id: "total-css-assets",
     label: "Total built CSS assets",
     actualBytes: totalCssBytes,
-    limitBytes: 90_000,
-    pass: totalCssBytes > 0 && totalCssBytes <= 90_000,
+    limitBytes: 145_000,
+    pass: totalCssBytes > 0 && totalCssBytes <= 145_000,
   },
 ];
 
@@ -150,12 +157,50 @@ const artifactChecks = [
   fileCheck("native-run", "Native Tauri run screenshot", "docs/qa/app-shell/native-run.png", 1024),
   fileCheck("editor-selected", "Editor selected-state screenshot", "docs/qa/editor-parity/selected.png", 1024),
   fileCheck("daily-driver-report", "Daily-driver report", "docs/qa/daily-driver/latest.md", 1024),
-  fileCheck("render-perf-live", "Live-captured render-perf snapshot (frame time/IPC payload/jank)", "docs/qa/perf-budget/render-perf-live.json", 50),
-  fileCheck("render-perf-two-pane", "Packaged two-pane render-perf snapshot", "docs/qa/perf-budget/render-perf-2-pane.json", 50),
-  fileCheck("render-perf-four-pane", "Packaged four-pane render-perf snapshot", "docs/qa/perf-budget/render-perf-4-pane.json", 50),
-  fileCheck("runtime-comparison", "Process-tree runtime comparison", "docs/qa/perf-budget/runtime-comparison.json", 100),
   fileCheck("gemini-tui", "Packaged Gemini TUI screenshot", "docs/qa/daily-driver/gemini-tui.png", 1024),
 ];
+
+const renderPerfCheck = (paneCount) => {
+  const file = `docs/qa/perf-budget/render-perf-${paneCount}-pane.json`;
+  const sample = exists(file) ? readJson(file) : null;
+  const frameCount = sample?.frameTime?.count ?? 0;
+  const frameP95 = sample?.frameTime?.p95 ?? Number.POSITIVE_INFINITY;
+  const jankRate = sample?.jankRate ?? Number.POSITIVE_INFINITY;
+  const ipcCount = sample?.ipcPayload?.count ?? 0;
+  const ipcP95 = sample?.ipcPayload?.p95 ?? Number.POSITIVE_INFINITY;
+  return {
+    id: `render-perf-${paneCount}-pane`,
+    label: `Packaged ${paneCount}-pane render performance`,
+    file,
+    expectedPaneCount: paneCount,
+    minimumFrames: 30,
+    maximumFrameP95Ms: 16.7,
+    maximumJankRate: 0.02,
+    minimumIpcSamples: 1,
+    maximumIpcP95Bytes: 262_144,
+    actual: { paneCount: sample?.paneCount, frameCount, frameP95, jankRate, ipcCount, ipcP95 },
+    pass: sample?.paneCount === paneCount
+      && frameCount >= 30
+      && frameP95 <= 16.7
+      && jankRate <= 0.02
+      && ipcCount >= 1
+      && ipcP95 <= 262_144,
+  };
+};
+
+const renderPerfChecks = [1, 2, 4].map(renderPerfCheck);
+const controlledRuntimeFile = "docs/qa/perf-budget/runtime-comparison-controlled.json";
+const controlledRuntime = exists(controlledRuntimeFile) ? readJson(controlledRuntimeFile) : null;
+const controlledRuntimeCheck = {
+  id: "controlled-runtime-comparison",
+  label: "Controlled equivalent Keelhouse and VS Code runtime comparison",
+  file: controlledRuntimeFile,
+  pass: controlledRuntime?.status === "controlled-equivalent"
+    && controlledRuntime?.summary?.keelhouse?.samples >= 5
+    && controlledRuntime?.summary?.vscode?.samples >= 5
+    && controlledRuntime?.scenario?.id
+    && controlledRuntime?.scenario?.keelhouse === controlledRuntime?.scenario?.vscode,
+};
 
 const headCommit = git("rev-parse --short HEAD");
 const dirtySuffix = git("status --short") ? "+dirty" : "";
@@ -163,6 +208,8 @@ const hardFailures = [
   ...hardBudgets.filter((budget) => !budget.pass),
   ...sourceChecks.filter((check) => !check.pass),
   ...artifactChecks.filter((check) => !check.pass),
+  ...renderPerfChecks.filter((check) => !check.pass),
+  ...(!controlledRuntimeCheck.pass ? [controlledRuntimeCheck] : []),
 ];
 
 const result = {
@@ -175,6 +222,8 @@ const result = {
   softBudgets,
   sourceChecks,
   artifactChecks,
+  renderPerfChecks,
+  controlledRuntimeCheck,
   metrics: {
     assets,
     totals: {
@@ -224,6 +273,14 @@ lines.push("", "## Artifact Checks", "");
 for (const check of artifactChecks) {
   lines.push(`- ${passFail(check.pass)} ${check.label} - ${check.file} (${bytes(check.bytes)})`);
 }
+
+lines.push("", "## Render Performance", "");
+for (const check of renderPerfChecks) {
+  const actual = check.actual;
+  const jankLabel = Number.isFinite(actual.jankRate) ? `${(actual.jankRate * 100).toFixed(2)}%` : "missing";
+  lines.push(`- ${passFail(check.pass)} ${check.label}: ${actual.frameCount} frames, p95 ${Number.isFinite(actual.frameP95) ? actual.frameP95.toFixed(2) : "missing"} ms, ${jankLabel} jank, IPC p95 ${Number.isFinite(actual.ipcP95) ? bytes(actual.ipcP95) : "missing"} - ${check.file}`);
+}
+lines.push(`- ${passFail(controlledRuntimeCheck.pass)} ${controlledRuntimeCheck.label} - ${controlledRuntimeCheck.file}`);
 
 lines.push("", "## Next Live Measurements", "");
 for (const measurement of result.nextLiveMeasurements) lines.push(`- ${measurement}`);

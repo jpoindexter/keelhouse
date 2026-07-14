@@ -1,22 +1,22 @@
 {
-  "generatedAt": "2026-07-12T22:08:43.020Z",
-  "commit": "f34b277+dirty",
+  "generatedAt": "2026-07-14T08:15:33.573Z",
+  "commit": "1f1fbca+dirty",
   "branch": "main",
-  "status": "baseline-ready",
+  "status": "missing-budget-evidence",
   "northStar": "daily-driver workflow runs completed without opening VS Code",
   "hardBudgets": [
     {
       "id": "total-js-assets",
       "label": "Total built JS assets",
-      "actualBytes": 1216932,
-      "limitBytes": 1400000,
+      "actualBytes": 1588321,
+      "limitBytes": 1750000,
       "pass": true
     },
     {
       "id": "total-css-assets",
       "label": "Total built CSS assets",
-      "actualBytes": 85006,
-      "limitBytes": 90000,
+      "actualBytes": 128655,
+      "limitBytes": 145000,
       "pass": true
     }
   ],
@@ -24,7 +24,7 @@
     {
       "id": "largest-js-vite-warning",
       "label": "Largest JS chunk stays below Vite warning size",
-      "actualBytes": 1216932,
+      "actualBytes": 1583523,
       "limitBytes": 500000,
       "pass": false,
       "note": "Warning only for now because CodeMirror language packages already exceed Vite's default chunk warning."
@@ -86,7 +86,7 @@
       "id": "chrome-first-open",
       "label": "Actual app first-open screenshot",
       "file": "docs/qa/app-shell/first-open-1440.png",
-      "bytes": 54758,
+      "bytes": 74258,
       "minBytes": 1024,
       "pass": true
     },
@@ -94,7 +94,7 @@
       "id": "chrome-narrow",
       "label": "Actual app narrow screenshot",
       "file": "docs/qa/app-shell/first-open-900.png",
-      "bytes": 40368,
+      "bytes": 57281,
       "minBytes": 1024,
       "pass": true
     },
@@ -110,7 +110,7 @@
       "id": "editor-selected",
       "label": "Editor selected-state screenshot",
       "file": "docs/qa/editor-parity/selected.png",
-      "bytes": 126634,
+      "bytes": 126975,
       "minBytes": 1024,
       "pass": true
     },
@@ -118,40 +118,8 @@
       "id": "daily-driver-report",
       "label": "Daily-driver report",
       "file": "docs/qa/daily-driver/latest.md",
-      "bytes": 2277,
+      "bytes": 2590,
       "minBytes": 1024,
-      "pass": true
-    },
-    {
-      "id": "render-perf-live",
-      "label": "Live-captured render-perf snapshot (frame time/IPC payload/jank)",
-      "file": "docs/qa/perf-budget/render-perf-live.json",
-      "bytes": 305,
-      "minBytes": 50,
-      "pass": true
-    },
-    {
-      "id": "render-perf-two-pane",
-      "label": "Packaged two-pane render-perf snapshot",
-      "file": "docs/qa/perf-budget/render-perf-2-pane.json",
-      "bytes": 324,
-      "minBytes": 50,
-      "pass": true
-    },
-    {
-      "id": "render-perf-four-pane",
-      "label": "Packaged four-pane render-perf snapshot",
-      "file": "docs/qa/perf-budget/render-perf-4-pane.json",
-      "bytes": 305,
-      "minBytes": 50,
-      "pass": true
-    },
-    {
-      "id": "runtime-comparison",
-      "label": "Process-tree runtime comparison",
-      "file": "docs/qa/perf-budget/runtime-comparison.json",
-      "bytes": 2473,
-      "minBytes": 100,
       "pass": true
     },
     {
@@ -163,17 +131,89 @@
       "pass": true
     }
   ],
+  "renderPerfChecks": [
+    {
+      "id": "render-perf-1-pane",
+      "label": "Packaged 1-pane render performance",
+      "file": "docs/qa/perf-budget/render-perf-1-pane.json",
+      "expectedPaneCount": 1,
+      "minimumFrames": 30,
+      "maximumFrameP95Ms": 16.7,
+      "maximumJankRate": 0.02,
+      "minimumIpcSamples": 1,
+      "maximumIpcP95Bytes": 262144,
+      "actual": {
+        "frameCount": 0,
+        "frameP95": null,
+        "jankRate": null,
+        "ipcCount": 0,
+        "ipcP95": null
+      },
+      "pass": false
+    },
+    {
+      "id": "render-perf-2-pane",
+      "label": "Packaged 2-pane render performance",
+      "file": "docs/qa/perf-budget/render-perf-2-pane.json",
+      "expectedPaneCount": 2,
+      "minimumFrames": 30,
+      "maximumFrameP95Ms": 16.7,
+      "maximumJankRate": 0.02,
+      "minimumIpcSamples": 1,
+      "maximumIpcP95Bytes": 262144,
+      "actual": {
+        "paneCount": 2,
+        "frameCount": 117,
+        "frameP95": 1.0000000000582077,
+        "jankRate": 0.017094017094017096,
+        "ipcCount": 7,
+        "ipcP95": 108281
+      },
+      "pass": true
+    },
+    {
+      "id": "render-perf-4-pane",
+      "label": "Packaged 4-pane render performance",
+      "file": "docs/qa/perf-budget/render-perf-4-pane.json",
+      "expectedPaneCount": 4,
+      "minimumFrames": 30,
+      "maximumFrameP95Ms": 16.7,
+      "maximumJankRate": 0.02,
+      "minimumIpcSamples": 1,
+      "maximumIpcP95Bytes": 262144,
+      "actual": {
+        "paneCount": 4,
+        "frameCount": 300,
+        "frameP95": 1,
+        "jankRate": 0,
+        "ipcCount": 220,
+        "ipcP95": 108284
+      },
+      "pass": true
+    }
+  ],
+  "controlledRuntimeCheck": {
+    "id": "controlled-runtime-comparison",
+    "label": "Controlled equivalent Keelhouse and VS Code runtime comparison",
+    "file": "docs/qa/perf-budget/runtime-comparison-controlled.json",
+    "pass": false
+  },
   "metrics": {
     "assets": [
       {
-        "file": "app/dist/assets/index-BApo8pt5.js",
-        "bytes": 1216932,
+        "file": "app/dist/assets/browserQa-DukSwdUQ.js",
+        "bytes": 4798,
         "ext": ".js"
       },
       {
-        "file": "app/dist/assets/index-BdR901f9.css",
-        "bytes": 85006,
+        "file": "app/dist/assets/index-CYk7Dmp9.css",
+        "bytes": 128655,
         "ext": ".css"
+      },
+      {
+        "file": "app/dist/assets/index-DLIZ6_Pn.js",
+        "bytes": 1583523,
+        "ext": ".js"
       },
       {
         "file": "app/dist/assets/inter-latin-400-normal-C38fXH4l.woff2",
@@ -227,9 +267,9 @@
       }
     ],
     "totals": {
-      "totalJsBytes": 1216932,
-      "totalCssBytes": 85006,
-      "largestJsBytes": 1216932
+      "totalJsBytes": 1588321,
+      "totalCssBytes": 128655,
+      "largestJsBytes": 1583523
     }
   },
   "nextLiveMeasurements": [

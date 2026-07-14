@@ -386,3 +386,11 @@ Append-only. Don't edit past entries — add a new one that supersedes.
 **Why:** Tauri's local output retained a linker-signed Mach-O but did not seal `Info.plist` and `Resources/icon.icns`. The app could launch, yet `codesign --verify --deep --strict` correctly rejected the package. A package command must verify the distributable bundle, not only compile the executable.
 
 **Verified:** Rebuilding through `npm run package:mac` produces a bundle that passes strict deep `codesign` verification, and the bundled ICNS hash matches the generated source asset.
+
+## 2026-07-14 — Rebase asset caps at the v1 feature freeze and enforce runtime evidence
+
+**Choice:** Set the production asset ceilings to 1.75 MB total JavaScript and 145 KB total CSS, approximately 10% above the measured 2026-07-14 build. Keep the 500 KB largest-chunk warning. Add hard metric checks for packaged 1-, 2-, and 4-pane captures: at least 30 frames, p95 paint at or below 16.7 ms, jank at or below 2%, at least one IPC sample, and IPC p95 at or below 256 KiB. Require a separate controlled-equivalent VS Code comparison; the existing observational capture cannot satisfy the gate.
+
+**Why:** The previous 1.4 MB/90 KB limits described the pre-chat feature set and were exceeded by the durable chat, connections, MCP, orchestration, and checkpoint slices. Raising them without strengthening the runtime gate would hide regressions; retaining them would make a known stale baseline masquerade as a product failure. The new ceilings freeze the complete v1 feature footprint while the runtime thresholds test the actual lightweight-workbench claim.
+
+**Reversible?** Yes. Asset caps should decrease after measured pruning or increase only through another explicit decision backed by equivalent runtime evidence.

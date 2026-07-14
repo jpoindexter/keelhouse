@@ -1,17 +1,17 @@
 # Performance Budget
 
-Generated: 2026-07-12T22:08:43.020Z
-Commit: f34b277+dirty
-Status: baseline-ready
+Generated: 2026-07-14T08:15:33.573Z
+Commit: 1f1fbca+dirty
+Status: missing-budget-evidence
 
 ## Hard Budgets
 
-- PASS Total built JS assets: 1188.4 KiB / 1367.2 KiB
-- PASS Total built CSS assets: 83.0 KiB / 87.9 KiB
+- PASS Total built JS assets: 1551.1 KiB / 1709.0 KiB
+- PASS Total built CSS assets: 125.6 KiB / 141.6 KiB
 
 ## Soft Budgets
 
-- WARN Largest JS chunk stays below Vite warning size: 1188.4 KiB / 488.3 KiB
+- WARN Largest JS chunk stays below Vite warning size: 1546.4 KiB / 488.3 KiB
   - Warning only for now because CodeMirror language packages already exceed Vite's default chunk warning.
 
 ## Source Checks
@@ -26,16 +26,19 @@ Status: baseline-ready
 
 ## Artifact Checks
 
-- PASS Actual app first-open screenshot - docs/qa/app-shell/first-open-1440.png (53.5 KiB)
-- PASS Actual app narrow screenshot - docs/qa/app-shell/first-open-900.png (39.4 KiB)
+- PASS Actual app first-open screenshot - docs/qa/app-shell/first-open-1440.png (72.5 KiB)
+- PASS Actual app narrow screenshot - docs/qa/app-shell/first-open-900.png (55.9 KiB)
 - PASS Native Tauri run screenshot - docs/qa/app-shell/native-run.png (315.8 KiB)
-- PASS Editor selected-state screenshot - docs/qa/editor-parity/selected.png (123.7 KiB)
-- PASS Daily-driver report - docs/qa/daily-driver/latest.md (2.2 KiB)
-- PASS Live-captured render-perf snapshot (frame time/IPC payload/jank) - docs/qa/perf-budget/render-perf-live.json (0.3 KiB)
-- PASS Packaged two-pane render-perf snapshot - docs/qa/perf-budget/render-perf-2-pane.json (0.3 KiB)
-- PASS Packaged four-pane render-perf snapshot - docs/qa/perf-budget/render-perf-4-pane.json (0.3 KiB)
-- PASS Process-tree runtime comparison - docs/qa/perf-budget/runtime-comparison.json (2.4 KiB)
+- PASS Editor selected-state screenshot - docs/qa/editor-parity/selected.png (124.0 KiB)
+- PASS Daily-driver report - docs/qa/daily-driver/latest.md (2.5 KiB)
 - PASS Packaged Gemini TUI screenshot - docs/qa/daily-driver/gemini-tui.png (119.0 KiB)
+
+## Render Performance
+
+- FAIL Packaged 1-pane render performance: 0 frames, p95 missing ms, missing jank, IPC p95 missing - docs/qa/perf-budget/render-perf-1-pane.json
+- PASS Packaged 2-pane render performance: 117 frames, p95 1.00 ms, 1.71% jank, IPC p95 105.7 KiB - docs/qa/perf-budget/render-perf-2-pane.json
+- PASS Packaged 4-pane render performance: 300 frames, p95 1.00 ms, 0.00% jank, IPC p95 105.7 KiB - docs/qa/perf-budget/render-perf-4-pane.json
+- FAIL Controlled equivalent Keelhouse and VS Code runtime comparison - docs/qa/perf-budget/runtime-comparison-controlled.json
 
 ## Next Live Measurements
 

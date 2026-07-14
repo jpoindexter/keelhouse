@@ -8,6 +8,18 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "docs/qa/perf-budget");
 const sampleCount = 5;
 const sampleDelayMs = 500;
+const controlled = process.env.KEELHOUSE_PERF_CONTROLLED === "1";
+const vscodeProcessMarker = process.env.KEELHOUSE_PERF_VSCODE_MARKER?.trim() ?? "";
+const controlledScenario = {
+  id: "one-project-explorer-editor-shell",
+  keelhouse: "Open the controlled fixture; show its file explorer; open README.md; open one blank shell; run printf 'PERF_CONTROLLED_OK\\n'.",
+  vscode: "Open the controlled fixture; show its file explorer; open README.md; open one blank shell; run printf 'PERF_CONTROLLED_OK\\n'.",
+};
+
+if (controlled && !vscodeProcessMarker) {
+  console.error("Controlled capture requires KEELHOUSE_PERF_VSCODE_MARKER for the isolated VS Code --user-data-dir.");
+  process.exit(2);
+}
 
 const sleep = (milliseconds) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 const processRows = () => execFileSync("ps", ["-axo", "pid=,ppid=,rss=,%cpu=,command="], { encoding: "utf8" })
@@ -45,13 +57,19 @@ const targets = [
     id: "keelhouse",
     label: "Packaged Keelhouse",
     find: (row) => row.command.includes("/Keelhouse.app/Contents/MacOS/agent-cli"),
-    workload: "Three restored projects; five panes in the active project (three shells, one exited Codex, one Gemini at the trust prompt).",
+    workload: controlled
+      ? controlledScenario.keelhouse
+      : "Three restored projects; five panes in the active project (three shells, one exited Codex, one Gemini at the trust prompt).",
   },
   {
     id: "vscode",
-    label: "Current VS Code workload",
-    find: (row) => row.command === "/Applications/Visual Studio Code.app/Contents/MacOS/Code",
-    workload: "Existing long-running user workload with extensions and multiple windows; observational baseline only, not a controlled equivalent run.",
+    label: controlled ? "Isolated VS Code" : "Current VS Code workload",
+    find: controlled
+      ? (row) => row.command.includes("/Visual Studio Code.app/Contents/MacOS/Code") && row.command.includes(vscodeProcessMarker)
+      : (row) => row.command === "/Applications/Visual Studio Code.app/Contents/MacOS/Code",
+    workload: controlled
+      ? controlledScenario.vscode
+      : "Existing long-running user workload with extensions and multiple windows; observational baseline only, not a controlled equivalent run.",
   },
 ];
 
@@ -87,8 +105,13 @@ const summary = Object.fromEntries(targets.map((target) => {
 
 const result = {
   capturedAt: new Date().toISOString(),
-  status: summary.keelhouse && summary.vscode ? "observational-comparison" : "missing-process",
-  caveat: "This captures current real workloads. It does not prove the equivalent-workflow North Star until VS Code and Keelhouse run the same controlled scenario.",
+  status: summary.keelhouse && summary.vscode
+    ? controlled ? "controlled-equivalent" : "observational-comparison"
+    : "missing-process",
+  caveat: controlled
+    ? "Both apps were prepared with the same named explorer/editor/shell scenario before process-tree sampling. This compares the specified idle-ready state, not startup energy or long-running agent load."
+    : "This captures current real workloads. It does not prove the equivalent-workflow North Star until VS Code and Keelhouse run the same controlled scenario.",
+  ...(controlled ? { scenario: controlledScenario } : {}),
   sampleCount,
   sampleDelayMs,
   summary,
@@ -96,7 +119,8 @@ const result = {
 };
 
 fs.mkdirSync(outDir, { recursive: true });
-fs.writeFileSync(path.join(outDir, "runtime-comparison.json"), `${JSON.stringify(result, null, 2)}\n`);
+const outputStem = controlled ? "runtime-comparison-controlled" : "runtime-comparison";
+fs.writeFileSync(path.join(outDir, `${outputStem}.json`), `${JSON.stringify(result, null, 2)}\n`);
 const lines = [
   "# Runtime Comparison",
   "",
@@ -119,7 +143,8 @@ const lines = [
   "Run the same one-project, two-agent, and three-project workflows in both apps from comparable cold starts, then record elapsed time and process-tree deltas.",
   "",
 ];
-fs.writeFileSync(path.join(outDir, "runtime-comparison.md"), `${lines.join("\n")}\n`);
+fs.writeFileSync(path.join(outDir, `${outputStem}.md`), `${lines.join("\n")}\n`);
 
-if (result.status !== "observational-comparison") process.exitCode = 1;
-else console.log("runtime comparison captured");
+const expectedStatus = controlled ? "controlled-equivalent" : "observational-comparison";
+if (result.status !== expectedStatus) process.exitCode = 1;
+else console.log(`${controlled ? "controlled" : "observational"} runtime comparison captured`);
