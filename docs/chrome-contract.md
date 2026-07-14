@@ -42,7 +42,7 @@ First open shows the demo layout: 332px Threads drawer, centered conversation+co
 - Structured agent chat is the persistent primary surface; raw terminal is a bottom-tray escape hatch for direct TUI interaction.
 - Each user prompt starts one visual turn; assistant, tool, status, and error events remain directly beneath that prompt until the next user prompt.
 - Observable prompt, approval, file, command, error, browser, git, and app events appear as inline provenance in the conversation.
-- Keelhouse does not infer structured chat, tool events, or thinking from terminal text. Codex JSON events provide the first explicit adapter; other providers route to raw terminal until their adapters land.
+- Keelhouse does not infer structured chat, tool events, or thinking from terminal text. Codex and Claude use explicit provider JSON adapters; providers without one route to raw terminal.
 - The composer stays pinned below output and activity.
 - Its footer exposes real attachment, permission, goal, Codex model, reasoning effort, stop, and send controls. Static labels must not stand in for hidden settings.
 - Permission, goal, model, and reasoning state persist per chat and reach the native Codex run request. Unsupported controls such as voice input stay absent rather than appearing as dead chrome.
@@ -63,6 +63,7 @@ First open shows the demo layout: 332px Threads drawer, centered conversation+co
 - The terminal toolbar retains the selected profile label but renders universal New, Find, Restart, Kill, and Close actions as 16px icons with `aria-label` and tooltip text. Toolbar controls keep a 12px outer inset and at least a 28px interaction box.
 - The status bar reports real workspace, provider, and active-surface state only. Placeholder integrations such as `Prettier` are prohibited.
 - Browser preview chrome responds to tray width; narrow trays hide the redundant Open button before controls overlap.
+- Tool tray tabs measure their rendered width in the native split view: full labels become active-label-only, then icon-only, before controls can collide. CSS container queries remain progressive enhancement rather than the sole resize gate.
 
 ## Native Engineering Review
 

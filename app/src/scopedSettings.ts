@@ -29,7 +29,7 @@ export type ScopedSettingView<T> = {
   chat: ScopedSettingResolution<T> | null;
 };
 
-const normalizeStructuredProfileId = (_value: unknown) => "codex";
+const normalizeStructuredProfileId = (value: unknown) => value === "claude" ? "claude" : "codex";
 
 export const scopedChatKey = (projectPath: string, sessionId: string) => `${projectPath}\n${sessionId}`;
 
@@ -59,8 +59,8 @@ const normalizeUrl = (value: unknown, fallback: string) =>
 const normalizePartialValues = (value: unknown): Partial<ScopedSettingsValues> => {
   if (!isRecord(value)) return {};
   const normalized: Partial<ScopedSettingsValues> = {};
-  if (value.agentProfileId === "codex") {
-    normalized.agentProfileId = "codex";
+  if (value.agentProfileId === "codex" || value.agentProfileId === "claude") {
+    normalized.agentProfileId = value.agentProfileId;
   }
   if (value.approvalMode === "ask" || value.approvalMode === "approveSafe" || value.approvalMode === "fullAccess") {
     normalized.approvalMode = value.approvalMode;
@@ -215,7 +215,9 @@ export const migrateLegacyScopedSettings = (input: {
     const override: Partial<ScopedSettingsValues> = {};
     if (browserUrl?.trim()) override.browserUrl = browserUrl.trim();
     if (composer) {
-      if (composer.selectedProfileId === "codex") override.agentProfileId = "codex";
+      if (composer.selectedProfileId === "codex" || composer.selectedProfileId === "claude") {
+        override.agentProfileId = composer.selectedProfileId;
+      }
       if (composer.approvalMode === "ask" || composer.approvalMode === "approveSafe" || composer.approvalMode === "fullAccess") {
         override.approvalMode = composer.approvalMode;
       }

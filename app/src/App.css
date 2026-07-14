@@ -6406,6 +6406,37 @@ body,
   border-color: #67c3d1;
 }
 
+.agent-composer__provider-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 2px 7px 5px;
+  border: 1px solid #41434f;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.agent-composer__provider-options button {
+  height: 28px;
+  border: 0;
+  border-right: 1px solid #41434f;
+  border-radius: 0;
+  background: #1a1b22;
+  color: #989baa;
+  font: 11px/1 var(--font-ui);
+}
+
+.agent-composer__provider-options button:last-child {
+  border-right: 0;
+}
+
+.agent-composer__provider-options button:hover,
+.agent-composer__provider-options button:focus-visible,
+.agent-composer__provider-options button.is-selected {
+  background: #30323d;
+  color: #ffffff;
+}
+
 .agent-composer__clear {
   height: 26px;
   border: 0;
@@ -6583,6 +6614,29 @@ body,
   .tool-tray-tabs__tab--active span {
     display: none;
   }
+}
+
+/* WebKit does not consistently re-evaluate this dock's container query while
+   the native split view is dragged. ToolTrayTabs also applies a measured class
+   so labels cannot overlap during or after a resize. */
+.tool-tray-tabs--compact .tool-tray-tabs__tab span,
+.tool-tray-tabs--icons .tool-tray-tabs__tab span {
+  display: none;
+}
+
+.tool-tray-tabs--compact .tool-tray-tabs__tab--active {
+  gap: 7px;
+  padding-inline: 10px;
+}
+
+.tool-tray-tabs--compact .tool-tray-tabs__tab--active span {
+  display: block;
+}
+
+.tool-tray-tabs--icons .tool-tray-tabs__tab,
+.tool-tray-tabs--icons .tool-tray-tabs__tab--active {
+  gap: 0;
+  padding-inline: 0;
 }
 
 .files-dock,

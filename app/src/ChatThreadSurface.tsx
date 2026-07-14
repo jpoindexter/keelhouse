@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { agentActivityFilterLabel, agentActivityMetaLabel, agentActivityTimeLabel } from "./agentActivity";
 import type { AgentActivityEvent } from "./agentActivity";
-import type { ChatConversation, ChatMessage } from "./chatConversation";
+import { chatProviderLabel, type ChatConversation, type ChatMessage } from "./chatConversation";
 import { ChatMarkdown } from "./ChatMarkdown";
 import { agentActivityAccessibleLabel, agentActivityIconName, AppIcon } from "./icons";
 
@@ -24,9 +24,9 @@ const SUGGESTIONS = [
   "Review the current Git changes before I commit.",
 ];
 
-const messageLabel = (message: ChatMessage) => {
+const messageLabel = (message: ChatMessage, providerLabel: string) => {
   if (message.role === "user") return "You";
-  if (message.role === "assistant") return "Codex";
+  if (message.role === "assistant") return providerLabel;
   return message.title ?? (message.role === "error" ? "Error" : "Activity");
 };
 
@@ -110,6 +110,7 @@ export function ChatThreadSurface({ conversation, events, hidden = false, onSugg
     return latest ? `${visibleMessages.length}:${latest.id}:${latest.timestamp}:${latest.status ?? ""}` : "empty";
   }, [visibleMessages]);
   const threadIdentity = visibleMessages[0]?.id ?? "empty";
+  const providerLabel = chatProviderLabel(conversation.provider);
 
   useEffect(() => {
     autoFollowRef.current = true;
@@ -188,7 +189,7 @@ export function ChatThreadSurface({ conversation, events, hidden = false, onSugg
   return (
     <div className="agent-chat-surface" aria-hidden={hidden}>
       <div className="chat-response-announcer" aria-live="polite" aria-atomic="true">
-        {conversation.activeRunId ? "Codex is working." : conversation.runStatus === "complete" ? "Codex response complete." : ""}
+        {conversation.activeRunId ? `${providerLabel} is working.` : conversation.runStatus === "complete" ? `${providerLabel} response complete.` : ""}
       </div>
       <div
         className="chat-thread"
@@ -206,7 +207,7 @@ export function ChatThreadSurface({ conversation, events, hidden = false, onSugg
         <div className="chat-thread__content">
           {empty ? (
             <div className="chat-empty">
-              <strong>Start a new Codex chat</strong>
+              <strong>Start a new {providerLabel} chat</strong>
               <div className="chat-empty__suggestions">
                 {SUGGESTIONS.map((prompt) => (
                   <button key={prompt} type="button" onClick={() => onSuggestion(prompt)}>{prompt}</button>
@@ -234,7 +235,7 @@ export function ChatThreadSurface({ conversation, events, hidden = false, onSugg
                     >
                       {message.role !== "tool" && !continuation ? (
                         <header>
-                          <strong>{messageLabel(message)}</strong>
+                          <strong>{messageLabel(message, providerLabel)}</strong>
                           {message.status === "running" ? <span className="chat-message__running">Working</span> : null}
                         </header>
                       ) : null}

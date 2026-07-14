@@ -12,6 +12,7 @@
 mod agent_hooks;
 mod chat_harness;
 mod chat_store;
+mod claude_adapter;
 mod connection_secrets;
 mod mcp_oauth;
 mod mcp_probe;
@@ -2291,7 +2292,7 @@ fn agent_connections_status() -> AgentConnectionsStatusResponse {
         providers: vec![
             agent_connection_status("codex", "Codex", Some(&["login", "status"]), true),
             agent_connection_status("gemini", "Gemini", None, false),
-            agent_connection_status("claude", "Claude", Some(&["auth", "status"]), false),
+            agent_connection_status("claude", "Claude", Some(&["auth", "status"]), true),
         ],
     }
 }

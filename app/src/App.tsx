@@ -257,13 +257,14 @@ import { ChatThreadSurface } from "./ChatThreadSurface";
 import {
   appendUserChatMessage,
   applyChatRunEnvelope,
+  chatProviderLabel,
   chatTitleFromPrompt,
   emptyChatConversation,
   forkChatConversation,
   normalizeChatConversationRecords,
   startChatRun,
 } from "./chatConversation";
-import type { ChatConversation, ChatConversationRecords, ChatMessage, ChatRunEnvelope } from "./chatConversation";
+import type { ChatConversation, ChatConversationRecords, ChatMessage, ChatProvider, ChatRunEnvelope } from "./chatConversation";
 import {
   deleteDurableChatConversation,
   deleteDurableProjectChats,
@@ -890,6 +891,11 @@ function App() {
       : emptyChatConversation(0),
     [activeComposerHarnessKey, chatConversations],
   );
+  const activeComposerProfile = resolveLaunchProfile(activeComposerHarness.selectedProfileId);
+  const activeComposerProvider = structuredChatProviderId(activeComposerHarness.selectedProfileId);
+  const activeComposerProviderLabel = activeComposerProvider
+    ? chatProviderLabel(activeComposerProvider)
+    : activeComposerProfile.label;
   const activeTerminalPane = useMemo(
     () => terminalPanes.find((pane) => pane.id === activeTerminalPaneId) ?? null,
     [activeTerminalPaneId, terminalPanes],
@@ -1867,8 +1873,8 @@ function App() {
       projectSessionId,
       cwd: projectId,
       label: "Structured chat",
-      agentProfileId: "codex",
-      agentProfileLabel: "Codex",
+      agentProfileId: activeComposerProvider ?? "codex",
+      agentProfileLabel: activeComposerProviderLabel,
       processState: "running",
       approvalMode: composerHarnessBySessionRef.current[composerHarnessSessionKey(projectId, projectSessionId)]?.approvalMode ?? "ask",
       exitCode: null,
@@ -2674,10 +2680,13 @@ function App() {
             path: attachment.target,
           }),
         });
-        const previousConversation = chatConversationsRef.current[chatId] ?? emptyChatConversation();
+        const storedConversation = chatConversationsRef.current[chatId] ?? emptyChatConversation(Date.now(), provider);
+        const previousConversation = storedConversation.provider === provider
+          ? storedConversation
+          : { ...storedConversation, provider, providerThreadId: undefined };
         const runId = `chat-run-${crypto.randomUUID()}`;
-        updateChatConversation(chatId, (conversation) =>
-          startChatRun(appendUserChatMessage(conversation, route.text), runId)
+        updateChatConversation(chatId, () =>
+          startChatRun(appendUserChatMessage(previousConversation, route.text), runId)
         );
         const session = projectSessionsRef.current[workspacePathRef.current]?.find((item) => item.id === activeSessionId);
         if (session && (session.title === "Current work" || /^New (session|chat)( \d+)?$/.test(session.title))) {
@@ -2734,7 +2743,7 @@ function App() {
         updateChatConversation(chatId, (conversation) => applyChatRunEnvelope(conversation, {
           runId: "launch-error",
           chatId,
-          provider: "codex",
+          provider: activeComposerProvider ?? activeChatConversation.provider,
           stream: "lifecycle",
           event: { type: "run.completed", exitCode: 1, message: String(err) },
         }));
@@ -2888,6 +2897,24 @@ function App() {
   const setComposerModel = async (model: string, options: { log?: boolean } = {}) => {
     const next = await updateActiveComposerHarness((state) => ({ ...state, model: model.slice(0, 128) }));
     if (options.log && next?.model.trim()) logComposerHarnessEvent("Model override changed", next.model.trim());
+  };
+
+  const setStructuredChatProvider = async (provider: ChatProvider) => {
+    const chatId = activeComposerHarnessKey;
+    if (!chatId || activeChatConversation.activeRunId || provider === activeComposerProvider) return;
+    await updateScopedSetting("chat", "agentProfileId", provider);
+    await updateActiveComposerHarness((state) => ({
+      ...state,
+      selectedProfileId: provider,
+      model: "",
+    }));
+    updateChatConversation(chatId, (conversation) => ({
+      ...conversation,
+      provider,
+      providerThreadId: undefined,
+      updatedAt: Date.now(),
+    }));
+    logComposerHarnessEvent("Chat provider changed", chatProviderLabel(provider));
   };
 
   const setComposerReasoningEffort = async (reasoningEffort: ComposerReasoningEffort) => {
@@ -6698,20 +6725,34 @@ function App() {
                   <details className="agent-composer__menu agent-composer__menu--runtime">
                     <summary className="agent-composer__control agent-composer__control--runtime">
                       <AppIcon name="agent" />
-                      <span>Codex</span>
+                      <span>{activeComposerProviderLabel}</span>
                       {activeComposerHarness.model.trim() ? <span className="agent-composer__control-detail">{activeComposerHarness.model.trim()}</span> : null}
                       {activeComposerHarness.reasoningEffort !== "default" ? <span className="agent-composer__control-detail">{composerReasoningLabel(activeComposerHarness.reasoningEffort)}</span> : null}
                       <AppIcon name="chevronDown" />
                     </summary>
                     <div className="agent-composer__popover agent-composer__popover--runtime">
-                      <div className="agent-composer__popover-title">Codex run settings</div>
+                      <div className="agent-composer__popover-title">{activeComposerProviderLabel} run settings</div>
+                      <div className="agent-composer__provider-options" role="group" aria-label="Structured chat provider">
+                        {LAUNCH_PROFILES.filter((profile) => profile.id === "codex" || profile.id === "claude").map((profile) => (
+                          <button
+                            className={activeComposerHarness.selectedProfileId === profile.id ? "is-selected" : ""}
+                            type="button"
+                            aria-pressed={activeComposerHarness.selectedProfileId === profile.id}
+                            disabled={Boolean(activeChatConversation.activeRunId)}
+                            key={profile.id}
+                            onClick={() => void setStructuredChatProvider(profile.id as ChatProvider)}
+                          >
+                            {profile.label}
+                          </button>
+                        ))}
+                      </div>
                       <label className="agent-composer__popover-field">
                         <span>Model override</span>
                         <input
-                          aria-label="Codex model override"
+                          aria-label={`${activeComposerProviderLabel} model override`}
                           value={activeComposerHarness.model}
                           maxLength={128}
-                          placeholder="Use Codex config default"
+                          placeholder={`Use ${activeComposerProviderLabel} default`}
                           disabled={!activeComposerHarnessKey}
                           onChange={(event) => void setComposerModel(event.currentTarget.value)}
                           onBlur={() => void setComposerModel(activeComposerHarness.model, { log: true })}
@@ -6944,10 +6985,10 @@ function App() {
           profileSetting={activeAgentProfileSetting}
           profiles={LAUNCH_PROFILES.map((profile) => ({
             id: profile.id,
-            label: profile.id === "codex"
+            label: profile.id === "codex" || profile.id === "claude"
               ? profile.label
               : `${profile.label} · ${profile.id === "shell" ? "not a chat provider" : "raw terminal only"}`,
-            disabled: profile.id !== "codex",
+            disabled: profile.id !== "codex" && profile.id !== "claude",
           }))}
           sessionTitle={activeSessionTitle}
           trayMode={toolTrayMode}

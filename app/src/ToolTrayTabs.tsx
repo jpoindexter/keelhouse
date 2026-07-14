@@ -1,3 +1,5 @@
+import { useLayoutEffect, useRef, useState } from "react";
+
 import { AppIcon } from "./icons";
 import type { ToolTrayMode } from "./workbenchLayout";
 
@@ -13,7 +15,35 @@ export const toolTraySelection = (current: ToolTrayMode, next: ToolTrayMode): To
 const showsEditor = (mode: ToolTrayMode) => mode === "editor" || mode === "split";
 const showsBrowser = (mode: ToolTrayMode) => mode === "browser" || mode === "split";
 
+export type ToolTrayDensity = "full" | "compact" | "icons";
+
+export const toolTrayDensity = (width: number): ToolTrayDensity => {
+  if (width < 420) return "icons";
+  if (width < 620) return "compact";
+  return "full";
+};
+
 export function ToolTrayTabs({ mode, onModeChange, onClose }: ToolTrayTabsProps) {
+  const trayRef = useRef<HTMLElement | null>(null);
+  const [density, setDensity] = useState<ToolTrayDensity>("compact");
+
+  useLayoutEffect(() => {
+    const tray = trayRef.current;
+    if (!tray) return;
+
+    const updateDensity = (width: number) => {
+      setDensity((current) => {
+        const next = toolTrayDensity(width);
+        return current === next ? current : next;
+      });
+    };
+    updateDensity(tray.getBoundingClientRect().width);
+
+    const observer = new ResizeObserver(([entry]) => updateDensity(entry.contentRect.width));
+    observer.observe(tray);
+    return () => observer.disconnect();
+  }, []);
+
   const choose = (next: ToolTrayMode) => {
     const selection = toolTraySelection(mode, next);
     if (selection == null) onClose();
@@ -21,7 +51,7 @@ export function ToolTrayTabs({ mode, onModeChange, onClose }: ToolTrayTabsProps)
   };
 
   return (
-    <nav className="tool-tray-tabs" aria-label="Tool tray surfaces">
+    <nav ref={trayRef} className={`tool-tray-tabs tool-tray-tabs--${density}`} aria-label="Tool tray surfaces" data-density={density}>
       <button
         className={`tool-tray-tabs__tab ${mode === "files" ? "tool-tray-tabs__tab--active" : ""}`}
         type="button"

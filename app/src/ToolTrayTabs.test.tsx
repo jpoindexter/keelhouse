@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { ToolTrayTabs, toolTraySelection } from "./ToolTrayTabs";
+import { ToolTrayTabs, toolTrayDensity, toolTraySelection } from "./ToolTrayTabs";
 
 const noop = () => {};
 
@@ -9,6 +9,12 @@ describe("ToolTrayTabs", () => {
   it("closes an active panel and switches to an inactive panel", () => {
     expect(toolTraySelection("files", "files")).toBeNull();
     expect(toolTraySelection("files", "browser")).toBe("browser");
+  });
+
+  it("collapses labels before controls can collide", () => {
+    expect(toolTrayDensity(760)).toBe("full");
+    expect(toolTrayDensity(540)).toBe("compact");
+    expect(toolTrayDensity(360)).toBe("icons");
   });
 
   it("provides the approved four-surface dock and marks one active tab", () => {

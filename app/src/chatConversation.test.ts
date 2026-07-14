@@ -63,6 +63,51 @@ describe("chat conversations", () => {
     expect(threaded.messages.map((message) => message.role)).toEqual(["user", "status"]);
   });
 
+  it("normalizes Claude chats and shared structured events without Codex labels", () => {
+    const restored = normalizeChatConversationRecords({
+      "/repo\nclaude": {
+        provider: "claude",
+        providerThreadId: "claude-session-1",
+        messages: [{ id: "user-1", role: "user", text: "Inspect", timestamp: 1 }],
+        updatedAt: 1,
+        revision: 0,
+        runStatus: "idle",
+      },
+    })["/repo\nclaude"];
+    const running = startChatRun(restored, "run-claude", 2);
+    const partial = applyChatRunEnvelope(running, {
+      runId: "run-claude",
+      chatId: "/repo\nclaude",
+      provider: "claude",
+      stream: "stdout",
+      event: { method: "item/agentMessage/delta", params: { itemId: "claude-message", delta: "Checking" } },
+    }, 3);
+    const thinking = applyChatRunEnvelope(partial, {
+      runId: "run-claude",
+      chatId: "/repo\nclaude",
+      provider: "claude",
+      stream: "stdout",
+      event: { type: "provider.thinking.delta", delta: "Reading files" },
+    }, 4);
+    const completed = applyChatRunEnvelope(thinking, {
+      runId: "run-claude",
+      chatId: "/repo\nclaude",
+      provider: "claude",
+      stream: "stdout",
+      event: { type: "turn.completed", usage: { input_tokens: 8, output_tokens: 3 } },
+    }, 5);
+
+    expect(running.messages[1]).toMatchObject({ title: "Claude", text: "Working" });
+    expect(completed.provider).toBe("claude");
+    expect(completed.providerThreadId).toBe("claude-session-1");
+    expect(completed.messages.map((message) => [message.title, message.text, message.status])).toContainEqual([
+      "Thinking",
+      "Reading files",
+      "complete",
+    ]);
+    expect(completed.usage).toEqual({ inputTokens: 8, cachedInputTokens: 0, outputTokens: 3 });
+  });
+
   it("renders structured assistant and command events as chat items", () => {
     const running = startChatRun(emptyChatConversation(1), "run-1", 2);
     const command = applyChatRunEnvelope(running, {

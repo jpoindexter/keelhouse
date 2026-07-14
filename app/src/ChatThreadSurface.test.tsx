@@ -101,6 +101,19 @@ describe("ChatThreadSurface", () => {
     expect(html).toContain("Run the relevant tests");
   });
 
+  it("uses the selected provider identity in the shared empty state", () => {
+    const html = renderToStaticMarkup(
+      <ChatThreadSurface
+        conversation={{ provider: "claude", messages: [], updatedAt: 0, revision: 0, runStatus: "idle" }}
+        events={[]}
+        onRetry={() => {}}
+        onSuggestion={() => {}}
+      />,
+    );
+    expect(html).toContain("Start a new Claude chat");
+    expect(html).not.toContain("Start a new Codex chat");
+  });
+
   it("marks messages as addressable search targets and exposes bookmark state", () => {
     const html = renderToStaticMarkup(
       <ChatThreadSurface

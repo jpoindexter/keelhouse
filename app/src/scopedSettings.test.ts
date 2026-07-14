@@ -68,12 +68,23 @@ describe("scoped settings", () => {
     const normalized = normalizeScopedSettings({
       global: { agentProfileId: "shell", approvalMode: "ask", browserUrl: "http://localhost:3000" },
       projects: { "/repo": { agentProfileId: "gemini" } },
-      chats: { "/repo\nchat-a": { agentProfileId: "claude" } },
+      chats: { "/repo\nchat-a": { agentProfileId: "shell" } },
     });
 
     expect(normalized.global.agentProfileId).toBe("codex");
     expect(normalized.projects).toEqual({});
     expect(normalized.chats).toEqual({});
+  });
+
+  it("preserves Claude as a structured provider at every scope", () => {
+    const normalized = normalizeScopedSettings({
+      global: { agentProfileId: "claude", approvalMode: "ask", browserUrl: "http://localhost:3000" },
+      projects: { "/repo": { agentProfileId: "claude" } },
+      chats: { "/repo\nchat-a": { agentProfileId: "claude" } },
+    });
+
+    expect(normalized.global.agentProfileId).toBe("claude");
+    expect(resolveScopedSetting(normalized, "agentProfileId", "/repo", "chat-a").value).toBe("claude");
   });
 
   it("normalizes invalid persisted values without dropping valid overrides", () => {

@@ -31,7 +31,7 @@ The center surface is not a terminal transcript. A chat is keyed by `project roo
       → independent run/stop/error state per chat
 ```
 
-Codex is the first structured adapter and reuses the user's local OAuth. Provider-native JSON owns message/tool semantics; terminal text is never parsed into chat structure. Gemini and Claude remain explicit raw-terminal fallbacks until equivalent adapters are implemented.
+Codex and Claude are structured adapters that reuse the user's local OAuth. Provider-native JSON owns message/tool semantics; terminal text is never parsed into chat structure. Gemini remains an explicit raw-terminal fallback until an equivalent adapter is implemented. Claude's packaged authenticated lifecycle is still a verification gate, not a completed behavior claim.
 
 ## Raw terminal flow (one pane)
 

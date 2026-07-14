@@ -31,7 +31,7 @@ describe("agent connection health", () => {
     expect(formatAgentConnectionCapability(provider({ id: "gemini", structuredChat: false }))).toBe("Raw terminal only");
     expect(structuredChatProviderId("codex")).toBe("codex");
     expect(structuredChatProviderId("gemini")).toBeNull();
-    expect(structuredChatProviderId("claude")).toBeNull();
+    expect(structuredChatProviderId("claude")).toBe("claude");
     expect(structuredChatProviderId("shell")).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-export type ChatProvider = "codex";
+export type ChatProvider = "codex" | "claude";
 
 export type ChatMessageRole = "user" | "assistant" | "tool" | "status" | "error";
 
@@ -64,8 +64,10 @@ const textValue = (value: unknown): string => typeof value === "string" ? value 
 const messageId = (prefix: string, timestamp: number, suffix = "") =>
   `${prefix}-${Math.max(0, Math.floor(timestamp)).toString(36)}${suffix ? `-${suffix}` : ""}`;
 
-export const emptyChatConversation = (now = Date.now()): ChatConversation => ({
-  provider: "codex",
+export const chatProviderLabel = (provider: ChatProvider) => provider === "claude" ? "Claude" : "Codex";
+
+export const emptyChatConversation = (now = Date.now(), provider: ChatProvider = "codex"): ChatConversation => ({
+  provider,
   messages: [],
   updatedAt: now,
   revision: 0,
@@ -158,7 +160,7 @@ export const normalizeChatConversationRecords = (value: unknown): ChatConversati
       ? entry.updatedAt
       : messages[messages.length - 1]?.timestamp ?? Date.now();
     return [[key, {
-      provider: "codex" as const,
+      provider: entry.provider === "claude" ? "claude" as const : "codex" as const,
       providerThreadId: textValue(entry.providerThreadId) || undefined,
       activeRunId: undefined,
       messages,
@@ -228,7 +230,7 @@ export const startChatRun = (
     id: messageId("status", now, runId),
     role: "status",
     text: "Working",
-    title: "Codex",
+    title: chatProviderLabel(conversation.provider),
     status: "running",
     timestamp: now,
   };
@@ -313,13 +315,21 @@ const itemMessage = (
     || type === "web_search" || type === "webSearch"
   ) {
     const name = textValue(item.tool) || textValue(item.query) || type.replace(/_/g, " ");
+    const output = textValue(item.aggregatedOutput ?? item.aggregated_output).trim();
+    const input = isRecord(item.input) ? JSON.stringify(item.input, null, 2) : "";
+    const failed = textValue(item.status) === "failed";
+    const title = name === "AskUserQuestion"
+      ? "Question"
+      : name === "TodoWrite" || name === "update_plan"
+        ? "Updated plan"
+        : running ? `Using ${name}` : `Used ${name}`;
     return {
       id: messageId("tool", now, itemId),
       role: "tool",
-      title: running ? "Using tool" : "Used tool",
-      text: name,
+      title,
+      text: output || input || name,
       itemId,
-      status: running ? "running" : "complete",
+      status: running ? "running" : failed ? "error" : "complete",
       timestamp: now,
     };
   }
@@ -371,6 +381,32 @@ const appendItemDelta = (
   return { ...conversation, messages, updatedAt: now };
 };
 
+const appendProviderActivityDelta = (
+  conversation: ChatConversation,
+  runId: string,
+  providerItemId: string,
+  title: string,
+  delta: string,
+  now: number,
+): ChatConversation => {
+  const itemId = `${runId}:${providerItemId}`;
+  const index = conversation.messages.findIndex((message) => message.itemId === itemId);
+  if (index < 0) {
+    return pushMessage(conversation, {
+      id: messageId("tool", now, itemId),
+      role: "tool",
+      title,
+      text: delta,
+      itemId,
+      status: "running",
+      timestamp: now,
+    });
+  }
+  const messages = [...conversation.messages];
+  messages[index] = { ...messages[index], text: `${messages[index].text}${delta}`, timestamp: now };
+  return { ...conversation, messages, updatedAt: now };
+};
+
 const completeRunningStatus = (conversation: ChatConversation, now: number): ChatConversation => ({
   ...conversation,
   activeRunId: undefined,
@@ -378,7 +414,9 @@ const completeRunningStatus = (conversation: ChatConversation, now: number): Cha
   messages: conversation.messages.map((message) =>
     message.role === "status" && message.status === "running"
       ? { ...message, text: "Completed", status: "complete" as const, timestamp: now }
-      : message
+      : message.status === "running" && message.approvalRequestId == null
+        ? { ...message, status: "complete" as const, timestamp: now }
+        : message
   ),
   updatedAt: now,
 });
@@ -396,7 +434,7 @@ export const applyChatRunEnvelope = (
     return exitCode === 0 ? completed : pushMessage({ ...completed, runStatus: "error" }, {
       id: messageId("error", now, envelope.runId),
       role: "error",
-      text: textValue(envelope.event.message) || `Codex exited with status ${exitCode}.`,
+      text: textValue(envelope.event.message) || `${chatProviderLabel(conversation.provider)} exited with status ${exitCode}.`,
       status: "error",
       timestamp: now,
     });
@@ -413,6 +451,50 @@ export const applyChatRunEnvelope = (
     const thread = isRecord(params.thread) ? params.thread : null;
     const providerThreadId = thread ? textValue(thread.id) : "";
     return providerThreadId ? { ...conversation, providerThreadId, updatedAt: now } : conversation;
+  }
+  if (eventType === "provider.thinking.delta") {
+    return appendProviderActivityDelta(
+      conversation,
+      envelope.runId,
+      "provider-thinking",
+      "Thinking",
+      textValue(envelope.event.delta),
+      now,
+    );
+  }
+  if (eventType === "provider.compaction") {
+    return pushMessage(conversation, {
+      id: messageId("tool", now, `${envelope.runId}-compaction`),
+      role: "tool",
+      title: "Compacted context",
+      text: textValue(envelope.event.summary) || "Context compacted",
+      itemId: `${envelope.runId}:provider-compaction`,
+      status: "complete",
+      timestamp: now,
+    });
+  }
+  if (eventType === "provider.question") {
+    const input = isRecord(envelope.event.input) ? JSON.stringify(envelope.event.input, null, 2) : "Question requested";
+    return upsertItemMessage(conversation, {
+      id: messageId("tool", now, `${envelope.runId}-question`),
+      role: "tool",
+      title: "Question",
+      text: input,
+      itemId: `${envelope.runId}:${textValue(envelope.event.toolId) || "provider-question"}`,
+      status: "complete",
+      timestamp: now,
+    });
+  }
+  if (eventType === "provider.plan.updated") {
+    return upsertItemMessage(conversation, {
+      id: messageId("tool", now, `${envelope.runId}-plan`),
+      role: "tool",
+      title: "Updated plan",
+      text: JSON.stringify(envelope.event.plan ?? {}, null, 2),
+      itemId: `${envelope.runId}:${textValue(envelope.event.toolId) || "provider-plan"}`,
+      status: "complete",
+      timestamp: now,
+    });
   }
   if (eventType === "item.started" || eventType === "item.completed") {
     const item = isRecord(envelope.event.item) ? envelope.event.item : null;
@@ -466,7 +548,7 @@ export const applyChatRunEnvelope = (
       id: messageId("approval", now, `${envelope.runId}-${requestId}`),
       role: "tool",
       title: kind,
-      text: details || "Codex requested permission to continue.",
+      text: details || `${chatProviderLabel(conversation.provider)} requested permission to continue.`,
       itemId: `${envelope.runId}:approval-${requestId}`,
       status: "running",
       timestamp: now,
@@ -508,7 +590,9 @@ export const applyChatRunEnvelope = (
     return { ...conversation, messages, updatedAt: now };
   }
   if (eventType === "turn.failed") {
-    const error = isRecord(envelope.event.error) ? textValue(envelope.event.error.message) : "Codex could not complete this turn.";
+    const error = isRecord(envelope.event.error)
+      ? textValue(envelope.event.error.message)
+      : `${chatProviderLabel(conversation.provider)} could not complete this turn.`;
     return pushMessage({ ...completeRunningStatus(conversation, now), runStatus: "error" }, {
       id: messageId("error", now, envelope.runId),
       role: "error",
@@ -544,7 +628,9 @@ export const applyChatRunEnvelope = (
       };
     }
     if (status === "failed") {
-      const error = turn && isRecord(turn.error) ? textValue(turn.error.message) : "Codex could not complete this turn.";
+      const error = turn && isRecord(turn.error)
+        ? textValue(turn.error.message)
+        : `${chatProviderLabel(conversation.provider)} could not complete this turn.`;
       return pushMessage({ ...completed, runStatus: "error" }, {
         id: messageId("error", now, envelope.runId),
         role: "error",

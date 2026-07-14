@@ -1196,13 +1196,14 @@
     {
       "id": "CLAUDE-STRUCTURED-ADAPTER",
       "title": "Structured Claude CLI adapter",
-      "column": "later",
+      "column": "next",
       "tier": "pebble",
       "track": "core",
       "size": "M",
       "launch": "v2",
       "summary": "Adapt Hashmark web's Claude stream-json parser behind the same provider-neutral chat event contract as Codex: resume ids, partial text, tool use/results, usage, compaction, plan updates, questions, and cancellation. Preserve Claude OAuth and never copy --dangerously-skip-permissions or prompt-in-argv behavior.",
       "done": "An authenticated Claude CLI chat starts/resumes/stops through structured events; prompts avoid argv when the installed CLI supports stdin; tool approvals use CHAT-PROVIDER-APPROVALS; usage/compaction/plan/question events render through shared chat components; adapter fixtures cover malformed/partial JSON and CLI-version capability checks.",
+      "progress": "Implementation checkpoint 2026-07-14: Claude is selectable in the chat composer and dispatches through a dedicated Rust stream-json adapter. New/resumed session ids, stdin prompts, partial text/thinking, tools/results, shared approvals, usage, compaction, plans, questions, cancellation, and provider-aware frontend state are implemented. Fixtures cover malformed and partial JSON, approval responses, capability checks, and argv safety; the installed Claude Code 2.1.197 CLI advertises the required flags and existing OAuth status was inspected without spending a prompt. Remaining before Done: execute packaged authenticated start/resume/approval/stop/usage/relaunch flows with explicit quota approval after macOS unlock. See docs/claude-structured-adapter.md.",
       "buildOrder": 91.36
     },
     {

@@ -44,5 +44,5 @@ export const formatAgentConnectionHealth = (status: AgentConnectionStatus): stri
 export const formatAgentConnectionCapability = (status: AgentConnectionStatus): string =>
   status.structuredChat ? "Structured chat" : "Raw terminal only";
 
-export const structuredChatProviderId = (profileId: string): "codex" | null =>
-  profileId === "codex" ? "codex" : null;
+export const structuredChatProviderId = (profileId: string): "codex" | "claude" | null =>
+  profileId === "codex" || profileId === "claude" ? profileId : null;
