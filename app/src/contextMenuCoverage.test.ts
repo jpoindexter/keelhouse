@@ -56,6 +56,8 @@ describe("production context-menu coverage", () => {
   it("keeps chat and raw-terminal launch defaults separate", () => {
     expect(app).toContain('useState<AgentSurfaceMode>("chat")');
     expect(app).toContain("createTerminalPane(defaultTerminalLaunchProfile())");
+    expect(app).toContain('pickWorkspace({ openTerminal: true })');
+    expect(app).toContain("Open a folder to start a terminal");
     expect(app).toContain('set("terminalLaunchProfile", profile)');
     expect(app).not.toContain("createTerminalPane(launchProfileRef.current)");
   });

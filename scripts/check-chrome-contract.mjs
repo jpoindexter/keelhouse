@@ -10,8 +10,11 @@ const assert = (condition, message) => {
   if (!condition) fail.push(message);
 };
 
-const appCss = `${read("app/src/App.css")}\n${read("app/src/responsive-shell.css")}\n${read("app/src/SearchCommandDialog.css")}`;
+const appCss = `${read("app/src/App.css")}\n${read("app/src/composerModelPicker.css")}\n${read("app/src/responsive-shell.css")}\n${read("app/src/SearchCommandDialog.css")}`;
 const appTsx = read("app/src/App.tsx");
+const composerModelPicker = read("app/src/ComposerModelPicker.tsx");
+const composerModelPopover = read("app/src/ComposerModelPopover.tsx");
+const composerReasoningPicker = read("app/src/ComposerReasoningPicker.tsx");
 const searchCommandDialog = read("app/src/SearchCommandDialog.tsx");
 const statusBar = read("app/src/StatusBar.tsx");
 const mainTsx = read("app/src/main.tsx");
@@ -134,8 +137,9 @@ assert(appTsx.includes("terminalPaneContextMenuItems"), "Terminal pane tabs must
 assert(/\.terminal-pane-button--active\s*\{[^}]*border-bottom-color:\s*var\(--color-accent-border\);[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/s.test(appCss), "Active terminal pane tabs must use a flat underline, not rounded capsule chrome");
 assert(appTsx.includes('aria-label="Composer permission mode"'), "Composer must expose the real approval-mode menu");
 assert(appTsx.includes('aria-label="Composer goal"'), "Composer must expose its persisted goal control");
-assert(appTsx.includes('aria-label={`${activeComposerProviderLabel} model override`}'), "Composer must expose a real provider-aware model override");
-assert(appTsx.includes("COMPOSER_REASONING_OPTIONS.map"), "Composer must expose reasoning effort choices");
+assert(composerModelPopover.includes('aria-label="Search models"') && composerModelPopover.includes("Custom model ID"), "Composer must expose searchable provider models and custom model IDs");
+assert(composerModelPicker.includes("onSelect={setComposerRuntime}") || appTsx.includes("onSelect={setComposerRuntime}"), "Composer model selection must persist through the runtime boundary");
+assert(composerReasoningPicker.includes("OPTIONS.map") && composerReasoningPicker.includes('role="menuitemradio"'), "Composer must expose separate accessible reasoning effort choices");
 assert(appTsx.includes('reasoningEffort: activeComposerHarness.reasoningEffort'), "Composer reasoning selection must reach the native chat request");
 assert(chatHarness.includes('params["effort"] = json!(effort);'), "Native chat runs must apply the selected Codex reasoning effort");
 assert(claudeAdapter.includes('args.extend(["--effort".into(), effort.into()]);'), "Native Claude chat runs must apply the selected reasoning effort");

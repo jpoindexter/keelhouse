@@ -6563,10 +6563,6 @@ body,
   height: 12px;
 }
 
-.agent-composer__control-detail {
-  color: #797c8b;
-}
-
 .agent-composer__popover {
   position: fixed;
   top: var(--composer-popover-top, -10000px);
@@ -6586,10 +6582,6 @@ body,
 .agent-composer__popover--permission,
 .agent-composer__popover--goal {
   left: var(--composer-popover-left, -10000px);
-}
-
-.agent-composer__popover--runtime {
-  right: auto;
 }
 
 .agent-composer__menu[open] .agent-composer__popover {
@@ -6675,37 +6667,6 @@ body,
   border-color: #67c3d1;
 }
 
-.agent-composer__provider-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  margin: 2px 7px 5px;
-  border: 1px solid #41434f;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.agent-composer__provider-options button {
-  height: 28px;
-  border: 0;
-  border-right: 1px solid #41434f;
-  border-radius: 0;
-  background: #1a1b22;
-  color: #989baa;
-  font: 11px/1 var(--font-ui);
-}
-
-.agent-composer__provider-options button:last-child {
-  border-right: 0;
-}
-
-.agent-composer__provider-options button:hover,
-.agent-composer__provider-options button:focus-visible,
-.agent-composer__provider-options button.is-selected {
-  background: #30323d;
-  color: #ffffff;
-}
-
 .agent-composer__clear {
   height: 26px;
   border: 0;
@@ -6720,52 +6681,6 @@ body,
 .agent-composer__clear:focus-visible {
   background: #2c2e38;
   color: #ececf4;
-}
-
-.agent-composer__reasoning {
-  display: grid;
-  gap: 6px;
-  margin: 3px 0 0;
-  border: 0;
-  padding: 6px 7px;
-}
-
-.agent-composer__reasoning legend {
-  color: #a6a8b6;
-  font-size: 11px;
-  padding: 0;
-}
-
-.agent-composer__reasoning > div {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 1px;
-  border: 1px solid #41434f;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.agent-composer__reasoning button {
-  min-width: 0;
-  height: 28px;
-  border: 0;
-  border-right: 1px solid #41434f;
-  border-radius: 0;
-  background: #1a1b22;
-  color: #989baa;
-  font: 11px/1 var(--font-ui);
-  padding: 0 4px;
-}
-
-.agent-composer__reasoning button:last-child {
-  border-right: 0;
-}
-
-.agent-composer__reasoning button:hover,
-.agent-composer__reasoning button:focus-visible,
-.agent-composer__reasoning button.is-selected {
-  background: #30323d;
-  color: #ffffff;
 }
 
 .agent-composer__actions {
@@ -6790,7 +6705,6 @@ body,
 }
 
 @media (max-width: 620px) {
-  .agent-composer__control-detail,
   .agent-composer__menu--goal .agent-composer__control span {
     display: none;
   }
@@ -7640,6 +7554,47 @@ body,
   min-height: 0;
   overflow: hidden;
   background: #171820;
+}
+
+.utility-tray__terminal-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  background: #171820;
+  color: #a6a8b6;
+  font: 12px/1.35 var(--font-ui);
+  text-align: center;
+}
+
+.utility-tray__terminal-empty > .app-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.utility-tray__terminal-empty strong {
+  color: #d7d8e2;
+  font-weight: 600;
+}
+
+.utility-tray__terminal-empty button {
+  height: 28px;
+  margin-top: 3px;
+  border: 1px solid #41434f;
+  border-radius: 4px;
+  background: #23242d;
+  color: #ececf4;
+  font: 500 12px/1 var(--font-ui);
+  padding: 0 10px;
+}
+
+.utility-tray__terminal-empty button:hover,
+.utility-tray__terminal-empty button:focus-visible {
+  border-color: #5c5f6d;
+  background: #30323d;
 }
 
 .utility-tray__body > .terminal-find {

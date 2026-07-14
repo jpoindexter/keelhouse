@@ -297,7 +297,10 @@ import {
 } from "./chatOrchestration";
 import { ContextMenu, type ContextMenuItem, type ContextMenuState } from "./ContextMenu";
 import { paneContextBelongsToProject, paneContextKey, paneContextParts, removeProjectPaneContexts } from "./paneOwnership";
+import { ComposerModelPicker } from "./ComposerModelPicker";
+import { ComposerReasoningPicker, composerReasoningLabel } from "./ComposerReasoningPicker";
 import "./App.css";
+import "./composerModelPicker.css";
 import "./responsive-shell.css";
 import "./workbenchTransitions.css";
 
@@ -386,19 +389,8 @@ const FONT_SIZE = 15;
 // output containing Chinese/Japanese/Korean text) render instead of tofu.
 const FONT_FAMILY = '"JetBrains Mono", "PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo", monospace';
 const LINE_HEIGHT = 1.25;
-const COMPOSER_REASONING_OPTIONS: { value: ComposerReasoningEffort; label: string }[] = [
-  { value: "default", label: "Default" },
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "xhigh", label: "Extra high" },
-];
-
 const composerApprovalLabel = (mode: AgentApprovalMode) =>
   mode === "fullAccess" ? "Full access" : mode === "approveSafe" ? "Approve" : "Ask";
-
-const composerReasoningLabel = (effort: ComposerReasoningEffort) =>
-  COMPOSER_REASONING_OPTIONS.find((option) => option.value === effort)?.label ?? "Default";
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 const dirname = (path: string) => path.replace(/[\\/][^\\/]*$/, "") || path;
@@ -2369,10 +2361,13 @@ function App() {
     }
   };
 
-  const pickWorkspace = async () => {
+  const pickWorkspace = async (options: { openTerminal?: boolean } = {}) => {
     const dir = await open({ directory: true });
-    if (typeof dir !== "string") return;
-    await requestOpenWorkspace(dir);
+    if (typeof dir !== "string") return false;
+    const opened = await requestOpenWorkspace(dir);
+    if (!opened) return false;
+    if (options.openTerminal) return createTerminalPane(defaultTerminalLaunchProfile());
+    return true;
   };
 
   const interruptActivePane = async () => {
@@ -3050,27 +3045,26 @@ function App() {
     if (options.log && next?.goal) logComposerHarnessEvent("Goal updated", next.goal);
   };
 
-  const setComposerModel = async (model: string, options: { log?: boolean } = {}) => {
-    const next = await updateActiveComposerHarness((state) => ({ ...state, model: model.slice(0, 128) }));
-    if (options.log && next?.model.trim()) logComposerHarnessEvent("Model override changed", next.model.trim());
-  };
-
-  const setStructuredChatProvider = async (provider: ChatProvider) => {
+  const setComposerRuntime = async (provider: ChatProvider, model: string) => {
     const chatId = activeComposerHarnessKey;
-    if (!chatId || activeChatConversation.activeRunId || provider === activeComposerProvider) return;
-    await updateScopedSetting("chat", "agentProfileId", provider);
+    if (!chatId || activeChatConversation.activeRunId) return;
+    const providerChanged = provider !== activeComposerProvider;
+    if (providerChanged) await updateScopedSetting("chat", "agentProfileId", provider);
     await updateActiveComposerHarness((state) => ({
       ...state,
       selectedProfileId: provider,
-      model: "",
+      model: model.trim().slice(0, 128),
     }));
-    updateChatConversation(chatId, (conversation) => ({
-      ...conversation,
-      provider,
-      providerThreadId: undefined,
-      updatedAt: Date.now(),
-    }));
-    logComposerHarnessEvent("Chat provider changed", chatProviderLabel(provider));
+    if (providerChanged) {
+      updateChatConversation(chatId, (conversation) => ({
+        ...conversation,
+        provider,
+        providerThreadId: undefined,
+        updatedAt: Date.now(),
+      }));
+      logComposerHarnessEvent("Chat provider changed", chatProviderLabel(provider));
+    }
+    logComposerHarnessEvent("Chat model changed", model.trim() || `${chatProviderLabel(provider)} default`);
   };
 
   const setComposerReasoningEffort = async (reasoningEffort: ComposerReasoningEffort) => {
@@ -3311,6 +3305,12 @@ function App() {
       return;
     }
     const root = workspacePathRef.current ?? workspacePath;
+    if (!root) {
+      setUtilityTrayMode("terminal");
+      setAgentSurfaceMode("terminal");
+      await pickWorkspace({ openTerminal: true });
+      return;
+    }
     const sessionId = activeSessionForProject(root);
     const hasTerminal = Boolean(root && sessionId && terminalPanesForSession(root, sessionId).length > 0);
     if (!hasTerminal && !await createTerminalPane(defaultTerminalLaunchProfile())) return;
@@ -5843,7 +5843,7 @@ function App() {
                 type="button"
                 title={shortcutTitle("workspace.open", "Open folder")}
                 aria-label="Open folder"
-                onClick={pickWorkspace}
+                onClick={() => void pickWorkspace()}
               >
                 <AppIcon name="folderOpen" />
                 <span>Open</span>
@@ -6165,7 +6165,7 @@ function App() {
               </select>
             </label>
             <div className="drawer-action-grid">
-              <button className="rail-open-button" type="button" onClick={pickWorkspace}>
+              <button className="rail-open-button" type="button" onClick={() => void pickWorkspace()}>
                 <AppIcon name="folderOpen" />
                 <span>Open Folder</span>
               </button>
@@ -6868,60 +6868,23 @@ function App() {
                   ) : null}
                 </div>
                 <div className="agent-composer__actions">
-                  <details className="agent-composer__menu agent-composer__menu--runtime" onToggle={handleComposerMenuToggle}>
-                    <summary className="agent-composer__control agent-composer__control--runtime">
-                      <AppIcon name="chat" />
-                      <span>{activeComposerProviderLabel}</span>
-                      {activeComposerHarness.model.trim() ? <span className="agent-composer__control-detail">{activeComposerHarness.model.trim()}</span> : null}
-                      {activeComposerHarness.reasoningEffort !== "default" ? <span className="agent-composer__control-detail">{composerReasoningLabel(activeComposerHarness.reasoningEffort)}</span> : null}
-                      <AppIcon name="chevronDown" />
-                    </summary>
-                    <div className="agent-composer__popover agent-composer__popover--runtime">
-                      <div className="agent-composer__popover-title">{activeComposerProviderLabel} run settings</div>
-                      <div className="agent-composer__provider-options" role="group" aria-label="Structured chat provider">
-                        {LAUNCH_PROFILES.filter((profile) => profile.id === "codex" || profile.id === "claude").map((profile) => (
-                          <button
-                            className={activeComposerHarness.selectedProfileId === profile.id ? "is-selected" : ""}
-                            type="button"
-                            aria-pressed={activeComposerHarness.selectedProfileId === profile.id}
-                            disabled={Boolean(activeChatConversation.activeRunId)}
-                            key={profile.id}
-                            onClick={() => void setStructuredChatProvider(profile.id as ChatProvider)}
-                          >
-                            {profile.label}
-                          </button>
-                        ))}
-                      </div>
-                      <label className="agent-composer__popover-field">
-                        <span>Model override</span>
-                        <input
-                          aria-label={`${activeComposerProviderLabel} model override`}
-                          value={activeComposerHarness.model}
-                          maxLength={128}
-                          placeholder={`Use ${activeComposerProviderLabel} default`}
-                          disabled={!activeComposerHarnessKey}
-                          onChange={(event) => void setComposerModel(event.currentTarget.value)}
-                          onBlur={() => void setComposerModel(activeComposerHarness.model, { log: true })}
-                        />
-                      </label>
-                      <fieldset className="agent-composer__reasoning">
-                        <legend>Reasoning effort</legend>
-                        <div>
-                          {COMPOSER_REASONING_OPTIONS.map((option) => (
-                            <button
-                              className={activeComposerHarness.reasoningEffort === option.value ? "is-selected" : ""}
-                              type="button"
-                              aria-pressed={activeComposerHarness.reasoningEffort === option.value}
-                              key={option.value}
-                              onClick={() => void setComposerReasoningEffort(option.value)}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </fieldset>
-                    </div>
-                  </details>
+                  {activeComposerProvider ? (
+                    <>
+                      <ComposerReasoningPicker
+                        value={activeComposerHarness.reasoningEffort}
+                        disabled={!activeComposerHarnessKey || Boolean(activeChatConversation.activeRunId)}
+                        onSelect={setComposerReasoningEffort}
+                      />
+                      <ComposerModelPicker
+                        provider={activeComposerProvider}
+                        model={activeComposerHarness.model}
+                        configuredModels={aiConnectionSettings.providerModels}
+                        disabled={!activeComposerHarnessKey || Boolean(activeChatConversation.activeRunId)}
+                        onManageModels={() => setSettingsOpen(true)}
+                        onSelect={setComposerRuntime}
+                      />
+                    </>
+                  ) : null}
                   {activeChatConversation.activeRunId ? (
                     <button
                       className="agent-composer__send agent-composer__send--stop"
@@ -7076,6 +7039,20 @@ function App() {
             ) : null}
             <div ref={terminalHostRef} className="terminal-host utility-tray__terminal" onPointerDown={() => imeInputRef.current?.focus()} onContextMenu={(event) => openContextMenu(event, terminalContextMenuItems())}>
               <canvas ref={canvasRef} className="term" aria-hidden="true" />
+              {!workspacePath ? (
+                <div className="utility-tray__terminal-empty">
+                  <AppIcon name="terminal" />
+                  <strong>Open a folder to start a terminal</strong>
+                  <span>Shell panes run in the selected project.</span>
+                  <button type="button" onClick={() => void pickWorkspace({ openTerminal: true })}>Open folder</button>
+                </div>
+              ) : terminalPanes.length === 0 ? (
+                <div className="utility-tray__terminal-empty">
+                  <AppIcon name="terminal" />
+                  <strong>No terminal panes</strong>
+                  <button type="button" onClick={() => void createTerminalPane(defaultTerminalLaunchProfile())}>Start Shell</button>
+                </div>
+              ) : null}
               <textarea
                 ref={imeInputRef}
                 className="terminal-ime-input"

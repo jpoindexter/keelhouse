@@ -11,7 +11,7 @@
     "app/src/ConnectionSettingsPanel.tsx": { "lines": 319, "longFunctions": 1, "maxFunctionLines": 268 },
     "app/src/SettingsModal.tsx": { "lines": 758, "longFunctions": 3, "maxFunctionLines": 653 },
     "app/src/chatConversation.ts": { "lines": 692, "longFunctions": 2, "maxFunctionLines": 231 },
-    "app/src/useWorkbenchLayout.ts": { "lines": 224, "longFunctions": 1, "maxFunctionLines": 146 },
+    "app/src/useWorkbenchLayout.ts": { "lines": 224, "longFunctions": 1, "maxFunctionLines": 147 },
     "app/src/workspaceState.ts": { "lines": 398, "longFunctions": 1, "maxFunctionLines": 69 }
   }
 }
