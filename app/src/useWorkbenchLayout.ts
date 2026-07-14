@@ -13,67 +13,17 @@ import {
   DEFAULT_WORKBENCH_LAYOUT,
   DEFAULT_WORKBENCH_SIZING,
   effectiveWorkbenchLayout,
-  normalizeStoredSideDrawerWidth,
 } from "./workbenchLayout";
 import type { ToolTrayMode, WorkbenchLayoutMode, WorkbenchSizing } from "./workbenchLayout";
-
-const WORKBENCH_LAYOUT_STORAGE_KEY = "keelhouse.workbench.layout.v4";
-const WORKBENCH_SIZING_STORAGE_KEY = "keelhouse.workbench.sizing.v2";
-const TOOL_TRAY_MODE_STORAGE_KEY = "keelhouse.workbench.toolTrayMode.v4";
-const SIDE_DRAWER_WIDTH_STORAGE_KEY = "keelhouse.sideDrawer.width.v3";
-const SIDE_DRAWER_COLLAPSED_STORAGE_KEY = "keelhouse.sideDrawer.collapsed.v2";
-
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-
-const readStoredWorkbenchLayout = (): WorkbenchLayoutMode => {
-  try {
-    const value = window.localStorage.getItem(WORKBENCH_LAYOUT_STORAGE_KEY);
-    return value === "left" || value === "right" || value === "bottom" || value === "hidden" ? value : DEFAULT_WORKBENCH_LAYOUT;
-  } catch {
-    return DEFAULT_WORKBENCH_LAYOUT;
-  }
-};
-
-const readStoredWorkbenchSizing = (): WorkbenchSizing => {
-  try {
-    const raw = window.localStorage.getItem(WORKBENCH_SIZING_STORAGE_KEY);
-    if (!raw) return DEFAULT_WORKBENCH_SIZING;
-    const value = JSON.parse(raw) as Partial<WorkbenchSizing>;
-    return {
-      trayPercent: clamp(typeof value.trayPercent === "number" ? value.trayPercent : DEFAULT_WORKBENCH_SIZING.trayPercent, 18, 54),
-      toolSplitPercent: clamp(typeof value.toolSplitPercent === "number" ? value.toolSplitPercent : DEFAULT_WORKBENCH_SIZING.toolSplitPercent, 25, 75),
-    };
-  } catch {
-    return DEFAULT_WORKBENCH_SIZING;
-  }
-};
-
-const readStoredToolTrayMode = (): ToolTrayMode => {
-  try {
-    const value = window.localStorage.getItem(TOOL_TRAY_MODE_STORAGE_KEY);
-    return value === "files" || value === "editor" || value === "browser" || value === "git" || value === "split"
-      ? value
-      : DEFAULT_TOOL_TRAY_MODE;
-  } catch {
-    return DEFAULT_TOOL_TRAY_MODE;
-  }
-};
-
-const readStoredSideDrawerWidth = () => {
-  try {
-    return normalizeStoredSideDrawerWidth(window.localStorage.getItem(SIDE_DRAWER_WIDTH_STORAGE_KEY));
-  } catch {
-    return DEFAULT_SIDE_DRAWER_WIDTH;
-  }
-};
-
-const readStoredSideDrawerCollapsed = () => {
-  try {
-    return window.localStorage.getItem(SIDE_DRAWER_COLLAPSED_STORAGE_KEY) === "true";
-  } catch {
-    return false;
-  }
-};
+import {
+  readStoredSideDrawerCollapsed,
+  readStoredSideDrawerWidth,
+  readStoredToolTrayMode,
+  readStoredWorkbenchLayout,
+  readStoredWorkbenchSizing,
+  clamp,
+  workbenchStorageKeys,
+} from "./workbenchLayoutStorage";
 
 export const useWorkbenchLayout = () => {
   const [workbenchLayout, setStoredWorkbenchLayout] = useState<WorkbenchLayoutMode>(readStoredWorkbenchLayout);
@@ -192,11 +142,11 @@ export const useWorkbenchLayout = () => {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(WORKBENCH_LAYOUT_STORAGE_KEY, workbenchLayout);
-      window.localStorage.setItem(WORKBENCH_SIZING_STORAGE_KEY, JSON.stringify(workbenchSizing));
-      window.localStorage.setItem(TOOL_TRAY_MODE_STORAGE_KEY, toolTrayMode);
-      window.localStorage.setItem(SIDE_DRAWER_WIDTH_STORAGE_KEY, String(sideDrawerWidth));
-      window.localStorage.setItem(SIDE_DRAWER_COLLAPSED_STORAGE_KEY, sideDrawerCollapsed ? "true" : "false");
+      window.localStorage.setItem(workbenchStorageKeys.layout, workbenchLayout);
+      window.localStorage.setItem(workbenchStorageKeys.sizing, JSON.stringify(workbenchSizing));
+      window.localStorage.setItem(workbenchStorageKeys.toolTrayMode, toolTrayMode);
+      window.localStorage.setItem(workbenchStorageKeys.sideDrawerWidth, String(sideDrawerWidth));
+      window.localStorage.setItem(workbenchStorageKeys.sideDrawerCollapsed, sideDrawerCollapsed ? "true" : "false");
     } catch {
       // Layout persistence is best-effort.
     }
