@@ -5725,6 +5725,16 @@ function App() {
         <div className="titlebar-actions">
           <div className="titlebar-panel-toggles" aria-label="Toggle panels">
             <button
+              className={`titlebar-action ${agentSurfaceMode === "terminal" ? "titlebar-action--active" : ""}`}
+              type="button"
+              title={agentSurfaceMode === "terminal" ? "Hide Terminal" : "Show Terminal"}
+              aria-label="Toggle Terminal tray"
+              aria-pressed={agentSurfaceMode === "terminal"}
+              onClick={() => void toggleRawTerminal()}
+            >
+              <AppIcon name="panelBottom" />
+            </button>
+            <button
               className={`titlebar-action ${renderedWorkbenchLayout !== "hidden" ? "titlebar-action--active" : ""}`}
               type="button"
               title="Toggle Tools"

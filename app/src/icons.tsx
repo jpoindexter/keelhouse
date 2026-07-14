@@ -26,6 +26,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   ExternalLink,
+  PanelBottom,
   PanelLeft,
   PanelRight,
   Plus,
@@ -76,6 +77,7 @@ export type AppIconName =
   | "more"
   | "newChat"
   | "openExternal"
+  | "panelBottom"
   | "panelLeft"
   | "panelRight"
   | "plus"
@@ -123,6 +125,7 @@ export const ICONS: Record<AppIconName, IconComponent> = {
   more: MoreHorizontal,
   newChat: SquarePen,
   openExternal: ExternalLink,
+  panelBottom: PanelBottom,
   panelLeft: PanelLeft,
   panelRight: PanelRight,
   plus: Plus,
