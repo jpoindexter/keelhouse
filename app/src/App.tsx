@@ -5702,15 +5702,9 @@ function App() {
   return (
     <div className={`app-shell ${sideDrawerCollapsed ? "app-shell--side-drawer-collapsed" : ""} ${settingsOpen ? "app-shell--settings-open" : ""}`} style={appShellStyle}>
       <header className="app-titlebar" aria-label="Application chrome" data-tauri-drag-region>
-        <div className="titlebar-identity">
-          <span className="titlebar-product">Keelhouse</span>
-          <button className="titlebar-search" type="button" onClick={() => openChatSearch()} title="Search chats across projects" aria-label="Search chats across projects">
-            <AppIcon name="search" />
-            <span>Search</span>
-          </button>
-        </div>
+        <div className="titlebar-identity" aria-hidden="true" />
         <div className="titlebar-splitter" aria-hidden="true" />
-        <div className="titlebar-agent-context" aria-label="Workspace context" data-tauri-drag-region>
+        <div className="titlebar-agent-context" aria-label="Active chat" data-tauri-drag-region>
           <div
             className="titlebar-workspace"
             data-tauri-drag-region
@@ -5718,12 +5712,11 @@ function App() {
               event.preventDefault();
               void toggleNativeWindowMaximize();
             }}
-            title="Current project. Double-click to maximize or restore the window."
+            title="Current chat. Double-click to maximize or restore the window."
           >
-            <AppIcon name="workspace" />
-            <span>{activeWorkspaceName}</span>
+            <AppIcon name="file" />
+            <span>{activeSessionTitle}</span>
           </div>
-          {gitStatus?.branch ? <span className="titlebar-branch">{`⎇ ${gitStatus.branch}`}</span> : null}
         </div>
         <div className="titlebar-splitter" aria-hidden="true" />
         <div className="titlebar-actions">
@@ -5757,39 +5750,43 @@ function App() {
       </header>
       <aside className={`file-rail ${sideDrawerCollapsed ? "file-rail--collapsed" : ""}`} aria-label={`${sideDrawerMode === "projects" ? "Project threads" : drawerActiveTitle} drawer`}>
         <div className="drawer-toolbar">
-          <span>{sideDrawerMode === "projects" ? "Threads" : drawerActiveTitle}</span>
-          {sideDrawerMode === "projects" ? (
+          <span>{sideDrawerMode === "projects" ? "Keelhouse" : drawerActiveTitle}</span>
+          <button
+            className="drawer-collapse-button"
+            type="button"
+            title="Search chats across projects"
+            aria-label="Search chats across projects"
+            onClick={() => openChatSearch()}
+          >
+            <AppIcon name="search" />
+          </button>
+        </div>
+        {sideDrawerMode === "projects" ? (
+          <div className="drawer-primary-row">
             <button
-              className="drawer-collapse-button"
+              className="drawer-primary-action"
               type="button"
-              title="New chat"
-              aria-label="New chat"
               disabled={!workspacePath}
               onClick={() => workspacePath && void createProjectSession(workspacePath)}
             >
               <AppIcon name="filePlus" />
+              <span>New chat</span>
             </button>
-          ) : null}
-          <button
-            className="drawer-collapse-button"
-            type="button"
-            title="Reset interface"
-            aria-label="Reset interface"
-            onClick={resetInterface}
-          >
-            <AppIcon name="reload" />
-          </button>
-          <button
-            className="drawer-collapse-button"
-            type="button"
-            title={sideDrawerCollapsed ? "Expand side drawer" : "Collapse side drawer"}
-            aria-label={sideDrawerCollapsed ? "Expand side drawer" : "Collapse side drawer"}
-            aria-pressed={sideDrawerCollapsed}
-            onClick={() => setSideDrawerCollapsed((collapsed) => !collapsed)}
-          >
-            <AppIcon name={sideDrawerCollapsed ? "chevronRight" : "chevronDown"} />
-          </button>
-        </div>
+            <button className="drawer-collapse-button" type="button" title="Reset interface" aria-label="Reset interface" onClick={resetInterface}>
+              <AppIcon name="reload" />
+            </button>
+            <button
+              className="drawer-collapse-button"
+              type="button"
+              title={sideDrawerCollapsed ? "Expand side drawer" : "Collapse side drawer"}
+              aria-label={sideDrawerCollapsed ? "Expand side drawer" : "Collapse side drawer"}
+              aria-pressed={sideDrawerCollapsed}
+              onClick={() => setSideDrawerCollapsed((collapsed) => !collapsed)}
+            >
+              <AppIcon name={sideDrawerCollapsed ? "chevronRight" : "chevronDown"} />
+            </button>
+          </div>
+        ) : null}
         <div className="drawer-mode-switcher" role="tablist" aria-label="Side drawer">
           {DRAWER_MODES.map((mode) => (
             <button
