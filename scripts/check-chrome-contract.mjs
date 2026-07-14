@@ -185,8 +185,11 @@ assert(toolDockMenu.includes('aria-label="Tools and dock position"'), "Tool dock
 assert(appTsx.includes("commandPaletteOpen"), "App chrome must expose a command palette state");
 assert(appTsx.includes("shortcutKeys(\"chrome.command-palette\")"), "Command palette must show its shortcut label");
 assert(appTsx.includes("filterCommandPaletteCommands(commandPaletteCommands, commandPaletteQuery, commandPaletteSources)"), "Command palette source settings must filter live results");
-assert(appTsx.includes('source: "files"') && appTsx.includes('source: "tabs"') && appTsx.includes('source: "worktrees"'), "Command palette must include real file, tab, and worktree sources");
-assert(commandPaletteSources.includes('COMMAND_PALETTE_SOURCE_IDS = ["commands", "files", "tabs", "worktrees"]'), "Command palette sources must use the persisted typed source contract");
+assert(appTsx.includes('source: "chats"') && appTsx.includes('source: "files"') && appTsx.includes('source: "tabs"') && appTsx.includes('source: "worktrees"'), "Command palette must include real chat, file, tab, and worktree sources");
+assert(commandPaletteSources.includes('COMMAND_PALETTE_SOURCE_IDS = ["chats", "commands", "files", "tabs", "worktrees"]'), "Command palette sources must use the persisted typed source contract");
+assert(appTsx.includes('placeholder="Search tasks or run a command"'), "Search must use the centered task and command palette");
+assert(!appTsx.includes('sideDrawerMode === "search"'), "Search must not render as a duplicate side drawer");
+assert(!appCss.includes(".search-scope-tabs"), "Removed search drawer tabs must not leave capsule styling behind");
 assert(settingsModal.includes("onCommandPaletteSourceChange") && settingsModal.includes("Toggle ${source.label} command palette source"), "Settings must expose functional command-palette source controls");
 assert(settingsModalData.includes('id: "agents.worktree-policy"') && settingsModalData.includes('id: "agents.hook-policy"') && settingsModalData.includes('id: "agents.environment-policy"'), "Settings must expose truthful worktree, lifecycle-hook, and environment policy rows");
 assert(settingsModal.includes("Unavailable until AI-CONNECTIONS environment profiles") && settingsModal.includes("Credential values are never displayed"), "Environment settings must state the current inheritance and secret-display boundary without presenting an unavailable control");
@@ -210,8 +213,6 @@ assert(/\.settings-workspace__policy small\s*\{[^}]*overflow-wrap:\s*anywhere;[^
 assert(appCss.includes(".command-palette"), "App CSS must style the command palette surface");
 assert(appCss.includes(".command-palette__row--active"), "Command palette must have a visible active row state");
 assert(appTsx.includes("quickOpenOpen"), "App chrome must expose a Cmd+P quick-open surface");
-assert(appTsx.includes("search_workspace_text"), "Search drawer must call the workspace text search command");
-assert(appTsx.includes("search-scope-tabs"), "Search drawer must expose Files/Text scopes");
 assert(editorQaFixture.includes("Project threads drawer"), "Editor QA fixture must reflect the approved project-thread drawer");
 assert(editorQaFixture.includes("<span>Threads</span>"), "Editor QA fixture must use the approved Threads drawer title");
 assert(!editorQaFixture.includes("Project sessions"), "Editor QA fixture must not present workspace sessions as the chat product noun");

@@ -1,4 +1,4 @@
-export const COMMAND_PALETTE_SOURCE_IDS = ["commands", "files", "tabs", "worktrees"] as const;
+export const COMMAND_PALETTE_SOURCE_IDS = ["chats", "commands", "files", "tabs", "worktrees"] as const;
 
 export type CommandPaletteSourceId = (typeof COMMAND_PALETTE_SOURCE_IDS)[number];
 export type CommandPaletteSourceSettings = Record<CommandPaletteSourceId, boolean>;
@@ -8,6 +8,7 @@ export const COMMAND_PALETTE_SOURCE_OPTIONS: Array<{
   label: string;
   description: string;
 }> = [
+  { id: "chats", label: "Chats", description: "Chats across open projects" },
   { id: "commands", label: "Commands", description: "Workbench and agent actions" },
   { id: "files", label: "Files", description: "Files in the active project" },
   { id: "tabs", label: "Open tabs", description: "Files already open in the editor" },
@@ -15,6 +16,7 @@ export const COMMAND_PALETTE_SOURCE_OPTIONS: Array<{
 ];
 
 export const DEFAULT_COMMAND_PALETTE_SOURCES: CommandPaletteSourceSettings = {
+  chats: true,
   commands: true,
   files: true,
   tabs: true,

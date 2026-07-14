@@ -24,7 +24,7 @@ describe("command palette filtering", () => {
       ...commands,
       { id: "file.readme", label: "README.md", detail: "/repo/README.md", source: "files" },
     ];
-    const sources = { commands: true, files: false, tabs: true, worktrees: true };
+    const sources = { chats: true, commands: true, files: false, tabs: true, worktrees: true };
 
     expect(filterCommandPaletteCommands(mixed, "readme", sources)).toEqual([]);
     expect(filterCommandPaletteCommands(mixed, "folder", sources)[0]?.id).toBe("workspace.open");

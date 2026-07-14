@@ -12,6 +12,7 @@ describe("command palette sources", () => {
 
   it("preserves known switches and enables newly added sources", () => {
     expect(normalizeCommandPaletteSources({ commands: false, files: true })).toEqual({
+      chats: true,
       commands: false,
       files: true,
       tabs: true,

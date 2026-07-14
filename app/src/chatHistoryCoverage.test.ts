@@ -15,16 +15,17 @@ describe("chat history discovery production wiring", () => {
   });
 
   it("exposes bookmark, pin, and archived-chat discovery controls", () => {
-    expect(app).toContain("chatSearchBookmarksOnly");
     expect(app).toContain("toggleChatMessageBookmark");
     expect(app).toContain("pinProjectSession(projectPath, session, !session.pinnedAt)");
-    expect(app).toContain('result.archived ? " · Archived" : ""');
+    expect(app).toContain('session.archived ? " · Archived" : ""');
     expect(thread).toContain('aria-label={message.bookmarked ? "Remove bookmark" : "Bookmark message"}');
   });
 
-  it("keeps discovery controls flat and three-scoped", () => {
-    expect(css).toMatch(/\.search-scope-tabs\s*\{[^}]*repeat\(3,/s);
-    expect(css).toMatch(/\.chat-search-filter button\s*\{[^}]*border-radius:\s*0;/s);
+  it("uses one centered discovery surface instead of a search drawer", () => {
+    expect(app).toContain('placeholder="Search tasks or run a command"');
+    expect(app).toContain('source: "chats"');
+    expect(app).not.toContain('sideDrawerMode === "search"');
+    expect(css).not.toContain(".search-scope-tabs");
     expect(css).toContain(".session-row__state > .session-row__pin");
     expect(css).toContain(".chat-message--focused");
   });

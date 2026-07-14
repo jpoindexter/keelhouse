@@ -1409,43 +1409,6 @@ body,
   overflow: hidden;
 }
 
-.search-scope-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  border-bottom: 1px solid var(--gray-800);
-  padding: 6px 8px;
-}
-
-.search-scope-tabs__button {
-  display: inline-flex;
-  height: 26px;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 1px solid transparent;
-  border-radius: var(--control-radius);
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: default;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.search-scope-tabs__button:hover,
-.search-scope-tabs__button:focus-visible {
-  background: var(--toolbar-control-bg-hover);
-  color: var(--color-text);
-  outline: none;
-}
-
-.search-scope-tabs__button--active {
-  background: var(--toolbar-control-active-bg);
-  box-shadow: inset 0 -2px 0 var(--color-accent-border);
-  color: var(--color-text-strong);
-}
-
 .drawer-field,
 .drawer-form {
   display: grid;
@@ -1549,63 +1512,6 @@ body,
   color: var(--color-text-subtle);
   font-size: 10px;
   font-weight: 700;
-}
-
-.drawer-list-row--search-hit {
-  grid-template-columns: 16px minmax(0, 1fr) auto;
-}
-
-.drawer-list-row--chat-hit {
-  grid-template-columns: 16px minmax(0, 1fr) auto;
-  align-items: start;
-  padding-block: 7px;
-}
-
-.chat-search-filter {
-  display: flex;
-  min-height: 32px;
-  align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid var(--gray-800);
-  padding: 0 12px 6px;
-}
-
-.chat-search-filter button {
-  display: inline-flex;
-  min-height: 26px;
-  align-items: center;
-  gap: 5px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 650;
-  padding: 0 2px;
-}
-
-.chat-search-filter button:hover,
-.chat-search-filter button:focus-visible,
-.chat-search-filter button.is-active {
-  color: var(--color-text-strong);
-  outline: none;
-}
-
-.chat-search-filter button.is-active {
-  border-bottom-color: var(--color-accent-border);
-}
-
-.drawer-list-row__snippet {
-  grid-column: 2 / -1;
-  overflow: hidden;
-  min-width: 0;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .drawer-summary {
