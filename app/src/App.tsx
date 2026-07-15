@@ -231,9 +231,9 @@ import {
   applyChatRunEnvelope,
   chatProviderLabel,
   emptyChatConversation,
-  forkChatConversation,
 } from "./chatConversation";
 import type { ChatConversation, ChatConversationRecords, ChatMessage, ChatProvider, ChatRunEnvelope } from "./chatConversation";
+import { createChatForkPlan } from "./chatForkPlan";
 import {
   deleteDurableChatConversation,
   deleteDurableProjectChats,
@@ -1222,36 +1222,31 @@ function App() {
       checkpointError = String(error);
       return null;
     });
-    let now = Date.now();
-    while (existing.some((session) => session.id === `session-${now.toString(36)}`)) now += 1;
-    const baseSession = newProjectSession(existing, now);
-    const session: ProjectSession = {
-      ...baseSession,
-      title: `Fork of ${sourceSession?.title ?? "chat"}`,
-      status: "exited",
-      parentSessionId: sourceSessionId,
-      parentMessageId: message.id,
-      forkedAt: now,
-      checkpointId: checkpoint?.id,
-      checkpointCreatedAt: checkpoint?.createdAt,
-    };
-    const forkedConversation = forkChatConversation(sourceConversation, sourceChatId, message.id, now);
-    if (!forkedConversation) {
+    const plan = createChatForkPlan({
+      checkpoint,
+      existingSessions: existing,
+      messageId: message.id,
+      now: Date.now(),
+      sourceChatId,
+      sourceConversation,
+      sourceSessionId,
+    });
+    if (!plan) {
       setLaunchError("This message cannot be used to fork the chat.");
       return;
     }
-    const forkedChatId = composerHarnessSessionKey(projectPath, session.id);
-    const nextSessions = upsertProjectSession(projectSessionsRef.current, projectPath, session);
-    const nextConversations = { ...chatConversationsRef.current, [forkedChatId]: forkedConversation };
-    await saveDurableChatConversation(forkedChatId, forkedConversation);
+    const forkedChatId = composerHarnessSessionKey(projectPath, plan.session.id);
+    const nextSessions = upsertProjectSession(projectSessionsRef.current, projectPath, plan.session);
+    const nextConversations = { ...chatConversationsRef.current, [forkedChatId]: plan.forkedConversation };
+    await saveDurableChatConversation(forkedChatId, plan.forkedConversation);
     chatConversationsRef.current = nextConversations;
     setChatConversations(nextConversations);
     await persistProjectSessions(nextSessions, activeSessionByProjectRef.current);
-    await persistBrowserPreviewUrl(projectPath, session.id, browserUrlRef.current);
-    await switchProjectSession(projectPath, session.id);
+    await persistBrowserPreviewUrl(projectPath, plan.session.id, browserUrlRef.current);
+    await switchProjectSession(projectPath, plan.session.id);
     setActionNotice(checkpointError
       ? `Forked chat without workspace checkpoint: ${checkpointError}`
-      : `Forked ${sourceSession?.title ?? "chat"}`);
+      : `Forked ${plan.sourceTitle}`);
   };
 
   useEffect(() => {
