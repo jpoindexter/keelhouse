@@ -56,9 +56,6 @@ import type { ActiveFileByWorkspace, ActiveSessionByProject, OpenProject, Projec
 import {
   clampEditorViewState,
   findFileTreeNode,
-  fileTreeContainsPath,
-  languageLabelForPath,
-  pathBreadcrumbs,
   reconcileActiveFileNode,
 } from "./editorState";
 import type { CursorPosition, EditorViewState } from "./editorState";
@@ -74,7 +71,6 @@ import {
   saveDraftAndContinueNavigation,
 } from "./draftProtection";
 import {
-  dirtyEditorTabPaths,
   removeEditorBuffersWithin,
   removeEditorTab,
   removeEditorTabsWithin,
@@ -172,10 +168,7 @@ import {
   terminalPaneProjectStatus as projectStatusFromTerminalPanes,
 } from "./terminalPane";
 import type { TerminalPaneState } from "./terminalPane";
-import {
-  decorateFileTreeWithGitStatus,
-  absolutePathForGitFile,
-} from "./fileGitStatus";
+import { absolutePathForGitFile } from "./fileGitStatus";
 import type { GitStatusFile } from "./fileGitStatus";
 import { parseUnifiedDiff } from "./diffView";
 import type { ParsedDiff } from "./diffView";
@@ -243,6 +236,7 @@ import { createSettingsPreferenceActions } from "./settingsPreferenceActions";
 import { createSettingsScopedActions } from "./settingsScopedActions";
 import { deriveActiveChatState } from "./activeChatState";
 import { deriveActiveAgentSessionState } from "./activeAgentSessionState";
+import { deriveEditorWorkspaceState } from "./editorWorkspaceState";
 import {
   addPaneTranscript,
   buildPaneTranscript,
@@ -275,7 +269,6 @@ import {
 import { mergeChatDiscoveryResults, type ChatSearchResult, type ChatSearchViewResult } from "./chatDiscovery";
 import { ToolTrayTabs } from "./ToolTrayTabs";
 import type { FileTreeNode, FileTreeResponse } from "./fileTreeTypes";
-import { flattenFileTree, markDirtyFiles } from "./fileTreeView";
 import { StatusBar } from "./StatusBar";
 import {
   type OrchestrationChildDraft,
@@ -458,7 +451,7 @@ function App() {
   const [railHeight, setRailHeight] = useState(240);
   const [selectedFile, setSelectedFile] = useState<FileTreeNode | null>(null);
   const [editorTabs, setEditorTabs] = useState<FileTreeNode[]>([]);
-  const [editorBufferRevision, setEditorBufferRevision] = useState(0);
+  const [, setEditorBufferRevision] = useState(0);
   const [editorText, setEditorText] = useState("");
   const [savedEditorText, setSavedEditorText] = useState("");
   const [editorLoading, setEditorLoading] = useState(false);
@@ -565,39 +558,16 @@ function App() {
   const [diffReview, setDiffReview] = useState<ActiveDiffReview | null>(null);
   const [diffReviewLoading, setDiffReviewLoading] = useState(false);
   const [diffReviewError, setDiffReviewError] = useState<string | null>(null);
-  const editorDirty = selectedFile != null && editorText !== savedEditorText;
-  const dirtyTabPaths = useMemo(
-    () => dirtyEditorTabPaths(editorTabs, editorBuffersRef.current, selectedFile?.path ?? null, editorDirty),
-    [editorBufferRevision, editorDirty, editorTabs, selectedFile],
-  );
-  const dirtyTabPathSet = useMemo(() => new Set(dirtyTabPaths), [dirtyTabPaths]);
-  const editorSaveConflict = editorError?.startsWith("File changed on disk since it was opened") ?? false;
-  const activeFileMissing = useMemo(
-    () => selectedFile != null && fileTree.length > 0 && !fileTreeContainsPath(fileTree, selectedFile.path),
-    [fileTree, selectedFile],
-  );
-  const editorBreadcrumbs = useMemo(
-    () => (selectedFile ? pathBreadcrumbs(workspacePath, selectedFile.path) : []),
-    [selectedFile, workspacePath],
-  );
-  const editorLanguage = selectedFile ? languageLabelForPath(selectedFile.path) : "No file";
-  const diffBreadcrumbs = useMemo(
-    () => (diffReview ? pathBreadcrumbs(workspacePath, diffReview.absolutePath) : []),
-    [diffReview, workspacePath],
-  );
-  const diffReviewCanOpenFile = Boolean(diffReview && diffReview.file.index !== "D" && diffReview.file.worktree !== "D");
-  const diffReviewCanStage = Boolean(diffReview && (diffReview.file.index === "?" || diffReview.file.worktree !== " "));
-  const diffReviewCanUnstage = Boolean(diffReview && diffReview.file.index !== " " && diffReview.file.index !== "?");
-  const diffReviewCanDiscard = Boolean(diffReview && (diffReview.file.index === "?" || diffReview.file.worktree !== " "));
-  const visibleFileTree = useMemo(
-    () => {
-      const dirtyTree = markDirtyFiles(fileTree, dirtyTabPathSet);
-      const files = workspacePath && gitStatusRoot === workspacePath && gitStatus?.isRepository ? gitStatus.files : [];
-      return decorateFileTreeWithGitStatus(workspacePath, dirtyTree, files);
-    },
-    [dirtyTabPathSet, fileTree, gitStatus, gitStatusRoot, workspacePath],
-  );
-  const searchableFiles = useMemo(() => flattenFileTree(visibleFileTree), [visibleFileTree]);
+  const {
+    activeFileMissing, diffBreadcrumbs, dirtyTabPathSet, dirtyTabPaths,
+    editorBreadcrumbs, editorDirty, editorLanguage, editorSaveConflict,
+    diffReviewCanDiscard, diffReviewCanOpenFile, diffReviewCanStage, diffReviewCanUnstage,
+    searchableFiles, visibleFileTree,
+  } = deriveEditorWorkspaceState({
+    diffReview, editorBuffers: editorBuffersRef.current, editorError, editorTabs,
+    editorText, fileTree, gitStatus, gitStatusRoot, savedEditorText,
+    selectedFile, workspacePath,
+  });
   const drawerSearchResults = useMemo(() => {
     return filterWorkspaceFiles(searchableFiles, drawerSearchQuery, drawerSearchQuery.trim() ? 80 : 40);
   }, [drawerSearchQuery, searchableFiles]);
