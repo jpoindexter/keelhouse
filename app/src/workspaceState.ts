@@ -1,50 +1,25 @@
-export const MAX_RECENT_PROJECTS = 8;
-export const MAX_OPEN_PROJECTS = 8;
-export const MAX_PROJECT_SESSIONS = 100;
+import { normalizeProjectStatus } from "./workspaceSessionNormalization";
+import { MAX_OPEN_PROJECTS, MAX_PROJECT_SESSIONS, MAX_RECENT_PROJECTS } from "./workspaceStateTypes";
+import type {
+  ActiveSessionByProject,
+  OpenProject,
+  ProjectRailStatus,
+  ProjectSession,
+  ProjectSessionsByProject,
+  ProjectSessionStatus,
+} from "./workspaceStateTypes";
 
-export type ProjectRailStatus = "running" | "exited" | "attention";
-export type ProjectSessionStatus = ProjectRailStatus;
-
-export type ProjectSessionOrchestration = {
-  dispatchId: string;
-  parentSessionId: string;
-  index: number;
-  count: number;
-  task: string;
-  provider: "codex" | "claude";
-  model?: string;
-  approvalMode: "ask" | "approveSafe" | "fullAccess";
-  budgetSeconds: number;
-  targets: string[];
-  worktreeMode: "shared" | "isolated";
-  worktreePath?: string;
-  worktreeBranch?: string;
-  returnedAt?: number;
-};
-
-export type OpenProject = {
-  path: string;
-  status: ProjectRailStatus;
-};
-
-export type ProjectSession = {
-  id: string;
-  title: string;
-  status: ProjectSessionStatus;
-  updatedAt: number;
-  archived?: boolean;
-  pinnedAt?: number;
-  parentSessionId?: string;
-  parentMessageId?: string;
-  forkedAt?: number;
-  checkpointId?: string;
-  checkpointCreatedAt?: number;
-  recoveryCheckpointId?: string;
-  orchestration?: ProjectSessionOrchestration;
-};
-
-export type ProjectSessionsByProject = Record<string, ProjectSession[]>;
-export type ActiveSessionByProject = Record<string, string>;
+export { normalizeProjectSessionsByProject } from "./workspaceSessionNormalization";
+export { MAX_OPEN_PROJECTS, MAX_PROJECT_SESSIONS, MAX_RECENT_PROJECTS } from "./workspaceStateTypes";
+export type {
+  ActiveSessionByProject,
+  OpenProject,
+  ProjectRailStatus,
+  ProjectSession,
+  ProjectSessionOrchestration,
+  ProjectSessionsByProject,
+  ProjectSessionStatus,
+} from "./workspaceStateTypes";
 
 export const normalizeRecentProjects = (value: unknown): string[] =>
   Array.isArray(value)
@@ -60,9 +35,6 @@ export const pushRecentProject = (projects: string[], path: string) => [
 ].slice(0, MAX_RECENT_PROJECTS);
 
 export const removeRecentProject = (projects: string[], path: string) => projects.filter((project) => project !== path);
-
-const normalizeProjectStatus = (value: unknown): ProjectRailStatus =>
-  value === "running" || value === "exited" || value === "attention" ? value : "exited";
 
 export const normalizeOpenProjects = (value: unknown): OpenProject[] => {
   if (!Array.isArray(value)) return [];
@@ -145,76 +117,6 @@ export const newProjectSession = (existing: ProjectSession[], updatedAt: number 
   updatedAt,
 });
 
-const normalizeProjectSession = (value: unknown): ProjectSession | null => {
-  if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
-  const item = value as Record<string, unknown>;
-  const id = typeof item.id === "string" ? item.id.trim() : "";
-  const title = typeof item.title === "string" ? item.title.trim() : "";
-  const updatedAt = typeof item.updatedAt === "number" && Number.isFinite(item.updatedAt) ? item.updatedAt : 0;
-  if (!id || !title) return null;
-  const orchestrationItem = typeof item.orchestration === "object" && item.orchestration != null && !Array.isArray(item.orchestration)
-    ? item.orchestration as Record<string, unknown>
-    : null;
-  const orchestration = orchestrationItem
-    && typeof orchestrationItem.dispatchId === "string" && orchestrationItem.dispatchId.trim()
-    && typeof orchestrationItem.parentSessionId === "string" && orchestrationItem.parentSessionId.trim()
-    && typeof orchestrationItem.index === "number" && Number.isInteger(orchestrationItem.index) && orchestrationItem.index >= 0
-    && typeof orchestrationItem.count === "number" && Number.isInteger(orchestrationItem.count) && orchestrationItem.count >= 2 && orchestrationItem.count <= 8
-    && typeof orchestrationItem.task === "string" && orchestrationItem.task.trim()
-    && (orchestrationItem.provider === "codex" || orchestrationItem.provider === "claude")
-    && (orchestrationItem.approvalMode === "ask" || orchestrationItem.approvalMode === "approveSafe" || orchestrationItem.approvalMode === "fullAccess")
-    && typeof orchestrationItem.budgetSeconds === "number" && Number.isInteger(orchestrationItem.budgetSeconds)
-    && orchestrationItem.budgetSeconds >= 30 && orchestrationItem.budgetSeconds <= 3600
-    && Array.isArray(orchestrationItem.targets)
-    && (orchestrationItem.worktreeMode === "shared" || orchestrationItem.worktreeMode === "isolated")
-    ? {
-        dispatchId: orchestrationItem.dispatchId.trim(),
-        parentSessionId: orchestrationItem.parentSessionId.trim(),
-        index: orchestrationItem.index,
-        count: orchestrationItem.count,
-        task: orchestrationItem.task.trim(),
-        provider: orchestrationItem.provider,
-        ...(typeof orchestrationItem.model === "string" && orchestrationItem.model.trim() ? { model: orchestrationItem.model.trim() } : {}),
-        approvalMode: orchestrationItem.approvalMode,
-        budgetSeconds: orchestrationItem.budgetSeconds,
-        targets: Array.from(new Set(orchestrationItem.targets.filter((target): target is string => typeof target === "string" && Boolean(target.trim())).map((target) => target.trim()))),
-        worktreeMode: orchestrationItem.worktreeMode,
-        ...(typeof orchestrationItem.worktreePath === "string" && orchestrationItem.worktreePath.trim() ? { worktreePath: orchestrationItem.worktreePath.trim() } : {}),
-        ...(typeof orchestrationItem.worktreeBranch === "string" && orchestrationItem.worktreeBranch.trim() ? { worktreeBranch: orchestrationItem.worktreeBranch.trim() } : {}),
-        ...(typeof orchestrationItem.returnedAt === "number" && Number.isFinite(orchestrationItem.returnedAt) && orchestrationItem.returnedAt > 0 ? { returnedAt: Math.floor(orchestrationItem.returnedAt) } : {}),
-      } satisfies ProjectSessionOrchestration
-    : undefined;
-  return {
-    id,
-    title,
-    status: normalizeProjectStatus(item.status),
-    updatedAt,
-    ...(item.archived === true ? { archived: true } : {}),
-    ...(typeof item.pinnedAt === "number" && Number.isFinite(item.pinnedAt) && item.pinnedAt > 0
-      ? { pinnedAt: Math.floor(item.pinnedAt) }
-      : {}),
-    ...(typeof item.parentSessionId === "string" && item.parentSessionId.trim()
-      ? { parentSessionId: item.parentSessionId.trim() }
-      : {}),
-    ...(typeof item.parentMessageId === "string" && item.parentMessageId.trim()
-      ? { parentMessageId: item.parentMessageId.trim() }
-      : {}),
-    ...(typeof item.forkedAt === "number" && Number.isFinite(item.forkedAt) && item.forkedAt > 0
-      ? { forkedAt: Math.floor(item.forkedAt) }
-      : {}),
-    ...(typeof item.checkpointId === "string" && item.checkpointId.trim()
-      ? { checkpointId: item.checkpointId.trim() }
-      : {}),
-    ...(typeof item.checkpointCreatedAt === "number" && Number.isFinite(item.checkpointCreatedAt) && item.checkpointCreatedAt > 0
-      ? { checkpointCreatedAt: Math.floor(item.checkpointCreatedAt) }
-      : {}),
-    ...(typeof item.recoveryCheckpointId === "string" && item.recoveryCheckpointId.trim()
-      ? { recoveryCheckpointId: item.recoveryCheckpointId.trim() }
-      : {}),
-    ...(orchestration ? { orchestration } : {}),
-  };
-};
-
 export const setProjectSessionArchived = (
   sessions: ProjectSessionsByProject,
   path: string,
@@ -262,27 +164,6 @@ export const activeSessionsForRail = (sessions: ProjectSession[], showArchived: 
 
 export const archivedSessionCount = (sessions: ProjectSession[]): number =>
   sessions.filter((session) => session.archived).length;
-
-export const normalizeProjectSessionsByProject = (value: unknown): ProjectSessionsByProject => {
-  if (typeof value !== "object" || value == null || Array.isArray(value)) return {};
-  const entries = Object.entries(value as Record<string, unknown>)
-    .map(([path, sessions]) => {
-      const trimmedPath = path.trim();
-      if (!trimmedPath || !Array.isArray(sessions)) return null;
-      const seen = new Set<string>();
-      const normalized = sessions
-        .map(normalizeProjectSession)
-        .filter((session): session is ProjectSession => {
-          if (!session || seen.has(session.id)) return false;
-          seen.add(session.id);
-          return true;
-        })
-        .slice(0, MAX_PROJECT_SESSIONS);
-      return normalized.length > 0 ? [trimmedPath, normalized] as const : null;
-    })
-    .filter((entry): entry is readonly [string, ProjectSession[]] => entry != null);
-  return Object.fromEntries(entries);
-};
 
 export const normalizeActiveSessionByProject = (value: unknown): ActiveSessionByProject => {
   if (typeof value !== "object" || value == null || Array.isArray(value)) return {};

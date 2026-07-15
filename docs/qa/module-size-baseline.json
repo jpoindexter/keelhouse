@@ -10,7 +10,6 @@
     "app/src/ChatThreadSurface.tsx": { "lines": 375, "longFunctions": 3, "maxFunctionLines": 277 },
     "app/src/ConnectionSettingsPanel.tsx": { "lines": 319, "longFunctions": 1, "maxFunctionLines": 268 },
     "app/src/SettingsModal.tsx": { "lines": 758, "longFunctions": 3, "maxFunctionLines": 653 },
-    "app/src/chatConversation.ts": { "lines": 692, "longFunctions": 2, "maxFunctionLines": 231 },
-    "app/src/workspaceState.ts": { "lines": 398, "longFunctions": 1, "maxFunctionLines": 69 }
+    "app/src/chatConversation.ts": { "lines": 692, "longFunctions": 2, "maxFunctionLines": 231 }
   }
 }
