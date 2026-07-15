@@ -33,6 +33,12 @@ const settingsModalData = read("app/src/settingsModalData.ts");
 const commandPaletteSources = read("app/src/commandPaletteSources.ts");
 const connectionSettings = read("app/src/connectionSettings.ts");
 const connectionSettingsPanel = read("app/src/ConnectionSettingsPanel.tsx");
+const connectionSecretControls = [
+  connectionSettingsPanel,
+  read("app/src/ConnectionProviderSettings.tsx"),
+  read("app/src/ProjectEnvironmentSettings.tsx"),
+  read("app/src/McpServerForm.tsx"),
+].join("\n");
 const sourceControlLinks = read("app/src/sourceControlLinks.ts");
 const connectionSecrets = read("app/src-tauri/src/connection_secrets.rs");
 const mcpProbe = read("app/src-tauri/src/mcp_probe.rs");
@@ -216,7 +222,7 @@ assert(settingsModalData.includes('id: "agents.worktree-policy"') && settingsMod
 assert(settingsModal.includes("Unavailable until AI-CONNECTIONS environment profiles") && settingsModal.includes("Credential values are never displayed"), "Environment settings must state the current inheritance and secret-display boundary without presenting an unavailable control");
 assert(settingsModalData.includes('id: "connections.manage"') && settingsModalData.includes('label: "Connections"'), "Settings must expose the dedicated AI and MCP Connections workspace");
 assert(connectionSettings.includes("environmentByProject") && connectionSettings.includes("mcpServers") && connectionSettings.includes("providerModels"), "Connection settings must use typed provider, environment, and MCP records");
-assert(connectionSettingsPanel.includes('type="password"') && connectionSettingsPanel.includes("onSaveSecret"), "Connection secret controls must use the Keychain callback boundary");
+assert(connectionSecretControls.includes('type="password"') && connectionSecretControls.includes("onSaveSecret"), "Connection secret controls must use the Keychain callback boundary");
 assert(connectionSettings.includes("connectionEnvironmentInputs") && appTsx.includes("environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current"), "All new chat and terminal runs must carry project environment references without renderer-side secret values");
 assert(connectionSecrets.includes("resolve_connection_environment") && connectionSecrets.includes('provider:codex:api-key') && connectionSecrets.includes('OPENAI_API_KEY'), "Rust must resolve project and provider credentials only at the process boundary");
 assert(mcpProbe.includes('"initialize"') && mcpProbe.includes('"tools/list"') && mcpProbe.includes("spawn_blocking") && mcpProbe.includes("read_connection_secret"), "MCP health must execute a bounded backend protocol probe with Keychain auth");
