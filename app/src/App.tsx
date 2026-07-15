@@ -39,7 +39,6 @@ import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import {
   activeProjectSessionId,
-  ensureProjectSessions,
   forgetActiveFile,
   isMissingWorkspaceError,
   newProjectSession,
@@ -51,7 +50,6 @@ import {
   setProjectSessionStatus,
   setProjectSessionArchived,
   setProjectSessionPinned,
-  upsertOpenProject,
   upsertProjectSession,
 } from "./workspaceState";
 import type { ActiveFileByWorkspace, ActiveSessionByProject, OpenProject, ProjectRailStatus, ProjectSession, ProjectSessionsByProject } from "./workspaceState";
@@ -222,6 +220,7 @@ import { buildCreatedWorktreePaneState } from "./terminalWorktreePaneCreate";
 import { buildWorkspaceOpenPane } from "./workspaceOpenPanes";
 import { prepareWorkspaceOpenSession, workspaceOpenLayoutForRoot } from "./workspaceOpenSession";
 import { planWorkspaceOpenSuccess } from "./workspaceOpenSuccess";
+import { planWorkspaceOpenFailure } from "./workspaceOpenFailure";
 import {
   addBackgroundExit,
   clearBackgroundExitsForProject,
@@ -1903,15 +1902,11 @@ function App() {
         await store?.delete("folder");
         await store?.save();
       } else {
-        const nextOpen = upsertOpenProject(openProjectsRef.current, path, "attention");
-        const now = Date.now();
-        let nextSessions = ensureProjectSessions(projectSessionsRef.current, path, now);
-        let nextActiveSessions = activeSessionByProjectRef.current;
-        const sessionId = activeProjectSessionId(nextActiveSessions, nextSessions, path);
-        if (sessionId) {
-          nextActiveSessions = setActiveProjectSession(nextActiveSessions, path, sessionId);
-          nextSessions = setProjectSessionStatus(nextSessions, path, sessionId, "attention", now);
-        }
+        const { activeSessions: nextActiveSessions, openProjects: nextOpen,
+          sessions: nextSessions } = planWorkspaceOpenFailure({
+          activeSessions: activeSessionByProjectRef.current, sessions: projectSessionsRef.current,
+          openProjects: openProjectsRef.current, path, now: Date.now(),
+        });
         openProjectsRef.current = nextOpen;
         projectSessionsRef.current = nextSessions;
         activeSessionByProjectRef.current = nextActiveSessions;
