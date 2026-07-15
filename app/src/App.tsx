@@ -58,7 +58,6 @@ import {
 import type { ActiveFileByWorkspace, ActiveSessionByProject, OpenProject, ProjectRailStatus, ProjectSession, ProjectSessionsByProject } from "./workspaceState";
 import {
   clampEditorViewState,
-  cursorFromText,
   findFileTreeNode,
   fileTreeContainsPath,
   languageLabelForPath,
@@ -66,6 +65,13 @@ import {
   reconcileActiveFileNode,
 } from "./editorState";
 import type { CursorPosition, EditorViewState } from "./editorState";
+import {
+  editorLoadErrorState,
+  editorLoadStateFromBuffer,
+  editorLoadStateFromResponse,
+  type EditorFileBuffer,
+  type EditorFileLoadState,
+} from "./editorFileLoadState";
 import {
   discardDraftAndContinueNavigation,
   saveDraftAndContinueNavigation,
@@ -80,7 +86,6 @@ import {
   retargetEditorTabs,
   upsertEditorTab,
 } from "./editorTabs";
-import type { EditorBufferSnapshot } from "./editorTabs";
 import {
   LAUNCH_PROFILES,
   createCustomLaunchProfile,
@@ -313,12 +318,7 @@ type DetectedLocalDevServer = {
   paneLabel: string;
   detectedAt: number;
 };
-type EditorBuffer = EditorBufferSnapshot & {
-  bytes: number | null;
-  modifiedMs: number | null;
-  error: string | null;
-  recoveryError: string | null;
-};
+type EditorBuffer = EditorFileBuffer;
 type ProjectEditorSnapshot = {
   tabs: FileTreeNode[];
   activePath: string | null;
@@ -3091,6 +3091,16 @@ function App() {
       ? [{ path: workspacePath, status: activeProjectStatus() }]
       : [];
 
+  const applyEditorLoadState = (state: EditorFileLoadState) => {
+    setEditorText(state.text);
+    setSavedEditorText(state.savedText);
+    setEditorBytes(state.bytes);
+    setEditorModifiedMs(state.modifiedMs);
+    setEditorError(state.error);
+    setEditorRecoveryError(state.recoveryError);
+    setEditorCursor(state.cursor);
+  };
+
   const openEditorFileDirect = async (file: FileTreeNode, options: OpenEditorFileOptions = {}) => {
     const root = workspacePathRef.current ?? workspacePath;
     if (!root) return;
@@ -3106,14 +3116,7 @@ function App() {
     const buffered = editorBuffersRef.current[file.path];
     if (buffered) {
       setEditorLoading(false);
-      setEditorText(buffered.text);
-      setSavedEditorText(buffered.savedText);
-      setEditorBytes(buffered.bytes);
-      setEditorModifiedMs(buffered.modifiedMs);
-      setEditorError(buffered.error);
-      setEditorRecoveryError(buffered.recoveryError);
-      const restoredForContent = clampEditorViewState(editorViewStatesRef.current[file.path], buffered.text.length);
-      setEditorCursor(restoredForContent ? cursorFromText(buffered.text, restoredForContent.head) : { line: 1, column: 1 });
+      applyEditorLoadState(editorLoadStateFromBuffer(buffered, editorViewStatesRef.current[file.path]));
       await persistActiveFile(root, file.path);
       if (options.focusEditor) requestAnimationFrame(() => editorViewRef.current?.focus());
       return;
@@ -3127,21 +3130,10 @@ function App() {
     try {
       const result = await invoke<TextFileResponse>("read_text_file", { root, path: file.path });
       if (editorLoadSeq.current !== seq || result.path !== file.path) return;
-      editorBuffersRef.current[file.path] = {
-        text: result.content,
-        savedText: result.content,
-        bytes: result.bytes,
-        modifiedMs: result.modifiedMs,
-        error: null,
-        recoveryError: null,
-      };
+      const loaded = editorLoadStateFromResponse(result, editorViewStatesRef.current[file.path]);
+      editorBuffersRef.current[file.path] = loaded.buffer;
       setEditorBufferRevision((value) => value + 1);
-      setEditorText(result.content);
-      setSavedEditorText(result.content);
-      setEditorBytes(result.bytes);
-      setEditorModifiedMs(result.modifiedMs);
-      const restoredForContent = clampEditorViewState(editorViewStatesRef.current[file.path], result.content.length);
-      setEditorCursor(restoredForContent ? cursorFromText(result.content, restoredForContent.head) : { line: 1, column: 1 });
+      applyEditorLoadState(loaded);
       await persistActiveFile(root, file.path);
       if (options.focusEditor) {
         requestAnimationFrame(() => {
@@ -3150,21 +3142,10 @@ function App() {
       }
     } catch (err) {
       if (editorLoadSeq.current !== seq) return;
-      editorBuffersRef.current[file.path] = {
-        text: "",
-        savedText: "",
-        bytes: null,
-        modifiedMs: null,
-        error: String(err),
-        recoveryError: null,
-      };
+      const failed = editorLoadErrorState(err);
+      editorBuffersRef.current[file.path] = failed.buffer;
       setEditorBufferRevision((value) => value + 1);
-      setEditorText("");
-      setSavedEditorText("");
-      setEditorBytes(null);
-      setEditorModifiedMs(null);
-      setEditorError(String(err));
-      setEditorRecoveryError(null);
+      applyEditorLoadState(failed);
     } finally {
       if (editorLoadSeq.current === seq) setEditorLoading(false);
     }
