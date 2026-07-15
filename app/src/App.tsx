@@ -41,11 +41,9 @@ import {
   activeProjectSessionId,
   forgetActiveFile,
   isMissingWorkspaceError,
-  newProjectSession,
   planProjectClose,
   removeOpenProject,
   rememberActiveFile,
-  setActiveProjectSession,
   setOpenProjectStatus,
   setProjectSessionStatus,
   setProjectSessionArchived,
@@ -273,6 +271,7 @@ import { composerReasoningLabel } from "./ComposerReasoningPicker";
 import { closeProjectResources as closeProjectResourcesWithContext } from "./projectResourceClose";
 import { requestProjectClose } from "./projectCloseRequest";
 import { planProjectSessionSwitch } from "./projectSessionSwitch";
+import { planProjectSessionCreate } from "./projectSessionCreate";
 import "./App.css";
 import "./composerModelPicker.css";
 import "./responsive-shell.css";
@@ -1994,17 +1993,13 @@ function App() {
 
   const createProjectSession = async (projectPath: string) => {
     const sameProject = workspacePathRef.current === projectPath;
-    const now = Date.now();
     captureCurrentSessionSnapshot();
-    const existing = projectSessionsRef.current[projectPath] ?? [];
-    const session = {
-      ...newProjectSession(existing, now),
-      status: "exited" as ProjectRailStatus,
-    };
-    const nextSessions = upsertProjectSession(projectSessionsRef.current, projectPath, session);
-    const nextActiveSessions = setActiveProjectSession(activeSessionByProjectRef.current, projectPath, session.id);
-    await persistProjectSessions(nextSessions, nextActiveSessions);
-    await persistBrowserPreviewUrl(projectPath, session.id, sameProject ? browserUrlRef.current : browserPreviewByProjectRef.current[projectPath] ?? DEFAULT_BROWSER_PREVIEW_URL);
+    const planned = planProjectSessionCreate({
+      activeSessions: activeSessionByProjectRef.current, sessions: projectSessionsRef.current,
+      projectPath, now: Date.now(),
+    });
+    await persistProjectSessions(planned.sessions, planned.activeSessions);
+    await persistBrowserPreviewUrl(projectPath, planned.session.id, sameProject ? browserUrlRef.current : browserPreviewByProjectRef.current[projectPath] ?? DEFAULT_BROWSER_PREVIEW_URL);
     if (sameProject) {
       await openWorkspaceDirect(projectPath, launchProfileRef.current, { captureCurrentSession: false });
     } else {
