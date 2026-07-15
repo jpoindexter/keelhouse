@@ -12,10 +12,8 @@ import type { TreeApi } from "react-arborist";
 import { DraftNavigationDialog } from "./DraftNavigationDialog";
 import { BrowserPreviewPanel } from "./BrowserPreviewPanel";
 import { AppTitlebar } from "./AppTitlebar";
-import { BottomUtilityTabs, type UtilityTrayMode } from "./BottomUtilityTabs";
-import { UtilityTrayLogs, UtilityTrayProcesses } from "./UtilityTrayViews";
-import { TerminalPaneControls } from "./TerminalPaneControls";
-import { TerminalViewport } from "./TerminalViewport";
+import type { UtilityTrayMode } from "./BottomUtilityTabs";
+import { BottomUtilityTray } from "./BottomUtilityTray";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
 import { BrowserToolsDrawer } from "./BrowserToolsDrawer";
 import { SourceControlDrawer } from "./SourceControlDrawer";
@@ -258,7 +256,6 @@ import {
   type PaneTranscript,
 } from "./paneTranscripts";
 import { TranscriptsModal } from "./TranscriptsModal";
-import { TerminalFindBar } from "./TerminalFindBar";
 import { useTerminalFind } from "./useTerminalFind";
 import { ChatThreadSurface } from "./ChatThreadSurface";
 import {
@@ -5801,61 +5798,30 @@ function App() {
             onSubmit={() => void submitComposerDraft()}
           />
         </section>
-        <button
-          className="utility-tray-resizer"
-          type="button"
-          aria-label="Resize bottom utility tray"
-          title="Resize bottom utility tray"
-          onPointerDown={(event) => {
-            setAgentSurfaceMode("terminal");
-            beginUtilityTrayResize(event);
-          }}
+        <BottomUtilityTray
+          activePane={activeTerminalPane} activePaneId={activeTerminalPaneId}
+          activeProfileLabel={activeTerminalProfile.label} canClose={Boolean(activeAgentSessionHandle)}
+          canvasRef={canvasRef} events={selectedAgentActivityLog} find={terminalFind}
+          hasWorkspace={Boolean(workspacePath)} imeInputRef={imeInputRef} launchProfile={terminalLaunchProfile}
+          launchProfileChanging={launchProfileChanging} launchProfiles={allLaunchProfiles}
+          mode={utilityTrayMode} open={agentSurfaceMode === "terminal"} panes={terminalPanes}
+          terminalHostRef={terminalHostRef}
+          onClose={() => { if (activeAgentSessionHandle) void activeAgentSessionHandle.close(); }}
+          onCreate={(profile) => void createTerminalPane(profile)} onFocus={(paneId) => void focusTerminalPane(paneId)}
+          onKill={() => { if (activeTerminalPane) void terminateTerminalPane(activeTerminalPane); }}
+          onOpenFolder={() => void pickWorkspace({ openTerminal: true })}
+          onOpenTab={(mode) => void openUtilityTray(mode)}
+          onPaneContextMenu={(event, pane) => openContextMenu(event, terminalPaneContextMenuItems(pane))}
+          onPaste={(text) => { invoke("paste", { text }).catch(() => {}); }}
+          onProfileChange={(profileId) => void switchTerminalLaunchProfile(resolveLaunchProfile(profileId))}
+          onRename={(pane) => void renameTerminalPane(pane)}
+          onResizeStart={(event) => { setAgentSurfaceMode("terminal"); beginUtilityTrayResize(event); }}
+          onRestart={() => { if (activeTerminalPane) void restartTerminalPane(activeTerminalPane); }}
+          onStartShell={() => void createTerminalPane(defaultTerminalLaunchProfile())}
+          onTabContextMenu={(event, mode) => openContextMenu(event, utilityTrayTabContextMenuItems(mode))}
+          onTerminalContextMenu={(event) => openContextMenu(event, terminalContextMenuItems())}
+          onToggleVisibility={toggleUtilityTrayVisibility}
         />
-        <section className={`utility-tray ${agentSurfaceMode === "terminal" ? "utility-tray--open" : "utility-tray--collapsed"}`} aria-label="Bottom utility tray">
-          <BottomUtilityTabs
-            mode={utilityTrayMode}
-            open={agentSurfaceMode === "terminal"}
-            onContextMenu={(event, mode) => openContextMenu(event, utilityTrayTabContextMenuItems(mode))}
-            onOpen={(mode) => void openUtilityTray(mode)}
-            onToggleVisibility={toggleUtilityTrayVisibility}
-          />
-          <div className={`utility-tray__body utility-tray__body--${utilityTrayMode}`}>
-            <TerminalPaneControls
-              activePane={activeTerminalPane}
-              activePaneId={activeTerminalPaneId}
-              canClose={Boolean(activeAgentSessionHandle)}
-              hasWorkspace={Boolean(workspacePath)}
-              launchProfile={terminalLaunchProfile}
-              launchProfileChanging={launchProfileChanging}
-              launchProfiles={allLaunchProfiles}
-              panes={terminalPanes}
-              onClose={() => { if (activeAgentSessionHandle) void activeAgentSessionHandle.close(); }}
-              onContextMenu={(event, pane) => openContextMenu(event, terminalPaneContextMenuItems(pane))}
-              onCreate={(profile) => void createTerminalPane(profile)}
-              onFind={terminalFind.toggle}
-              onFocus={(paneId) => void focusTerminalPane(paneId)}
-              onKill={() => { if (activeTerminalPane) void terminateTerminalPane(activeTerminalPane); }}
-              onProfileChange={(profileId) => void switchTerminalLaunchProfile(resolveLaunchProfile(profileId))}
-              onRename={(pane) => void renameTerminalPane(pane)}
-              onRestart={() => { if (activeTerminalPane) void restartTerminalPane(activeTerminalPane); }}
-            />
-            <TerminalFindBar controller={terminalFind} />
-            <TerminalViewport
-              activeProfileLabel={activeTerminalProfile.label}
-              canvasRef={canvasRef}
-              imeInputRef={imeInputRef}
-              paneCount={terminalPanes.length}
-              terminalHostRef={terminalHostRef}
-              workspaceOpen={Boolean(workspacePath)}
-              onContextMenu={(event) => openContextMenu(event, terminalContextMenuItems())}
-              onOpenFolder={() => void pickWorkspace({ openTerminal: true })}
-              onPaste={(text) => { invoke("paste", { text }).catch(() => {}); }}
-              onStartShell={() => void createTerminalPane(defaultTerminalLaunchProfile())}
-            />
-            <UtilityTrayProcesses panes={terminalPanes} onFocus={(paneId) => void focusTerminalPane(paneId)} />
-            <UtilityTrayLogs events={selectedAgentActivityLog} />
-          </div>
-        </section>
       </main>
 
       {settingsOpen ? (

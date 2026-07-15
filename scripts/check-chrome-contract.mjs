@@ -22,6 +22,7 @@ const appCss = `${readCss("app/src/App.css")}\n${readCss("app/src/composerModelP
 const appTsx = read("app/src/App.tsx");
 const appTitlebar = read("app/src/AppTitlebar.tsx");
 const bottomUtilityTabs = read("app/src/BottomUtilityTabs.tsx");
+const bottomUtilityTray = read("app/src/BottomUtilityTray.tsx");
 const composerModelPicker = read("app/src/ComposerModelPicker.tsx");
 const composerModelPopover = read("app/src/ComposerModelPopover.tsx");
 const composerReasoningPicker = read("app/src/ComposerReasoningPicker.tsx");
@@ -164,7 +165,7 @@ assert(chatConversation.includes('eventType === "item/agentMessage/delta"'), "St
 assert(appTsx.includes('route.kind === "chat"'), "Normal composer prompts must route to structured chat, not a pty paste path");
 assert(appTsx.includes('invoke<ResolveWorkspaceResponse>("resolve_workspace"'), "Opening a chat must resolve its project without spawning a hidden terminal");
 assert(tauriBackend.includes("fn resolve_workspace"), "The backend must expose a no-pty project open path for chat mode");
-assert(appTsx.includes('className={`utility-tray ${agentSurfaceMode === "terminal"'), "Raw terminal must live in the approved bottom utility tray");
+assert(bottomUtilityTray.includes('className={`utility-tray ${props.open ?') && appTsx.includes('open={agentSurfaceMode === "terminal"}'), "Raw terminal must live in the approved bottom utility tray");
 assert(appTsx.includes('hidden={false}'), "Opening the bottom tray must keep the chat timeline visible");
 assert(composerSurface.includes('className="agent-composer" aria-label="Agent composer"'), "Opening the bottom tray must keep the chat composer visible");
 assert(bottomUtilityTabs.includes('aria-label="Utility tray surfaces"'), "Bottom tray must expose Terminal, Processes, and Logs modes");
