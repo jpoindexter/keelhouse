@@ -164,11 +164,9 @@ import {
   terminalPaneProjectStatus as projectStatusFromTerminalPanes,
 } from "./terminalPane";
 import type { TerminalPaneState } from "./terminalPane";
-import { absolutePathForGitFile } from "./fileGitStatus";
 import type { GitStatusFile } from "./fileGitStatus";
-import { useGitStatus, type GitStatusResponse } from "./useGitStatus";
-import { parseUnifiedDiff } from "./diffView";
-import type { ParsedDiff } from "./diffView";
+import { useGitStatus } from "./useGitStatus";
+import { useGitDiffReview } from "./useGitDiffReview";
 import {
   paneLayoutFromPanes,
 } from "./sessionRestore";
@@ -317,14 +315,6 @@ type ActiveTerminalPaneByContext = Record<string, number>;
 type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
 type ChatImageResponse = { path: string; bytes: number; mimeType: string };
 type FileOpResponse = { path: string };
-type GitDiffResponse = { path: string; diff: string; source: string };
-type GitFileAction = "stage" | "unstage" | "discard";
-type ActiveDiffReview = {
-  file: GitStatusFile;
-  absolutePath: string;
-  response: GitDiffResponse;
-  parsed: ParsedDiff;
-};
 type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
 type DetectedLocalDevServer = {
@@ -553,9 +543,17 @@ function App() {
     active: sideDrawerMode === "files" || sideDrawerMode === "git", refreshKey: treeRefreshNonce,
     resolveRoot: () => workspacePathRef.current ?? workspacePath, workspacePath,
   });
-  const [diffReview, setDiffReview] = useState<ActiveDiffReview | null>(null);
-  const [diffReviewLoading, setDiffReviewLoading] = useState(false);
-  const [diffReviewError, setDiffReviewError] = useState<string | null>(null);
+  const {
+    close: closeDiffReview, copy: copyShownDiff, error: diffReviewError,
+    loading: diffReviewLoading, open: openGitDiff, review: diffReview,
+    runFileAction: runGitFileAction,
+  } = useGitDiffReview({
+    gateAction: (action) => gateAppAction(action),
+    getRoot: () => workspacePathRef.current ?? workspacePath,
+    hasUnsaved: (path) => editorHasUnsavedBufferForPath(path),
+    onRefreshFiles: refreshFileTree,
+    onStatus: (status, root) => { setGitStatus(status); setGitStatusRoot(root); },
+  });
   const {
     activeFileMissing, diffBreadcrumbs, dirtyTabPathSet, dirtyTabPaths,
     editorBreadcrumbs, editorDirty, editorLanguage, editorSaveConflict,
@@ -641,41 +639,6 @@ function App() {
     }, 60);
   };
 
-  const loadGitDiff = async (file: GitStatusFile, options: { gate?: boolean } = {}) => {
-    const root = workspacePathRef.current ?? workspacePath;
-    if (!root) return false;
-    if (options.gate ?? true) {
-      const audit = await gateAppAction(createAppAction({
-        kind: "open-diff",
-        label: "Open diff",
-        target: file.path,
-        risk: "low",
-        requestedBy: "user",
-      }));
-      if (audit.decision !== "approved") return false;
-    }
-    setDiffReviewLoading(true);
-    setDiffReviewError(null);
-    setDiffReview(null);
-    try {
-      const response = await invoke<GitDiffResponse>("git_file_diff", { root, path: file.path });
-      setDiffReview({
-        file,
-        response,
-        absolutePath: absolutePathForGitFile(root, file.path),
-        parsed: parseUnifiedDiff(response.diff),
-      });
-      return true;
-    } catch (err) {
-      setDiffReviewError(String(err));
-      return false;
-    } finally {
-      setDiffReviewLoading(false);
-    }
-  };
-
-  const openGitDiff = (file: GitStatusFile) => loadGitDiff(file, { gate: true });
-
   const reviewRunCardFile = async (relativePath: string) => {
     const normalized = relativePath.trim().replace(/^\.\//, "");
     const changedFile = gitStatus?.files.find((file) => file.path === normalized);
@@ -697,86 +660,16 @@ function App() {
     }
   };
 
-  const gitActionLabel = (action: GitFileAction) => {
-    if (action === "stage") return "Stage file";
-    if (action === "unstage") return "Unstage file";
-    return "Discard unstaged changes";
-  };
-
-  const gitActionKind = (action: GitFileAction) => {
-    if (action === "stage") return "stage-file" as const;
-    if (action === "unstage") return "unstage-file" as const;
-    return "discard-file" as const;
-  };
-
   const editorHasUnsavedBufferForPath = (path: string) => {
     if (selectedFileRef.current?.path === path && editorText !== savedEditorText) return true;
     const buffered = editorBuffersRef.current[path];
     return Boolean(buffered && buffered.text !== buffered.savedText);
   };
 
-  const runGitFileAction = async (action: GitFileAction, file: GitStatusFile) => {
-    const root = workspacePathRef.current ?? workspacePath;
-    if (!root) return false;
-    const absolutePath = absolutePathForGitFile(root, file.path);
-    if (action === "discard" && editorHasUnsavedBufferForPath(absolutePath)) {
-      setDiffReviewError("Save or close the unsaved editor draft before discarding Git changes.");
-      return false;
-    }
-    const audit = await gateAppAction(createAppAction({
-      kind: gitActionKind(action),
-      label: gitActionLabel(action),
-      target: file.path,
-      risk: action === "discard" ? "destructive" : "medium",
-      requestedBy: "user",
-      undoHint: action === "discard" ? "Use Git history or editor undo if available." : "Use the opposite Git action.",
-    }));
-    if (audit.decision !== "approved") return false;
-    setDiffReviewLoading(true);
-    setDiffReviewError(null);
-    try {
-      const nextStatus = await invoke<GitStatusResponse>("git_file_action", { root, path: file.path, action });
-      setGitStatus(nextStatus);
-      setGitStatusRoot(root);
-      refreshFileTree();
-      const nextFile = nextStatus.files.find((item) => item.path === file.path);
-      if (nextFile) {
-        await loadGitDiff(nextFile, { gate: false });
-      } else {
-        closeDiffReview();
-      }
-      return true;
-    } catch (err) {
-      setDiffReviewError(String(err));
-      return false;
-    } finally {
-      setDiffReviewLoading(false);
-    }
-  };
-
-  const copyShownDiff = async () => {
-    if (!diffReview) return false;
-    const audit = await gateAppAction(createAppAction({
-      kind: "copy-diff",
-      label: "Copy shown diff",
-      target: diffReview.response.path,
-      risk: "low",
-      requestedBy: "user",
-    }));
-    if (audit.decision !== "approved") return false;
-    await writeText(diffReview.response.diff);
-    return true;
-  };
-
   const openDiffFile = async (line: number | null = null) => {
     if (!diffReview) return;
     const opened = await requestOpenEditorFile(fileNodeFromPath(diffReview.absolutePath, "file"), { focusEditor: true });
     if (opened && line != null) focusEditorLine(line);
-  };
-
-  const closeDiffReview = () => {
-    setDiffReview(null);
-    setDiffReviewError(null);
   };
 
   useSyncRef(recentProjectsRef, recentProjects);
