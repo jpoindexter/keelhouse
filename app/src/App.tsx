@@ -112,6 +112,7 @@ import {
 import type { AgentApprovalMode, AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
 import { executeAgentPaneInterrupt } from "./agentPaneInterrupt";
 import { executeTerminalPaneClose } from "./terminalPaneCloseWorkflow";
+import { executeTerminalPaneCreate } from "./terminalPaneCreateWorkflow";
 import { AppIcon } from "./icons";
 import type { AppIconName } from "./icons";
 import {
@@ -204,7 +205,6 @@ import { executeProjectSessionDelete } from "./projectSessionDelete";
 import { executeTerminalPaneRestart } from "./terminalPaneRestartWorkflow";
 import { executeTerminalPaneTerminate } from "./terminalPaneTerminate";
 import { createSessionCheckpointActions } from "./sessionCheckpointActions";
-import { buildCreatedTerminalPane } from "./terminalPaneCreate";
 import { buildCreatedWorktreePaneState } from "./terminalWorktreePaneCreate";
 import { openWorkspaceTerminalPanes } from "./workspaceOpenPanes";
 import { prepareWorkspaceOpenSession } from "./workspaceOpenSession";
@@ -1883,41 +1883,27 @@ function App() {
     const root = workspacePathRef.current ?? workspacePath;
     const sessionId = activeSessionForProject(root);
     if (!root || !sessionId || launchProfileChanging) return false;
-    const audit = await gateAppAction(createAppAction({
-      kind: "create-pane",
-      label: "Create pane",
-      target: `${profile.label} in ${root}`,
-      risk: "medium",
-      requestedBy,
-      undoHint: "Close the new pane.",
-    }));
-    if (audit.decision !== "approved") return false;
-    setLaunchProfileChanging(true);
-    try {
-      const result = await invoke<OpenPaneResponse>("create_pane", { path: root, profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root) });
-      const existingPanes = terminalPanesForSession(root, sessionId);
-      const slot = existingPanes.length;
-      const pane = buildCreatedTerminalPane({
-        createdAt: Date.now(),
-        existingPanes,
-        paneId: result.paneId,
+    return executeTerminalPaneCreate({
+      createPane: async () => (await invoke<OpenPaneResponse>("create_pane", {
+        path: root,
         profile,
-        root,
-        savedLabel: savedPaneLabelForSlot(root, slot),
-      });
-      const nextPanes = [...existingPanes, pane];
-      setSessionTerminalPanes(root, sessionId, nextPanes, result.paneId);
-      recordCreatedPaneActivity(pane, root, sessionId);
-      await finalizeCreatedTerminalPane(root, nextPanes, profile);
-      return true;
-    } catch (err) {
-      setLaunchError(String(err));
-      await updateOpenProjectStatus(root, "attention");
-      await updateActiveSessionStatus(root, "attention");
-      return false;
-    } finally {
-      setLaunchProfileChanging(false);
-    }
+        environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root),
+      })).paneId,
+      currentPanes: () => terminalPanesForSession(root, sessionId),
+      finalizePane: (panes) => finalizeCreatedTerminalPane(root, panes, profile),
+      gateAction: async (action) => (await gateAppAction(action)).decision,
+      now: Date.now,
+      profile,
+      recordCreated: (pane) => recordCreatedPaneActivity(pane, root, sessionId),
+      requestedBy,
+      root,
+      savedLabel: (slot) => savedPaneLabelForSlot(root, slot),
+      setChanging: setLaunchProfileChanging,
+      setError: setLaunchError,
+      setSessionPanes: (panes, activeId) => setSessionTerminalPanes(root, sessionId, panes, activeId),
+      updateProjectStatus: (status) => updateOpenProjectStatus(root, status),
+      updateSessionStatus: (status) => updateActiveSessionStatus(root, status),
+    });
   };
 
   const toggleRawTerminal = async () => {
