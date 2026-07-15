@@ -244,6 +244,7 @@ import {
 } from "./backgroundExits";
 import { requestPermission } from "@tauri-apps/plugin-notification";
 import { createSettingsPreferenceActions } from "./settingsPreferenceActions";
+import { createSettingsScopedActions } from "./settingsScopedActions";
 import {
   addPaneTranscript,
   buildPaneTranscript,
@@ -4276,6 +4277,21 @@ function App() {
     setNotificationsEnabled,
     setTheme: setAppTheme,
   });
+  const settingsScopedActions = createSettingsScopedActions({
+    clearScopedSetting,
+    readEffectiveBrowserUrl: () => resolveScopedSetting(
+      scopedSettingsRef.current, "browserUrl", workspacePathRef.current,
+      activeSessionForProject(workspacePathRef.current),
+    ).value,
+    resolveLaunchProfile,
+    restoreBrowserPreview: () => restoreBrowserPreview(
+      workspacePathRef.current, activeSessionForProject(workspacePathRef.current),
+    ),
+    setBrowserLocation,
+    setComposerApprovalMode,
+    switchLaunchProfile,
+    updateScopedSetting,
+  });
 
   return (
     <div className={`app-shell ${sideDrawerCollapsed ? "app-shell--side-drawer-collapsed" : ""} ${renderedWorkbenchLayout === "hidden" ? "app-shell--tools-hidden" : ""} ${settingsOpen ? "app-shell--settings-open" : ""}`} style={appShellStyle}>
@@ -4687,26 +4703,10 @@ function App() {
           trayMode={toolTrayMode}
           workspaceName={activeWorkspaceName}
           workspacePath={workspacePath ?? ""}
-          onApprovalModeChange={(scope, mode) => {
-            if (scope === "chat") void setComposerApprovalMode(mode);
-            else void updateScopedSetting(scope, "approvalMode", mode);
-          }}
+          onApprovalModeChange={settingsScopedActions.onApprovalModeChange}
           onOpenAgentConnection={(providerId) => void openAgentConnection(providerId)}
           onRefreshAgentConnections={refreshAgentConnections}
-          onBrowserUrlCommit={(scope, url) => {
-            const normalized = normalizeBrowserPreviewUrl(url);
-            if (!normalized) return;
-            void (async () => {
-              await updateScopedSetting(scope, "browserUrl", normalized);
-              const effective = resolveScopedSetting(
-                scopedSettingsRef.current,
-                "browserUrl",
-                workspacePathRef.current,
-                activeSessionForProject(workspacePathRef.current),
-              ).value;
-              setBrowserLocation(effective);
-            })();
-          }}
+          onBrowserUrlCommit={settingsScopedActions.onBrowserUrlCommit}
           onAiConnectionSettingsChange={(next) => void saveAiConnectionSettings(next)}
           onDeleteConnectionSecret={deleteConnectionSecret}
           onSaveConnectionSecret={saveConnectionSecret}
@@ -4750,25 +4750,8 @@ function App() {
           onKeybindingOverrideChange={settingsPreferenceActions.onKeybindingOverrideChange}
           onClose={() => setSettingsOpen(false)}
           onLayoutChange={setWorkbenchLayout}
-          onProfileChange={(scope, profileId) => {
-            const profile = resolveLaunchProfile(profileId);
-            if (!profile) return;
-            if (scope === "global") void switchLaunchProfile(profile);
-            else void updateScopedSetting(scope, "agentProfileId", profile.id);
-          }}
-          onScopedSettingReset={(rowId, scope) => {
-            const key = rowId === "agents.profile"
-              ? "agentProfileId"
-              : rowId === "agents.permission"
-                ? "approvalMode"
-                : "browserUrl";
-            void (async () => {
-              await clearScopedSetting(scope, key);
-              if (key === "browserUrl") {
-                restoreBrowserPreview(workspacePathRef.current, activeSessionForProject(workspacePathRef.current));
-              }
-            })();
-          }}
+          onProfileChange={settingsScopedActions.onProfileChange}
+          onScopedSettingReset={settingsScopedActions.onScopedSettingReset}
           onResetLayout={resetInterface}
           onTrayModeChange={setToolTrayMode}
         />
