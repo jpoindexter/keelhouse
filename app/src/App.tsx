@@ -1,7 +1,6 @@
 import { type CSSProperties, type FormEvent, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { readImage, readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { confirm as confirmDialog, open } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { load } from "@tauri-apps/plugin-store";
@@ -35,6 +34,7 @@ import {
 import { useBrowserPreviewState } from "./useBrowserPreviewState";
 import { useFilesRailHeight } from "./useFilesRailHeight";
 import { useComposerLocalState } from "./useComposerLocalState";
+import { useComposerAttachments } from "./useComposerAttachments";
 import type { BrowserPreviewRecords } from "./browserPreview";
 import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
@@ -99,13 +99,7 @@ import {
 } from "./agentComposer";
 import type { ComposerAppCommand } from "./agentComposer";
 import { runComposerAppCommand as runComposerAppCommandWithContext } from "./composerAppCommands";
-import {
-  createComposerAttachment,
-  removeComposerAttachment,
-  upsertComposerAttachment,
-} from "./composerHarness";
-import type { ComposerAttachment, ComposerHarnessRecords, ComposerReasoningEffort } from "./composerHarness";
-import { prepareChatContext } from "./chatContext";
+import type { ComposerHarnessRecords, ComposerReasoningEffort } from "./composerHarness";
 import { submitComposerDraft as submitComposerDraftWithContext } from "./composerSubmission";
 import {
   appActionAuditLabel,
@@ -312,7 +306,6 @@ type WorktreeResponse = { path: string; branch: string };
 type TerminalPanesByContext = Record<string, ManagedTerminalPane[]>;
 type ActiveTerminalPaneByContext = Record<string, number>;
 type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
-type ChatImageResponse = { path: string; bytes: number; mimeType: string };
 type FileOpResponse = { path: string };
 type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
@@ -599,6 +592,27 @@ function App() {
     getRecords: () => composerHarnessBySessionRef.current,
     persistRecords: (records) => persistComposerHarnessRecords(records),
   });
+  const {
+    attachLocalFiles: attachLocalFileToComposer,
+    attachPreview: attachPreviewToComposer,
+    attachWorkspaceFile: attachWorkspaceFileToComposer,
+    pasteImage: pasteComposerImage,
+    removeAttachment: removeComposerAttachmentById,
+    reviewContext: reviewComposerContext,
+  } = useComposerAttachments({
+    active: agentSurfaceMode === "chat",
+    activeHarness: activeComposerHarness,
+    activeKey: activeComposerHarnessKey,
+    draft: composerDraft,
+    gateAction: (action) => gateAppAction(action),
+    getBrowserUrl: () => browserUrlRef.current,
+    getRoot: () => workspacePathRef.current,
+    logEvent: (label, detail) => logComposerHarnessEvent(label, detail),
+    setError: setComposerError,
+    setNotice: setComposerNotice,
+    updateHarness: updateActiveComposerHarness,
+  });
+  const attachSelectedFileToComposer = async () => attachWorkspaceFileToComposer(selectedFile);
   const composerMentionQuery = composerDraft.match(/(?:^|\s)@([^\s@]*)$/)?.[1] ?? null;
   const composerMentionResults = useMemo(
     () => composerMentionQuery == null ? [] : filterWorkspaceFiles(searchableFiles, composerMentionQuery, 8),
@@ -1988,133 +2002,6 @@ function App() {
     const next = await updateActiveComposerHarness((state) => ({ ...state, reasoningEffort }));
     if (!next) return;
     logComposerHarnessEvent("Reasoning effort changed", composerReasoningLabel(reasoningEffort));
-  };
-
-  const addComposerAttachment = async (attachment: ComposerAttachment) => {
-    const audit = await gateAppAction(createAppAction({
-      kind: "attach-reference",
-      label: "Attach reference",
-      target: attachment.target,
-      risk: "low",
-      requestedBy: "user",
-      undoHint: "Remove the attachment chip.",
-    }));
-    if (audit.decision !== "approved") return;
-    await updateActiveComposerHarness((state) => ({
-      ...state,
-      attachments: upsertComposerAttachment(state.attachments, attachment),
-    }));
-    logComposerHarnessEvent("Attachment added", attachment.label);
-  };
-
-  const attachWorkspaceFileToComposer = async (file: Pick<FileTreeNode, "name" | "path"> | null) => {
-    if (!file) {
-      setComposerError("Open a file before attaching the current file.");
-      return;
-    }
-    try {
-      await invoke("read_chat_context_file", { root: workspacePathRef.current, path: file.path });
-      await addComposerAttachment(createComposerAttachment({
-        kind: "file",
-        label: file.name,
-        target: file.path,
-      }));
-    } catch (err) {
-      setComposerError(String(err));
-    }
-  };
-
-  const attachSelectedFileToComposer = async () => attachWorkspaceFileToComposer(selectedFile);
-
-  const attachPreviewToComposer = async () => {
-    await addComposerAttachment(createComposerAttachment({
-      kind: "screenshot",
-      label: "Browser preview",
-      target: browserUrlRef.current,
-    }));
-  };
-
-  const attachLocalFileToComposer = async () => {
-    const picked = await open({ multiple: true });
-    const paths = Array.isArray(picked) ? picked : typeof picked === "string" ? [picked] : [];
-    for (const path of paths.slice(0, 6)) {
-      try {
-        if (/\.(png|jpe?g|webp|gif)$/i.test(path)) {
-          await attachImagePathToComposer(path);
-        } else {
-          await invoke("read_chat_context_file", { root: workspacePathRef.current, path });
-          await addComposerAttachment(createComposerAttachment({
-            kind: "file",
-            label: basename(path),
-            target: path,
-          }));
-        }
-      } catch (err) {
-        setComposerError(String(err));
-      }
-    }
-  };
-
-  const attachImagePathToComposer = async (path: string) => {
-    try {
-      const image = await invoke<ChatImageResponse>("cache_chat_image", { path });
-      await addComposerAttachment(createComposerAttachment({ kind: "image", label: basename(image.path), target: image.path }));
-      setComposerError(null);
-    } catch (err) {
-      setComposerError(String(err));
-    }
-  };
-
-  useEffect(() => {
-    let disposed = false;
-    let remove: (() => void) | null = null;
-    void getCurrentWebview().onDragDropEvent((event) => {
-      if (disposed || event.payload.type !== "drop" || agentSurfaceMode !== "chat") return;
-      for (const path of event.payload.paths.slice(0, 6)) {
-        if (/\.(png|jpe?g|webp|gif)$/i.test(path)) void attachImagePathToComposer(path);
-      }
-    }).then((unlisten) => { if (disposed) unlisten(); else remove = unlisten; });
-    return () => { disposed = true; remove?.(); };
-  }, [agentSurfaceMode, activeComposerHarnessKey]);
-
-  const pasteComposerImage = async () => {
-    try {
-      const image = await readImage();
-      const [{ width, height }, rgba] = await Promise.all([image.size(), image.rgba()]);
-      const saved = await invoke<ChatImageResponse>("save_chat_clipboard_image", {
-        rgba: Array.from(rgba),
-        width,
-        height,
-      });
-      await addComposerAttachment(createComposerAttachment({ kind: "image", label: basename(saved.path), target: saved.path }));
-      setComposerError(null);
-    } catch (err) {
-      setComposerError(`Could not attach clipboard image: ${String(err)}`);
-    }
-  };
-
-  const reviewComposerContext = async () => {
-    try {
-      const prepared = await prepareChatContext(composerDraft || "[No draft text]", activeComposerHarness, {
-        readFile: (attachment) => invoke<TextFileResponse>("read_chat_context_file", {
-          root: workspacePathRef.current,
-          path: attachment.target,
-        }),
-        inspectImage: (attachment) => invoke<ChatImageResponse>("inspect_chat_image", { path: attachment.target }),
-      });
-      setComposerNotice(prepared.preview);
-      setComposerError(null);
-    } catch (err) {
-      setComposerError(String(err));
-    }
-  };
-
-  const removeComposerAttachmentById = async (attachment: ComposerAttachment) => {
-    await updateActiveComposerHarness((state) => ({
-      ...state,
-      attachments: removeComposerAttachment(state.attachments, attachment.id),
-    }));
-    logComposerHarnessEvent("Attachment removed", attachment.label);
   };
 
   const focusTerminalPane = async (paneId: number, requestedBy: "user" | "agent" = "user") => {
