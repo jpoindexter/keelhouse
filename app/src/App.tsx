@@ -48,7 +48,6 @@ import {
   removeProjectSession,
   removeOpenProject,
   rememberActiveFile,
-  removeRecentProject,
   setActiveProjectSession,
   setOpenProjectStatus,
   setProjectSessionStatus,
@@ -104,10 +103,10 @@ import {
   composerHistoryAt,
   nextComposerHistoryIndex,
   previousComposerHistoryIndex,
-  composerHelpText,
   COMPOSER_APP_COMMANDS,
 } from "./agentComposer";
 import type { ComposerAppCommand } from "./agentComposer";
+import { runComposerAppCommand as runComposerAppCommandWithContext } from "./composerAppCommands";
 import {
   createComposerAttachment,
   defaultComposerHarnessState,
@@ -187,6 +186,7 @@ import { useShellLayout, type SideDrawerMode } from "./useShellLayout";
 import { useAppChromeState } from "./useAppChromeState";
 import { useSettingsRuntimeStatus } from "./useSettingsRuntimeStatus";
 import { loadWorkspaceBootstrap, type PaneLabelsBySession } from "./workspaceBootstrap";
+import { planMissingWorkspaceCleanup } from "./workspaceOpenRecovery";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { SettingsModal } from "./SettingsModal";
 import { crashRecoveryMessage, deriveCrashRecovery } from "./crashRecovery";
@@ -1868,28 +1868,27 @@ function App() {
       setManagedTerminalPanes(previousPanes);
       setFocusedTerminalPane(previousActivePaneId);
       if (isMissingWorkspaceError(message)) {
-        const nextRecent = removeRecentProject(recentProjectsRef.current, path);
-        const nextOpen = removeOpenProject(openProjectsRef.current, path);
-        const { [path]: _removedSessions, ...nextSessions } = projectSessionsRef.current;
-        const { [path]: _removedActiveSession, ...nextActiveSessions } = activeSessionByProjectRef.current;
-        const nextProjectPanesByContext = removeProjectPaneContexts(terminalPanesByContextRef.current, path);
-        const nextActivePanesByContext = removeProjectPaneContexts(activeTerminalPaneByContextRef.current, path);
-        const { [path]: _removedBrowserProject, ...nextBrowserProjects } = browserPreviewByProjectRef.current;
-        const nextBrowserSessions = Object.fromEntries(
-          Object.entries(browserPreviewBySessionRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
-        );
-        const nextComposerHarness = Object.fromEntries(
-          Object.entries(composerHarnessBySessionRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
-        );
-        const nextChatConversations = Object.fromEntries(
-          Object.entries(chatConversationsRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
-        );
-        const nextSessionSnapshots = Object.fromEntries(
-          Object.entries(sessionEditorSnapshotsRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
-        );
-        const nextPaneLayouts = Object.fromEntries(
-          Object.entries(paneLayoutsBySessionRef.current).filter(([key]) => !key.startsWith(`${path}\n`)),
-        );
+        const cleanup = planMissingWorkspaceCleanup({
+          path,
+          recentProjects: recentProjectsRef.current,
+          openProjects: openProjectsRef.current,
+          sessions: projectSessionsRef.current,
+          activeSessions: activeSessionByProjectRef.current,
+          projectPanes: terminalPanesByContextRef.current,
+          activePanes: activeTerminalPaneByContextRef.current,
+          browserProjects: browserPreviewByProjectRef.current,
+          browserSessions: browserPreviewBySessionRef.current,
+          harnessRecords: composerHarnessBySessionRef.current,
+          conversations: chatConversationsRef.current,
+          editorSnapshots: sessionEditorSnapshotsRef.current,
+          paneLayouts: paneLayoutsBySessionRef.current,
+        });
+        const { recentProjects: nextRecent, openProjects: nextOpen, sessions: nextSessions,
+          activeSessions: nextActiveSessions, projectPanes: nextProjectPanesByContext,
+          activePanes: nextActivePanesByContext, browserProjects: nextBrowserProjects,
+          browserSessions: nextBrowserSessions, harnessRecords: nextComposerHarness,
+          conversations: nextChatConversations, editorSnapshots: nextSessionSnapshots,
+          paneLayouts: nextPaneLayouts } = cleanup;
         recentProjectsRef.current = nextRecent;
         openProjectsRef.current = nextOpen;
         projectSessionsRef.current = nextSessions;
@@ -2298,98 +2297,18 @@ function App() {
     }
   };
 
-  const composerAppAction = (command: ComposerAppCommand): AppActionDescriptor => {
-    if (command === "save") {
-      return createAppAction({
-        kind: "save-file",
-        label: "Save file",
-        target: selectedFileRef.current?.path,
-        risk: "high",
-        requestedBy: "composer",
-        undoHint: "Use editor undo or revert the file from source control.",
-      });
-    }
-    if (command === "find") {
-      return createAppAction({
-        kind: "find-in-file",
-        label: "Find in file",
-        target: selectedFileRef.current?.path,
-        risk: "low",
-        requestedBy: "composer",
-      });
-    }
-    if (command === "open-folder") {
-      return createAppAction({
-        kind: "open-folder",
-        label: "Open folder picker",
-        risk: "medium",
-        requestedBy: "composer",
-      });
-    }
-    return createAppAction({
-      kind: "clear-terminal",
-      label: "Clear terminal",
-      target: activeTerminalPaneLabel ?? undefined,
-      risk: "medium",
-      requestedBy: "composer",
-      undoHint: "Terminal scrollback is not restored by the app.",
-    });
-  };
-
   const runComposerAppCommand = async (command: ComposerAppCommand): Promise<boolean> => {
-    if (command === "save") {
-      if (!selectedFile) {
-        setComposerError("No editor file is selected.");
-        return false;
-      }
-      const audit = await gateAppAction(composerAppAction(command), activeAgentSessionHandle);
-      if (audit.decision !== "approved") {
-        setComposerError(`${audit.label} was ${audit.decision}.`);
-        return false;
-      }
-      const ok = await saveEditorFile();
-      if (!ok) {
-        setComposerError("Save failed. The editor recovery panel has the details.");
-        return false;
-      }
-      return true;
-    }
-    if (command === "find") {
-      if (!selectedFile) {
-        setComposerError("Open a file before using Find.");
-        return false;
-      }
-      const audit = await gateAppAction(composerAppAction(command), activeAgentSessionHandle);
-      if (audit.decision !== "approved") {
-        setComposerError(`${audit.label} was ${audit.decision}.`);
-        return false;
-      }
-      openEditorSearch();
-      return true;
-    }
-    if (command === "open-folder") {
-      const audit = await gateAppAction(composerAppAction(command), activeAgentSessionHandle);
-      if (audit.decision !== "approved") {
-        setComposerError(`${audit.label} was ${audit.decision}.`);
-        return false;
-      }
-      await pickWorkspace();
-      return true;
-    }
-    if (command === "clear-terminal") {
-      const audit = await gateAppAction(composerAppAction(command), activeAgentSessionHandle);
-      if (audit.decision !== "approved") {
-        setComposerError(`${audit.label} was ${audit.decision}.`);
-        return false;
-      }
-      await clearActiveTerminal();
-      return true;
-    }
-    if (command === "help") {
-      setComposerNotice(composerHelpText());
-      return true;
-    }
-    return false;
+    return runComposerAppCommandWithContext(command, {
+      selectedFilePath: selectedFile?.path ?? null,
+      terminalLabel: activeTerminalPaneLabel,
+      gateAction: (action) => gateAppAction(action, activeAgentSessionHandle),
+      saveFile: saveEditorFile,
+      openSearch: openEditorSearch,
+      pickWorkspace,
+      clearTerminal: clearActiveTerminal,
+      setError: setComposerError,
+      setNotice: setComposerNotice,
+    });
   };
 
   const submitComposerDraft = async (draftOverride?: string) => {
