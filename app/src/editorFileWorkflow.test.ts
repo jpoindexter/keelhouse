@@ -15,6 +15,7 @@ const setup = (cached = false, deny = false, activePath: string | null = null) =
   const services: EditorFileWorkflowServices = {
     readFile: vi.fn().mockResolvedValue({ bytes: 4, content: "test", modifiedMs: 1, path: file.path }),
     requestFrame: (callback) => callback(),
+    writeFile: vi.fn().mockResolvedValue({ bytes: 7, content: "updated", modifiedMs: 2, path: file.path }),
   };
   const applyState = vi.fn<(state: EditorFileLoadState) => void>();
   const beginOpen = vi.fn();
@@ -33,12 +34,21 @@ const setup = (cached = false, deny = false, activePath: string | null = null) =
     },
     getActiveFilePath: () => activePath,
     getRoot: () => "/workspace",
+    getSaveState: () => ({
+      bytes: 4, dirty: true, file, modifiedMs: 1, recoveryError: null,
+      root: "/workspace", savedText: "test", saving: false, text: "updated",
+    }),
     loadSequence: { current: 0 },
     onCurrentFile,
+    onSaveError: vi.fn(),
+    onSaveSuccess: vi.fn(),
     persistActiveFile,
+    prepareSave: vi.fn(),
     prepareRead: vi.fn(),
+    recordEdit: vi.fn(),
     services,
     setLoading: vi.fn(),
+    setSaving: vi.fn(),
     viewStates: { current: {} },
   });
   return { applyState, beginOpen, buffers, focusEditor, onCurrentFile, persistActiveFile, services, workflow };
@@ -80,5 +90,25 @@ describe("createEditorFileWorkflow", () => {
     expect(opened).toBe(true);
     expect(subject.onCurrentFile).toHaveBeenCalledWith(true);
     expect(subject.beginOpen).not.toHaveBeenCalled();
+  });
+
+  it("saves the current editor text with optimistic concurrency", async () => {
+    const subject = setup();
+    const saved = await subject.workflow.save();
+
+    expect(saved).toBe(true);
+    expect(subject.services.writeFile).toHaveBeenCalledWith(
+      "/workspace", file.path, "updated", 1,
+    );
+    expect(subject.buffers.current[file.path]).toMatchObject({ text: "updated", savedText: "updated" });
+  });
+
+  it("preserves the draft and reports a failed save", async () => {
+    const subject = setup();
+    vi.mocked(subject.services.writeFile).mockRejectedValueOnce(new Error("modified on disk"));
+    const saved = await subject.workflow.save();
+
+    expect(saved).toBe(false);
+    expect(subject.buffers.current[file.path]).toMatchObject({ text: "updated", savedText: "test" });
   });
 });

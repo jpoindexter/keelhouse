@@ -17,6 +17,20 @@ export type EditorFileOpenOptions = { focusEditor?: boolean };
 export type EditorFileWorkflowServices = {
   readFile: (root: string, path: string) => Promise<TextFileReadResult>;
   requestFrame: (callback: () => void) => void;
+  writeFile: (
+    root: string, path: string, content: string, expectedModifiedMs: number | null,
+  ) => Promise<TextFileReadResult>;
+};
+type EditorSaveState = {
+  bytes: number | null;
+  dirty: boolean;
+  file: FileTreeNode | null;
+  modifiedMs: number | null;
+  recoveryError: string | null;
+  root: string | null;
+  savedText: string;
+  saving: boolean;
+  text: string;
 };
 
 type EditorFileWorkflowOptions = {
@@ -28,12 +42,18 @@ type EditorFileWorkflowOptions = {
   gateAction: (action: AppActionDescriptor) => Promise<AppActionAuditEvent>;
   getActiveFilePath: () => string | null;
   getRoot: () => string | null;
+  getSaveState: () => EditorSaveState;
   loadSequence: Ref<number>;
   onCurrentFile: (focusEditor: boolean) => void;
+  onSaveError: (message: string) => void;
+  onSaveSuccess: (result: TextFileReadResult) => void;
   persistActiveFile: (root: string, path: string) => Promise<void>;
+  prepareSave: () => void;
   prepareRead: () => void;
+  recordEdit: (file: FileTreeNode) => void;
   services?: EditorFileWorkflowServices;
   setLoading: (loading: boolean) => void;
+  setSaving: (saving: boolean) => void;
   viewStates: Ref<Record<string, EditorViewState>>;
 };
 
@@ -42,6 +62,9 @@ type WorkflowContext = EditorFileWorkflowOptions & { services: EditorFileWorkflo
 const nativeServices: EditorFileWorkflowServices = {
   readFile: (root, path) => invoke<TextFileReadResult>("read_text_file", { root, path }),
   requestFrame: (callback) => requestAnimationFrame(callback),
+  writeFile: (root, path, content, expectedModifiedMs) => invoke<TextFileReadResult>("write_text_file", {
+    root, path, content, expectedModifiedMs,
+  }),
 };
 
 const focusWhenRequested = (context: WorkflowContext, focusEditor: boolean) => {
@@ -112,6 +135,38 @@ const requestOpen = async (
   return true;
 };
 
+const save = async (context: WorkflowContext, force = false) => {
+  const state = context.getSaveState();
+  if (!state.root || !state.file || state.saving) return false;
+  if (!state.dirty) return true;
+  context.setSaving(true);
+  context.prepareSave();
+  try {
+    const result = await context.services.writeFile(
+      state.root, state.file.path, state.text, force ? null : state.modifiedMs,
+    );
+    context.buffers.current[state.file.path] = {
+      text: result.content, savedText: result.content, bytes: result.bytes,
+      modifiedMs: result.modifiedMs, error: null, recoveryError: null,
+    };
+    context.bumpBufferRevision();
+    context.onSaveSuccess(result);
+    context.recordEdit(state.file);
+    return true;
+  } catch (error) {
+    const message = String(error);
+    context.buffers.current[state.file.path] = {
+      text: state.text, savedText: state.savedText, bytes: state.bytes,
+      modifiedMs: state.modifiedMs, error: message, recoveryError: state.recoveryError,
+    };
+    context.bumpBufferRevision();
+    context.onSaveError(message);
+    return false;
+  } finally {
+    context.setSaving(false);
+  }
+};
+
 export const createEditorFileWorkflow = (options: EditorFileWorkflowOptions) => {
   const context = { ...options, services: options.services ?? nativeServices };
   return {
@@ -120,5 +175,6 @@ export const createEditorFileWorkflow = (options: EditorFileWorkflowOptions) => 
     requestOpen: (
       file: FileTreeNode, openOptions: EditorFileOpenOptions = {}, requestedBy: "user" | "agent" = "user",
     ) => requestOpen(context, file, openOptions, requestedBy),
+    save: (force = false) => save(context, force),
   };
 };

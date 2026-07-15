@@ -300,7 +300,6 @@ type ResolveWorkspaceResponse = { root: string };
 type OpenPaneResponse = { paneId: number };
 type ClosePaneResponse = { activePaneId: number | null };
 type WorktreeResponse = { path: string; branch: string };
-type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
 type SaveEditorFileOptions = { force?: boolean };
 type DetectedLocalDevServer = {
   url: string;
@@ -2184,6 +2183,7 @@ function App() {
   const {
     openDirect: openEditorFileDirect,
     requestOpen: requestOpenEditorFile,
+    save: saveEditorFileWithForce,
   } = createEditorFileWorkflow({
     applyState: (state: EditorFileLoadState) => {
       setEditorText(state.text);
@@ -2209,12 +2209,30 @@ function App() {
     gateAction: (action) => gateAppAction(action),
     getActiveFilePath: () => selectedFileRef.current?.path ?? null,
     getRoot: () => workspacePathRef.current ?? workspacePath,
+    getSaveState: () => ({
+      bytes: editorBytes,
+      dirty: editorDirty,
+      file: selectedFile,
+      modifiedMs: editorModifiedMs,
+      recoveryError: editorRecoveryError,
+      root: workspacePathRef.current ?? workspacePath,
+      savedText: savedEditorText,
+      saving: editorSaving,
+      text: editorText,
+    }),
     loadSequence: editorLoadSeq,
     onCurrentFile: (focusEditor) => {
       closeDiffReview();
       if (focusEditor) requestAnimationFrame(() => editorViewRef.current?.focus());
     },
+    onSaveError: setEditorError,
+    onSaveSuccess: (result) => {
+      setSavedEditorText(result.content);
+      setEditorBytes(result.bytes);
+      setEditorModifiedMs(result.modifiedMs);
+    },
     persistActiveFile,
+    prepareSave: () => { setEditorError(null); setEditorRecoveryError(null); },
     prepareRead: () => {
       setEditorError(null);
       setEditorRecoveryError(null);
@@ -2222,60 +2240,14 @@ function App() {
       setEditorModifiedMs(null);
       setEditorCursor({ line: 1, column: 1 });
     },
+    recordEdit: (file) => recordAgentActivity(activeAgentSessionDescriptor, {
+      kind: "file", label: "Edited a file", detail: file.name, status: "complete",
+    }),
     setLoading: setEditorLoading,
+    setSaving: setEditorSaving,
     viewStates: editorViewStatesRef,
   });
-
-  const saveEditorFile = async (options: SaveEditorFileOptions = {}) => {
-    const root = workspacePathRef.current ?? workspacePath;
-    if (!root || !selectedFile || editorSaving) return false;
-    if (!editorDirty) return true;
-    setEditorSaving(true);
-    setEditorError(null);
-    setEditorRecoveryError(null);
-    try {
-      const result = await invoke<TextFileResponse>("write_text_file", {
-        root,
-        path: selectedFile.path,
-        content: editorText,
-        expectedModifiedMs: options.force ? null : editorModifiedMs,
-      });
-      editorBuffersRef.current[selectedFile.path] = {
-        text: result.content,
-        savedText: result.content,
-        bytes: result.bytes,
-        modifiedMs: result.modifiedMs,
-        error: null,
-        recoveryError: null,
-      };
-      setEditorBufferRevision((value) => value + 1);
-      setSavedEditorText(result.content);
-      setEditorBytes(result.bytes);
-      setEditorModifiedMs(result.modifiedMs);
-      recordAgentActivity(activeAgentSessionDescriptor, {
-        kind: "file",
-        label: "Edited a file",
-        detail: selectedFile.name,
-        status: "complete",
-      });
-      return true;
-    } catch (err) {
-      const message = String(err);
-      editorBuffersRef.current[selectedFile.path] = {
-        text: editorText,
-        savedText: savedEditorText,
-        bytes: editorBytes,
-        modifiedMs: editorModifiedMs,
-        error: message,
-        recoveryError: editorRecoveryError,
-      };
-      setEditorBufferRevision((value) => value + 1);
-      setEditorError(message);
-      return false;
-    } finally {
-      setEditorSaving(false);
-    }
-  };
+  const saveEditorFile = (options: SaveEditorFileOptions = {}) => saveEditorFileWithForce(options.force ?? false);
 
   const reloadSelectedFileFromDisk = async () => {
     if (!selectedFile) return;
