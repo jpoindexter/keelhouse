@@ -29,8 +29,8 @@ import { AppRuntimeDialogs } from "./AppRuntimeDialogs";
 import {
   DEFAULT_BROWSER_PREVIEW_URL,
   detectLocalDevServerUrl,
-  normalizeBrowserPreviewUrl,
 } from "./browserPreview";
+import { createBrowserPreviewActions } from "./browserPreviewActions";
 import { useBrowserPreviewState } from "./useBrowserPreviewState";
 import { useFilesRailHeight } from "./useFilesRailHeight";
 import { useComposerLocalState } from "./useComposerLocalState";
@@ -788,7 +788,6 @@ function App() {
     store: storeRef,
   });
 
-  const browserPreviewSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
   const composerHarnessSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
 
   const chatConversationActions = createChatConversationActions({
@@ -886,49 +885,38 @@ function App() {
     });
   };
 
-  const persistBrowserPreviewUrl = async (root: string | null, sessionId: string | null, url: string) => {
-    if (!root) return;
-    const nextByProject = { ...browserPreviewByProjectRef.current, [root]: url };
-    const nextBySession = sessionId
-      ? { ...browserPreviewBySessionRef.current, [browserPreviewSessionKey(root, sessionId)]: url }
-      : browserPreviewBySessionRef.current;
-    browserPreviewByProjectRef.current = nextByProject;
-    browserPreviewBySessionRef.current = nextBySession;
-    setBrowserPreviewByProject(nextByProject);
-    setBrowserPreviewBySession(nextBySession);
-    let nextScopedSettings = setScopedSetting(scopedSettingsRef.current, "project", "browserUrl", url, root, sessionId);
-    if (sessionId) nextScopedSettings = setScopedSetting(nextScopedSettings, "chat", "browserUrl", url, root, sessionId);
-    scopedSettingsRef.current = nextScopedSettings;
-    setScopedSettings(nextScopedSettings);
-    await storeRef.current?.set("browserPreviewByProject", nextByProject);
-    await storeRef.current?.set("browserPreviewBySession", nextBySession);
-    await storeRef.current?.set("scopedSettings", nextScopedSettings);
-    await storeRef.current?.save();
-  };
-
-  const restoreBrowserPreview = (root: string | null, sessionId: string | null) => {
-    const nextUrl = resolveScopedSetting(scopedSettingsRef.current, "browserUrl", root, sessionId).value;
-    restoreBrowserPreviewState(nextUrl);
-  };
-
-  const navigateBrowserPreview = async (rawUrl: string) => {
-    const normalized = normalizeBrowserPreviewUrl(rawUrl);
-    if (!normalized) {
-      setBrowserError("Enter an http, https, or file URL.");
-      return false;
-    }
-    const audit = await gateAppAction(createAppAction({
-      kind: "open-browser-preview",
-      label: "Open browser preview",
-      target: normalized,
-      risk: "low",
-      requestedBy: "user",
-    }));
-    if (audit.decision !== "approved") return false;
-    setBrowserLocation(normalized);
-    await persistBrowserPreviewUrl(workspacePathRef.current, activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, workspacePathRef.current), normalized);
-    return true;
-  };
+  const browserPreviewActions = createBrowserPreviewActions({
+    gateAction: async (action) => (await gateAppAction(action)).decision,
+    getState: () => ({
+      currentRoot: workspacePathRef.current,
+      currentSessionId: activeProjectSessionId(
+        activeSessionByProjectRef.current, projectSessionsRef.current, workspacePathRef.current,
+      ),
+      projects: browserPreviewByProjectRef.current,
+      scopedSettings: scopedSettingsRef.current,
+      sessions: browserPreviewBySessionRef.current,
+    }),
+    restoreLocation: restoreBrowserPreviewState,
+    saveStore: async () => { await storeRef.current?.save(); },
+    setError: setBrowserError,
+    setLocation: setBrowserLocation,
+    setProjects: (records) => {
+      browserPreviewByProjectRef.current = records;
+      setBrowserPreviewByProject(records);
+    },
+    setScopedSettings: (settings) => {
+      scopedSettingsRef.current = settings;
+      setScopedSettings(settings);
+    },
+    setSessions: (records) => {
+      browserPreviewBySessionRef.current = records;
+      setBrowserPreviewBySession(records);
+    },
+    setStoreValue: async (key, value) => { await storeRef.current?.set(key, value); },
+  });
+  const persistBrowserPreviewUrl = browserPreviewActions.persistUrl;
+  const restoreBrowserPreview = browserPreviewActions.restoreUrl;
+  const navigateBrowserPreview = browserPreviewActions.navigate;
 
   const submitBrowserAddress = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
