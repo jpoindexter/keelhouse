@@ -26,6 +26,7 @@ const composerModelPicker = read("app/src/ComposerModelPicker.tsx");
 const composerModelPopover = read("app/src/ComposerModelPopover.tsx");
 const composerReasoningPicker = read("app/src/ComposerReasoningPicker.tsx");
 const composerSurface = read("app/src/AgentComposerSurface.tsx");
+const appChromeState = read("app/src/useAppChromeState.ts");
 const searchCommandDialog = read("app/src/SearchCommandDialog.tsx");
 const commandPaletteController = read("app/src/useCommandPalette.ts");
 const quickOpenSurface = [
@@ -210,7 +211,7 @@ assert(/\.titlebar-search span\s*\{[^}]*overflow:\s*hidden;[^}]*text-overflow:\s
 assert(tauriBackend.includes('format!("@ {sha}")'), "Detached HEAD must show a useful short SHA in the titlebar");
 assert(appCss.includes("grid-template-rows: 38px minmax(0, 1fr) 6px var(--utility-tray-height, 42px);"), "Workbench must reserve the approved resizable bottom utility tray");
 assert(appTitlebar.includes('aria-label="Reset interface"'), "Threads header must expose an always-visible interface reset");
-assert(appTsx.includes("window.setTimeout(() => setCrashNotice(null), 12_000)"), "Crash recovery feedback must clear without permanently covering the workbench");
+assert(appChromeState.includes("useTimedNotice(12_000)") && appChromeState.includes("window.setTimeout(() => setNotice(null), duration)"), "Crash recovery feedback must clear without permanently covering the workbench");
 assert(appTitlebar.includes('aria-label="Toggle Threads"'), "Titlebar must expose the approved Threads toggle");
 assert((appTitlebar.match(/aria-label="Toggle Threads"/g) ?? []).length === 1, "Threads must have one visible chrome toggle");
 assert(!`${appTsx}\n${appTitlebar}`.includes('aria-label="Hide Threads"'), "Threads header must not duplicate the titlebar toggle");

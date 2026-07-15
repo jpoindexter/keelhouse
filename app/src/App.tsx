@@ -28,7 +28,6 @@ import { EditorDiffView } from "./EditorDiffView";
 import { EditorCodeSurface } from "./EditorCodeSurface";
 import { AgentComposerSurface } from "./AgentComposerSurface";
 import { OrchestrationDialog } from "./OrchestrationDialog";
-import { composerPopoverPosition } from "./composerPopover";
 import {
   browserHistoryCanGoBack,
   browserHistoryCanGoForward,
@@ -207,6 +206,8 @@ import {
 } from "./sessionRestore";
 import type { PaneLayoutsBySession } from "./sessionRestore";
 import { useShellLayout, type SideDrawerMode } from "./useShellLayout";
+import { useAppChromeState } from "./useAppChromeState";
+import { useSettingsRuntimeStatus } from "./useSettingsRuntimeStatus";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { migrateWorkspaceStore } from "./workspaceMigrations";
 import { SettingsModal } from "./SettingsModal";
@@ -218,11 +219,9 @@ import {
   worktreeForPaneId,
   type WorktreeRecord,
 } from "./worktrees";
-import { formatCliToolStatus, normalizeSourceControlStatus, type SourceControlStatus } from "./sourceControl";
+import { formatCliToolStatus, type SourceControlStatus } from "./sourceControl";
 import {
-  normalizeAgentConnectionsStatus,
   structuredChatProviderId,
-  type AgentConnectionsStatus,
 } from "./agentConnections";
 import {
   CONNECTION_PROVIDER_IDS,
@@ -241,7 +240,7 @@ import {
   type McpOAuthStart,
   type McpOAuthStatus,
 } from "./connectionSettings";
-import { buildRepoUrl, parseRemoteUrl, sourceRepoStatusLabel, type RepoLocation } from "./sourceControlLinks";
+import { buildRepoUrl, sourceRepoStatusLabel, type RepoLocation } from "./sourceControlLinks";
 import { imeCaretStyle, shouldDeferTerminalKeyToIme } from "./terminalIme";
 import { buildSnapshot, createRenderPerfState, recordFrameTime, recordIpcPayloadBytes } from "./renderPerf";
 import {
@@ -557,103 +556,23 @@ function App() {
   const [orchestrationError, setOrchestrationError] = useState<string | null>(null);
   const [composerNotice, setComposerNotice] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  useEffect(() => {
-    const repositionOpenComposerMenus = () => {
-      document.querySelectorAll<HTMLDetailsElement>("details.agent-composer__menu[open]").forEach(composerPopoverPosition);
-    };
-    window.addEventListener("resize", repositionOpenComposerMenus);
-    window.addEventListener("scroll", repositionOpenComposerMenus, true);
-    return () => {
-      window.removeEventListener("resize", repositionOpenComposerMenus);
-      window.removeEventListener("scroll", repositionOpenComposerMenus, true);
-    };
-  }, []);
-  const [sourceControlStatus, setSourceControlStatus] = useState<SourceControlStatus | null>(null);
-  const [agentConnectionsStatus, setAgentConnectionsStatus] = useState<AgentConnectionsStatus | null>(null);
-  const [agentConnectionsRefreshing, setAgentConnectionsRefreshing] = useState(false);
+  const {
+    actionNotice, appTheme, crashNotice, notificationsEnabled, notificationsEnabledRef,
+    setActionNotice, setAppTheme, setCrashNotice, setNotificationsEnabled,
+  } = useAppChromeState();
+  const {
+    agentConnectionsRefreshing, agentConnectionsStatus, refreshAgentConnections,
+    repoLocation, sourceControlStatus,
+  } = useSettingsRuntimeStatus(settingsOpen, workspacePath);
   const [aiConnectionSettings, setAiConnectionSettings] = useState<AiConnectionSettings>(DEFAULT_AI_CONNECTION_SETTINGS);
   const [connectionSecretPresence, setConnectionSecretPresence] = useState<Record<string, boolean>>({});
   const [mcpOAuthStatuses, setMcpOAuthStatuses] = useState<Record<string, McpOAuthStatus>>({});
-  const [repoLocation, setRepoLocation] = useState<RepoLocation | null>(null);
-  const [crashNotice, setCrashNotice] = useState<string | null>(null);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [worktrees, setWorktrees] = useState<WorktreeRecord[]>([]);
   const [backgroundExits, setBackgroundExits] = useState<BackgroundExit[]>([]);
   const [paneTranscripts, setPaneTranscripts] = useState<PaneTranscript[]>([]);
   const [transcriptsOpen, setTranscriptsOpen] = useState(false);
   const [openTranscriptId, setOpenTranscriptId] = useState<string | null>(null);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const notificationsEnabledRef = useRef(false);
-  useEffect(() => {
-    notificationsEnabledRef.current = notificationsEnabled;
-  }, [notificationsEnabled]);
   const [keybindingOverrides, setKeybindingOverrides] = useState<KeybindingOverrides>({});
-  const [appTheme, setAppTheme] = useState<"graphite" | "mono-ghost">("graphite");
-
-  useEffect(() => {
-    if (appTheme === "mono-ghost") {
-      document.documentElement.dataset.theme = "mono-ghost";
-    } else {
-      delete document.documentElement.dataset.theme;
-    }
-  }, [appTheme]);
-
-  useEffect(() => {
-    if (!crashNotice) return;
-    const timeout = window.setTimeout(() => setCrashNotice(null), 12_000);
-    return () => window.clearTimeout(timeout);
-  }, [crashNotice]);
-
-  useEffect(() => {
-    if (!actionNotice) return;
-    const timeout = window.setTimeout(() => setActionNotice(null), 2600);
-    return () => window.clearTimeout(timeout);
-  }, [actionNotice]);
-
-  useEffect(() => {
-    let cancelled = false;
-    invoke<unknown>("source_control_status")
-      .then((result) => {
-        if (!cancelled) setSourceControlStatus(normalizeSourceControlStatus(result));
-      })
-      .catch(() => {
-        if (!cancelled) setSourceControlStatus(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [settingsOpen, workspacePath]);
-
-  const refreshAgentConnections = () => {
-    setAgentConnectionsRefreshing(true);
-    invoke<unknown>("agent_connections_status")
-      .then((result) => setAgentConnectionsStatus(normalizeAgentConnectionsStatus(result)))
-      .catch(() => setAgentConnectionsStatus(null))
-      .finally(() => setAgentConnectionsRefreshing(false));
-  };
-
-  useEffect(() => {
-    if (settingsOpen) refreshAgentConnections();
-  }, [settingsOpen]);
-
-  useEffect(() => {
-    if (!workspacePath) {
-      setRepoLocation(null);
-      return;
-    }
-    let cancelled = false;
-    invoke<string | null>("git_remote_url", { root: workspacePath })
-      .then((url) => {
-        if (!cancelled) setRepoLocation(url ? parseRemoteUrl(url) : null);
-      })
-      .catch(() => {
-        if (!cancelled) setRepoLocation(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [settingsOpen, workspacePath]);
   const [composerDraft, setComposerDraft] = useState("");
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
