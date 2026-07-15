@@ -138,6 +138,10 @@ import {
   buildCommandPaletteLayoutCommands,
   buildCommandPaletteResourceCommands,
 } from "./commandPaletteNavigation";
+import {
+  buildTerminalFindCommands,
+  buildTerminalLifecycleCommands,
+} from "./commandPaletteTerminal";
 import { SearchCommandDialog, type SearchDialogCommand } from "./SearchCommandDialog";
 import { useCommandPalette } from "./useCommandPalette";
 import { QuickOpenDialog } from "./QuickOpenDialog";
@@ -3813,6 +3817,24 @@ function App() {
     workspacePath,
     worktrees,
   };
+  const commandPaletteTerminal = {
+    activePane: activeTerminalPane,
+    activePaneLabel: activeTerminalPaneLabelForCommands,
+    canClose: Boolean(activeAgentSessionHandle),
+    launchProfileChanging,
+    onClear: () => void clearActiveTerminal(),
+    onClose: () => { if (activeAgentSessionHandle) void activeAgentSessionHandle.close(); },
+    onCreatePane: (profile: LaunchProfile) => void createTerminalPane(profile),
+    onCreateWorktreePane: (profile: LaunchProfile) => void createWorktreePane(profile),
+    onFind: () => terminalFind.setOpen(true),
+    onKill: (pane: ManagedTerminalPane) => void terminateTerminalPane(pane),
+    onRemoveWorktree: (paneId: number) => void closeWorktreePane(paneId),
+    onRestart: (pane: ManagedTerminalPane) => void restartTerminalPane(pane),
+    shortcut: shortcutKeys,
+    terminalProfile: terminalLaunchProfile,
+    workspacePath,
+    worktrees,
+  };
   const commandPaletteCommands: CommandPaletteCommand[] = [
     ...visibleOpenProjects.flatMap((project) => projectSessionsFor(project.path).map((session): CommandPaletteCommand => ({
       id: `chat.${project.path}.${session.id}`,
@@ -3880,15 +3902,7 @@ function App() {
       keywords: ["preferences", "config", "permission", "profile"],
       run: () => setSettingsOpen(true),
     },
-    {
-      id: "terminal.find",
-      label: "Find in Terminal",
-      detail: activeTerminalPane ? "Search the selected pane's scrollback" : "Start a pane to search its output",
-      icon: "search",
-      disabled: !activeTerminalPane,
-      keywords: ["scrollback", "search", "output", "terminal"],
-      run: () => terminalFind.setOpen(true),
-    },
+    ...buildTerminalFindCommands(commandPaletteTerminal),
     {
       id: "perf.snapshot-render-stats",
       label: "Copy Render Perf Snapshot",
@@ -3946,70 +3960,7 @@ function App() {
       keywords: ["editor"],
       run: () => selectedFile && void closeEditorTab(selectedFile),
     },
-    {
-      id: "terminal.new-pane",
-      label: `New ${terminalLaunchProfile.label} Pane`,
-      detail: workspacePath ? basename(workspacePath) : "Open a folder before creating a pane",
-      icon: "terminal",
-      disabled: !workspacePath || launchProfileChanging,
-      keywords: ["agent", "terminal", "claude", "codex"],
-      run: () => void createTerminalPane(terminalLaunchProfile),
-    },
-    {
-      id: "terminal.new-worktree-pane",
-      label: "New Worktree Pane",
-      detail: workspacePath ? `Disposable git worktree in ${basename(workspacePath)}` : "Open a folder before creating a worktree",
-      icon: "terminal",
-      disabled: !workspacePath || launchProfileChanging,
-      keywords: ["worktree", "branch", "parallel", "agent", "terminal"],
-      run: () => void createWorktreePane(terminalLaunchProfile),
-    },
-    {
-      id: "terminal.remove-worktree",
-      label: "Remove Worktree",
-      detail: activeTerminalPane ? (worktreeForPaneId(worktrees, String(activeTerminalPane.id))?.branch ?? "Selected pane has no worktree") : "No pane selected",
-      icon: "close",
-      disabled: !activeTerminalPane || !worktreeForPaneId(worktrees, activeTerminalPane ? String(activeTerminalPane.id) : null),
-      keywords: ["worktree", "branch", "cleanup", "delete"],
-      run: () => activeTerminalPane && void closeWorktreePane(activeTerminalPane.id),
-    },
-    {
-      id: "terminal.restart-pane",
-      label: "Restart Selected Process",
-      detail: activeTerminalPaneLabelForCommands ?? "No pane selected",
-      icon: "reload",
-      disabled: !activeTerminalPane || launchProfileChanging,
-      keywords: ["agent", "terminal"],
-      run: () => activeTerminalPane && void restartTerminalPane(activeTerminalPane),
-    },
-    {
-      id: "terminal.kill-pane",
-      label: "Kill Selected Process",
-      detail: activeTerminalPaneLabelForCommands ?? "No pane selected",
-      icon: "stop",
-      disabled: !activeTerminalPane || activeTerminalPane.state === "exited",
-      keywords: ["agent", "terminal", "stop"],
-      run: () => activeTerminalPane && void terminateTerminalPane(activeTerminalPane),
-    },
-    {
-      id: "terminal.close-pane",
-      label: "Close Selected Pane",
-      detail: activeTerminalPaneLabelForCommands ?? "No pane selected",
-      icon: "close",
-      disabled: !activeAgentSessionHandle,
-      keywords: ["agent", "terminal"],
-      run: () => activeAgentSessionHandle && void activeAgentSessionHandle.close(),
-    },
-    {
-      id: "terminal.clear",
-      label: "Clear Terminal",
-      detail: activeTerminalPaneLabelForCommands ?? "No pane selected",
-      shortcut: shortcutKeys("terminal.clear"),
-      icon: "terminal",
-      disabled: !activeTerminalPane,
-      keywords: ["agent", "screen"],
-      run: () => void clearActiveTerminal(),
-    },
+    ...buildTerminalLifecycleCommands(commandPaletteTerminal),
     {
       id: "browser.reload",
       label: "Reload Preview",
