@@ -16,6 +16,11 @@ const composerModelPicker = read("app/src/ComposerModelPicker.tsx");
 const composerModelPopover = read("app/src/ComposerModelPopover.tsx");
 const composerReasoningPicker = read("app/src/ComposerReasoningPicker.tsx");
 const searchCommandDialog = read("app/src/SearchCommandDialog.tsx");
+const quickOpenSurface = [
+  appTsx,
+  read("app/src/QuickOpenDialog.tsx"),
+  read("app/src/useQuickOpen.ts"),
+].join("\n");
 const statusBar = read("app/src/StatusBar.tsx");
 const mainTsx = read("app/src/main.tsx");
 const browserQa = read("app/src/browserQa.ts");
@@ -255,7 +260,12 @@ assert(appTsx.includes('invoke("delete_connection_secret", { key })'), "Full loc
 assert(/\.settings-workspace__policy small\s*\{[^}]*overflow-wrap:\s*anywhere;[^}]*white-space:\s*normal;/s.test(appCss), "Policy values must wrap instead of truncating important safety text");
 assert(appCss.includes(".command-palette"), "App CSS must style the command palette surface");
 assert(appCss.includes(".command-palette__row--active"), "Command palette must have a visible active row state");
-assert(appTsx.includes("quickOpenOpen"), "App chrome must expose a Cmd+P quick-open surface");
+assert(
+  quickOpenSurface.includes('aria-label="Quick open files"')
+    && quickOpenSurface.includes('shortcutKeys("workspace.quick-open")')
+    && quickOpenSurface.includes("openDialog"),
+  "App chrome must expose a Cmd+P quick-open surface",
+);
 assert(editorQaFixture.includes("Project threads drawer"), "Editor QA fixture must reflect the approved project-thread drawer");
 assert(editorQaFixture.includes("<span>Threads</span>"), "Editor QA fixture must use the approved Threads drawer title");
 assert(!editorQaFixture.includes("Project sessions"), "Editor QA fixture must not present workspace sessions as the chat product noun");

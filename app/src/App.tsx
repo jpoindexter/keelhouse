@@ -161,6 +161,8 @@ import {
 } from "./shortcuts";
 import { filterCommandPaletteCommands } from "./commandPalette";
 import { SearchCommandDialog, type SearchDialogCommand } from "./SearchCommandDialog";
+import { QuickOpenDialog } from "./QuickOpenDialog";
+import { useQuickOpen } from "./useQuickOpen";
 import {
   DEFAULT_COMMAND_PALETTE_SOURCES,
   normalizeCommandPaletteSources,
@@ -501,7 +503,6 @@ function App() {
   const editorBuffersRef = useRef<Record<string, EditorBuffer>>({});
   const sessionEditorSnapshotsRef = useRef<Record<string, ProjectEditorSnapshot>>({});
   const commandPaletteInputRef = useRef<HTMLInputElement | null>(null);
-  const quickOpenInputRef = useRef<HTMLInputElement | null>(null);
   const pendingEditorFocusRef = useRef(false);
   const editorLoadSeq = useRef(0);
   const latest = useRef<Snapshot | null>(null);
@@ -737,9 +738,6 @@ function App() {
   const [chatSearchError, setChatSearchError] = useState<string | null>(null);
   const [chatSearchRevision, setChatSearchRevision] = useState(0);
   const [focusedChatMessageId, setFocusedChatMessageId] = useState<string | null>(null);
-  const [quickOpenOpen, setQuickOpenOpen] = useState(false);
-  const [quickOpenQuery, setQuickOpenQuery] = useState("");
-  const [quickOpenActiveIndex, setQuickOpenActiveIndex] = useState(0);
   const [gitStatus, setGitStatus] = useState<GitStatusResponse | null>(null);
   const [gitStatusRoot, setGitStatusRoot] = useState<string | null>(null);
   const [gitStatusLoading, setGitStatusLoading] = useState(false);
@@ -793,7 +791,7 @@ function App() {
     ),
     [chatConversations, chatSearchResults, commandPaletteQuery, projectSessions],
   );
-  const quickOpenResults = useMemo(() => filterWorkspaceFiles(searchableFiles, quickOpenQuery, 80), [quickOpenQuery, searchableFiles]);
+  const quickOpen = useQuickOpen(searchableFiles, () => setContextMenu(null));
   const composerMentionQuery = composerDraft.match(/(?:^|\s)@([^\s@]*)$/)?.[1] ?? null;
   const composerMentionResults = useMemo(
     () => composerMentionQuery == null ? [] : filterWorkspaceFiles(searchableFiles, composerMentionQuery, 8),
@@ -3975,19 +3973,6 @@ function App() {
     setCommandPaletteActiveIndex(0);
   };
 
-  const openQuickOpen = () => {
-    setContextMenu(null);
-    setQuickOpenQuery("");
-    setQuickOpenActiveIndex(0);
-    setQuickOpenOpen(true);
-  };
-
-  const closeQuickOpen = () => {
-    setQuickOpenOpen(false);
-    setQuickOpenQuery("");
-    setQuickOpenActiveIndex(0);
-  };
-
 
   const gitFileContextMenuItems = (file: GitStatusFile): ContextMenuItem[] => [
     menuItem("git.diff", "Open Diff", () => openGitDiff(file), { icon: "git" }),
@@ -4662,7 +4647,7 @@ function App() {
       icon: "search",
       disabled: !workspacePath,
       keywords: ["file", "jump", "cmd p"],
-      run: openQuickOpen,
+      run: quickOpen.openDialog,
     },
     {
       id: "editor.save",
@@ -4906,34 +4891,6 @@ function App() {
     setCommandPaletteActiveIndex(0);
     requestAnimationFrame(() => commandPaletteInputRef.current?.focus());
   }, [commandPaletteOpen, commandPaletteQuery]);
-
-  const runQuickOpenFile = (file: FileTreeNode | null) => {
-    if (!file) return;
-    closeQuickOpen();
-    void requestOpenEditorFile(file, { focusEditor: true });
-  };
-
-  const handleQuickOpenKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeQuickOpen();
-    } else if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setQuickOpenActiveIndex((index) => quickOpenResults.length === 0 ? 0 : (index + 1) % quickOpenResults.length);
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setQuickOpenActiveIndex((index) => quickOpenResults.length === 0 ? 0 : (index - 1 + quickOpenResults.length) % quickOpenResults.length);
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      runQuickOpenFile(quickOpenResults[quickOpenActiveIndex] ?? quickOpenResults[0] ?? null);
-    }
-  };
-
-  useEffect(() => {
-    if (!quickOpenOpen) return;
-    setQuickOpenActiveIndex(0);
-    requestAnimationFrame(() => quickOpenInputRef.current?.focus());
-  }, [quickOpenOpen, quickOpenQuery]);
 
   const tabIsDirty = (path: string) => dirtyTabPathSet.has(path);
 
@@ -5426,7 +5383,7 @@ function App() {
       }
       if (comboMatches(e, "workspace.quick-open")) {
         e.preventDefault();
-        openQuickOpen();
+        quickOpen.openDialog();
         return;
       }
       if (comboMatches(e, "chrome.settings")) {
@@ -7312,58 +7269,12 @@ function App() {
           onRun={runCommandPaletteCommand}
         />
       ) : null}
-      {quickOpenOpen ? (
-        <div className="command-palette-backdrop" role="presentation" onPointerDown={closeQuickOpen}>
-          <section
-            className="command-palette quick-open"
-            aria-label="Quick open files"
-            role="dialog"
-            aria-modal="true"
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-            <div className="command-palette__field">
-              <AppIcon name="file" />
-              <input
-                ref={quickOpenInputRef}
-                value={quickOpenQuery}
-                aria-label="Quick open file"
-                placeholder="Open file by name or path..."
-                onChange={(event) => {
-                  setQuickOpenQuery(event.currentTarget.value);
-                  setQuickOpenActiveIndex(0);
-                }}
-                onKeyDown={handleQuickOpenKeyDown}
-              />
-              <span>{shortcutKeys("workspace.quick-open")}</span>
-            </div>
-            <div className="command-palette__list" role="listbox" aria-label="Files">
-              {!workspacePath ? <div className="command-palette__empty">Open a folder before quick open</div> : null}
-              {workspacePath && quickOpenResults.length > 0 ? (
-                quickOpenResults.map((file, index) => (
-                  <button
-                    className={`command-palette__row ${index === quickOpenActiveIndex ? "command-palette__row--active" : ""}`}
-                    type="button"
-                    role="option"
-                    aria-selected={index === quickOpenActiveIndex}
-                    key={file.path}
-                    onPointerMove={() => setQuickOpenActiveIndex(index)}
-                    onClick={() => runQuickOpenFile(file)}
-                  >
-                    <span className="command-palette__icon">
-                      <AppIcon name="file" />
-                    </span>
-                    <span className="command-palette__copy">
-                      <strong>{file.name}</strong>
-                      <span>{pathBreadcrumbs(workspacePath, file.path).join(" / ")}</span>
-                    </span>
-                  </button>
-                ))
-              ) : null}
-              {workspacePath && quickOpenResults.length === 0 ? <div className="command-palette__empty">No files match</div> : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
+      <QuickOpenDialog
+        controller={quickOpen}
+        shortcut={shortcutKeys("workspace.quick-open")}
+        workspacePath={workspacePath}
+        onOpenFile={(file) => void requestOpenEditorFile(file, { focusEditor: true })}
+      />
       {pendingNavigation && selectedFile ? (
         <DraftNavigationDialog
           fileName={selectedFile.name}
