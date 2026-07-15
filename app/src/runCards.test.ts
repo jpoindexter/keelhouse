@@ -51,7 +51,10 @@ describe("run card provenance", () => {
   });
 
   it("keeps the renderer on typed adapters instead of terminal snapshots", () => {
-    const source = readFileSync(new URL("./ChatThreadSurface.tsx", import.meta.url), "utf8");
+    const source = [
+      readFileSync(new URL("./ChatToolMessage.tsx", import.meta.url), "utf8"),
+      readFileSync(new URL("./AgentActivityTimeline.tsx", import.meta.url), "utf8"),
+    ].join("\n");
     expect(source).toContain("runCardFromChatMessage");
     expect(source).toContain("runCardFromActivityEvent");
     expect(source).not.toContain("terminalSnapshotText");

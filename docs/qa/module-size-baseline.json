@@ -7,7 +7,6 @@
   "violations": {
     "app/src/App.css": { "lines": 7801, "longFunctions": 0, "maxFunctionLines": 0 },
     "app/src/App.tsx": { "lines": 7733, "longFunctions": 24, "maxFunctionLines": 7194 },
-    "app/src/ChatThreadSurface.tsx": { "lines": 375, "longFunctions": 3, "maxFunctionLines": 277 },
     "app/src/SettingsModal.tsx": { "lines": 758, "longFunctions": 3, "maxFunctionLines": 653 },
     "app/src/chatConversation.ts": { "lines": 692, "longFunctions": 2, "maxFunctionLines": 231 }
   }

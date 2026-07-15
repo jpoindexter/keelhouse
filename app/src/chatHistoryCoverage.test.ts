@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const app = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
-const thread = readFileSync(new URL("./ChatThreadSurface.tsx", import.meta.url), "utf8");
+const thread = [
+  readFileSync(new URL("./ChatThreadSurface.tsx", import.meta.url), "utf8"),
+  readFileSync(new URL("./ChatTurn.tsx", import.meta.url), "utf8"),
+  readFileSync(new URL("./ChatMessageArticle.tsx", import.meta.url), "utf8"),
+].join("\n");
 const searchDialog = readFileSync(new URL("./SearchCommandDialog.tsx", import.meta.url), "utf8");
 const css = `${readFileSync(new URL("./App.css", import.meta.url), "utf8")}\n${readFileSync(new URL("./SearchCommandDialog.css", import.meta.url), "utf8")}`;
 
@@ -12,7 +16,9 @@ describe("chat history discovery production wiring", () => {
     expect(app).toContain("openChatSearchResult(result)");
     expect(app).toContain('setFocusedChatMessageId(result.messageId ?? null)');
     expect(thread).toContain('data-message-id={message.id}');
-    expect(thread).toContain('focusMessageId === message.id ? " chat-message--focused"');
+    expect(thread).toContain("focusMessageId={focusMessageId}");
+    expect(thread).toContain("focused={props.focusMessageId === message.id}");
+    expect(thread).toContain('focused ? " chat-message--focused"');
   });
 
   it("exposes bookmark, pin, and archived-chat discovery controls", () => {

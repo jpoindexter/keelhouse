@@ -21,6 +21,12 @@ const mainTsx = read("app/src/main.tsx");
 const browserQa = read("app/src/browserQa.ts");
 const shellQaScript = read("scripts/capture-app-shell-qa.sh");
 const chatThreadSurface = read("app/src/ChatThreadSurface.tsx");
+const chatRenderer = [
+  chatThreadSurface,
+  read("app/src/ChatTurn.tsx"),
+  read("app/src/ChatMessageArticle.tsx"),
+  read("app/src/AgentActivityTimeline.tsx"),
+].join("\n");
 const chatConversation = read("app/src/chatConversation.ts");
 const chatHarness = read("app/src-tauri/src/chat_harness.rs");
 const claudeAdapter = read("app/src-tauri/src/claude_adapter.rs");
@@ -116,10 +122,10 @@ assert(!/border-left:\s*\d+px\s+solid\s+(?:#67c3d1|var\(--color-accent-border\))
 assert(appCss.includes("grid-template-rows: 36px minmax(0, 1fr) 24px;"), "Application chrome must preserve the approved 36px titlebar and 24px status strip");
 assert(/\.project-rail__heading\s*\{[^}]*font-size:\s*11px;[^}]*font-weight:\s*600;[^}]*text-transform:\s*uppercase;/s.test(appCss), "Project section labels must preserve the compact uppercase rhythm");
 assert(chatThreadSurface.includes('className="chat-thread"'), "Chat surface must render a persistent message timeline");
-assert(chatThreadSurface.includes('className="chat-turn"'), "Chat surface must group each prompt with the provider output that follows it");
-assert(chatThreadSurface.includes('message.role === "user"'), "Chat surface must distinguish user messages from Codex responses");
-assert(chatThreadSurface.includes("agent-thread-event"), "Chat surface must render provenance activity rows");
-assert(!chatThreadSurface.includes("agent-activity-log__title\">Activity"), "Agent events must stay inline instead of becoming a separate Activity dashboard");
+assert(chatRenderer.includes('className="chat-turn"'), "Chat surface must group each prompt with the provider output that follows it");
+assert(chatRenderer.includes('message.role === "user"'), "Chat surface must distinguish user messages from Codex responses");
+assert(chatRenderer.includes("agent-thread-event"), "Chat surface must render provenance activity rows");
+assert(!chatRenderer.includes("agent-activity-log__title\">Activity"), "Agent events must stay inline instead of becoming a separate Activity dashboard");
 assert(chatConversation.includes("providerThreadId"), "Each chat must persist its own provider thread identity");
 assert(chatConversation.includes("activeRunId"), "Each chat must own its active run independently");
 assert(chatHarness.includes("codex app-server --stdio"), "Structured Codex chat must use the provider-native app-server event stream");
