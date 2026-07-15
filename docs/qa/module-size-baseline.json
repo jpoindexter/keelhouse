@@ -6,6 +6,6 @@
   },
   "violations": {
     "app/src/App.css": { "lines": 7707, "longFunctions": 0, "maxFunctionLines": 0 },
-    "app/src/App.tsx": { "lines": 7306, "longFunctions": 23, "maxFunctionLines": 6843 }
+    "app/src/App.tsx": { "lines": 7258, "longFunctions": 23, "maxFunctionLines": 6794 }
   }
 }

@@ -16,6 +16,7 @@ const composerModelPicker = read("app/src/ComposerModelPicker.tsx");
 const composerModelPopover = read("app/src/ComposerModelPopover.tsx");
 const composerReasoningPicker = read("app/src/ComposerReasoningPicker.tsx");
 const searchCommandDialog = read("app/src/SearchCommandDialog.tsx");
+const commandPaletteController = read("app/src/useCommandPalette.ts");
 const quickOpenSurface = [
   appTsx,
   read("app/src/QuickOpenDialog.tsx"),
@@ -226,11 +227,11 @@ assert(appTsx.includes("workbench--tools-${toolTrayMode}"), "Workbench must rend
 assert(appTsx.includes("toolTrayMode === \"split\" ? ("), "Editor/browser splitter must render only in split tray mode");
 assert(toolDockMenu.includes("Hide tools"), "Tool dock menu must expose a direct way to return to the agent-only layout");
 assert(toolDockMenu.includes('aria-label="Tools and dock position"'), "Tool dock controls must use one compact, labelled menu");
-assert(appTsx.includes("commandPaletteOpen"), "App chrome must expose a command palette state");
+assert(commandPaletteController.includes("const [open, setOpen] = useState(false)"), "App chrome must expose a command palette state");
 assert(appTsx.includes("shortcutKeys(\"chrome.command-palette\")"), "Command palette must show its shortcut label");
 assert(appTsx.includes('<div className="titlebar-identity"') && appTsx.includes('title="New chat"') && appTsx.includes('title="Search tasks or run a command"') && appTsx.includes('title="Reset interface"'), "Thread actions must share the native titlebar lane with the traffic lights");
 assert(!appTsx.includes('className="drawer-collapse-button"'), "The Threads section header must not duplicate titlebar actions");
-assert(appTsx.includes("filterCommandPaletteCommands(commandPaletteCommands, commandPaletteQuery, commandPaletteSources)"), "Command palette source settings must filter live results");
+assert(appTsx.includes("filterCommandPaletteCommands(commandPaletteCommands, commandPalette.query, commandPaletteSources)"), "Command palette source settings must filter live results");
 assert(appTsx.includes('source: "chats"') && appTsx.includes('source: "files"') && appTsx.includes('source: "tabs"') && appTsx.includes('source: "worktrees"'), "Command palette must include real chat, file, tab, and worktree sources");
 assert(commandPaletteSources.includes('COMMAND_PALETTE_SOURCE_IDS = ["chats", "commands", "files", "tabs", "worktrees"]'), "Command palette sources must use the persisted typed source contract");
 assert(searchCommandDialog.includes('placeholder="Search tasks or run a command"'), "Search must use the centered task and command palette");

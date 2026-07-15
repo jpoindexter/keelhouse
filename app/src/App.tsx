@@ -1,4 +1,4 @@
-import { type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -161,6 +161,7 @@ import {
 } from "./shortcuts";
 import { filterCommandPaletteCommands } from "./commandPalette";
 import { SearchCommandDialog, type SearchDialogCommand } from "./SearchCommandDialog";
+import { useCommandPalette } from "./useCommandPalette";
 import { QuickOpenDialog } from "./QuickOpenDialog";
 import { useQuickOpen } from "./useQuickOpen";
 import {
@@ -502,7 +503,6 @@ function App() {
   const editorViewStatesRef = useRef<Record<string, EditorViewState>>({});
   const editorBuffersRef = useRef<Record<string, EditorBuffer>>({});
   const sessionEditorSnapshotsRef = useRef<Record<string, ProjectEditorSnapshot>>({});
-  const commandPaletteInputRef = useRef<HTMLInputElement | null>(null);
   const pendingEditorFocusRef = useRef(false);
   const editorLoadSeq = useRef(0);
   const latest = useRef<Snapshot | null>(null);
@@ -565,9 +565,7 @@ function App() {
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
   const [draftDialogError, setDraftDialogError] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
-  const [commandPaletteActiveIndex, setCommandPaletteActiveIndex] = useState(0);
+  const commandPalette = useCommandPalette(() => setContextMenu(null));
   const [commandPaletteSources, setCommandPaletteSources] = useState({ ...DEFAULT_COMMAND_PALETTE_SOURCES });
   const [orchestrationOpen, setOrchestrationOpen] = useState(false);
   const [orchestrationLaunching, setOrchestrationLaunching] = useState(false);
@@ -786,10 +784,10 @@ function App() {
       chatSearchResults,
       projectSessions,
       chatConversations,
-      commandPaletteQuery,
+      commandPalette.query,
       false,
     ),
-    [chatConversations, chatSearchResults, commandPaletteQuery, projectSessions],
+    [chatConversations, chatSearchResults, commandPalette.query, projectSessions],
   );
   const quickOpen = useQuickOpen(searchableFiles, () => setContextMenu(null));
   const composerMentionQuery = composerDraft.match(/(?:^|\s)@([^\s@]*)$/)?.[1] ?? null;
@@ -920,8 +918,8 @@ function App() {
   };
 
   useEffect(() => {
-    if (!commandPaletteOpen) return;
-    const query = commandPaletteQuery.trim();
+    if (!commandPalette.open) return;
+    const query = commandPalette.query.trim();
     if (query.length < 2) {
       setChatSearchResults([]);
       setChatSearchError(null);
@@ -950,7 +948,7 @@ function App() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [chatSearchRevision, commandPaletteOpen, commandPaletteQuery]);
+  }, [chatSearchRevision, commandPalette.open, commandPalette.query]);
 
   const focusEditorLine = (line: number) => {
     const targetLine = Math.max(1, line);
@@ -3960,19 +3958,6 @@ function App() {
   };
 
 
-  const openCommandPalette = () => {
-    setContextMenu(null);
-    setCommandPaletteQuery("");
-    setCommandPaletteActiveIndex(0);
-    setCommandPaletteOpen(true);
-  };
-
-  const closeCommandPalette = () => {
-    setCommandPaletteOpen(false);
-    setCommandPaletteQuery("");
-    setCommandPaletteActiveIndex(0);
-  };
-
 
   const gitFileContextMenuItems = (file: GitStatusFile): ContextMenuItem[] => [
     menuItem("git.diff", "Open Diff", () => openGitDiff(file), { icon: "git" }),
@@ -4855,43 +4840,13 @@ function App() {
       run: () => void requestOpenEditorFile(file, { focusEditor: true }),
     })),
   ];
-  const filteredCommandPaletteCommands = filterCommandPaletteCommands(commandPaletteCommands, commandPaletteQuery, commandPaletteSources);
-  const visibleCommandPaletteCommands = commandPaletteQuery.trim()
+  const filteredCommandPaletteCommands = filterCommandPaletteCommands(commandPaletteCommands, commandPalette.query, commandPaletteSources);
+  const visibleCommandPaletteCommands = commandPalette.query.trim()
     ? filteredCommandPaletteCommands.slice(0, 120)
     : [
         ...filteredCommandPaletteCommands.filter((command) => command.source === "chats").slice(0, 6),
         ...filteredCommandPaletteCommands.filter((command) => command.source !== "chats").slice(0, 6),
       ];
-  const activeCommandPaletteCommand = visibleCommandPaletteCommands[commandPaletteActiveIndex] ?? visibleCommandPaletteCommands[0] ?? null;
-
-  const runCommandPaletteCommand = (command: CommandPaletteCommand | null) => {
-    if (!command || command.disabled) return;
-    closeCommandPalette();
-    command.run();
-  };
-
-  const handleCommandPaletteKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeCommandPalette();
-    } else if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setCommandPaletteActiveIndex((index) => visibleCommandPaletteCommands.length === 0 ? 0 : (index + 1) % visibleCommandPaletteCommands.length);
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setCommandPaletteActiveIndex((index) => visibleCommandPaletteCommands.length === 0 ? 0 : (index - 1 + visibleCommandPaletteCommands.length) % visibleCommandPaletteCommands.length);
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      runCommandPaletteCommand(activeCommandPaletteCommand);
-    }
-  };
-
-  useEffect(() => {
-    if (!commandPaletteOpen) return;
-    setCommandPaletteActiveIndex(0);
-    requestAnimationFrame(() => commandPaletteInputRef.current?.focus());
-  }, [commandPaletteOpen, commandPaletteQuery]);
-
   const tabIsDirty = (path: string) => dirtyTabPathSet.has(path);
 
   const closeEditorTab = async (tab: FileTreeNode) => {
@@ -5378,7 +5333,7 @@ function App() {
       if (e.isComposing || (target?.matches(".terminal-ime-input") && shouldDeferTerminalKeyToIme(e))) return;
       if (comboMatches(e, "chrome.command-palette")) {
         e.preventDefault();
-        openCommandPalette();
+        commandPalette.openDialog();
         return;
       }
       if (comboMatches(e, "workspace.quick-open")) {
@@ -5627,7 +5582,7 @@ function App() {
             type="button"
             title="Search tasks or run a command"
             aria-label="Search tasks or run a command"
-            onClick={openCommandPalette}
+            onClick={commandPalette.openDialog}
           >
             <AppIcon name="search" />
           </button>
@@ -7250,23 +7205,20 @@ function App() {
           onActionError={(item, error) => setLaunchError(`${item.label} failed: ${String(error)}`)}
         />
       ) : null}
-      {commandPaletteOpen ? (
+      {commandPalette.open ? (
         <SearchCommandDialog
           commands={visibleCommandPaletteCommands}
-          activeIndex={commandPaletteActiveIndex}
-          query={commandPaletteQuery}
+          activeIndex={commandPalette.activeIndex}
+          query={commandPalette.query}
           shortcut={shortcutKeys("chrome.command-palette")}
           loading={chatSearchLoading}
           error={chatSearchError}
-          inputRef={commandPaletteInputRef}
-          onClose={closeCommandPalette}
-          onQueryChange={(query) => {
-            setCommandPaletteQuery(query);
-            setCommandPaletteActiveIndex(0);
-          }}
-          onKeyDown={handleCommandPaletteKeyDown}
-          onActiveIndexChange={setCommandPaletteActiveIndex}
-          onRun={runCommandPaletteCommand}
+          inputRef={commandPalette.inputRef}
+          onClose={commandPalette.close}
+          onQueryChange={commandPalette.setQuery}
+          onKeyDown={(event) => commandPalette.onKeyDown(event, visibleCommandPaletteCommands)}
+          onActiveIndexChange={commandPalette.setActiveIndex}
+          onRun={commandPalette.run}
         />
       ) : null}
       <QuickOpenDialog
