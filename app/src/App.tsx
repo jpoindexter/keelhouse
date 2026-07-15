@@ -44,7 +44,6 @@ import {
   isMissingWorkspaceError,
   newProjectSession,
   planProjectClose,
-  pushRecentProject,
   removeOpenProject,
   rememberActiveFile,
   setActiveProjectSession,
@@ -222,6 +221,7 @@ import { buildCreatedTerminalPane } from "./terminalPaneCreate";
 import { buildCreatedWorktreePaneState } from "./terminalWorktreePaneCreate";
 import { buildWorkspaceOpenPane } from "./workspaceOpenPanes";
 import { prepareWorkspaceOpenSession, workspaceOpenLayoutForRoot } from "./workspaceOpenSession";
+import { planWorkspaceOpenSuccess } from "./workspaceOpenSuccess";
 import {
   addBackgroundExit,
   clearBackgroundExitsForProject,
@@ -1806,25 +1806,14 @@ function App() {
       resetEditor();
       setTimeout(sendTerminalResize, 0);
       const now = Date.now();
-      const nextRecent = pushRecentProject(recentProjectsRef.current, root);
       const previousStatus = previousRoot ? projectStatusForRoot(previousRoot) : "exited";
-      const nextOpen = upsertOpenProject(
-        previousRoot && previousRoot !== root ? setOpenProjectStatus(openProjectsRef.current, previousRoot, previousStatus) : openProjectsRef.current,
-        root,
-        projectStatusForRoot(root),
-      );
-      let nextSessions = projectSessionsRef.current;
-      let nextActiveSessions = activeSessionByProjectRef.current;
-      if (previousRoot && previousRoot !== root) {
-        const previousSessionId = activeProjectSessionId(nextActiveSessions, nextSessions, previousRoot);
-        if (previousSessionId) nextSessions = setProjectSessionStatus(nextSessions, previousRoot, previousSessionId, previousStatus, now);
-      }
-      nextSessions = ensureProjectSessions(nextSessions, root, now);
-      const sessionId = activeProjectSessionId(nextActiveSessions, nextSessions, root);
-      if (sessionId) {
-        nextActiveSessions = setActiveProjectSession(nextActiveSessions, root, sessionId);
-        nextSessions = setProjectSessionStatus(nextSessions, root, sessionId, terminalPaneProjectStatus(nextProjectPanes), now);
-      }
+      const { activeSessions: nextActiveSessions, openProjects: nextOpen, recentProjects: nextRecent,
+        sessionId, sessions: nextSessions } = planWorkspaceOpenSuccess({
+        activeSessions: activeSessionByProjectRef.current, sessions: projectSessionsRef.current,
+        openProjects: openProjectsRef.current, recentProjects: recentProjectsRef.current,
+        previousRoot, previousStatus, root, now,
+        projectStatus: projectStatusForRoot(root), sessionStatus: terminalPaneProjectStatus(nextProjectPanes),
+      });
       persistPaneLayoutForSession(root, sessionId, nextProjectPanes);
       recentProjectsRef.current = nextRecent;
       openProjectsRef.current = nextOpen;
