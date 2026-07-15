@@ -42,7 +42,6 @@ import type { SelectionRange } from "./selection";
 import {
   activeProjectSessionId,
   forgetActiveFile,
-  isMissingWorkspaceError,
   planProjectClose,
   removeOpenProject,
   rememberActiveFile,
@@ -181,7 +180,7 @@ import { useAppChromeState } from "./useAppChromeState";
 import { useSettingsRuntimeStatus } from "./useSettingsRuntimeStatus";
 import { useSyncRef } from "./useSyncRef";
 import { loadWorkspaceBootstrap, type PaneLabelsBySession } from "./workspaceBootstrap";
-import { applyWorkspaceCleanupRecord, planMissingWorkspaceCleanup } from "./workspaceOpenRecovery";
+import { applyWorkspaceCleanupRecord } from "./workspaceOpenRecovery";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { SettingsModal } from "./SettingsModal";
 import { crashRecoveryMessage, deriveCrashRecovery } from "./crashRecovery";
@@ -221,7 +220,6 @@ import { buildCreatedWorktreePaneState } from "./terminalWorktreePaneCreate";
 import { openWorkspaceTerminalPanes } from "./workspaceOpenPanes";
 import { prepareWorkspaceOpenSession } from "./workspaceOpenSession";
 import { planWorkspaceOpenSuccess } from "./workspaceOpenSuccess";
-import { planWorkspaceOpenFailure } from "./workspaceOpenFailure";
 import { persistMissingWorkspaceCleanup } from "./workspaceOpenRecoveryPersistence";
 import { persistWorkspaceOpenFailure, persistWorkspaceOpenSuccess } from "./workspaceOpenPersistence";
 import { requestWorkspaceOpen } from "./workspaceOpenRequest";
@@ -237,6 +235,7 @@ import { createSettingsScopedActions } from "./settingsScopedActions";
 import { deriveActiveChatState } from "./activeChatState";
 import { deriveActiveAgentSessionState } from "./activeAgentSessionState";
 import { deriveEditorWorkspaceState } from "./editorWorkspaceState";
+import { executeWorkspaceOpenFailure } from "./workspaceOpenFailureWorkflow";
 import {
   addPaneTranscript,
   buildPaneTranscript,
@@ -1686,64 +1685,50 @@ function App() {
       void invoke("log_health_event", { message: `open_workspace failed: ${message}` }).catch(() => {});
       setManagedTerminalPanes(previousPanes);
       setFocusedTerminalPane(previousActivePaneId);
-      if (isMissingWorkspaceError(message)) {
-        const cleanup = planMissingWorkspaceCleanup({
-          path,
-          recentProjects: recentProjectsRef.current,
-          openProjects: openProjectsRef.current,
-          sessions: projectSessionsRef.current,
-          activeSessions: activeSessionByProjectRef.current,
-          projectPanes: terminalPanesByContextRef.current,
-          activePanes: activeTerminalPaneByContextRef.current,
-          browserProjects: browserPreviewByProjectRef.current,
-          browserSessions: browserPreviewBySessionRef.current,
-          harnessRecords: composerHarnessBySessionRef.current,
-          conversations: chatConversationsRef.current,
-          editorSnapshots: sessionEditorSnapshotsRef.current,
-          paneLayouts: paneLayoutsBySessionRef.current,
-        });
-        applyWorkspaceCleanupRecord(recentProjectsRef, cleanup.recentProjects, setRecentProjects);
-        applyWorkspaceCleanupRecord(openProjectsRef, cleanup.openProjects, setOpenProjects);
-        applyWorkspaceCleanupRecord(projectSessionsRef, cleanup.sessions, setProjectSessions);
-        applyWorkspaceCleanupRecord(activeSessionByProjectRef, cleanup.activeSessions, setActiveSessionByProjectState);
-        applyWorkspaceCleanupRecord(terminalPanesByContextRef, cleanup.projectPanes);
-        applyWorkspaceCleanupRecord(activeTerminalPaneByContextRef, cleanup.activePanes);
-        applyWorkspaceCleanupRecord(browserPreviewByProjectRef, cleanup.browserProjects, setBrowserPreviewByProject);
-        applyWorkspaceCleanupRecord(browserPreviewBySessionRef, cleanup.browserSessions, setBrowserPreviewBySession);
-        applyWorkspaceCleanupRecord(composerHarnessBySessionRef, cleanup.harnessRecords, setComposerHarnessBySession);
-        applyWorkspaceCleanupRecord(chatConversationsRef, cleanup.conversations, setChatConversations);
-        applyWorkspaceCleanupRecord(sessionEditorSnapshotsRef, cleanup.editorSnapshots);
-        applyWorkspaceCleanupRecord(paneLayoutsBySessionRef, cleanup.paneLayouts);
-        await persistMissingWorkspaceCleanup({
+      await executeWorkspaceOpenFailure({
+        applyFailure: ({ activeSessions, openProjects, sessions }) => {
+          applyWorkspaceCleanupRecord(openProjectsRef, openProjects, setOpenProjects);
+          applyWorkspaceCleanupRecord(projectSessionsRef, sessions, setProjectSessions);
+          applyWorkspaceCleanupRecord(activeSessionByProjectRef, activeSessions, setActiveSessionByProjectState);
+        },
+        applyMissingCleanup: (cleanup) => {
+          applyWorkspaceCleanupRecord(recentProjectsRef, cleanup.recentProjects, setRecentProjects);
+          applyWorkspaceCleanupRecord(openProjectsRef, cleanup.openProjects, setOpenProjects);
+          applyWorkspaceCleanupRecord(projectSessionsRef, cleanup.sessions, setProjectSessions);
+          applyWorkspaceCleanupRecord(activeSessionByProjectRef, cleanup.activeSessions, setActiveSessionByProjectState);
+          applyWorkspaceCleanupRecord(terminalPanesByContextRef, cleanup.projectPanes);
+          applyWorkspaceCleanupRecord(activeTerminalPaneByContextRef, cleanup.activePanes);
+          applyWorkspaceCleanupRecord(browserPreviewByProjectRef, cleanup.browserProjects, setBrowserPreviewByProject);
+          applyWorkspaceCleanupRecord(browserPreviewBySessionRef, cleanup.browserSessions, setBrowserPreviewBySession);
+          applyWorkspaceCleanupRecord(composerHarnessBySessionRef, cleanup.harnessRecords, setComposerHarnessBySession);
+          applyWorkspaceCleanupRecord(chatConversationsRef, cleanup.conversations, setChatConversations);
+          applyWorkspaceCleanupRecord(sessionEditorSnapshotsRef, cleanup.editorSnapshots);
+          applyWorkspaceCleanupRecord(paneLayoutsBySessionRef, cleanup.paneLayouts);
+        },
+        message, now: Date.now(), path,
+        persistFailure: ({ activeSessions, openProjects, sessions }) => persistWorkspaceOpenFailure({
+          activeSessions, openProjects, sessions, store,
+        }),
+        persistMissingCleanup: (cleanup) => persistMissingWorkspaceCleanup({
           beforeDeleteFolder: () => {
             if (workspacePathRef.current !== path) return;
-            setManagedTerminalPanes([]);
-            setFocusedTerminalPane(null);
-            setWorkspacePath(null);
-            setFileTree([]);
-            resetEditor();
+            setManagedTerminalPanes([]); setFocusedTerminalPane(null); setWorkspacePath(null);
+            setFileTree([]); resetEditor();
           },
           cleanup, deleteProjectChats: deleteDurableProjectChats, path, store,
           onDeleteError: (error) => {
             void invoke("log_health_event", { message: `delete project chats failed: ${String(error)}` }).catch(() => {});
           },
-        });
-      } else {
-        const { activeSessions: nextActiveSessions, openProjects: nextOpen,
-          sessions: nextSessions } = planWorkspaceOpenFailure({
-          activeSessions: activeSessionByProjectRef.current, sessions: projectSessionsRef.current,
-          openProjects: openProjectsRef.current, path, now: Date.now(),
-        });
-        openProjectsRef.current = nextOpen;
-        projectSessionsRef.current = nextSessions;
-        activeSessionByProjectRef.current = nextActiveSessions;
-        setOpenProjects(nextOpen);
-        setProjectSessions(nextSessions);
-        setActiveSessionByProjectState(nextActiveSessions);
-        await persistWorkspaceOpenFailure({
-          activeSessions: nextActiveSessions, openProjects: nextOpen, sessions: nextSessions, store,
-        });
-      }
+        }),
+        state: {
+          activePanes: activeTerminalPaneByContextRef.current, activeSessions: activeSessionByProjectRef.current,
+          browserProjects: browserPreviewByProjectRef.current, browserSessions: browserPreviewBySessionRef.current,
+          conversations: chatConversationsRef.current, editorSnapshots: sessionEditorSnapshotsRef.current,
+          harnessRecords: composerHarnessBySessionRef.current, openProjects: openProjectsRef.current,
+          paneLayouts: paneLayoutsBySessionRef.current, projectPanes: terminalPanesByContextRef.current,
+          recentProjects: recentProjectsRef.current, sessions: projectSessionsRef.current,
+        },
+      });
       return false;
     }
   };
