@@ -40,6 +40,11 @@ const toolDockMenu = read("app/src/ToolDockMenu.tsx");
 const toolTrayTabs = read("app/src/ToolTrayTabs.tsx");
 const icons = read("app/src/icons.tsx");
 const settingsModal = read("app/src/SettingsModal.tsx");
+const settingsWorkspace = [
+  settingsModal,
+  read("app/src/SettingsRowControl.tsx"),
+  read("app/src/SettingsAgentControls.tsx"),
+].join("\n");
 const settingsModalData = read("app/src/settingsModalData.ts");
 const commandPaletteSources = read("app/src/commandPaletteSources.ts");
 const connectionSettings = read("app/src/connectionSettings.ts");
@@ -228,9 +233,9 @@ assert(searchCommandDialog.includes('label="Tasks"') && searchCommandDialog.incl
 assert(appTsx.includes('command.source === "chats").slice(0, 6)') && appTsx.includes('command.source !== "chats").slice(0, 6)'), "Centered search must keep both tasks and actions visible before a query");
 assert(!appTsx.includes('sideDrawerMode === "search"'), "Search must not render as a duplicate side drawer");
 assert(!appCss.includes(".search-scope-tabs"), "Removed search drawer tabs must not leave capsule styling behind");
-assert(settingsModal.includes("onCommandPaletteSourceChange") && settingsModal.includes("Toggle ${source.label} command palette source"), "Settings must expose functional command-palette source controls");
+assert(settingsWorkspace.includes("onCommandPaletteSourceChange") && settingsWorkspace.includes("Toggle ${source.label} command palette source"), "Settings must expose functional command-palette source controls");
 assert(settingsModalData.includes('id: "agents.worktree-policy"') && settingsModalData.includes('id: "agents.hook-policy"') && settingsModalData.includes('id: "agents.environment-policy"'), "Settings must expose truthful worktree, lifecycle-hook, and environment policy rows");
-assert(settingsModal.includes("Unavailable until AI-CONNECTIONS environment profiles") && settingsModal.includes("Credential values are never displayed"), "Environment settings must state the current inheritance and secret-display boundary without presenting an unavailable control");
+assert(settingsWorkspace.includes("Unavailable until AI-CONNECTIONS environment profiles") && settingsWorkspace.includes("Credential values are never displayed"), "Environment settings must state the current inheritance and secret-display boundary without presenting an unavailable control");
 assert(settingsModalData.includes('id: "connections.manage"') && settingsModalData.includes('label: "Connections"'), "Settings must expose the dedicated AI and MCP Connections workspace");
 assert(connectionSettings.includes("environmentByProject") && connectionSettings.includes("mcpServers") && connectionSettings.includes("providerModels"), "Connection settings must use typed provider, environment, and MCP records");
 assert(connectionSecretControls.includes('type="password"') && connectionSecretControls.includes("onSaveSecret"), "Connection secret controls must use the Keychain callback boundary");

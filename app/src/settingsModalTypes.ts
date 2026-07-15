@@ -1,0 +1,43 @@
+import type { AgentApprovalMode } from "./agentSessionHandle";
+import type { AgentConnectionStatus, AgentConnectionsStatus } from "./agentConnections";
+import type { CommandPaletteSourceId, CommandPaletteSourceSettings } from "./commandPaletteSources";
+import type { AiConnectionSettings, ConnectionTargetStatus, McpOAuthStart, McpOAuthStatus, McpServerConfig } from "./connectionSettings";
+import type { KeybindingOverrides } from "./shortcuts";
+import type { LaunchProfile } from "./launchProfiles";
+import type { ScopedSettingView, SettingsScope } from "./scopedSettings";
+import type { SourceControlStatus } from "./sourceControl";
+import type { RepoLocation } from "./sourceControlLinks";
+import type { SettingsCategoryId } from "./settingsModalData";
+import type { ToolTrayMode, WorkbenchLayoutMode } from "./workbenchLayout";
+
+export type SettingsProfileOption = { id: string; label: string; disabled?: boolean };
+export type AgentHookStatus = { endpoint: string; configPath: string; running: boolean };
+
+export type SettingsModalProps = {
+  approvalSetting: ScopedSettingView<AgentApprovalMode>; agentConnectionsStatus?: AgentConnectionsStatus | null;
+  agentConnectionsRefreshing?: boolean; agentHookStatus?: AgentHookStatus | null; browserSetting: ScopedSettingView<string>;
+  aiConnectionSettings?: AiConnectionSettings; connectionSecretPresence?: Record<string, boolean>;
+  mcpOAuthStatuses?: Record<string, McpOAuthStatus>; commandPaletteSources?: CommandPaletteSourceSettings;
+  customTerminalProfiles?: LaunchProfile[]; gitBranch: string | null; gitChangeCount: number | null;
+  initialCategory?: SettingsCategoryId; initialQuery?: string; keybindingOverrides?: KeybindingOverrides;
+  layout: WorkbenchLayoutMode; notificationsEnabled?: boolean; sourceControlStatus?: SourceControlStatus | null;
+  repoLocation?: RepoLocation | null; onOpenSourceControlLink?: (url: string) => void; theme?: "graphite" | "mono-ghost";
+  profileSetting: ScopedSettingView<string>; profiles: SettingsProfileOption[]; trayMode: ToolTrayMode;
+  sessionTitle?: string; workspaceName?: string; workspacePath?: string;
+  onApprovalModeChange: (scope: SettingsScope, mode: AgentApprovalMode) => void;
+  onOpenAgentConnection?: (providerId: AgentConnectionStatus["id"]) => void; onRefreshAgentConnections?: () => void;
+  onBrowserUrlCommit: (scope: SettingsScope, url: string) => void;
+  onAiConnectionSettingsChange?: (settings: AiConnectionSettings) => void;
+  onDeleteConnectionSecret?: (key: string) => Promise<void>; onSaveConnectionSecret?: (key: string, value: string) => Promise<void>;
+  onValidateConnectionTarget?: (server: McpServerConfig) => Promise<ConnectionTargetStatus>;
+  onBeginMcpOAuth?: (server: McpServerConfig) => Promise<McpOAuthStart>;
+  onDisconnectMcpOAuth?: (server: McpServerConfig) => Promise<McpOAuthStatus>;
+  onCommandPaletteSourceChange?: (source: CommandPaletteSourceId, enabled: boolean) => void;
+  onAddCustomTerminalProfile?: (label: string, command: string) => void; onClose: () => void;
+  onKeybindingOverrideChange?: (id: string, keys: string[] | null) => void;
+  onNotificationsChange?: (enabled: boolean) => void; onRemoveCustomTerminalProfile?: (profileId: string) => void;
+  onResetLocalData?: () => void; onThemeChange?: (theme: "graphite" | "mono-ghost") => void;
+  onLayoutChange: (layout: WorkbenchLayoutMode) => void; onProfileChange: (scope: SettingsScope, profileId: string) => void;
+  onScopedSettingReset: (rowId: "agents.profile" | "agents.permission" | "browser.url", scope: Exclude<SettingsScope, "global">) => void;
+  onResetLayout: () => void; onTrayModeChange: (mode: ToolTrayMode) => void;
+};
