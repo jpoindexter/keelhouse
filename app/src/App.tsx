@@ -36,15 +36,14 @@ import { useFilesRailHeight } from "./useFilesRailHeight";
 import { useComposerLocalState } from "./useComposerLocalState";
 import { useComposerAttachments } from "./useComposerAttachments";
 import { useEditorNavigationLifecycle } from "./useEditorNavigationLifecycle";
+import { createWorkspacePersistence } from "./workspacePersistence";
 import type { BrowserPreviewRecords } from "./browserPreview";
 import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import {
   activeProjectSessionId,
-  forgetActiveFile,
   planProjectClose,
   removeOpenProject,
-  rememberActiveFile,
   setOpenProjectStatus,
   setProjectSessionStatus,
   setProjectSessionArchived,
@@ -157,9 +156,6 @@ import type { TerminalPaneState } from "./terminalPane";
 import type { GitStatusFile } from "./fileGitStatus";
 import { useGitStatus } from "./useGitStatus";
 import { useGitDiffReview } from "./useGitDiffReview";
-import {
-  paneLayoutFromPanes,
-} from "./sessionRestore";
 import type { PaneLayoutsBySession } from "./sessionRestore";
 import { useShellLayout, type SideDrawerMode } from "./useShellLayout";
 import { useAppChromeState } from "./useAppChromeState";
@@ -766,105 +762,35 @@ function App() {
     setEditorBufferRevision((value) => value + 1);
   };
 
-  const persistActiveFile = async (workspace: string, filePath: string) => {
-    const store = storeRef.current;
-    const next = rememberActiveFile(activeFilesByWorkspaceRef.current, workspace, filePath);
-    activeFilesByWorkspaceRef.current = next;
-    await store?.set("activeFileByWorkspace", next);
-    await store?.save();
-  };
-
-  const clearPersistedActiveFile = async (workspace: string) => {
-    const store = storeRef.current;
-    const next = forgetActiveFile(activeFilesByWorkspaceRef.current, workspace);
-    activeFilesByWorkspaceRef.current = next;
-    await store?.set("activeFileByWorkspace", next);
-    await store?.save();
-  };
-
-  const persistOpenProjects = async (projects: OpenProject[]) => {
-    openProjectsRef.current = projects;
-    setOpenProjects(projects);
-    await storeRef.current?.set("openProjects", projects);
-    await storeRef.current?.save();
-  };
-
-  const persistProjectSessions = async (sessions: ProjectSessionsByProject, activeByProject: ActiveSessionByProject) => {
-    projectSessionsRef.current = sessions;
-    activeSessionByProjectRef.current = activeByProject;
-    setProjectSessions(sessions);
-    setActiveSessionByProjectState(activeByProject);
-    await storeRef.current?.set("projectSessions", sessions);
-    await storeRef.current?.set("activeSessionByProject", activeByProject);
-    await storeRef.current?.save();
-  };
-
-  const sessionSnapshotKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
-
-  const paneLabelSessionKey = (root: string | null, sessionId = activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, root)) =>
-    root && sessionId ? sessionSnapshotKey(root, sessionId) : null;
-
-  const savedPaneLabelForSlot = (root: string | null, slot: number, sessionId?: string | null) => {
-    const key = paneLabelSessionKey(root, sessionId);
-    if (!key) return null;
-    return paneLabelsBySessionRef.current[key]?.find((record) => record.slot === slot)?.label ?? null;
-  };
-
-  const persistSessionEditorSnapshots = (next: Record<string, ProjectEditorSnapshot>) => {
-    sessionEditorSnapshotsRef.current = next;
-    void storeRef.current?.set("sessionEditorSnapshots", next);
-    void storeRef.current?.save();
-  };
-
-  const persistPaneLayoutsBySession = (next: PaneLayoutsBySession) => {
-    paneLayoutsBySessionRef.current = next;
-    void storeRef.current?.set("paneLayoutsBySession", next);
-    void storeRef.current?.save();
-  };
-
-  const persistPaneLayoutForSession = (
-    root: string | null,
-    sessionId: string | null,
-    panes: ManagedTerminalPane[] = terminalPanesForSession(root, sessionId),
-  ) => {
-    if (!root || !sessionId) return;
-    const key = sessionSnapshotKey(root, sessionId);
-    const records = paneLayoutFromPanes(panes);
-    const next = { ...paneLayoutsBySessionRef.current };
-    if (records.length > 0) next[key] = records;
-    else delete next[key];
-    persistPaneLayoutsBySession(next);
-  };
-
-  const removePersistedSessionRestore = (root: string, sessionId: string) => {
-    const key = sessionSnapshotKey(root, sessionId);
-    const nextSnapshots = { ...sessionEditorSnapshotsRef.current };
-    const nextPaneLayouts = { ...paneLayoutsBySessionRef.current };
-    delete nextSnapshots[key];
-    delete nextPaneLayouts[key];
-    persistSessionEditorSnapshots(nextSnapshots);
-    persistPaneLayoutsBySession(nextPaneLayouts);
-  };
-
-  const persistPaneLabel = async (root: string, slot: number, label: string | null) => {
-    const key = paneLabelSessionKey(root);
-    if (!key) return;
-    const existing = paneLabelsBySessionRef.current[key] ?? [];
-    const normalized = normalizeTerminalPaneLabel(label);
-    const nextRecords = normalized
-      ? [
-          ...existing.filter((record) => record.slot !== slot),
-          { slot, label: normalized, updatedAt: Date.now() },
-        ].sort((a, b) => a.slot - b.slot)
-      : existing.filter((record) => record.slot !== slot);
-    const next = { ...paneLabelsBySessionRef.current };
-    if (nextRecords.length > 0) next[key] = nextRecords;
-    else delete next[key];
-    paneLabelsBySessionRef.current = next;
-    setPaneLabelsBySession(next);
-    await storeRef.current?.set("paneLabelsBySession", next);
-    await storeRef.current?.save();
-  };
+  const {
+    clearActiveFile: clearPersistedActiveFile,
+    persistActiveFile,
+    persistOpenProjects,
+    persistPaneLabel,
+    persistPaneLayout: persistPaneLayoutForSession,
+    persistProjectSessions,
+    persistSessionSnapshots: persistSessionEditorSnapshots,
+    removeSessionRestore: removePersistedSessionRestore,
+    savedPaneLabel: savedPaneLabelForSlot,
+    sessionKey: sessionSnapshotKey,
+  } = createWorkspacePersistence({
+    activeFiles: activeFilesByWorkspaceRef,
+    activeSessions: activeSessionByProjectRef,
+    getActiveSession: (root) => activeProjectSessionId(
+      activeSessionByProjectRef.current, projectSessionsRef.current, root,
+    ),
+    getPanes: (root, sessionId) => terminalPanesForSession(root, sessionId),
+    openProjects: openProjectsRef,
+    paneLabels: paneLabelsBySessionRef,
+    paneLayouts: paneLayoutsBySessionRef,
+    projectSessions: projectSessionsRef,
+    sessionSnapshots: sessionEditorSnapshotsRef,
+    setActiveSessions: setActiveSessionByProjectState,
+    setOpenProjects,
+    setPaneLabels: setPaneLabelsBySession,
+    setProjectSessions,
+    store: storeRef,
+  });
 
   const browserPreviewSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
   const composerHarnessSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
