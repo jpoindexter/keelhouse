@@ -210,6 +210,7 @@ import { buildTerminalContextMenuItems } from "./terminalContextMenu";
 import { buildProjectSessionContextMenuItems } from "./projectSessionContextMenu";
 import { planPaneExit } from "./paneExitPlan";
 import { planProjectSessionDelete } from "./deleteProjectSessionPlan";
+import { executeProjectSessionDelete } from "./projectSessionDelete";
 import { replaceRestartedPane } from "./terminalPaneRestart";
 import { planCheckpointRestore } from "./checkpointRestorePlan";
 import { buildCreatedTerminalPane } from "./terminalPaneCreate";
@@ -2107,26 +2108,18 @@ function App() {
       sessionId: session.id,
     });
     if (!plan.canDelete) return;
-    const ok = await confirmDialog(`Delete chat "${session.title}"? Its messages and saved workspace context will be removed.`);
-    if (!ok) return;
-    try {
-      await closeSessionTerminalPanes(projectPath, session.id);
-    } catch (err) {
-      setLaunchError(`Could not close this chat's terminal panes: ${String(err)}`);
-      return;
-    }
-    try {
-      await deleteDurableChatConversation(composerHarnessSessionKey(projectPath, session.id));
-    } catch (err) {
-      setLaunchError(`Could not delete this chat's history: ${String(err)}`);
-      return;
-    }
-    removePersistedSessionRestore(projectPath, session.id);
-    await removeSessionScopedRecords(plan);
-    await persistProjectSessions(plan.nextSessions, plan.nextActiveSessions);
-    if (plan.shouldReopenActiveWorkspace) {
-      await openWorkspaceDirect(projectPath, launchProfileRef.current, { captureCurrentSession: false });
-    }
+    const result = await executeProjectSessionDelete({
+      closeTerminalPanes: () => closeSessionTerminalPanes(projectPath, session.id),
+      confirmDelete: confirmDialog,
+      deleteHistory: () => deleteDurableChatConversation(composerHarnessSessionKey(projectPath, session.id)),
+      persistSessions: persistProjectSessions,
+      plan,
+      removePersistedRestore: () => removePersistedSessionRestore(projectPath, session.id),
+      removeScopedRecords: () => removeSessionScopedRecords(plan),
+      reopenActiveWorkspace: () => openWorkspaceDirect(projectPath, launchProfileRef.current, { captureCurrentSession: false }),
+      title: session.title,
+    });
+    if (result.status === "failed") setLaunchError(result.message);
   };
 
   const pickWorkspace = async (options: { openTerminal?: boolean } = {}) => {
