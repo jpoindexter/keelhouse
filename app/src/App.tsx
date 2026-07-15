@@ -268,8 +268,9 @@ import {
 } from "./chatOrchestration";
 import { launchOrchestration as launchOrchestrationWithContext } from "./orchestrationLaunch";
 import { ContextMenu, type ContextMenuItem, type ContextMenuState } from "./ContextMenu";
-import { paneContextBelongsToProject, paneContextKey, paneContextParts, removeProjectPaneContexts } from "./paneOwnership";
+import { paneContextBelongsToProject, paneContextKey, paneContextParts } from "./paneOwnership";
 import { composerReasoningLabel } from "./ComposerReasoningPicker";
+import { closeProjectResources as closeProjectResourcesWithContext } from "./projectResourceClose";
 import "./App.css";
 import "./composerModelPicker.css";
 import "./responsive-shell.css";
@@ -1897,23 +1898,19 @@ function App() {
   };
 
   const closeProjectResources = async (projectPath: string) => {
-    const activeRunIds = Object.entries(chatConversationsRef.current)
-      .filter(([key, conversation]) => key.startsWith(`${projectPath}\n`) && conversation.activeRunId)
-      .map(([, conversation]) => conversation.activeRunId as string);
-    for (const runId of activeRunIds) await invoke("stop_chat_run", { runId });
-
-    for (const pane of terminalPanesForProject(projectPath)) {
-      intentionallyTerminatedPaneIdsRef.current.add(pane.id);
-      try {
-        await invoke("close_pane", { paneId: pane.id });
-      } catch (error) {
-        intentionallyTerminatedPaneIdsRef.current.delete(pane.id);
-        throw error;
-      }
-      delete terminalSnapshotsRef.current[pane.id];
-    }
-    terminalPanesByContextRef.current = removeProjectPaneContexts(terminalPanesByContextRef.current, projectPath);
-    activeTerminalPaneByContextRef.current = removeProjectPaneContexts(activeTerminalPaneByContextRef.current, projectPath);
+    const closed = await closeProjectResourcesWithContext({
+      activePanes: activeTerminalPaneByContextRef.current,
+      closePane: (paneId) => invoke("close_pane", { paneId }),
+      conversations: chatConversationsRef.current,
+      intentionallyTerminatedPaneIds: intentionallyTerminatedPaneIdsRef.current,
+      panes: terminalPanesForProject(projectPath),
+      projectPanes: terminalPanesByContextRef.current,
+      projectPath,
+      snapshots: terminalSnapshotsRef.current,
+      stopChatRun: (runId) => invoke("stop_chat_run", { runId }),
+    });
+    activeTerminalPaneByContextRef.current = closed.activePanes;
+    terminalPanesByContextRef.current = closed.projectPanes;
   };
 
   const closeProjectDirect = async (projectPath: string) => {
