@@ -221,6 +221,7 @@ import { buildWorkspaceOpenPane } from "./workspaceOpenPanes";
 import { prepareWorkspaceOpenSession, workspaceOpenLayoutForRoot } from "./workspaceOpenSession";
 import { planWorkspaceOpenSuccess } from "./workspaceOpenSuccess";
 import { planWorkspaceOpenFailure } from "./workspaceOpenFailure";
+import { persistMissingWorkspaceCleanup } from "./workspaceOpenRecoveryPersistence";
 import {
   addBackgroundExit,
   clearBackgroundExitsForProject,
@@ -1880,27 +1881,20 @@ function App() {
         setBrowserPreviewBySession(nextBrowserSessions);
         setComposerHarnessBySession(nextComposerHarness);
         setChatConversations(nextChatConversations);
-        await store?.set("recentFolders", nextRecent);
-        await store?.set("openProjects", nextOpen);
-        await store?.set("projectSessions", nextSessions);
-        await store?.set("activeSessionByProject", nextActiveSessions);
-        await store?.set("browserPreviewByProject", nextBrowserProjects);
-        await store?.set("browserPreviewBySession", nextBrowserSessions);
-        await store?.set("composerHarnessBySession", nextComposerHarness);
-        await deleteDurableProjectChats(path).catch((error) => {
-          void invoke("log_health_event", { message: `delete project chats failed: ${String(error)}` }).catch(() => {});
+        await persistMissingWorkspaceCleanup({
+          beforeDeleteFolder: () => {
+            if (workspacePathRef.current !== path) return;
+            setManagedTerminalPanes([]);
+            setFocusedTerminalPane(null);
+            setWorkspacePath(null);
+            setFileTree([]);
+            resetEditor();
+          },
+          cleanup, deleteProjectChats: deleteDurableProjectChats, path, store,
+          onDeleteError: (error) => {
+            void invoke("log_health_event", { message: `delete project chats failed: ${String(error)}` }).catch(() => {});
+          },
         });
-        await store?.set("sessionEditorSnapshots", nextSessionSnapshots);
-        await store?.set("paneLayoutsBySession", nextPaneLayouts);
-        if (workspacePathRef.current === path) {
-          setManagedTerminalPanes([]);
-          setFocusedTerminalPane(null);
-          setWorkspacePath(null);
-          setFileTree([]);
-          resetEditor();
-        }
-        await store?.delete("folder");
-        await store?.save();
       } else {
         const { activeSessions: nextActiveSessions, openProjects: nextOpen,
           sessions: nextSessions } = planWorkspaceOpenFailure({
