@@ -72,7 +72,6 @@ import {
 import {
   discardDraftAndContinueNavigation,
   saveDraftAndContinueNavigation,
-  shouldPromptForDirtyDraft,
 } from "./draftProtection";
 import {
   dirtyEditorTabPaths,
@@ -223,6 +222,7 @@ import { planWorkspaceOpenSuccess } from "./workspaceOpenSuccess";
 import { planWorkspaceOpenFailure } from "./workspaceOpenFailure";
 import { persistMissingWorkspaceCleanup } from "./workspaceOpenRecoveryPersistence";
 import { persistWorkspaceOpenFailure, persistWorkspaceOpenSuccess } from "./workspaceOpenPersistence";
+import { requestWorkspaceOpen } from "./workspaceOpenRequest";
 import {
   addBackgroundExit,
   clearBackgroundExitsForProject,
@@ -1884,23 +1884,16 @@ function App() {
 
   const requestOpenWorkspace = async (path: string) => {
     setBackgroundExits((exits) => clearBackgroundExitsForProject(exits, path));
-    if (dirtyTabPaths.length > 1) {
-      const ok = await confirmDialog(`Switch workspace and discard ${dirtyTabPaths.length} unsaved editor tabs?`);
-      if (!ok) return false;
-    } else if (dirtyTabPaths.length === 1) {
-      const dirtyTab = editorTabs.find((tab) => tab.path === dirtyTabPaths[0]);
-      if (dirtyTab && dirtyTab.path !== selectedFileRef.current?.path) {
-        await openEditorFileDirect(dirtyTab);
-      }
-      setDraftDialogError(null);
-      setPendingNavigation({ kind: "workspace", path });
-      return false;
-    } else if (shouldPromptForDirtyDraft(editorDirty, selectedFileRef.current?.path ?? null, { kind: "workspace", path })) {
-      setDraftDialogError(null);
-      setPendingNavigation({ kind: "workspace", path });
-      return false;
-    }
-    return openWorkspaceDirect(path);
+    return requestWorkspaceOpen({
+      confirmDiscard: (count) => confirmDialog(`Switch workspace and discard ${count} unsaved editor tabs?`),
+      deferNavigation: () => {
+        setDraftDialogError(null);
+        setPendingNavigation({ kind: "workspace", path });
+      },
+      dirtyTabPaths, editorDirty, editorTabs, path,
+      openEditorFile: openEditorFileDirect, openWorkspace: openWorkspaceDirect,
+      selectedFilePath: selectedFileRef.current?.path ?? null,
+    });
   };
 
   const closeProjectResources = async (projectPath: string) => {
