@@ -212,6 +212,7 @@ import { buildProjectSessionContextMenuItems } from "./projectSessionContextMenu
 import { planPaneExit } from "./paneExitPlan";
 import { planProjectSessionDelete } from "./deleteProjectSessionPlan";
 import { replaceRestartedPane } from "./terminalPaneRestart";
+import { planCheckpointRestore } from "./checkpointRestorePlan";
 import {
   addBackgroundExit,
   clearBackgroundExitsForProject,
@@ -3558,6 +3559,29 @@ function App() {
     }
   };
 
+  const reconcileRestoredActiveFile = async (
+    activeFile: FileTreeNode | null,
+    action: "write" | "delete" | null,
+  ) => {
+    if (!activeFile || !action) return;
+    if (action === "delete") {
+      setSelectedFile(null);
+      setEditorText("");
+      setSavedEditorText("");
+      return;
+    }
+    await openEditorFileDirect(activeFile);
+  };
+
+  const approveCheckpointRestore = async (projectPath: string, fileCount: number) => gateAppAction(createAppAction({
+    kind: "restore-checkpoint",
+    label: "Restore workspace checkpoint",
+    target: `${fileCount} files in ${projectPath}`,
+    risk: "high",
+    requestedBy: "user",
+    undoHint: "Restore the recovery checkpoint created before this operation.",
+  }));
+
   const restoreSessionCheckpoint = async (
     projectPath: string,
     session: ProjectSession,
@@ -3573,44 +3597,28 @@ function App() {
         setActionNotice("Workspace already matches this checkpoint");
         return;
       }
-      const affectedAbsolutePaths = new Set(preview.files.map((file) => `${projectPath}/${file.path}`));
-      const protectedDirtyPath = dirtyTabPaths.find((path) => affectedAbsolutePaths.has(path));
-      if (protectedDirtyPath) {
-        setLaunchError(`Save or discard the dirty editor buffer before restore: ${protectedDirtyPath}`);
+      const plan = planCheckpointRestore({
+        dirtyTabPaths,
+        preview,
+        projectPath,
+        selectedFilePath: selectedFileRef.current?.path ?? null,
+      });
+      if (plan.protectedDirtyPath) {
+        setLaunchError(`Save or discard the dirty editor buffer before restore: ${plan.protectedDirtyPath}`);
         return;
       }
       if (!await confirmDialog(checkpointPreviewMessage(preview))) return;
-      const audit = await gateAppAction(createAppAction({
-        kind: "restore-checkpoint",
-        label: "Restore workspace checkpoint",
-        target: `${preview.files.length} files in ${projectPath}`,
-        risk: "high",
-        requestedBy: "user",
-        undoHint: "Restore the recovery checkpoint created before this operation.",
-      }));
+      const audit = await approveCheckpointRestore(projectPath, preview.files.length);
       if (audit.decision !== "approved") return;
-      const relativeDirtyPaths = dirtyTabPaths
-        .filter((path) => path.startsWith(`${projectPath}/`))
-        .map((path) => path.slice(projectPath.length + 1));
       const result = await restoreWorkspaceCheckpoint(
         projectPath,
         checkpointId,
         preview.previewToken,
-        relativeDirtyPaths,
+        plan.relativeDirtyPaths,
       );
-      for (const path of affectedAbsolutePaths) delete editorBuffersRef.current[path];
+      for (const path of plan.affectedAbsolutePaths) delete editorBuffersRef.current[path];
       setEditorBufferRevision((revision) => revision + 1);
-      const activeFile = selectedFileRef.current;
-      if (activeFile && affectedAbsolutePaths.has(activeFile.path)) {
-        const action = preview.files.find((file) => `${projectPath}/${file.path}` === activeFile.path)?.action;
-        if (action === "delete") {
-          setSelectedFile(null);
-          setEditorText("");
-          setSavedEditorText("");
-        } else {
-          await openEditorFileDirect(activeFile);
-        }
-      }
+      await reconcileRestoredActiveFile(selectedFileRef.current, plan.activeFileAction);
       await updateProjectSessionMetadata(projectPath, session.id, {
         recoveryCheckpointId: result.recoveryCheckpointId,
       });
