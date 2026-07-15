@@ -9,6 +9,15 @@ const withoutProject = <T>(records: Record<string, T>, path: string) => {
 const withoutProjectSessions = <T>(records: Record<string, T>, path: string) =>
   Object.fromEntries(Object.entries(records).filter(([key]) => !key.startsWith(`${path}\n`))) as Record<string, T>;
 
+export const applyWorkspaceCleanupRecord = <T>(
+  target: { current: T },
+  value: T,
+  publish?: (value: T) => void,
+) => {
+  target.current = value;
+  publish?.(value);
+};
+
 export const planMissingWorkspaceCleanup = <
   TProjectPanes,
   TActivePane,

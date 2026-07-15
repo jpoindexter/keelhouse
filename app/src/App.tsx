@@ -174,7 +174,7 @@ import { useShellLayout, type SideDrawerMode } from "./useShellLayout";
 import { useAppChromeState } from "./useAppChromeState";
 import { useSettingsRuntimeStatus } from "./useSettingsRuntimeStatus";
 import { loadWorkspaceBootstrap, type PaneLabelsBySession } from "./workspaceBootstrap";
-import { planMissingWorkspaceCleanup } from "./workspaceOpenRecovery";
+import { applyWorkspaceCleanupRecord, planMissingWorkspaceCleanup } from "./workspaceOpenRecovery";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { SettingsModal } from "./SettingsModal";
 import { crashRecoveryMessage, deriveCrashRecovery } from "./crashRecovery";
@@ -1836,32 +1836,18 @@ function App() {
           editorSnapshots: sessionEditorSnapshotsRef.current,
           paneLayouts: paneLayoutsBySessionRef.current,
         });
-        const { recentProjects: nextRecent, openProjects: nextOpen, sessions: nextSessions,
-          activeSessions: nextActiveSessions, projectPanes: nextProjectPanesByContext,
-          activePanes: nextActivePanesByContext, browserProjects: nextBrowserProjects,
-          browserSessions: nextBrowserSessions, harnessRecords: nextComposerHarness,
-          conversations: nextChatConversations, editorSnapshots: nextSessionSnapshots,
-          paneLayouts: nextPaneLayouts } = cleanup;
-        recentProjectsRef.current = nextRecent;
-        openProjectsRef.current = nextOpen;
-        projectSessionsRef.current = nextSessions;
-        activeSessionByProjectRef.current = nextActiveSessions;
-        terminalPanesByContextRef.current = nextProjectPanesByContext;
-        activeTerminalPaneByContextRef.current = nextActivePanesByContext;
-        browserPreviewByProjectRef.current = nextBrowserProjects;
-        browserPreviewBySessionRef.current = nextBrowserSessions;
-        composerHarnessBySessionRef.current = nextComposerHarness;
-        chatConversationsRef.current = nextChatConversations;
-        sessionEditorSnapshotsRef.current = nextSessionSnapshots;
-        paneLayoutsBySessionRef.current = nextPaneLayouts;
-        setRecentProjects(nextRecent);
-        setOpenProjects(nextOpen);
-        setProjectSessions(nextSessions);
-        setActiveSessionByProjectState(nextActiveSessions);
-        setBrowserPreviewByProject(nextBrowserProjects);
-        setBrowserPreviewBySession(nextBrowserSessions);
-        setComposerHarnessBySession(nextComposerHarness);
-        setChatConversations(nextChatConversations);
+        applyWorkspaceCleanupRecord(recentProjectsRef, cleanup.recentProjects, setRecentProjects);
+        applyWorkspaceCleanupRecord(openProjectsRef, cleanup.openProjects, setOpenProjects);
+        applyWorkspaceCleanupRecord(projectSessionsRef, cleanup.sessions, setProjectSessions);
+        applyWorkspaceCleanupRecord(activeSessionByProjectRef, cleanup.activeSessions, setActiveSessionByProjectState);
+        applyWorkspaceCleanupRecord(terminalPanesByContextRef, cleanup.projectPanes);
+        applyWorkspaceCleanupRecord(activeTerminalPaneByContextRef, cleanup.activePanes);
+        applyWorkspaceCleanupRecord(browserPreviewByProjectRef, cleanup.browserProjects, setBrowserPreviewByProject);
+        applyWorkspaceCleanupRecord(browserPreviewBySessionRef, cleanup.browserSessions, setBrowserPreviewBySession);
+        applyWorkspaceCleanupRecord(composerHarnessBySessionRef, cleanup.harnessRecords, setComposerHarnessBySession);
+        applyWorkspaceCleanupRecord(chatConversationsRef, cleanup.conversations, setChatConversations);
+        applyWorkspaceCleanupRecord(sessionEditorSnapshotsRef, cleanup.editorSnapshots);
+        applyWorkspaceCleanupRecord(paneLayoutsBySessionRef, cleanup.paneLayouts);
         await persistMissingWorkspaceCleanup({
           beforeDeleteFolder: () => {
             if (workspacePathRef.current !== path) return;

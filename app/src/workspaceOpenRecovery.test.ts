@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { planMissingWorkspaceCleanup } from "./workspaceOpenRecovery";
+import {
+  applyWorkspaceCleanupRecord,
+  planMissingWorkspaceCleanup,
+} from "./workspaceOpenRecovery";
 
 describe("missing workspace cleanup", () => {
   it("removes only the missing project and its session records", () => {
@@ -24,5 +27,19 @@ describe("missing workspace cleanup", () => {
     expect(Object.keys(plan.sessions)).toEqual(["/kept"]);
     expect(Object.keys(plan.projectPanes)).toEqual(["/kept\ntwo"]);
     expect(Object.keys(plan.conversations)).toEqual(["/kept\ntwo"]);
+  });
+});
+
+describe("applyWorkspaceCleanupRecord", () => {
+  it("keeps the authoritative ref and published state in sync", () => {
+    const target = { current: ["/missing"] };
+    let published: string[] = [];
+
+    applyWorkspaceCleanupRecord(target, ["/kept"], (value) => {
+      published = value;
+    });
+
+    expect(target.current).toEqual(["/kept"]);
+    expect(published).toEqual(["/kept"]);
   });
 });
