@@ -63,12 +63,10 @@ import {
 } from "./editorState";
 import type { CursorPosition, EditorViewState } from "./editorState";
 import {
-  editorLoadErrorState,
-  editorLoadStateFromBuffer,
-  editorLoadStateFromResponse,
   type EditorFileBuffer,
   type EditorFileLoadState,
 } from "./editorFileLoadState";
+import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
   removeEditorBuffersWithin,
   removeEditorTabsWithin,
@@ -303,7 +301,6 @@ type OpenPaneResponse = { paneId: number };
 type ClosePaneResponse = { activePaneId: number | null };
 type WorktreeResponse = { path: string; branch: string };
 type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
-type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
 type DetectedLocalDevServer = {
   url: string;
@@ -2184,88 +2181,50 @@ function App() {
       ? [{ path: workspacePath, status: activeProjectStatus() }]
       : [];
 
-  const applyEditorLoadState = (state: EditorFileLoadState) => {
-    setEditorText(state.text);
-    setSavedEditorText(state.savedText);
-    setEditorBytes(state.bytes);
-    setEditorModifiedMs(state.modifiedMs);
-    setEditorError(state.error);
-    setEditorRecoveryError(state.recoveryError);
-    setEditorCursor(state.cursor);
-  };
-
-  const openEditorFileDirect = async (file: FileTreeNode, options: OpenEditorFileOptions = {}) => {
-    const root = workspacePathRef.current ?? workspacePath;
-    if (!root) return;
-    closeDiffReview();
-    captureCurrentEditorViewState();
-    captureCurrentEditorBuffer();
-    pendingEditorFocusRef.current = options.focusEditor ?? false;
-    const seq = editorLoadSeq.current + 1;
-    editorLoadSeq.current = seq;
-    setEditorTabs((tabs) => upsertEditorTab(tabs, file));
-    setSelectedFile(file);
-    setEditorSaving(false);
-    const buffered = editorBuffersRef.current[file.path];
-    if (buffered) {
-      setEditorLoading(false);
-      applyEditorLoadState(editorLoadStateFromBuffer(buffered, editorViewStatesRef.current[file.path]));
-      await persistActiveFile(root, file.path);
-      if (options.focusEditor) requestAnimationFrame(() => editorViewRef.current?.focus());
-      return;
-    }
-    setEditorLoading(true);
-    setEditorError(null);
-    setEditorRecoveryError(null);
-    setEditorBytes(null);
-    setEditorModifiedMs(null);
-    setEditorCursor({ line: 1, column: 1 });
-    try {
-      const result = await invoke<TextFileResponse>("read_text_file", { root, path: file.path });
-      if (editorLoadSeq.current !== seq || result.path !== file.path) return;
-      const loaded = editorLoadStateFromResponse(result, editorViewStatesRef.current[file.path]);
-      editorBuffersRef.current[file.path] = loaded.buffer;
-      setEditorBufferRevision((value) => value + 1);
-      applyEditorLoadState(loaded);
-      await persistActiveFile(root, file.path);
-      if (options.focusEditor) {
-        requestAnimationFrame(() => {
-          editorViewRef.current?.focus();
-        });
-      }
-    } catch (err) {
-      if (editorLoadSeq.current !== seq) return;
-      const failed = editorLoadErrorState(err);
-      editorBuffersRef.current[file.path] = failed.buffer;
-      setEditorBufferRevision((value) => value + 1);
-      applyEditorLoadState(failed);
-    } finally {
-      if (editorLoadSeq.current === seq) setEditorLoading(false);
-    }
-  };
-
-  const requestOpenEditorFile = async (
-    file: FileTreeNode,
-    options: OpenEditorFileOptions = {},
-    requestedBy: "user" | "agent" = "user",
-  ) => {
-    const currentPath = selectedFileRef.current?.path ?? null;
-    if (currentPath === file.path) {
+  const {
+    openDirect: openEditorFileDirect,
+    requestOpen: requestOpenEditorFile,
+  } = createEditorFileWorkflow({
+    applyState: (state: EditorFileLoadState) => {
+      setEditorText(state.text);
+      setSavedEditorText(state.savedText);
+      setEditorBytes(state.bytes);
+      setEditorModifiedMs(state.modifiedMs);
+      setEditorError(state.error);
+      setEditorRecoveryError(state.recoveryError);
+      setEditorCursor(state.cursor);
+    },
+    beginOpen: (file, focusEditor) => {
       closeDiffReview();
-      if (options.focusEditor) requestAnimationFrame(() => editorViewRef.current?.focus());
-      return true;
-    }
-    const audit = await gateAppAction(createAppAction({
-      kind: "open-file",
-      label: "Open file",
-      target: file.path,
-      risk: "low",
-      requestedBy,
-    }));
-    if (audit.decision !== "approved") return false;
-    await openEditorFileDirect(file, options);
-    return true;
-  };
+      captureCurrentEditorViewState();
+      captureCurrentEditorBuffer();
+      pendingEditorFocusRef.current = focusEditor;
+      setEditorTabs((tabs) => upsertEditorTab(tabs, file));
+      setSelectedFile(file);
+      setEditorSaving(false);
+    },
+    buffers: editorBuffersRef,
+    bumpBufferRevision: () => setEditorBufferRevision((value) => value + 1),
+    focusEditor: () => editorViewRef.current?.focus(),
+    gateAction: (action) => gateAppAction(action),
+    getActiveFilePath: () => selectedFileRef.current?.path ?? null,
+    getRoot: () => workspacePathRef.current ?? workspacePath,
+    loadSequence: editorLoadSeq,
+    onCurrentFile: (focusEditor) => {
+      closeDiffReview();
+      if (focusEditor) requestAnimationFrame(() => editorViewRef.current?.focus());
+    },
+    persistActiveFile,
+    prepareRead: () => {
+      setEditorError(null);
+      setEditorRecoveryError(null);
+      setEditorBytes(null);
+      setEditorModifiedMs(null);
+      setEditorCursor({ line: 1, column: 1 });
+    },
+    setLoading: setEditorLoading,
+    viewStates: editorViewStatesRef,
+  });
 
   const saveEditorFile = async (options: SaveEditorFileOptions = {}) => {
     const root = workspacePathRef.current ?? workspacePath;
