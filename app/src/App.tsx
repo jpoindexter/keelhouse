@@ -211,6 +211,7 @@ import { buildTerminalContextMenuItems } from "./terminalContextMenu";
 import { buildProjectSessionContextMenuItems } from "./projectSessionContextMenu";
 import { planPaneExit } from "./paneExitPlan";
 import { planProjectSessionDelete } from "./deleteProjectSessionPlan";
+import { replaceRestartedPane } from "./terminalPaneRestart";
 import {
   addBackgroundExit,
   clearBackgroundExitsForProject,
@@ -2132,6 +2133,32 @@ function App() {
     await persistComposerHarnessRecords(nextComposerHarness);
   };
 
+  const recordRestartedPaneActivity = (
+    restarted: ManagedTerminalPane | undefined,
+    previousPane: ManagedTerminalPane,
+    projectId: string,
+    projectSessionId: string,
+    label: string,
+  ) => {
+    if (!restarted) return;
+    recordAgentActivity(
+      buildAgentSessionHandleDescriptor({
+        pane: restarted,
+        projectId,
+        projectSessionId,
+        label,
+        approvalMode: agentApprovalMode,
+      }),
+      {
+        kind: "process",
+        label: "Restarted process",
+        detail: launchProfileCommandLine(previousPane.profile),
+        target: previousPane.cwd,
+        status: "running",
+      },
+    );
+  };
+
   const deleteProjectSession = async (projectPath: string, session: ProjectSession) => {
     const plan = planProjectSessionDelete({
       activeSessionByProject: activeSessionByProjectRef.current,
@@ -2247,11 +2274,7 @@ function App() {
     setLaunchProfileChanging(true);
     try {
       const result = await invoke<OpenPaneResponse>("restart_pane", { path: root, paneId: pane.id, profile: pane.profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root) });
-      const nextPanes = terminalPanesForSession(root, sessionId).map((item) =>
-        item.id === pane.id
-          ? { ...item, id: result.paneId, state: "running" as TerminalPaneState, exitCode: null, createdAt: Date.now() }
-          : item,
-      );
+      const nextPanes = replaceRestartedPane(terminalPanesForSession(root, sessionId), pane.id, result.paneId, Date.now());
       delete terminalSnapshotsRef.current[pane.id];
       latest.current = null;
       setSessionTerminalPanes(root, sessionId, nextPanes, result.paneId);
@@ -2261,24 +2284,7 @@ function App() {
       await updateOpenProjectStatus(root, projectStatusForRoot(root));
       await updateActiveSessionStatus(root, terminalPaneProjectStatus(nextPanes));
       const restarted = nextPanes.find((item) => item.id === result.paneId);
-      if (restarted && sessionId) {
-        recordAgentActivity(
-          buildAgentSessionHandleDescriptor({
-            pane: restarted,
-            projectId: root,
-            projectSessionId: sessionId,
-            label,
-            approvalMode: agentApprovalMode,
-          }),
-          {
-            kind: "process",
-            label: "Restarted process",
-            detail: launchProfileCommandLine(pane.profile),
-            target: pane.cwd,
-            status: "running",
-          },
-        );
-      }
+      recordRestartedPaneActivity(restarted, pane, root, sessionId, label);
       return true;
     } catch (err) {
       setLaunchError(String(err));
