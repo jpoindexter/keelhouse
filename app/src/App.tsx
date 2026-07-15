@@ -251,7 +251,8 @@ import {
   chatProviderLabel,
   emptyChatConversation,
 } from "./chatConversation";
-import type { ChatConversation, ChatConversationRecords, ChatMessage, ChatProvider, ChatRunEnvelope } from "./chatConversation";
+import type { ChatConversation, ChatConversationRecords, ChatMessage, ChatProvider } from "./chatConversation";
+import { useChatRunEvents } from "./useChatRunEvents";
 import { createChatForkPlan } from "./chatForkPlan";
 import {
   deleteDurableChatConversation,
@@ -1046,22 +1047,10 @@ function App() {
       : `Forked ${plan.sourceTitle}`);
   };
 
-  useEffect(() => {
-    let disposed = false;
-    let removeListener: (() => void) | null = null;
-    void listen<ChatRunEnvelope>("chat-run-event", (event) => {
-      updateChatConversation(event.payload.chatId, (conversation) =>
-        applyChatRunEnvelope(conversation, event.payload)
-      );
-    }).then((remove) => {
-      if (disposed) remove();
-      else removeListener = remove;
-    });
-    return () => {
-      disposed = true;
-      removeListener?.();
-    };
-  }, []);
+  useChatRunEvents((envelope) => {
+    updateChatConversation(envelope.chatId, (conversation) =>
+      applyChatRunEnvelope(conversation, envelope));
+  });
 
   const persistComposerHarnessRecords = async (records: ComposerHarnessRecords) => {
     composerHarnessBySessionRef.current = records;
