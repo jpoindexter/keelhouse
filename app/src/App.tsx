@@ -37,6 +37,11 @@ import { useComposerLocalState } from "./useComposerLocalState";
 import { useComposerAttachments } from "./useComposerAttachments";
 import { useEditorNavigationLifecycle } from "./useEditorNavigationLifecycle";
 import { createWorkspacePersistence } from "./workspacePersistence";
+import {
+  createTerminalPaneContexts,
+  type ActiveTerminalPaneByContext,
+  type TerminalPanesByContext,
+} from "./terminalPaneContexts";
 import type { BrowserPreviewRecords } from "./browserPreview";
 import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
@@ -150,7 +155,6 @@ import type { AgentActivityEvent, AgentActivityLogFilter } from "./agentActivity
 import {
   normalizeTerminalPaneLabel,
   terminalPaneLabelForDisplay,
-  terminalPaneProjectStatus as projectStatusFromTerminalPanes,
 } from "./terminalPane";
 import type { TerminalPaneState } from "./terminalPane";
 import type { GitStatusFile } from "./fileGitStatus";
@@ -269,7 +273,7 @@ import {
 } from "./settingsMcpActions";
 import { resetSettingsLocalData } from "./settingsLocalReset";
 import { ContextMenu, type ContextMenuItem, type ContextMenuState } from "./ContextMenu";
-import { paneContextBelongsToProject, paneContextKey, paneContextParts } from "./paneOwnership";
+import { paneContextKey } from "./paneOwnership";
 import { composerReasoningLabel } from "./ComposerReasoningPicker";
 import { closeProjectResources as closeProjectResourcesWithContext } from "./projectResourceClose";
 import { requestProjectClose } from "./projectCloseRequest";
@@ -298,8 +302,6 @@ type ResolveWorkspaceResponse = { root: string };
 type OpenPaneResponse = { paneId: number };
 type ClosePaneResponse = { activePaneId: number | null };
 type WorktreeResponse = { path: string; branch: string };
-type TerminalPanesByContext = Record<string, ManagedTerminalPane[]>;
-type ActiveTerminalPaneByContext = Record<string, number>;
 type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
 type OpenEditorFileOptions = { focusEditor?: boolean };
 type SaveEditorFileOptions = { force?: boolean };
@@ -1007,104 +1009,34 @@ function App() {
   const updateActiveSessionStatus = async (path: string | null, status: ProjectRailStatus) =>
     updateSessionStatus(path, activeSessionForProject(path), status);
 
-  const setManagedTerminalPanes = (panes: ManagedTerminalPane[]) => {
-    terminalPanesRef.current = panes;
-    setTerminalPanes(panes);
-  };
-
-  const setFocusedTerminalPane = (paneId: number | null) => {
-    activeTerminalPaneIdRef.current = paneId;
-    setActiveTerminalPaneId(paneId);
-  };
-
   const activeSessionForProject = (root: string | null) =>
     activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, root);
-
-  const terminalPanesForSession = (
-    root: string | null,
-    sessionId: string | null = activeSessionForProject(root),
-  ) => {
-    const key = paneContextKey(root, sessionId);
-    return key ? terminalPanesByContextRef.current[key] ?? [] : [];
-  };
-
-  const terminalPanesForProject = (root: string | null) => {
-    if (!root) return [];
-    return Object.entries(terminalPanesByContextRef.current)
-      .filter(([key]) => paneContextBelongsToProject(key, root))
-      .flatMap(([, panes]) => panes);
-  };
-
-  const paneContextForPaneId = (paneId: number) => {
-    const entry = Object.entries(terminalPanesByContextRef.current).find(([, panes]) =>
-      panes.some((pane) => pane.id === paneId)
-    );
-    if (!entry) return null;
-    const parts = paneContextParts(entry[0]);
-    return parts ? { key: entry[0], panes: entry[1], ...parts } : null;
-  };
-
-  const activePaneForSession = (
-    root: string | null,
-    sessionId: string | null = activeSessionForProject(root),
-    panes: ManagedTerminalPane[] = terminalPanesForSession(root, sessionId),
-  ) => {
-    const key = paneContextKey(root, sessionId);
-    if (!key) return null;
-    const saved = activeTerminalPaneByContextRef.current[key];
-    return panes.some((pane) => pane.id === saved) ? saved : panes[0]?.id ?? null;
-  };
-
-  const setSessionTerminalPanes = (
-    root: string,
-    sessionId: string,
-    panes: ManagedTerminalPane[],
-    activePaneId: number | null = activePaneForSession(root, sessionId, panes),
-  ) => {
-    const key = paneContextKey(root, sessionId);
-    if (!key) return;
-    terminalPanesByContextRef.current = { ...terminalPanesByContextRef.current, [key]: panes };
-    if (activePaneId == null) {
-      const { [key]: _removedActive, ...nextActive } = activeTerminalPaneByContextRef.current;
-      activeTerminalPaneByContextRef.current = nextActive;
-    } else {
-      activeTerminalPaneByContextRef.current = { ...activeTerminalPaneByContextRef.current, [key]: activePaneId };
-    }
-    if (workspacePathRef.current === root && activeSessionForProject(root) === sessionId) {
-      setManagedTerminalPanes(panes);
-      setFocusedTerminalPane(activePaneId);
-    }
-    persistPaneLayoutForSession(root, sessionId, panes);
-  };
-
-  const terminalPaneProjectStatus = (panes: ManagedTerminalPane[] = terminalPanesRef.current): ProjectRailStatus => {
-    return projectStatusFromTerminalPanes(panes);
-  };
-
-  const projectStatusForRoot = (root: string | null): ProjectRailStatus =>
-    terminalPaneProjectStatus(terminalPanesForProject(root));
-
-  const activeSessionStatus = (): ProjectRailStatus => terminalPaneProjectStatus(terminalPanesRef.current);
-
-  const activeProjectStatus = (): ProjectRailStatus => {
-    return projectStatusForRoot(workspacePathRef.current);
-  };
-
-  const setPaneState = (paneId: number, state: TerminalPaneState, exitCode: number | null = null) => {
-    const context = paneContextForPaneId(paneId);
-    const currentPanes = context?.panes ?? terminalPanesRef.current;
-    const next = currentPanes.map((pane) =>
-      pane.id === paneId ? { ...pane, state, exitCode } : pane,
-    );
-    if (context) setSessionTerminalPanes(
-      context.projectRoot,
-      context.sessionId,
-      next,
-      activePaneForSession(context.projectRoot, context.sessionId, next),
-    );
-    else setManagedTerminalPanes(next);
-    return next;
-  };
+  const {
+    activePaneForSession,
+    activeProjectStatus,
+    activeSessionStatus,
+    contextForPaneId: paneContextForPaneId,
+    panesForProject: terminalPanesForProject,
+    panesForSession: terminalPanesForSession,
+    projectStatusForRoot,
+    setFocusedPane: setFocusedTerminalPane,
+    setManagedPanes: setManagedTerminalPanes,
+    setPaneState,
+    setSessionPanes: setSessionTerminalPanes,
+    statusForPanes: terminalPaneProjectStatus,
+  } = createTerminalPaneContexts({
+    activePaneIds: activeTerminalPaneByContextRef,
+    activeSessionForProject,
+    activeWorkspace: workspacePathRef,
+    panes: terminalPanesRef,
+    panesByContext: terminalPanesByContextRef,
+    persistPaneLayout: persistPaneLayoutForSession,
+    setActivePaneId: (paneId) => {
+      activeTerminalPaneIdRef.current = paneId;
+      setActiveTerminalPaneId(paneId);
+    },
+    setPanes: setTerminalPanes,
+  });
 
   const terminalPaneLabel = (pane: ManagedTerminalPane, index: number) => terminalPaneLabelForDisplay(pane.label, pane.profile.label, index);
 
