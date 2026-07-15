@@ -28,13 +28,11 @@ import { EditorCodeSurface } from "./EditorCodeSurface";
 import { AgentComposerSurface } from "./AgentComposerSurface";
 import { AppRuntimeDialogs } from "./AppRuntimeDialogs";
 import {
-  browserHistoryCanGoBack,
-  browserHistoryCanGoForward,
   DEFAULT_BROWSER_PREVIEW_URL,
   detectLocalDevServerUrl,
   normalizeBrowserPreviewUrl,
-  pushBrowserHistory,
 } from "./browserPreview";
+import { useBrowserPreviewState } from "./useBrowserPreviewState";
 import type { BrowserPreviewRecords } from "./browserPreview";
 import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
@@ -474,12 +472,13 @@ function App() {
   const [composerHarnessBySession, setComposerHarnessBySession] = useState<ComposerHarnessRecords>({});
   const [scopedSettings, setScopedSettings] = useState<ScopedSettingsState>(defaultScopedSettings);
   const [chatConversations, setChatConversations] = useState<ChatConversationRecords>({});
-  const [browserUrl, setBrowserUrl] = useState(DEFAULT_BROWSER_PREVIEW_URL);
-  const [browserAddress, setBrowserAddress] = useState(DEFAULT_BROWSER_PREVIEW_URL);
-  const [browserHistory, setBrowserHistory] = useState([DEFAULT_BROWSER_PREVIEW_URL]);
-  const [browserHistoryIndex, setBrowserHistoryIndex] = useState(0);
-  const [browserReloadNonce, setBrowserReloadNonce] = useState(0);
-  const [browserError, setBrowserError] = useState<string | null>(null);
+  const {
+    address: browserAddress, canGoBack: browserCanGoBack, canGoForward: browserCanGoForward,
+    error: browserError, goHistory: goBrowserHistory, reload: reloadBrowserPreview,
+    reloadNonce: browserReloadNonce, restore: restoreBrowserPreviewState,
+    setAddress: setBrowserAddress, setError: setBrowserError, setLocation: setBrowserLocation,
+    url: browserUrl,
+  } = useBrowserPreviewState((url) => { browserUrlRef.current = url; });
   const [detectedLocalDevServer, setDetectedLocalDevServer] = useState<DetectedLocalDevServer | null>(null);
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
   const [draftDialogError, setDraftDialogError] = useState<string | null>(null);
@@ -617,8 +616,6 @@ function App() {
   const primarySurfaceLabel = "Codex";
   const primarySurfaceStatusLabel = activeChatConversation.activeRunId ? "Working" : "Ready";
   const utilityTrayStatusLabel = utilityTrayMode.charAt(0).toUpperCase() + utilityTrayMode.slice(1);
-  const browserCanGoBack = browserHistoryCanGoBack(browserHistoryIndex);
-  const browserCanGoForward = browserHistoryCanGoForward(browserHistory, browserHistoryIndex);
   const activeDetectedLocalDevServer =
     detectedLocalDevServer &&
     detectedLocalDevServer.projectId === workspacePath &&
@@ -1164,18 +1161,6 @@ function App() {
     });
   };
 
-  const setBrowserLocation = (url: string, options: { pushHistory?: boolean } = {}) => {
-    browserUrlRef.current = url;
-    setBrowserUrl(url);
-    setBrowserAddress(url);
-    setBrowserError(null);
-    if (options.pushHistory ?? true) {
-      const next = pushBrowserHistory(browserHistory, browserHistoryIndex, url);
-      setBrowserHistory(next.history);
-      setBrowserHistoryIndex(next.index);
-    }
-  };
-
   const persistBrowserPreviewUrl = async (root: string | null, sessionId: string | null, url: string) => {
     if (!root) return;
     const nextByProject = { ...browserPreviewByProjectRef.current, [root]: url };
@@ -1198,13 +1183,7 @@ function App() {
 
   const restoreBrowserPreview = (root: string | null, sessionId: string | null) => {
     const nextUrl = resolveScopedSetting(scopedSettingsRef.current, "browserUrl", root, sessionId).value;
-    browserUrlRef.current = nextUrl;
-    setBrowserUrl(nextUrl);
-    setBrowserAddress(nextUrl);
-    setBrowserHistory([nextUrl]);
-    setBrowserHistoryIndex(0);
-    setBrowserError(null);
-    setBrowserReloadNonce((value) => value + 1);
+    restoreBrowserPreviewState(nextUrl);
   };
 
   const navigateBrowserPreview = async (rawUrl: string) => {
@@ -1237,16 +1216,6 @@ function App() {
     if (toolTrayMode === "editor") setToolTrayMode("browser");
     await navigateBrowserPreview(activeDetectedLocalDevServer.url);
   };
-
-  const goBrowserHistory = (direction: -1 | 1) => {
-    const nextIndex = browserHistoryIndex + direction;
-    const nextUrl = browserHistory[nextIndex];
-    if (!nextUrl) return;
-    setBrowserHistoryIndex(nextIndex);
-    setBrowserLocation(nextUrl, { pushHistory: false });
-  };
-
-  const reloadBrowserPreview = () => setBrowserReloadNonce((value) => value + 1);
 
   const updateOpenProjectStatus = async (path: string | null, status: ProjectRailStatus) => {
     if (!path) return;
