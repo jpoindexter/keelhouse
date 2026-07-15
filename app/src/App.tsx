@@ -22,6 +22,7 @@ import { FilesSideDrawer } from "./FilesSideDrawer";
 import { ProjectThreadsDrawer } from "./ProjectThreadsDrawer";
 import { FilesDock, SourceControlDock } from "./WorkbenchDocks";
 import { WorkbenchResizers } from "./WorkbenchResizers";
+import { DRAWER_MODES, drawerTitleFor } from "./drawerModes";
 import { EditorChrome } from "./EditorChrome";
 import { EditorDiffView } from "./EditorDiffView";
 import { EditorCodeSurface } from "./EditorCodeSurface";
@@ -280,6 +281,7 @@ import {
 import { mergeChatDiscoveryResults, type ChatSearchResult, type ChatSearchViewResult } from "./chatDiscovery";
 import { ToolTrayTabs } from "./ToolTrayTabs";
 import type { FileTreeNode, FileTreeResponse } from "./fileTreeTypes";
+import { flattenFileTree, markDirtyFiles } from "./fileTreeView";
 import { StatusBar } from "./StatusBar";
 import {
   type OrchestrationChildDraft,
@@ -372,14 +374,6 @@ const formatBytes = (bytes: number | null) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
-const DRAWER_MODES: { id: SideDrawerMode; label: string; icon: AppIconName }[] = [
-  { id: "projects", label: "Projects", icon: "workspace" },
-  { id: "files", label: "Files", icon: "file" },
-  { id: "git", label: "Git", icon: "git" },
-  { id: "browser", label: "Browser", icon: "browser" },
-  { id: "settings", label: "Settings", icon: "settings" },
-];
-
 const menuItem = (
   id: string,
   label: string,
@@ -389,25 +383,6 @@ const menuItem = (
 
 const sourceRepoStatusTitleFor = (repoLocation: RepoLocation | null, toolStatus: SourceControlStatus["gh"] | undefined) =>
   repoLocation ? `${sourceRepoStatusLabel(repoLocation)} · ${toolStatus ? formatCliToolStatus(toolStatus) : "Checking authentication"}` : "";
-
-const drawerTitleFor = (mode: SideDrawerMode) => mode === "projects"
-  ? "Project chats"
-  : DRAWER_MODES.find((candidate) => candidate.id === mode)?.label ?? DRAWER_MODES[0].label;
-
-const markDirtyFile = (nodes: FileTreeNode[], dirtyPaths: Set<string>): FileTreeNode[] => {
-  if (dirtyPaths.size === 0) return nodes;
-  return nodes.map((node) => ({
-    ...node,
-    dirty: dirtyPaths.has(node.path),
-    children: node.children ? markDirtyFile(node.children, dirtyPaths) : undefined,
-  }));
-};
-
-const flattenFiles = (nodes: FileTreeNode[]): FileTreeNode[] =>
-  nodes.flatMap((node) => [
-    ...(node.kind === "file" ? [node] : []),
-    ...(node.children ? flattenFiles(node.children) : []),
-  ]);
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -616,13 +591,13 @@ function App() {
   const diffReviewCanDiscard = Boolean(diffReview && (diffReview.file.index === "?" || diffReview.file.worktree !== " "));
   const visibleFileTree = useMemo(
     () => {
-      const dirtyTree = markDirtyFile(fileTree, dirtyTabPathSet);
+      const dirtyTree = markDirtyFiles(fileTree, dirtyTabPathSet);
       const files = workspacePath && gitStatusRoot === workspacePath && gitStatus?.isRepository ? gitStatus.files : [];
       return decorateFileTreeWithGitStatus(workspacePath, dirtyTree, files);
     },
     [dirtyTabPathSet, fileTree, gitStatus, gitStatusRoot, workspacePath],
   );
-  const searchableFiles = useMemo(() => flattenFiles(visibleFileTree), [visibleFileTree]);
+  const searchableFiles = useMemo(() => flattenFileTree(visibleFileTree), [visibleFileTree]);
   const drawerSearchResults = useMemo(() => {
     return filterWorkspaceFiles(searchableFiles, drawerSearchQuery, drawerSearchQuery.trim() ? 80 : 40);
   }, [drawerSearchQuery, searchableFiles]);

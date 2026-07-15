@@ -29,6 +29,7 @@ const composerModelPopover = read("app/src/ComposerModelPopover.tsx");
 const composerReasoningPicker = read("app/src/ComposerReasoningPicker.tsx");
 const composerSurface = read("app/src/AgentComposerSurface.tsx");
 const appChromeState = read("app/src/useAppChromeState.ts");
+const drawerModes = read("app/src/drawerModes.ts");
 const searchCommandDialog = read("app/src/SearchCommandDialog.tsx");
 const commandPaletteController = read("app/src/useCommandPalette.ts");
 const commandPaletteSurface = [
@@ -196,7 +197,7 @@ assert(chatHarness.includes('params["effort"] = json!(effort);'), "Native chat r
 assert(claudeAdapter.includes('args.extend(["--effort".into(), effort.into()]);'), "Native Claude chat runs must apply the selected reasoning effort");
 assert(appTsx.includes("drawerActiveTitle"), "App drawer header must be mode-aware, not a generic Drawer label");
 assert(!appTsx.includes("<span>Drawer</span>"), "App drawer header must not render a generic Drawer label");
-assert(appTsx.includes("Project chats"), "Projects drawer must present independent chats under each project");
+assert(drawerModes.includes("Project chats"), "Projects drawer must present independent chats under each project");
 assert(appTsx.includes('aria-label="Agent conversation"'), "Center surface must remain the agent conversation");
 assert(!appTsx.includes('className="agent-surface-switcher"'), "The agent header must not duplicate the titlebar chat/terminal toggle");
 assert(!appTsx.includes('className="terminal-titlebar"'), "The conversation must not duplicate the active chat title below the native titlebar");
