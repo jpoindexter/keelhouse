@@ -21,6 +21,7 @@ import { TerminalPaneControls } from "./TerminalPaneControls";
 import { TerminalViewport } from "./TerminalViewport";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
 import { BrowserToolsDrawer } from "./BrowserToolsDrawer";
+import { SourceControlDrawer } from "./SourceControlDrawer";
 import { EditorSaveError } from "./EditorSaveError";
 import { OrchestrationDialog } from "./OrchestrationDialog";
 import { composerPopoverPosition, handleComposerMenuToggle } from "./composerPopover";
@@ -5763,68 +5764,14 @@ function App() {
         ) : null}
         {!sideDrawerCollapsed && sideDrawerMode === "projects" && visibleOpenProjects.length === 0 ? <div className="rail-status">Open a folder to start a chat</div> : null}
         {!sideDrawerCollapsed && sideDrawerMode === "git" ? (
-          <section className="drawer-panel" aria-label="Source control">
-            <div className="panel-title panel-title--with-action">
-              <span>Source Control</span>
-              <button
-                className="rail-open-button"
-                type="button"
-                disabled={!workspacePath || gitStatusLoading}
-                onClick={() => void refreshGitStatus()}
-              >
-                <AppIcon name="reload" />
-                <span>Refresh</span>
-              </button>
-            </div>
-            {gitStatusLoading ? <div className="rail-status">Reading git status…</div> : null}
-            {gitStatusError ? <div className="rail-status rail-status--error">{gitStatusError}</div> : null}
-            {!workspacePath ? <div className="rail-status">Open a folder to read source control</div> : null}
-            {workspacePath && gitStatus?.isRepository === false ? <div className="rail-status">This workspace is not a Git repository</div> : null}
-            {gitStatus?.isRepository ? (
-              <>
-                <div className="drawer-summary">
-                  <div>
-                    <span>Branch</span>
-                    <strong>{gitStatus.branch ?? "Detached"}</strong>
-                  </div>
-                  <div>
-                    <span>Changes</span>
-                    <strong>{gitStatus.files.length}</strong>
-                  </div>
-                  <div>
-                    <span>Staged</span>
-                    <strong>{gitStatus.staged}</strong>
-                  </div>
-                  <div>
-                    <span>Untracked</span>
-                    <strong>{gitStatus.untracked}</strong>
-                  </div>
-                  {gitStatus.ahead > 0 || gitStatus.behind > 0 ? (
-                    <div>
-                      <span>Remote</span>
-                      <strong>{`+${gitStatus.ahead} / -${gitStatus.behind}`}</strong>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="drawer-list">
-                  {gitStatus.files.length === 0 ? <div className="rail-status">Working tree clean</div> : null}
-                  {gitStatus.files.map((file) => (
-                    <button
-                      className="drawer-list-row"
-                      type="button"
-                      key={`${file.index}${file.worktree}${file.path}`}
-                      title={`${gitStatusLabel(file)} · ${file.path}`}
-                      onClick={() => void openGitDiff(file)}
-                    >
-                      <AppIcon name={file.index === "?" ? "filePlus" : "git"} />
-                      <span className="drawer-list-row__main">{basename(file.path)}</span>
-                      <span className="drawer-list-row__meta">{gitStatusLabel(file)} · Review diff</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : null}
-          </section>
+          <SourceControlDrawer
+            error={gitStatusError}
+            hasWorkspace={Boolean(workspacePath)}
+            loading={gitStatusLoading}
+            status={gitStatus}
+            onOpenDiff={(file) => void openGitDiff(file)}
+            onRefresh={() => void refreshGitStatus()}
+          />
         ) : null}
         {!sideDrawerCollapsed && sideDrawerMode === "browser" ? (
           <BrowserToolsDrawer
