@@ -220,6 +220,7 @@ import { replaceRestartedPane } from "./terminalPaneRestart";
 import { planCheckpointRestore } from "./checkpointRestorePlan";
 import { buildCreatedTerminalPane } from "./terminalPaneCreate";
 import { buildCreatedWorktreePaneState } from "./terminalWorktreePaneCreate";
+import { buildWorkspaceOpenPane } from "./workspaceOpenPanes";
 import {
   addBackgroundExit,
   clearBackgroundExitsForProject,
@@ -1761,16 +1762,14 @@ function App() {
           ? paneLayoutsBySessionRef.current[sessionSnapshotKey(root, requestedSessionId)] ?? initialLayout
           : initialLayout;
         const [firstRecord, ...restRecords] = layout.length > 0 ? layout : fallbackLayout;
-        const pane = {
-          id: result.paneId,
-          profile: firstProfile,
-          cwd: root,
-          slot: firstRecord.slot,
-          label: firstRecord.label ?? savedPaneLabelForSlot(root, firstRecord.slot, requestedSessionId),
-          state: "running" as TerminalPaneState,
-          exitCode: null,
+        const pane = buildWorkspaceOpenPane({
           createdAt: Date.now(),
-        };
+          cwd: root,
+          layout: firstRecord,
+          paneId: result.paneId,
+          profile: firstProfile,
+          savedLabel: savedPaneLabelForSlot(root, firstRecord.slot, requestedSessionId),
+        });
         nextProjectPanes = [pane];
         nextActivePaneId = result.paneId;
         for (const record of restRecords) {
@@ -1778,16 +1777,14 @@ function App() {
           const nextPane = await invoke<OpenPaneResponse>("create_pane", { path: root, profile: paneProfile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root) });
           nextProjectPanes = [
             ...nextProjectPanes,
-            {
-              id: nextPane.paneId,
-              profile: paneProfile,
-              cwd: root,
-              slot: record.slot,
-              label: record.label ?? savedPaneLabelForSlot(root, record.slot, requestedSessionId),
-              state: "running" as TerminalPaneState,
-              exitCode: null,
+            buildWorkspaceOpenPane({
               createdAt: Date.now(),
-            },
+              cwd: root,
+              layout: record,
+              paneId: nextPane.paneId,
+              profile: paneProfile,
+              savedLabel: savedPaneLabelForSlot(root, record.slot, requestedSessionId),
+            }),
           ];
         }
       } else {
