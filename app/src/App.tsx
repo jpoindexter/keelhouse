@@ -34,6 +34,7 @@ import { createBrowserPreviewActions } from "./browserPreviewActions";
 import { useBrowserPreviewState } from "./useBrowserPreviewState";
 import { useFilesRailHeight } from "./useFilesRailHeight";
 import { useComposerLocalState } from "./useComposerLocalState";
+import { createComposerSettingsActions } from "./composerSettingsActions";
 import { useComposerAttachments } from "./useComposerAttachments";
 import { useEditorNavigationLifecycle } from "./useEditorNavigationLifecycle";
 import { createWorkspacePersistence } from "./workspacePersistence";
@@ -97,7 +98,7 @@ import {
 } from "./agentComposer";
 import type { ComposerAppCommand } from "./agentComposer";
 import { runComposerAppCommand as runComposerAppCommandWithContext } from "./composerAppCommands";
-import type { ComposerHarnessRecords, ComposerReasoningEffort } from "./composerHarness";
+import type { ComposerHarnessRecords } from "./composerHarness";
 import { submitComposerDraft as submitComposerDraftWithContext } from "./composerSubmission";
 import {
   appActionAuditLabel,
@@ -1717,45 +1718,26 @@ function App() {
     await storeRef.current?.save();
   };
 
-  const setComposerApprovalMode = async (approvalMode: AgentApprovalMode) => {
-    await updateScopedSetting("chat", "approvalMode", approvalMode);
-    const next = await updateActiveComposerHarness((state) => ({ ...state, approvalMode }));
-    if (!next) return;
-    logComposerHarnessEvent("Permission mode changed", approvalMode);
-  };
-
-  const setComposerGoal = async (goal: string, options: { log?: boolean } = {}) => {
-    const next = await updateActiveComposerHarness((state) => ({ ...state, goal: goal.slice(0, 160) }));
-    if (options.log && next?.goal) logComposerHarnessEvent("Goal updated", next.goal);
-  };
-
-  const setComposerRuntime = async (provider: ChatProvider, model: string) => {
-    const chatId = activeComposerHarnessKey;
-    if (!chatId || activeChatConversation.activeRunId) return;
-    const providerChanged = provider !== activeComposerProvider;
-    if (providerChanged) await updateScopedSetting("chat", "agentProfileId", provider);
-    await updateActiveComposerHarness((state) => ({
-      ...state,
-      selectedProfileId: provider,
-      model: model.trim().slice(0, 128),
-    }));
-    if (providerChanged) {
-      updateChatConversation(chatId, (conversation) => ({
-        ...conversation,
-        provider,
-        providerThreadId: undefined,
-        updatedAt: Date.now(),
-      }));
-      logComposerHarnessEvent("Chat provider changed", chatProviderLabel(provider));
-    }
-    logComposerHarnessEvent("Chat model changed", model.trim() || `${chatProviderLabel(provider)} default`);
-  };
-
-  const setComposerReasoningEffort = async (reasoningEffort: ComposerReasoningEffort) => {
-    const next = await updateActiveComposerHarness((state) => ({ ...state, reasoningEffort }));
-    if (!next) return;
-    logComposerHarnessEvent("Reasoning effort changed", composerReasoningLabel(reasoningEffort));
-  };
+  const composerSettingsActions = createComposerSettingsActions({
+    getRuntimeState: () => ({
+      activeRunId: activeChatConversation.activeRunId,
+      chatId: activeComposerHarnessKey,
+      provider: activeComposerProvider,
+    }),
+    labelProvider: chatProviderLabel,
+    labelReasoning: composerReasoningLabel,
+    logEvent: logComposerHarnessEvent,
+    now: Date.now,
+    updateConversation: updateChatConversation,
+    updateHarness: updateActiveComposerHarness,
+    updateScopedSetting: (key, value) => key === "approvalMode"
+      ? updateScopedSetting("chat", "approvalMode", value as AgentApprovalMode)
+      : updateScopedSetting("chat", "agentProfileId", value as ChatProvider),
+  });
+  const setComposerApprovalMode = composerSettingsActions.setApprovalMode;
+  const setComposerGoal = composerSettingsActions.setGoal;
+  const setComposerRuntime = composerSettingsActions.setRuntime;
+  const setComposerReasoningEffort = composerSettingsActions.setReasoningEffort;
 
   const focusTerminalPane = async (paneId: number, requestedBy: "user" | "agent" = "user") => {
     if (paneId === activeTerminalPaneIdRef.current) return;
