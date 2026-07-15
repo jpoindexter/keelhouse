@@ -111,6 +111,7 @@ import {
 } from "./agentSessionHandle";
 import type { AgentApprovalMode, AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
 import { executeAgentPaneInterrupt } from "./agentPaneInterrupt";
+import { executeTerminalPaneClose } from "./terminalPaneCloseWorkflow";
 import { AppIcon } from "./icons";
 import type { AppIconName } from "./icons";
 import {
@@ -298,7 +299,6 @@ type PaneExit = { paneId: number; command: string; code: number; message: string
 type OpenWorkspaceResponse = { root: string; paneId: number };
 type ResolveWorkspaceResponse = { root: string };
 type OpenPaneResponse = { paneId: number };
-type ClosePaneResponse = { activePaneId: number | null };
 type WorktreeResponse = { path: string; branch: string };
 type SaveEditorFileOptions = { force?: boolean };
 type DetectedLocalDevServer = {
@@ -1970,45 +1970,25 @@ function App() {
     if (!root || !sessionId) return false;
     const pane = terminalPanesForSession(root, sessionId).find((item) => item.id === paneId);
     if (!pane) return false;
-    const audit = await gateAppAction(createAppAction({
-      kind: "close-pane",
-      label: "Close pane",
-      target: terminalPaneLabelForDisplay(pane.label, pane.profile.label, pane.slot),
-      risk: "destructive",
-      requestedBy: "user",
-      undoHint: "Create a new pane from the same profile; live process state is not recoverable.",
-    }), activeAgentSessionDescriptor);
-    if (audit.decision !== "approved") return false;
-    try {
-      intentionallyTerminatedPaneIdsRef.current.add(paneId);
-      let result: ClosePaneResponse;
-      try {
-        result = await invoke<ClosePaneResponse>("close_pane", { paneId });
-      } catch (error) {
-        intentionallyTerminatedPaneIdsRef.current.delete(paneId);
-        throw error;
-      }
-      const remaining = terminalPanesForSession(root, sessionId).filter((item) => item.id !== paneId);
-      const nextActive = result.activePaneId != null && remaining.some((item) => item.id === result.activePaneId)
-        ? result.activePaneId
-        : remaining[0]?.id ?? null;
-      delete terminalSnapshotsRef.current[paneId];
-      setSessionTerminalPanes(root, sessionId, remaining, nextActive);
-      if (nextActive != null) await invoke("focus_pane", { paneId: nextActive });
-      latest.current = nextActive == null ? null : terminalSnapshotsRef.current[nextActive] ?? null;
-      requestTerminalPaintRef.current();
-      setLaunchError(null);
-      const status = terminalPaneProjectStatus(remaining);
-      await updateOpenProjectStatus(root, projectStatusForRoot(root));
-      await updateActiveSessionStatus(root, status);
-      if (nextActive != null) setTimeout(sendTerminalResize, 0);
-      return true;
-    } catch (err) {
-      setLaunchError(String(err));
-      await updateOpenProjectStatus(root, "attention");
-      await updateActiveSessionStatus(root, "attention");
-      return false;
-    }
+    return executeTerminalPaneClose({
+      clearPaneSnapshot: (id) => { delete terminalSnapshotsRef.current[id]; },
+      closePane: async (id) => (await invoke<{ activePaneId: number | null }>("close_pane", { paneId: id })).activePaneId,
+      currentPanes: () => terminalPanesForSession(root, sessionId),
+      focusPane: (id) => invoke("focus_pane", { paneId: id }),
+      gateAction: async (action) => (await gateAppAction(action, activeAgentSessionDescriptor)).decision,
+      markIntentionallyTerminated: (id) => intentionallyTerminatedPaneIdsRef.current.add(id),
+      pane,
+      projectStatus: () => projectStatusForRoot(root),
+      requestPaint: () => requestTerminalPaintRef.current(),
+      scheduleResize: () => setTimeout(sendTerminalResize, 0),
+      sessionStatus: terminalPaneProjectStatus,
+      setError: setLaunchError,
+      setLatestSnapshot: (id) => { latest.current = id == null ? null : terminalSnapshotsRef.current[id] ?? null; },
+      setSessionPanes: (panes, activeId) => setSessionTerminalPanes(root, sessionId, panes, activeId),
+      unmarkIntentionallyTerminated: (id) => intentionallyTerminatedPaneIdsRef.current.delete(id),
+      updateProjectStatus: (status) => updateOpenProjectStatus(root, status),
+      updateSessionStatus: (status) => updateActiveSessionStatus(root, status),
+    });
   };
 
   const createWorktreePane = async (profile: LaunchProfile = terminalLaunchProfileRef.current) => {
