@@ -22,6 +22,7 @@ import { TerminalViewport } from "./TerminalViewport";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
 import { BrowserToolsDrawer } from "./BrowserToolsDrawer";
 import { SourceControlDrawer } from "./SourceControlDrawer";
+import { QuickSettingsDrawer } from "./QuickSettingsDrawer";
 import { EditorSaveError } from "./EditorSaveError";
 import { OrchestrationDialog } from "./OrchestrationDialog";
 import { composerPopoverPosition, handleComposerMenuToggle } from "./composerPopover";
@@ -208,7 +209,6 @@ import {
   paneLayoutFromPanes,
 } from "./sessionRestore";
 import type { PaneLayoutsBySession } from "./sessionRestore";
-import type { ToolTrayMode, WorkbenchLayoutMode } from "./workbenchLayout";
 import { useWorkbenchLayout } from "./useWorkbenchLayout";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { migrateWorkspaceStore } from "./workspaceMigrations";
@@ -5793,76 +5793,24 @@ function App() {
           />
         ) : null}
         {!sideDrawerCollapsed && sideDrawerMode === "settings" ? (
-          <section className="drawer-panel" aria-label="Settings">
-            <div className="panel-title">Settings</div>
-            <label className="drawer-field">
-              <span>New terminal pane profile</span>
-              <select
-                value={terminalLaunchProfile.id}
-                disabled={launchProfileChanging}
-                onChange={(event) => void switchTerminalLaunchProfile(resolveLaunchProfile(event.currentTarget.value))}
-              >
-                {allLaunchProfiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="drawer-field">
-              <span>Permission mode</span>
-              <select
-                value={activeComposerHarness.approvalMode}
-                disabled={!activeComposerHarnessKey}
-                onChange={(event) => void setComposerApprovalMode(event.currentTarget.value as AgentApprovalMode)}
-              >
-                <option value="ask">Ask</option>
-                <option value="approveSafe">Approve safe</option>
-                <option value="fullAccess">Full access</option>
-              </select>
-            </label>
-            <label className="drawer-field">
-              <span>Bottom tray</span>
-              <select
-                value={agentSurfaceMode}
-                onChange={(event) => event.currentTarget.value === "terminal"
-                  ? void toggleRawTerminal()
-                  : setAgentSurfaceMode("chat")}
-              >
-                <option value="chat">Collapsed</option>
-                <option value="terminal">Terminal open</option>
-              </select>
-            </label>
-            <label className="drawer-field">
-              <span>Tool tray</span>
-              <select value={renderedWorkbenchLayout} onChange={(event) => setWorkbenchLayout(event.currentTarget.value as WorkbenchLayoutMode)}>
-                <option value="left">Left</option>
-                <option value="right">Right</option>
-                <option value="bottom">Bottom</option>
-                <option value="hidden">Hidden</option>
-              </select>
-            </label>
-            <label className="drawer-field">
-              <span>Tray tabs</span>
-              <select value={toolTrayMode} onChange={(event) => setToolTrayMode(event.currentTarget.value as ToolTrayMode)}>
-                <option value="files">Files</option>
-                <option value="split">Split editor + browser</option>
-                <option value="editor">Editor only</option>
-                <option value="browser">Browser only</option>
-                <option value="git">Git</option>
-              </select>
-            </label>
-            <div className="drawer-action-grid">
-              <button className="rail-open-button" type="button" onClick={() => void pickWorkspace()}>
-                <AppIcon name="folderOpen" />
-                <span>Open Folder</span>
-              </button>
-              <button className="rail-open-button" type="button" disabled={!workspacePath} onClick={refreshFileTree}>
-                <AppIcon name="reload" />
-                <span>Refresh Files</span>
-              </button>
-            </div>
-          </section>
+          <QuickSettingsDrawer
+            approvalMode={activeComposerHarness.approvalMode}
+            canSetApproval={Boolean(activeComposerHarnessKey)}
+            hasWorkspace={Boolean(workspacePath)}
+            launchProfile={terminalLaunchProfile}
+            launchProfileChanging={launchProfileChanging}
+            launchProfiles={allLaunchProfiles}
+            terminalOpen={agentSurfaceMode === "terminal"}
+            toolMode={toolTrayMode}
+            workbenchLayout={renderedWorkbenchLayout}
+            onApprovalChange={(mode) => void setComposerApprovalMode(mode)}
+            onBottomTrayChange={(open) => open ? void toggleRawTerminal() : setAgentSurfaceMode("chat")}
+            onLayoutChange={setWorkbenchLayout}
+            onOpenFolder={() => void pickWorkspace()}
+            onProfileChange={(profileId) => void switchTerminalLaunchProfile(resolveLaunchProfile(profileId))}
+            onRefreshFiles={refreshFileTree}
+            onToolModeChange={setToolTrayMode}
+          />
         ) : null}
         {!sideDrawerCollapsed && sideDrawerMode === "files" ? (
           <div ref={railBodyRef} className="rail-tree">
