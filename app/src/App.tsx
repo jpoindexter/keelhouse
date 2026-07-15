@@ -272,6 +272,7 @@ import { paneContextBelongsToProject, paneContextKey, paneContextParts } from ".
 import { composerReasoningLabel } from "./ComposerReasoningPicker";
 import { closeProjectResources as closeProjectResourcesWithContext } from "./projectResourceClose";
 import { requestProjectClose } from "./projectCloseRequest";
+import { planProjectSessionSwitch } from "./projectSessionSwitch";
 import "./App.css";
 import "./composerModelPicker.css";
 import "./responsive-shell.css";
@@ -1963,20 +1964,16 @@ function App() {
   const switchProjectSession = async (projectPath: string, sessionId: string) => {
     setFocusedChatMessageId(null);
     const currentRoot = workspacePathRef.current;
-    const sameProject = currentRoot === projectPath;
-    const now = Date.now();
     await flushActiveComposerLocalState();
     captureCurrentSessionSnapshot();
-    let nextSessions = projectSessionsRef.current;
-    let nextActiveSessions = setActiveProjectSession(activeSessionByProjectRef.current, projectPath, sessionId);
-    const previousSessionId = activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, projectPath);
-    if (sameProject && previousSessionId && previousSessionId !== sessionId) {
-      nextSessions = setProjectSessionStatus(nextSessions, projectPath, previousSessionId, activeSessionStatus(), now);
-    }
     const targetStatus = terminalPaneProjectStatus(terminalPanesForSession(projectPath, sessionId));
-    nextSessions = setProjectSessionStatus(nextSessions, projectPath, sessionId, sameProject ? targetStatus : "exited", now);
-    await persistProjectSessions(nextSessions, nextActiveSessions);
-    if (sameProject) {
+    const planned = planProjectSessionSwitch({
+      activeSessions: activeSessionByProjectRef.current, sessions: projectSessionsRef.current,
+      currentRoot, projectPath, sessionId, targetStatus, now: Date.now(),
+      previousStatus: activeSessionStatus(),
+    });
+    await persistProjectSessions(planned.sessions, planned.activeSessions);
+    if (planned.sameProject) {
       await openWorkspaceDirect(projectPath, launchProfileRef.current, { captureCurrentSession: false });
     } else {
       await requestOpenWorkspace(projectPath);
