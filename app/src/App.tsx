@@ -220,14 +220,15 @@ import {
 import { buildRepoUrl, sourceRepoStatusLabel, type RepoLocation } from "./sourceControlLinks";
 import { buildSnapshot, createRenderPerfState, recordIpcPayloadBytes } from "./renderPerf";
 import { useTerminalCanvasRuntime } from "./useTerminalCanvasRuntime";
+import { useNativeAppEvents } from "./useNativeAppEvents";
+import { planPaneExit } from "./paneExitPlan";
 import {
   addBackgroundExit,
   clearBackgroundExitsForProject,
-  isBackgroundExit,
-  notificationBody,
+  notifyBackgroundExit,
   type BackgroundExit,
 } from "./backgroundExits";
-import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
+import { requestPermission } from "@tauri-apps/plugin-notification";
 import {
   addPaneTranscript,
   buildPaneTranscript,
@@ -5029,94 +5030,73 @@ function App() {
     },
   });
 
-  useEffect(() => {
-    const unlisten = listen<GridPayload>("grid", (ev) => {
-      ipcSampleCounter.current += 1;
-      if (ipcSampleCounter.current % 20 === 0) {
-        recordIpcPayloadBytes(renderPerfRef.current, JSON.stringify(ev.payload).length);
-      }
-      terminalSnapshotsRef.current[ev.payload.paneId] = ev.payload.snapshot;
-      detectLocalDevServerFromSnapshot(ev.payload.paneId, ev.payload.snapshot);
-      if (ev.payload.paneId === activeTerminalPaneIdRef.current) {
-        latest.current = ev.payload.snapshot;
-        requestTerminalPaintRef.current();
-      }
-    });
-    const unlistenMenu = listen("menu-open-folder", () => {
-      pickWorkspace();
-    });
-    const unlistenMenuSave = listen("menu-save-file", () => {
-      void saveEditorFileRef.current();
-    });
-    const unlistenMenuFind = listen("menu-find-in-file", () => {
-      openEditorSearchRef.current();
-    });
-    const unlistenMenuCloseTab = listen("menu-close-editor-tab", () => {
-      void closeActiveEditorTabRef.current();
-    });
-    const unlistenPaneExit = listen<PaneExit>("pane-exit", (ev) => {
-      const wasIntentionallyTerminated = intentionallyTerminatedPaneIdsRef.current.delete(ev.payload.paneId);
-      const context = paneContextForPaneId(ev.payload.paneId);
+  const handleGridPayload = (payload: GridPayload) => {
+    ipcSampleCounter.current += 1;
+    if (ipcSampleCounter.current % 20 === 0) {
+      recordIpcPayloadBytes(renderPerfRef.current, JSON.stringify(payload).length);
+    }
+    terminalSnapshotsRef.current[payload.paneId] = payload.snapshot;
+    detectLocalDevServerFromSnapshot(payload.paneId, payload.snapshot);
+    if (payload.paneId === activeTerminalPaneIdRef.current) {
+      latest.current = payload.snapshot;
+      requestTerminalPaintRef.current();
+    }
+  };
+
+  const handlePaneExit = (payload: PaneExit) => {
+      const intentionallyTerminated = intentionallyTerminatedPaneIdsRef.current.delete(payload.paneId);
+      const context = paneContextForPaneId(payload.paneId);
       const root = context?.projectRoot ?? workspacePathRef.current;
-      const nextPanes = setPaneState(ev.payload.paneId, "exited", ev.payload.code);
-      const nextStatus = terminalPaneProjectStatus(nextPanes);
-      const paneIndex = nextPanes.findIndex((pane) => pane.id === ev.payload.paneId);
-      const pane = paneIndex >= 0 ? nextPanes[paneIndex] : null;
       const sessionId = context?.sessionId ?? activeSessionForProject(root);
-      if (root && sessionId && pane) {
+      const plan = planPaneExit({
+        ...payload,
+        intentionallyTerminated,
+        contextRoot: root,
+        contextSessionId: sessionId,
+        workspaceRoot: workspacePathRef.current,
+        activePaneId: activeTerminalPaneIdRef.current,
+        activeSessionId: activeSessionForProject(root),
+        panes: setPaneState(payload.paneId, "exited", payload.code),
+      });
+      if (plan.root && plan.sessionId && plan.pane) {
         recordAgentActivity(
           buildAgentSessionHandleDescriptor({
-            pane,
-            projectId: root,
-            projectSessionId: sessionId,
-            label: terminalPaneLabelForDisplay(pane.label, pane.profile.label, paneIndex),
+            pane: plan.pane,
+            projectId: plan.root,
+            projectSessionId: plan.sessionId,
+            label: terminalPaneLabelForDisplay(plan.pane.label, plan.pane.profile.label, plan.paneIndex),
             approvalMode: agentApprovalMode,
           }),
           {
-            kind: wasIntentionallyTerminated ? "process" : "command",
-            label: wasIntentionallyTerminated ? "Process terminated" : ev.payload.code === 0 ? "Command finished" : "Command failed",
-            detail: ev.payload.command,
-            target: root,
-            exitCode: ev.payload.code,
+            ...plan.activity,
+            target: plan.root,
             outputRef: "terminal",
-            status: wasIntentionallyTerminated ? "exited" : ev.payload.code === 0 ? "complete" : "error",
           },
         );
       }
-      if (!wasIntentionallyTerminated && ev.payload.paneId === activeTerminalPaneIdRef.current) setLaunchError(ev.payload.message);
-      void updateOpenProjectStatus(root, projectStatusForRoot(root));
-      void updateSessionStatus(root, sessionId, nextStatus);
-      if (root && sessionId && pane) {
-        const snapshot = terminalSnapshotsRef.current[ev.payload.paneId];
-        if (snapshot) persistPaneTranscript(root, sessionId, pane, paneIndex, terminalSnapshotText(snapshot), Date.now());
+      if (plan.showLaunchError) setLaunchError(plan.launchError);
+      void updateOpenProjectStatus(plan.root, projectStatusForRoot(plan.root));
+      void updateSessionStatus(plan.root, plan.sessionId, plan.status);
+      if (plan.root && plan.sessionId && plan.pane) {
+        const snapshot = terminalSnapshotsRef.current[payload.paneId];
+        if (snapshot) persistPaneTranscript(plan.root, plan.sessionId, plan.pane, plan.paneIndex, terminalSnapshotText(snapshot), Date.now());
       }
-      const exitedInBackground = root && (
-        isBackgroundExit(root, workspacePathRef.current)
-        || sessionId !== activeSessionForProject(root)
-      );
-      if (!wasIntentionallyTerminated && root && exitedInBackground) {
-        const label = pane ? terminalPaneLabelForDisplay(pane.label, pane.profile.label, paneIndex) : "Agent";
-        const exit = { paneId: String(ev.payload.paneId), projectPath: root, label, failed: ev.payload.code !== 0 };
-        setBackgroundExits((exits) => addBackgroundExit(exits, exit));
+      if (plan.backgroundExit) {
+        setBackgroundExits((exits) => addBackgroundExit(exits, plan.backgroundExit!));
         if (notificationsEnabledRef.current) {
-          void (async () => {
-            let granted = await isPermissionGranted();
-            if (!granted) granted = (await requestPermission()) === "granted";
-            if (granted) sendNotification({ title: "Keelhouse", body: notificationBody(exit) });
-          })().catch(() => {});
+          void notifyBackgroundExit(plan.backgroundExit).catch(() => {});
         }
       }
-    });
+  };
 
-    return () => {
-      unlisten.then((f) => f());
-      unlistenMenu.then((f) => f());
-      unlistenMenuSave.then((f) => f());
-      unlistenMenuFind.then((f) => f());
-      unlistenMenuCloseTab.then((f) => f());
-      unlistenPaneExit.then((f) => f());
-    };
-  }, []);
+  useNativeAppEvents<GridPayload, PaneExit>({
+    onGrid: handleGridPayload,
+    onOpenFolder: () => { void pickWorkspace(); },
+    onSaveFile: () => { void saveEditorFileRef.current(); },
+    onFindInFile: () => openEditorSearchRef.current(),
+    onCloseEditorTab: () => { void closeActiveEditorTabRef.current(); },
+    onPaneExit: handlePaneExit,
+  });
 
   const activeTerminalPaneIndex = activeTerminalPane ? terminalPanes.findIndex((pane) => pane.id === activeTerminalPane.id) : -1;
   const activeTerminalPaneLabel = activeTerminalPane

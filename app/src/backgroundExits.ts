@@ -28,7 +28,14 @@ export const backgroundExitCountForProject = (current: BackgroundExit[], project
 export const notificationBody = (exit: BackgroundExit): string =>
   `${exit.label} ${exit.failed ? "failed" : "finished"} in ${projectName(exit.projectPath)}`;
 
+export const notifyBackgroundExit = async (exit: BackgroundExit): Promise<void> => {
+  let granted = await isPermissionGranted();
+  if (!granted) granted = (await requestPermission()) === "granted";
+  if (granted) sendNotification({ title: "Keelhouse", body: notificationBody(exit) });
+};
+
 const projectName = (projectPath: string): string => {
   const parts = projectPath.split("/").filter(Boolean);
   return parts[parts.length - 1] ?? projectPath;
 };
+import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
