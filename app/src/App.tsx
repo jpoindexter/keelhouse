@@ -31,7 +31,6 @@ import {
   browserHistoryCanGoForward,
   DEFAULT_BROWSER_PREVIEW_URL,
   detectLocalDevServerUrl,
-  normalizeBrowserPreviewRecords,
   normalizeBrowserPreviewUrl,
   pushBrowserHistory,
 } from "./browserPreview";
@@ -43,13 +42,7 @@ import {
   ensureProjectSessions,
   forgetActiveFile,
   isMissingWorkspaceError,
-  normalizeActiveFileByWorkspace,
-  normalizeActiveSessionByProject,
-  normalizeOpenProjects,
-  normalizeProjectSessionsByProject,
-  normalizeRecentProjects,
   newProjectSession,
-  openProjectsFromRecent,
   planProjectClose,
   pushRecentProject,
   removeProjectSession,
@@ -97,15 +90,10 @@ import {
   defaultTerminalLaunchProfile,
   launchProfileById,
   launchProfileCommandLine,
-  normalizeLaunchProfile,
-  normalizeCustomLaunchProfiles,
-  normalizeTerminalLaunchProfile,
 } from "./launchProfiles";
 import type { LaunchProfile } from "./launchProfiles";
 import {
   defaultScopedSettings,
-  migrateLegacyScopedSettings,
-  normalizeScopedSettings,
   resetScopedSetting,
   resolveScopedSetting,
   scopedSettingView,
@@ -125,7 +113,6 @@ import type { ComposerAppCommand } from "./agentComposer";
 import {
   createComposerAttachment,
   defaultComposerHarnessState,
-  normalizeComposerHarnessRecords,
   removeComposerAttachment,
   upsertComposerAttachment,
 } from "./composerHarness";
@@ -159,7 +146,6 @@ type AgentHookStatus = {
   running: boolean;
 };
 import {
-  normalizeKeybindingOverrides,
   setActiveKeybindingOverrides,
   shortcutKeys,
   type KeybindingOverrides,
@@ -171,7 +157,6 @@ import { QuickOpenDialog } from "./QuickOpenDialog";
 import { useQuickOpen } from "./useQuickOpen";
 import {
   DEFAULT_COMMAND_PALETTE_SOURCES,
-  normalizeCommandPaletteSources,
   type CommandPaletteSourceId,
 } from "./commandPaletteSources";
 import { filterWorkspaceFiles } from "./workspaceSearch";
@@ -179,7 +164,6 @@ import {
   MAX_AGENT_ACTIVITY_LOG_EVENTS,
   createAgentActivityEvent,
   filterAgentActivityEvents,
-  normalizeAgentActivityEvents,
   pushAgentActivityEvent,
 } from "./agentActivity";
 import type { AgentActivityEvent, AgentActivityLogFilter } from "./agentActivity";
@@ -197,21 +181,18 @@ import type { GitStatusFile } from "./fileGitStatus";
 import { parseUnifiedDiff } from "./diffView";
 import type { ParsedDiff } from "./diffView";
 import {
-  normalizePaneLayoutsBySession,
-  normalizeSessionEditorSnapshots,
   paneLayoutFromPanes,
 } from "./sessionRestore";
 import type { PaneLayoutsBySession } from "./sessionRestore";
 import { useShellLayout, type SideDrawerMode } from "./useShellLayout";
 import { useAppChromeState } from "./useAppChromeState";
 import { useSettingsRuntimeStatus } from "./useSettingsRuntimeStatus";
+import { loadWorkspaceBootstrap, type PaneLabelsBySession } from "./workspaceBootstrap";
 import { terminalSnapshotText } from "./terminalTranscript";
-import { migrateWorkspaceStore } from "./workspaceMigrations";
 import { SettingsModal } from "./SettingsModal";
 import { crashRecoveryMessage, deriveCrashRecovery } from "./crashRecovery";
 import {
   addWorktree,
-  normalizeWorktrees,
   removeWorktreeByPaneId,
   worktreeForPaneId,
   type WorktreeRecord,
@@ -228,7 +209,6 @@ import {
   mcpOauthClientSecretKey,
   mcpOauthTokenKey,
   mcpSecretKey,
-  normalizeAiConnectionSettings,
   providerSecretKey,
   type AiConnectionSettings,
   type ConnectionSecretStatus,
@@ -251,7 +231,6 @@ import { isPermissionGranted, requestPermission, sendNotification } from "@tauri
 import {
   addPaneTranscript,
   buildPaneTranscript,
-  normalizePaneTranscripts,
   type PaneTranscript,
 } from "./paneTranscripts";
 import { TranscriptsModal } from "./TranscriptsModal";
@@ -265,15 +244,12 @@ import {
   chatTitleFromPrompt,
   emptyChatConversation,
   forkChatConversation,
-  normalizeChatConversationRecords,
   startChatRun,
 } from "./chatConversation";
 import type { ChatConversation, ChatConversationRecords, ChatMessage, ChatProvider, ChatRunEnvelope } from "./chatConversation";
 import {
   deleteDurableChatConversation,
   deleteDurableProjectChats,
-  loadDurableChatConversations,
-  migrateLegacyChatConversations,
   resetDurableChatStore,
   saveDurableChatConversation,
   searchDurableChatMessages,
@@ -316,8 +292,6 @@ type ClosePaneResponse = { activePaneId: number | null };
 type WorktreeResponse = { path: string; branch: string };
 type TerminalPanesByContext = Record<string, ManagedTerminalPane[]>;
 type ActiveTerminalPaneByContext = Record<string, number>;
-type PaneLabelRecord = { slot: number; label: string; updatedAt: number };
-type PaneLabelsBySession = Record<string, PaneLabelRecord[]>;
 type WorkspaceTreeChanged = { root: string; count: number };
 type TextFileResponse = { path: string; content: string; bytes: number; modifiedMs: number | null };
 type ChatImageResponse = { path: string; bytes: number; mimeType: string };
@@ -367,6 +341,7 @@ type PendingNavigation =
   | { kind: "workspace"; path: string }
   | { kind: "close-project"; projectPath: string };
 type CommandPaletteCommand = SearchDialogCommand;
+type WorkspaceBootstrapSnapshot = Awaited<ReturnType<typeof loadWorkspaceBootstrap>>;
 
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 const dirname = (path: string) => path.replace(/[\\/][^\\/]*$/, "") || path;
@@ -383,25 +358,6 @@ const DRAWER_MODES: { id: SideDrawerMode; label: string; icon: AppIconName }[] =
   { id: "browser", label: "Browser", icon: "browser" },
   { id: "settings", label: "Settings", icon: "settings" },
 ];
-const normalizePaneLabelsBySession = (value: unknown): PaneLabelsBySession => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>)
-      .map(([key, rawRecords]) => {
-        if (!Array.isArray(rawRecords)) return [key, []] as const;
-        const records = rawRecords.flatMap((record): PaneLabelRecord[] => {
-          if (!record || typeof record !== "object") return [];
-          const data = record as { slot?: unknown; label?: unknown; updatedAt?: unknown };
-          const slot = typeof data.slot === "number" && Number.isInteger(data.slot) && data.slot >= 0 ? data.slot : null;
-          const label = normalizeTerminalPaneLabel(data.label);
-          if (slot == null || !label) return [];
-          return [{ slot, label, updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0 }];
-        });
-        return [key, records] as const;
-      })
-      .filter(([, records]) => records.length > 0),
-  );
-};
 
 const menuItem = (
   id: string,
@@ -4992,110 +4948,61 @@ function App() {
     };
   }, []);
 
+  const applyBootstrapRefs = (data: WorkspaceBootstrapSnapshot) => {
+    storeRef.current = data.store;
+    recentProjectsRef.current = data.recentProjects;
+    openProjectsRef.current = data.openProjects;
+    projectSessionsRef.current = data.projectSessions;
+    activeSessionByProjectRef.current = data.activeSessions;
+    browserPreviewByProjectRef.current = data.browserProjects;
+    browserPreviewBySessionRef.current = data.browserSessions;
+    composerHarnessBySessionRef.current = data.composerHarness;
+    scopedSettingsRef.current = data.scopedSettings;
+    chatConversationsRef.current = data.chatConversations;
+    paneLabelsBySessionRef.current = data.paneLabels;
+    sessionEditorSnapshotsRef.current = data.sessionSnapshots;
+    paneLayoutsBySessionRef.current = data.paneLayouts;
+    launchProfileRef.current = data.launchProfile;
+    terminalLaunchProfileRef.current = data.terminalProfile;
+    customLaunchProfilesRef.current = data.customProfiles;
+    aiConnectionSettingsRef.current = data.aiConnectionSettings;
+    activeFilesByWorkspaceRef.current = data.activeFiles;
+  };
+
+  const applyBootstrapState = (data: WorkspaceBootstrapSnapshot) => {
+    setLaunchProfile(data.launchProfile);
+    setTerminalLaunchProfile(data.terminalProfile);
+    setCustomLaunchProfiles(data.customProfiles);
+    setAiConnectionSettings(data.aiConnectionSettings);
+    void refreshConnectionSecretPresence(data.aiConnectionSettings);
+    setRecentProjects(data.recentProjects);
+    setOpenProjects(data.openProjects);
+    setProjectSessions(data.projectSessions);
+    setActiveSessionByProjectState(data.activeSessions);
+    setBrowserPreviewByProject(data.browserProjects);
+    setBrowserPreviewBySession(data.browserSessions);
+    setComposerHarnessBySession(data.composerHarness);
+    setScopedSettings(data.scopedSettings);
+    setChatConversations(data.chatConversations);
+    setPaneLabelsBySession(data.paneLabels);
+    setAgentActivityEvents(data.agentActivity);
+    setActiveKeybindingOverrides(data.keybindings);
+    setKeybindingOverrides(data.keybindings);
+    setCommandPaletteSources(data.commandPaletteSources);
+    if (data.theme) setAppTheme(data.theme);
+    if (data.notificationsEnabled) setNotificationsEnabled(true);
+    setPaneTranscripts(data.paneTranscripts);
+    setWorktrees(data.worktrees);
+  };
+
   // Reopen the last folder on startup, otherwise ask for a workspace.
   const initWorkspace = async () => {
-      const store = await load("workspace.json", { autoSave: true, defaults: {} });
-      storeRef.current = store;
-      const storedEntries = Object.fromEntries(await store.entries());
-      const migration = migrateWorkspaceStore(storedEntries);
-      if (migration.migrated) {
-        for (const [key, value] of Object.entries(migration.data)) {
-          await store.set(key, value);
-        }
-        await store.save();
-      }
-      const savedRecent = normalizeRecentProjects(await store.get<unknown>("recentFolders"));
-      const savedOpenProjects = normalizeOpenProjects(await store.get<unknown>("openProjects"));
-      const savedProjectSessions = normalizeProjectSessionsByProject(await store.get<unknown>("projectSessions"));
-      const savedActiveSessions = normalizeActiveSessionByProject(await store.get<unknown>("activeSessionByProject"));
-      const savedBrowserProjects = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewByProject"));
-      const savedBrowserSessions = normalizeBrowserPreviewRecords(await store.get<unknown>("browserPreviewBySession"));
-      const savedProfile = normalizeLaunchProfile(await store.get<unknown>("launchProfile"));
-      const savedCustomProfiles = normalizeCustomLaunchProfiles(await store.get<unknown>("customLaunchProfiles"));
-      customLaunchProfilesRef.current = savedCustomProfiles;
-      setCustomLaunchProfiles(savedCustomProfiles);
-      const savedAiConnectionSettings = normalizeAiConnectionSettings(await store.get<unknown>("aiConnectionSettings"));
-      aiConnectionSettingsRef.current = savedAiConnectionSettings;
-      setAiConnectionSettings(savedAiConnectionSettings);
-      void refreshConnectionSecretPresence(savedAiConnectionSettings);
-      const savedTerminalProfile = normalizeTerminalLaunchProfile(await store.get<unknown>("terminalLaunchProfile"));
-      const savedComposerHarness = normalizeComposerHarnessRecords(await store.get<unknown>("composerHarnessBySession"), savedProfile.id);
-      const storedScopedSettings = await store.get<unknown>("scopedSettings");
-      const savedScopedSettings = storedScopedSettings == null
-        ? migrateLegacyScopedSettings({
-            agentProfileId: savedProfile.id,
-            browserUrl: DEFAULT_BROWSER_PREVIEW_URL,
-            browserProjects: savedBrowserProjects,
-            browserChats: savedBrowserSessions,
-            composerChats: savedComposerHarness,
-          })
-        : normalizeScopedSettings(storedScopedSettings, defaultScopedSettings(savedProfile.id, DEFAULT_BROWSER_PREVIEW_URL));
-      const savedGlobalProfile = resolveLaunchProfile(savedScopedSettings.global.agentProfileId);
-      if (storedScopedSettings == null || JSON.stringify(storedScopedSettings) !== JSON.stringify(savedScopedSettings)) {
-        await store.set("scopedSettings", savedScopedSettings);
-        await store.save();
-      }
-      const legacyChatConversations = normalizeChatConversationRecords(await store.get<unknown>("chatConversations"));
-      if (Object.keys(legacyChatConversations).length > 0) {
-        await migrateLegacyChatConversations(legacyChatConversations);
-      } else {
-        await migrateLegacyChatConversations({});
-      }
-      const savedChatConversations = normalizeChatConversationRecords(await loadDurableChatConversations());
-      if ((await store.get<unknown>("chatConversations")) !== null) {
-        await store.delete("chatConversations");
-        await store.save();
-      }
-      const savedPaneLabels = normalizePaneLabelsBySession(await store.get<unknown>("paneLabelsBySession"));
-      const savedSessionSnapshots = normalizeSessionEditorSnapshots(await store.get<unknown>("sessionEditorSnapshots"));
-      const savedPaneLayouts = normalizePaneLayoutsBySession(await store.get<unknown>("paneLayoutsBySession"));
-      const savedAgentActivity = normalizeAgentActivityEvents(await store.get<unknown>("agentActivityEvents"));
-      activeFilesByWorkspaceRef.current = normalizeActiveFileByWorkspace(await store.get<unknown>("activeFileByWorkspace"));
-      const savedKeybindings = normalizeKeybindingOverrides(await store.get<unknown>("keybindingOverrides"));
-      setActiveKeybindingOverrides(savedKeybindings);
-      setKeybindingOverrides(savedKeybindings);
-      setCommandPaletteSources(normalizeCommandPaletteSources(await store.get<unknown>("commandPaletteSources")));
-      const savedTheme = await store.get<unknown>("appTheme");
-      if (savedTheme === "mono-ghost") setAppTheme("mono-ghost");
-      if ((await store.get<unknown>("notificationsEnabled")) === true) setNotificationsEnabled(true);
-      setPaneTranscripts(normalizePaneTranscripts(await store.get<unknown>("paneTranscripts")));
-      setWorktrees(normalizeWorktrees(await store.get<unknown>("worktrees")));
-      const initialOpenProjects = savedOpenProjects.length > 0 ? savedOpenProjects : openProjectsFromRecent(savedRecent);
-      const initialProjectSessions = initialOpenProjects.reduce(
-        (sessions, project) => ensureProjectSessions(sessions, project.path, Date.now()),
-        savedProjectSessions,
-      );
-      recentProjectsRef.current = savedRecent;
-      openProjectsRef.current = initialOpenProjects;
-      projectSessionsRef.current = initialProjectSessions;
-      activeSessionByProjectRef.current = savedActiveSessions;
-      browserPreviewByProjectRef.current = savedBrowserProjects;
-      browserPreviewBySessionRef.current = savedBrowserSessions;
-      composerHarnessBySessionRef.current = savedComposerHarness;
-      scopedSettingsRef.current = savedScopedSettings;
-      chatConversationsRef.current = savedChatConversations;
-      paneLabelsBySessionRef.current = savedPaneLabels;
-      sessionEditorSnapshotsRef.current = savedSessionSnapshots;
-      paneLayoutsBySessionRef.current = savedPaneLayouts;
-      launchProfileRef.current = savedGlobalProfile;
-      setLaunchProfile(savedGlobalProfile);
-      terminalLaunchProfileRef.current = savedTerminalProfile;
-      setTerminalLaunchProfile(savedTerminalProfile);
-      setRecentProjects(savedRecent);
-      setOpenProjects(initialOpenProjects);
-      setProjectSessions(initialProjectSessions);
-      setActiveSessionByProjectState(savedActiveSessions);
-      setBrowserPreviewByProject(savedBrowserProjects);
-      setBrowserPreviewBySession(savedBrowserSessions);
-      setComposerHarnessBySession(savedComposerHarness);
-      setScopedSettings(savedScopedSettings);
-      setChatConversations(savedChatConversations);
-      setPaneLabelsBySession(savedPaneLabels);
-      setAgentActivityEvents(savedAgentActivity);
-      const last = await store.get<string>("folder");
-      if (last) await openWorkspaceDirect(last, savedGlobalProfile);
-      else await pickWorkspace();
-      sendTerminalResize();
+    const data = await loadWorkspaceBootstrap();
+    applyBootstrapRefs(data);
+    applyBootstrapState(data);
+    if (data.lastFolder) await openWorkspaceDirect(data.lastFolder, data.launchProfile);
+    else await pickWorkspace();
+    sendTerminalResize();
   };
 
   useTerminalCanvasRuntime({
