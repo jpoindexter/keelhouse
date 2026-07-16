@@ -83,7 +83,7 @@ import { createPaneActivityLog } from "./paneActivityLog";
 import { createTerminalResize } from "./terminalResize";
 import { searchDialogPropsFrom } from "./searchCommandDialogHost";
 import { transcriptsModalPropsFrom } from "./transcriptsModalHost";
-import { statusBarRepoPropsFrom } from "./statusBarHost";
+import { sourceRepoStatusTitleFrom, statusBarRepoPropsFrom } from "./statusBarHost";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -131,7 +131,6 @@ import {
   worktreeForPaneId,
   type WorktreeRecord,
 } from "./worktrees";
-import { formatCliToolStatus, type SourceControlStatus } from "./sourceControl";
 import {
   DEFAULT_AI_CONNECTION_SETTINGS,
   connectionEnvironmentInputs,
@@ -141,7 +140,6 @@ import {
   type McpOAuthStatus,
 } from "./connectionSettings";
 import { useMcpOAuthStatus } from "./useMcpOAuthStatus";
-import { sourceRepoStatusLabel, type RepoLocation } from "./sourceControlLinks";
 import { createRenderPerfState, recordIpcPayloadBytes } from "./renderPerf";
 import { useTerminalCanvasRuntime } from "./useTerminalCanvasRuntime";
 import { useNativeAppEvents } from "./useNativeAppEvents";
@@ -222,8 +220,6 @@ const formatBytes = (bytes: number | null) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
-const sourceRepoStatusTitleFor = (repoLocation: RepoLocation | null, toolStatus: SourceControlStatus["gh"] | undefined) =>
-  repoLocation ? `${sourceRepoStatusLabel(repoLocation)} · ${toolStatus ? formatCliToolStatus(toolStatus) : "Checking authentication"}` : "";
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1650,8 +1646,7 @@ function App() {
     workspacePath,
   });
   const drawerActiveTitle = drawerTitleFor(sideDrawerMode);
-  const sourceHostToolStatus = repoLocation?.kind === "github" ? sourceControlStatus?.gh : sourceControlStatus?.glab;
-  const sourceRepoStatusTitle = sourceRepoStatusTitleFor(repoLocation, sourceHostToolStatus);
+  const sourceRepoStatusTitle = sourceRepoStatusTitleFrom(repoLocation, sourceControlStatus);
   const settingsPreferenceActions = createSettingsPreferenceActions({
     commandPaletteSources,
     keybindingOverrides,

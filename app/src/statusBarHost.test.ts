@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { statusBarRepoPropsFrom } from "./statusBarHost";
+import { sourceRepoStatusTitleFrom, statusBarRepoPropsFrom } from "./statusBarHost";
 import type { RepoLocation } from "./sourceControlLinks";
 
 const repo: RepoLocation = { host: "github.com", kind: "github", owner: "jp", repo: "keelhouse" };
@@ -22,5 +22,22 @@ describe("statusBarRepoPropsFrom", () => {
     expect(props.repoLabel).toBeNull();
     props.onOpenRepo();
     expect(openExternal).not.toHaveBeenCalled();
+  });
+});
+
+describe("sourceRepoStatusTitleFrom", () => {
+  it("combines the repo label with the host tool status", () => {
+    const title = sourceRepoStatusTitleFrom(repo, {
+      gh: { account: "jp", authenticated: true, installed: true },
+      git: { account: null, authenticated: null, installed: true },
+      glab: { account: null, authenticated: null, installed: false },
+    });
+
+    expect(title).toContain("jp/keelhouse");
+  });
+
+  it("reports pending authentication and hides without a repo", () => {
+    expect(sourceRepoStatusTitleFrom(repo, undefined)).toContain("Checking authentication");
+    expect(sourceRepoStatusTitleFrom(null, undefined)).toBe("");
   });
 });
