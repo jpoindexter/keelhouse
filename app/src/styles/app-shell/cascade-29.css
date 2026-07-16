@@ -173,7 +173,7 @@
 .tool-tray-tabs {
   height: 40px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(38px, 1fr)) 34px;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) 34px;
   container-name: tool-tabs;
   container-type: inline-size;
   gap: 0;

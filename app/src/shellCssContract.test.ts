@@ -37,6 +37,7 @@ describe("responsive shell CSS contract", () => {
   });
 
   it("places the Context surface in every supported dock position", () => {
+    expect(css).toMatch(/\.tool-tray-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\) 34px;/s);
     expect(css).toMatch(/\.workspace-context-dock\s*\{[^}]*grid-area:\s*context;/s);
     expect(css).toMatch(/\.workbench\.workbench--tools-context\.workbench--drawer-right\s*\{[^}]*"terminal rightsplit context"/s);
     expect(css).toMatch(/\.workbench\.workbench--tools-context\.workbench--drawer-left\s*\{[^}]*"context rightsplit terminal"/s);
