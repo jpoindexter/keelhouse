@@ -123,3 +123,29 @@ export const createTerminalRuntimeEventHandlers = <TSnapshot, TRenderPerf>(
   handleGridPayload: (payload: TerminalGridPayload<TSnapshot>) => handleGrid(options, payload),
   handlePaneExit: (payload: TerminalPaneExitPayload) => handleExit(options, payload),
 });
+
+type RuntimeHookBundle<TSnapshot> = {
+  activePaneIdRef: Ref<number | null>;
+  contextForPaneId: (paneId: number) => { projectRoot: string; sessionId: string } | null;
+  intentionallyTerminatedPaneIdsRef: Ref<Set<number>>;
+  projectStatusForRoot: (root: string | null) => TerminalPaneProjectStatus;
+  setPaneState: (paneId: number, state: "exited", exitCode: number) => ManagedTerminalPane[];
+  snapshotsRef: Ref<Record<number, TSnapshot>>;
+};
+
+type HookDerivedRuntimeKeys =
+  | "activePaneId" | "contextForPaneId" | "intentionallyTerminatedPaneIds"
+  | "projectStatus" | "setPaneState" | "snapshots";
+
+export const terminalRuntimeFromHook = <TSnapshot, TRenderPerf>(
+  hook: RuntimeHookBundle<TSnapshot>,
+  rest: Omit<TerminalRuntimeEventHandlerOptions<TSnapshot, TRenderPerf>, HookDerivedRuntimeKeys>,
+): TerminalRuntimeEventHandlerOptions<TSnapshot, TRenderPerf> => ({
+  ...rest,
+  activePaneId: hook.activePaneIdRef,
+  contextForPaneId: hook.contextForPaneId,
+  intentionallyTerminatedPaneIds: hook.intentionallyTerminatedPaneIdsRef.current,
+  projectStatus: hook.projectStatusForRoot,
+  setPaneState: hook.setPaneState,
+  snapshots: hook.snapshotsRef,
+});

@@ -201,6 +201,7 @@ import { createProjectSessionNavigationActions } from "./projectSessionNavigatio
 import { createProjectSessionDeletionController, projectSessionDeletionFromHook } from "./projectSessionDeletionController";
 import {
   createTerminalRuntimeEventHandlers,
+  terminalRuntimeFromHook,
   type TerminalGridPayload,
   type TerminalPaneExitPayload,
 } from "./terminalRuntimeEventHandlers";
@@ -285,14 +286,14 @@ function App() {
     activePaneId: activeTerminalPaneId,
     activePaneIdRef: activeTerminalPaneIdRef, activePaneIdsRef: activeTerminalPaneByContextRef,
     activeProjectStatus, activeSessionStatus, contextForPaneId: paneContextForPaneId,
-    intentionallyTerminatedPaneIdsRef, paneLabelsRef: paneLabelsBySessionRef,
+    paneLabelsRef: paneLabelsBySessionRef,
     paneLayoutsRef: paneLayoutsBySessionRef,
     panes: terminalPanes, panesByContextRef: terminalPanesByContextRef,
     panesForSession: terminalPanesForSession,
     panesRef: terminalPanesRef, projectStatusForRoot,
     requestPaintRef: requestTerminalPaintRef, setFocusedPane: setFocusedTerminalPane,
     setManagedPanes: setManagedTerminalPanes, setPaneLabels: setPaneLabelsBySession,
-    setPaneState, setSessionPanes: setSessionTerminalPanes,
+    setSessionPanes: setSessionTerminalPanes,
     snapshotsRef: terminalSnapshotsRef, statusForPanes: terminalPaneProjectStatus,
   } = terminal;
   const {
@@ -1593,20 +1594,19 @@ function App() {
     },
   });
 
-  const terminalRuntimeEventHandlers = createTerminalRuntimeEventHandlers({
-    activePaneId: activeTerminalPaneIdRef, activeSessionForProject,
-    approvalMode: agentApprovalMode, contextForPaneId: paneContextForPaneId,
+  const terminalRuntimeEventHandlers = createTerminalRuntimeEventHandlers(terminalRuntimeFromHook(terminal, {
+    activeSessionForProject,
+    approvalMode: agentApprovalMode,
     detectLocalServer: detectLocalDevServerFromSnapshot,
-    intentionallyTerminatedPaneIds: intentionallyTerminatedPaneIdsRef.current,
     ipcSampleCounter, latest, notificationsEnabled: notificationsEnabledRef,
     notifyBackgroundExit, now: Date.now, persistTranscript: persistPaneTranscript,
-    projectStatus: projectStatusForRoot, recordActivity: recordAgentActivity,
+    recordActivity: recordAgentActivity,
     recordIpcPayload: recordIpcPayloadBytes, renderPerf: renderPerfRef,
     requestPaint: () => requestTerminalPaintRef.current(), setBackgroundExits,
-    setError: setLaunchError, setPaneState, snapshotText: terminalSnapshotText,
-    snapshots: terminalSnapshotsRef, updateProjectStatus: updateOpenProjectStatus,
+    setError: setLaunchError, snapshotText: terminalSnapshotText,
+    updateProjectStatus: updateOpenProjectStatus,
     updateSessionStatus, workspacePath: workspacePathRef,
-  });
+  }));
 
   useNativeAppEvents<TerminalGridPayload<Snapshot>, TerminalPaneExitPayload>({
     onGrid: terminalRuntimeEventHandlers.handleGridPayload,

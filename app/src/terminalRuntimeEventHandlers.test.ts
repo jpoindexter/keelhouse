@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
 import { createTerminalRuntimeEventHandlers } from "./terminalRuntimeEventHandlers";
+import { terminalRuntimeFromHook } from "./terminalRuntimeEventHandlers";
 
 const ref = <T,>(current: T) => ({ current });
 const profile = { id: "codex", label: "Codex", command: "codex", args: [], useLoginShell: false };
@@ -71,5 +72,26 @@ describe("createTerminalRuntimeEventHandlers", () => {
     expect(options.persistTranscript).toHaveBeenCalledWith(
       "/repo", "chat", expect.objectContaining({ id: 7 }), 0, "terminal output", 10,
     );
+  });
+});
+
+describe("terminalRuntimeFromHook", () => {
+  it("maps pane-hook refs onto the runtime handler names", () => {
+    const options = createOptions();
+    const hook = {
+      activePaneIdRef: options.activePaneId,
+      contextForPaneId: options.contextForPaneId,
+      intentionallyTerminatedPaneIdsRef: { current: options.intentionallyTerminatedPaneIds },
+      projectStatusForRoot: options.projectStatus,
+      setPaneState: options.setPaneState,
+      snapshotsRef: options.snapshots,
+    };
+
+    const mapped = terminalRuntimeFromHook(hook, options);
+
+    expect(mapped.activePaneId).toBe(options.activePaneId);
+    expect(mapped.contextForPaneId).toBe(options.contextForPaneId);
+    expect(mapped.projectStatus).toBe(options.projectStatus);
+    expect(mapped.snapshots).toBe(options.snapshots);
   });
 });
