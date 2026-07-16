@@ -266,12 +266,11 @@ function App() {
     captureSessionSnapshot: captureEditorSessionSnapshot,
     closeActiveEditorTabRef, editorBuffersRef, editorBytes, editorCursor, editorError,
     editorLoading, editorRecoveryError, editorSaving,
-    editorTabs, editorText, editorViewRef, editorViewStatesRef, fileOpError,
-    openEditorSearchRef, pendingEditorFocusRef, resetEditor, restoredActiveFileWorkspaceRef,
+    editorTabs, editorText, editorViewStatesRef, fileOpError,
+    openEditorSearchRef, resetEditor, restoredActiveFileWorkspaceRef,
     restoreSessionSnapshot: restoreEditorSessionSnapshot, saveEditorFileRef,
     savedEditorText, selectedFile, selectedFileRef,
-    sessionEditorSnapshotsRef, setEditorBufferRevision, setEditorCursor,
-    setEditorRecoveryError,
+    sessionEditorSnapshotsRef, setEditorBufferRevision,
     setEditorTabs, setEditorText, setFileOpError,
     setSelectedFile,
   } = editorSession;
@@ -1086,11 +1085,7 @@ function App() {
   const editorSurface = createEditorSurfaceActions<
     FileTreeNode, EditorView, GitStatusFile, ReturnType<typeof EditorView.scrollIntoView>
   >(
-    {
-      editorBuffersRef, editorText, editorViewRef, editorViewStatesRef,
-      pendingEditorFocusRef, savedEditorText, selectedFileRef,
-      setEditorCursor, setEditorRecoveryError,
-    },
+    editorSession,
     {
       copyText: writeText,
       getDiffReviewPath: () => diffReview?.absolutePath ?? null,
