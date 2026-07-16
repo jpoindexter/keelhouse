@@ -84,6 +84,7 @@ import { createTerminalResize } from "./terminalResize";
 import { searchDialogPropsFrom } from "./searchCommandDialogHost";
 import { transcriptsModalPropsFrom } from "./transcriptsModalHost";
 import { sourceRepoStatusTitleFrom, statusBarRepoPropsFrom } from "./statusBarHost";
+import { nextToolsLayout } from "./appTitlebarHost";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -1738,7 +1739,7 @@ function App() {
         onResetInterface={resetInterface}
         onToggleSideDrawer={() => setSideDrawerCollapsed((collapsed) => !collapsed)}
         onToggleTerminal={() => void toggleRawTerminal()}
-        onToggleTools={() => setWorkbenchLayout(renderedWorkbenchLayout === "hidden" ? workbenchLayout === "hidden" ? "right" : workbenchLayout : "hidden")}
+        onToggleTools={() => setWorkbenchLayout(nextToolsLayout(renderedWorkbenchLayout, workbenchLayout))}
         onToolModeChange={setToolTrayMode}
       />,
         rail: <WorkspaceSideRail
