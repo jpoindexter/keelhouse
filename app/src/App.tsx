@@ -64,9 +64,9 @@ import { createRenderPerfExport } from "./renderPerfExport";
 import { createDevServerDetection } from "./devServerDetectionSurface";
 import { createPaneTranscriptCapture } from "./paneTranscriptCapture";
 import { deriveOrchestrationDialogState, orchestrationDialogPropsFrom } from "./orchestrationDialogState";
-import { settingsAgentProfileOptions } from "./settingsModalData";
 import { deriveAppSurfaceLabels } from "./appSurfaceLabels";
 import { AppSettingsHost } from "./appSettingsHost";
+import { appSettingsHostPropsFrom } from "./appSettingsHostProps";
 import { WorkbenchDockPanels } from "./WorkbenchDockPanels";
 import { workbenchDockPanelsPropsFrom } from "./workbenchDockPanelsHost";
 import { WorkbenchShell } from "./WorkbenchShell";
@@ -1364,47 +1364,13 @@ function App() {
         </>,
         overlays: <>
 
-      <AppSettingsHost
-        open={settingsOpen}
-        connectionActions={settingsConnectionActions}
-        preferenceActions={settingsPreferenceActions}
-        profilesController={profiles}
-        scopedActions={settingsScopedActions}
-        handlers={{
-          close: () => setSettingsOpen(false),
-          deleteConnectionSecret: mcpOAuth.deleteSecret,
-          openAgentConnection: utilityTrayControls.openAgentConnection,
-          openSourceControlLink: (url) => openUrl(url).catch(() => {}),
-          refreshAgentConnections: settingsRuntime.refreshAgentConnections,
-          resetLayout: shellLayout.resetInterface,
-          saveConnectionSecret: mcpOAuth.saveSecret,
-          saveConnectionSettings: settingsConnectionActions.saveSettings,
-          setLayout: shellLayout.setWorkbenchLayout,
-          setTrayMode: shellLayout.setToolTrayMode,
-        }}
-        modal={{
-          agentConnectionsRefreshing: settingsRuntime.agentConnectionsRefreshing, agentConnectionsStatus: settingsRuntime.agentConnectionsStatus, agentHookStatus,
-          aiConnectionSettings,
-          approvalSetting: activeChat.activeApprovalSetting,
-          browserSetting: activeChat.activeBrowserSetting,
-          commandPaletteSources, connectionSecretPresence: mcpOAuth.secretPresence,
-          customTerminalProfiles: profiles.customProfiles,
-          gitBranch: gitStatusHook.status?.branch ?? null,
-          gitChangeCount: gitStatusHook.status ? gitStatusHook.status.files.length : null,
-          keybindingOverrides,
-          layout: shellLayout.renderedWorkbenchLayout,
-          mcpOAuthStatuses: mcpOAuth.statuses, notificationsEnabled: chrome.notificationsEnabled,
-          profileSetting: activeChat.activeAgentProfileSetting,
-          profiles: settingsAgentProfileOptions(LAUNCH_PROFILES),
-          repoLocation: settingsRuntime.repoLocation,
-          sessionTitle: surfaceLabels.activeSessionTitle,
-          sourceControlStatus: settingsRuntime.sourceControlStatus,
-          theme: chrome.appTheme,
-          trayMode: shellLayout.toolTrayMode,
-          workspaceName: surfaceLabels.activeWorkspaceName,
-          workspacePath: workspacePath ?? "",
-        }}
-      />
+      <AppSettingsHost {...appSettingsHostPropsFrom({
+        activeChat, agentHookStatus, aiConnectionSettings, chrome, commandPaletteSources,
+        connectionActions: settingsConnectionActions, gitStatusHook, keybindingOverrides, mcpOAuth,
+        openUrl, preferenceActions: settingsPreferenceActions, profiles,
+        scopedActions: settingsScopedActions, setSettingsOpen, settingsOpen, settingsRuntime,
+        shellLayout, surfaceLabels, utilityTrayControls, workspacePath,
+      })} />
       <TranscriptsModal {...transcriptsModalPropsFrom(
         { openTranscriptId: paneTranscripts.openTranscriptId, paneTranscripts: paneTranscripts.paneTranscripts, setOpenTranscriptId: paneTranscripts.setOpenTranscriptId, setTranscriptsOpen: paneTranscripts.setTranscriptsOpen, transcriptsOpen: paneTranscripts.transcriptsOpen },
         { projectId: workspacePath, projectSessionId: activeChat.activeSessionId },
