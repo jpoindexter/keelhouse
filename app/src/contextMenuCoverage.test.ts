@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const app = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
 const agentComposerSurface = readFileSync(new URL("./AgentComposerSurface.tsx", import.meta.url), "utf8");
 const browserComposerContextMenu = readFileSync(new URL("./browserComposerContextMenu.ts", import.meta.url), "utf8");
+const editorContextMenus = readFileSync(new URL("./editorContextMenus.ts", import.meta.url), "utf8");
 const projectThreadsDrawer = readFileSync(new URL("./ProjectThreadsDrawer.tsx", import.meta.url), "utf8");
 const projectSessionContextMenu = readFileSync(new URL("./projectSessionContextMenu.ts", import.meta.url), "utf8");
 const shellLayout = readFileSync(new URL("./useShellLayout.ts", import.meta.url), "utf8");
@@ -13,7 +14,7 @@ const workspaceContextMenus = readFileSync(new URL("./workspaceContextMenus.ts",
 
 describe("production context-menu coverage", () => {
   it("registers unique commands for every promised surface", () => {
-    const menuSources = `${app}\n${browserComposerContextMenu}\n${projectSessionContextMenu}\n${terminalContextMenu}\n${workspaceContextMenus}`;
+    const menuSources = `${app}\n${browserComposerContextMenu}\n${editorContextMenus}\n${projectSessionContextMenu}\n${terminalContextMenu}\n${workspaceContextMenus}`;
     const ids = Array.from(menuSources.matchAll(/(?:menuItem|sessionItem|terminalItem)\("([^"]+)"/g), (match) => match[1]);
     expect(new Set(ids).size).toBe(ids.length);
     for (const prefix of ["workspace.", "project.", "session.", "file.", "tab.", "editor.", "git.", "diff.", "terminal.", "pane.", "utility.", "browser.", "composer."]) {

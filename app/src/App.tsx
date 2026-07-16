@@ -191,6 +191,11 @@ import {
   buildWorkspaceContextMenuItems,
 } from "./workspaceContextMenus";
 import {
+  buildDiffContextMenuItems,
+  buildEditorContextMenuItems,
+  buildEditorTabContextMenuItems,
+} from "./editorContextMenus";
+import {
   buildBrowserContextMenuItems,
   buildComposerAddMenuItems,
   buildComposerContextMenuItems,
@@ -2192,53 +2197,31 @@ function App() {
     setActionNotice(pinned ? `Pinned ${session.title}` : `Unpinned ${session.title}`);
   };
 
-  const editorTabContextMenuItems = (tab: FileTreeNode): ContextMenuItem[] => [
-    menuItem("tab.open", "Open", () => requestOpenEditorFile(tab, { focusEditor: true }), { icon: "file" }),
-    menuItem("tab.close", "Close Tab", () => closeEditorTab(tab), { icon: "close", shortcut: shortcutKeys("editor.close-tab") }),
-    menuItem("tab.reveal", "Reveal in Finder", () => revealRailNode(tab), { icon: "folderOpen" }),
-    menuItem("tab.copy-path", "Copy Path", () => copyPathToClipboard(tab.path), { icon: "file" }),
-  ];
-
-  const editorContextMenuItems = (): ContextMenuItem[] => [
-    menuItem("editor.save", "Save", () => saveEditorFile(), {
-      icon: "save",
-      shortcut: shortcutKeys("editor.save"),
-      disabled: !editorDirty || editorSaving || editorLoading,
-    }),
-    menuItem("editor.find", "Find and Replace", openEditorSearch, {
-      icon: "search",
-      shortcut: shortcutKeys("editor.find"),
-      disabled: !selectedFile || editorLoading,
-    }),
-    menuItem("editor.open-external", "Open Externally", () => openSelectedFileExternally(), { icon: "file", disabled: !selectedFile }),
-    menuItem("editor.reveal", "Reveal in Finder", () => revealSelectedFile(), { icon: "folderOpen", disabled: !selectedFile }),
-    menuItem("editor.copy-path", "Copy File Path", () => selectedFile ? copyPathToClipboard(selectedFile.path) : undefined, { icon: "file", disabled: !selectedFile }),
-  ];
-
-  const diffContextMenuItems = (): ContextMenuItem[] => {
-    if (!diffReview) return [];
-    return [
-      menuItem("diff.stage", "Stage File", () => runGitFileAction("stage", diffReview.file), {
-        icon: "git",
-        disabled: !diffReviewCanStage || diffReviewLoading,
-      }),
-      menuItem("diff.unstage", "Unstage File", () => runGitFileAction("unstage", diffReview.file), {
-        icon: "git",
-        disabled: !diffReviewCanUnstage || diffReviewLoading,
-      }),
-      menuItem("diff.discard", "Discard Unstaged Changes", () => runGitFileAction("discard", diffReview.file), {
-        icon: "error",
-        danger: true,
-        disabled: !diffReviewCanDiscard || diffReviewLoading,
-      }),
-      menuItem("diff.copy", "Copy Shown Diff", () => copyShownDiff(), {
-        icon: "copy",
-        disabled: diffReview.response.diff.length === 0,
-      }),
-      menuItem("diff.open", "Open File", () => openDiffFile(), { icon: "file", disabled: !diffReviewCanOpenFile }),
-      menuItem("diff.close", "Close Diff", closeDiffReview, { icon: "close" }),
-    ];
+  const editorContextMenuActions = {
+    closeDiff: closeDiffReview,
+    closeTab: (tab: FileTreeNode) => closeEditorTab(tab),
+    copyDiff: copyShownDiff,
+    copyPath: copyPathToClipboard,
+    find: openEditorSearch,
+    openDiffFile,
+    openExternal: openSelectedFileExternally,
+    openTab: (tab: FileTreeNode) => requestOpenEditorFile(tab, { focusEditor: true }),
+    revealNode: revealRailNode,
+    revealSelected: revealSelectedFile,
+    runGitAction: runGitFileAction,
+    save: saveEditorFile,
+    shortcut: shortcutKeys,
   };
+  const editorTabContextMenuItems = (tab: FileTreeNode) =>
+    buildEditorTabContextMenuItems(tab, editorContextMenuActions);
+  const editorContextMenuItems = () => buildEditorContextMenuItems({
+    editorDirty, editorLoading, editorSaving, selectedFile,
+  }, editorContextMenuActions);
+  const diffContextMenuItems = () => buildDiffContextMenuItems({
+    canDiscard: diffReviewCanDiscard, canOpenFile: diffReviewCanOpenFile,
+    canStage: diffReviewCanStage, canUnstage: diffReviewCanUnstage,
+    loading: diffReviewLoading, review: diffReview,
+  }, editorContextMenuActions);
 
   const persistPaneTranscript = (
     projectId: string,
