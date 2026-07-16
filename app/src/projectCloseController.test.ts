@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
-import { createProjectCloseController } from "./projectCloseController";
+import { createProjectCloseController, projectCloseFromHook } from "./projectCloseController";
 
 const ref = <T,>(current: T) => ({ current });
 const profile = { id: "shell", label: "Shell", command: "/bin/zsh", args: [], useLoginShell: false };
@@ -80,5 +80,26 @@ describe("createProjectCloseController", () => {
     expect(closed).toBe(false);
     expect(deferNavigation).toHaveBeenCalledOnce();
     expect(options.closePane).not.toHaveBeenCalled();
+  });
+});
+
+describe("projectCloseFromHook", () => {
+  it("maps pane-hook refs onto the close controller names", () => {
+    const options = createOptions();
+    const hook = {
+      activePaneIdsRef: options.activePanes,
+      intentionallyTerminatedPaneIdsRef: { current: options.intentionallyTerminatedPaneIds },
+      panesByContextRef: options.projectPanes,
+      panesForProject: options.getPanes,
+      snapshotsRef: options.snapshots,
+    };
+
+    const mapped = projectCloseFromHook(hook, options);
+
+    expect(mapped.activePanes).toBe(options.activePanes);
+    expect(mapped.getPanes).toBe(options.getPanes);
+    expect(mapped.projectPanes).toBe(options.projectPanes);
+    expect(mapped.snapshots).toBe(options.snapshots);
+    expect(mapped.intentionallyTerminatedPaneIds).toBe(options.intentionallyTerminatedPaneIds);
   });
 });

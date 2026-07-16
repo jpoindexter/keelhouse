@@ -98,3 +98,26 @@ export const createProjectCloseController = (options: ProjectCloseControllerOpti
   requestCloseProject: (project: OpenProject, deferNavigation: () => void) =>
     requestClose(options, project, deferNavigation),
 });
+
+type CloseHookBundle = {
+  activePaneIdsRef: Ref<Record<string, number>>;
+  intentionallyTerminatedPaneIdsRef: Ref<Set<number>>;
+  panesByContextRef: Ref<Record<string, ManagedTerminalPane[]>>;
+  panesForProject: (projectPath: string) => ManagedTerminalPane[];
+  snapshotsRef: ProjectCloseControllerOptions["snapshots"];
+};
+
+type HookDerivedCloseKeys =
+  | "activePanes" | "getPanes" | "intentionallyTerminatedPaneIds" | "projectPanes" | "snapshots";
+
+export const projectCloseFromHook = (
+  hook: CloseHookBundle,
+  rest: Omit<ProjectCloseControllerOptions, HookDerivedCloseKeys>,
+): ProjectCloseControllerOptions => ({
+  ...rest,
+  activePanes: hook.activePaneIdsRef,
+  getPanes: hook.panesForProject,
+  intentionallyTerminatedPaneIds: hook.intentionallyTerminatedPaneIdsRef.current,
+  projectPanes: hook.panesByContextRef,
+  snapshots: hook.snapshotsRef,
+});

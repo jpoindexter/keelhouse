@@ -196,7 +196,7 @@ import type { FileTreeNode } from "./fileTreeTypes";
 import { StatusBar } from "./StatusBar";
 import type { ContextMenuItem } from "./ContextMenu";
 import { composerReasoningLabel } from "./ComposerReasoningPicker";
-import { createProjectCloseController } from "./projectCloseController";
+import { createProjectCloseController, projectCloseFromHook } from "./projectCloseController";
 import { createProjectSessionNavigationActions } from "./projectSessionNavigationActions";
 import { createProjectSessionDeletionController, projectSessionDeletionFromHook } from "./projectSessionDeletionController";
 import {
@@ -288,7 +288,7 @@ function App() {
     intentionallyTerminatedPaneIdsRef, paneLabelsRef: paneLabelsBySessionRef,
     paneLayoutsRef: paneLayoutsBySessionRef,
     panes: terminalPanes, panesByContextRef: terminalPanesByContextRef,
-    panesForProject: terminalPanesForProject, panesForSession: terminalPanesForSession,
+    panesForSession: terminalPanesForSession,
     panesRef: terminalPanesRef, projectStatusForRoot,
     requestPaintRef: requestTerminalPaintRef, setFocusedPane: setFocusedTerminalPane,
     setManagedPanes: setManagedTerminalPanes, setPaneLabels: setPaneLabelsBySession,
@@ -701,9 +701,7 @@ function App() {
     path, () => requestPendingNavigation({ kind: "workspace", path }),
   );
 
-  const projectCloseController = createProjectCloseController({
-    activePanes: activeTerminalPaneByContextRef,
-    intentionallyTerminatedPaneIds: intentionallyTerminatedPaneIdsRef.current,
+  const projectCloseController = createProjectCloseController(projectCloseFromHook(terminal, {
     clearActiveWorkspace: () => {
       setWorkspacePath(null); setManagedTerminalPanes([]); setFocusedTerminalPane(null);
       latest.current = null; setFileTree([]); resetEditor();
@@ -711,16 +709,16 @@ function App() {
     closePane: (paneId) => invoke("close_pane", { paneId }),
     confirmClose: (message) => confirmDialog(message), conversations: chatConversationsRef,
     deleteStoredFolder: async () => { await storeRef.current?.delete("folder"); },
-    dirtyTabCount: dirtyTabPaths.length, getPanes: terminalPanesForProject,
+    dirtyTabCount: dirtyTabPaths.length,
     hasSelectedFile: () => selectedFileRef.current != null,
     openProjects: openProjectsRef, openWorkspace: openWorkspaceDirect,
-    persistOpenProjects, projectPanes: terminalPanesByContextRef,
+    persistOpenProjects,
     saveStore: async () => { await storeRef.current?.save(); },
-    setActionNotice, setLaunchError, snapshots: terminalSnapshotsRef,
+    setActionNotice, setLaunchError,
     stopChatRun: (runId) => invoke("stop_chat_run", { runId }),
     stopWorkspaceWatcher: () => invoke("stop_workspace_watcher"),
     workspacePath: workspacePathRef,
-  });
+  }));
   const closeProjectDirect = projectCloseController.closeProjectDirect;
   const requestCloseProject = (project: OpenProject) => projectCloseController.requestCloseProject(
     project, () => requestPendingNavigation({ kind: "close-project", projectPath: project.path }),
