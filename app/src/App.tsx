@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { confirm as confirmDialog, open } from "@tauri-apps/plugin-dialog";
@@ -68,6 +68,7 @@ import { deriveAppSurfaceLabels } from "./appSurfaceLabels";
 import { AppSettingsHost } from "./appSettingsHost";
 import { WorkbenchDockPanels } from "./WorkbenchDockPanels";
 import { canUseShellProfile, findShellProfile } from "./shellProfileNotice";
+import { WorkbenchShell } from "./WorkbenchShell";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -176,7 +177,6 @@ import {
   createWorkspaceCheckpoint,
 } from "./workspaceCheckpoints";
 import { mergeChatDiscoveryResults, type ChatSearchViewResult } from "./chatDiscovery";
-import { ToolTrayTabs } from "./ToolTrayTabs";
 import type { FileTreeNode } from "./fileTreeTypes";
 import { StatusBar } from "./StatusBar";
 import type { ContextMenuItem } from "./ContextMenu";
@@ -1746,8 +1746,20 @@ function App() {
   });
 
   return (
-    <div className={`app-shell ${sideDrawerCollapsed ? "app-shell--side-drawer-collapsed" : ""} ${renderedWorkbenchLayout === "hidden" ? "app-shell--tools-hidden" : ""} ${settingsOpen ? "app-shell--settings-open" : ""}`} style={appShellStyle}>
-      <AppTitlebar
+    <WorkbenchShell
+      handlers={{
+        beginSideDrawerResize,
+        hideTools: () => setWorkbenchLayout("hidden"),
+        nudgeSideDrawerResize,
+        setToolTrayMode,
+      }}
+      layout={{
+        appShellStyle, renderedWorkbenchLayout, settingsOpen, sideDrawerCollapsed,
+        surfaceMode: agentSurfaceMode, toolTrayMode, utilityTrayHeight, workbenchStyle,
+      }}
+      refs={{ workbenchRef }}
+      slots={{
+        titlebar: <AppTitlebar
         activeSessionTitle={activeSessionTitle}
         hasWorkspace={Boolean(workspacePath)}
         layout={renderedWorkbenchLayout}
@@ -1768,8 +1780,8 @@ function App() {
         onToggleTerminal={() => void toggleRawTerminal()}
         onToggleTools={() => setWorkbenchLayout(renderedWorkbenchLayout === "hidden" ? workbenchLayout === "hidden" ? "right" : workbenchLayout : "hidden")}
         onToolModeChange={setToolTrayMode}
-      />
-      <WorkspaceSideRail
+      />,
+        rail: <WorkspaceSideRail
         activeTitle={drawerActiveTitle}
         collapsed={sideDrawerCollapsed}
         mode={sideDrawerMode}
@@ -1825,30 +1837,8 @@ function App() {
           onOpenFolder: () => void pickWorkspace(),
           onWorkspaceContextMenu: (event) => openContextMenu(event, workspaceContextMenuItems()),
         }}
-      />
-      {!sideDrawerCollapsed ? (
-        <button
-          className="side-drawer-resizer"
-          type="button"
-          aria-label="Resize side drawer"
-          title="Resize side drawer"
-          onPointerDown={beginSideDrawerResize}
-          onKeyDown={nudgeSideDrawerResize}
-        />
-      ) : null}
-
-      <main
-        ref={workbenchRef}
-        className={`workbench workbench--drawer-${renderedWorkbenchLayout} workbench--tools-${toolTrayMode} ${agentSurfaceMode === "terminal" ? "workbench--utility-open" : ""}`}
-        style={{ ...workbenchStyle, "--utility-tray-height": `${agentSurfaceMode === "terminal" ? utilityTrayHeight : 42}px` } as CSSProperties}
-      >
-        {renderedWorkbenchLayout !== "hidden" ? (
-          <ToolTrayTabs
-            mode={toolTrayMode}
-            onModeChange={setToolTrayMode}
-            onClose={() => setWorkbenchLayout("hidden")}
-          />
-        ) : null}
+      />,
+        main: <>
         <WorkbenchDockPanels
           files={{
             error: fileTreeError, loading: fileTreeLoading, query: drawerSearchQuery,
@@ -2023,7 +2013,8 @@ function App() {
           onTerminalContextMenu={(event) => openContextMenu(event, terminalContextMenuItems())}
           onToggleVisibility={toggleUtilityTrayVisibility}
         />
-      </main>
+        </>,
+        overlays: <>
 
       <AppSettingsHost
         open={settingsOpen}
@@ -2149,7 +2140,9 @@ function App() {
         surfaceMode={agentSurfaceMode}
         utilityLabel={utilityTrayStatusLabel}
       />
-    </div>
+        </>,
+      }}
+    />
   );
 }
 

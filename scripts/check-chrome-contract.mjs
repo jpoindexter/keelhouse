@@ -254,7 +254,7 @@ assert(toolTrayTabs.includes("current === next ? null : next"), "Clicking the ac
 assert(toolTrayTabs.includes("new ResizeObserver"), "Tool tray labels must react to the rendered split-view width");
 assert(toolTrayTabs.includes('if (width < 480) return "icons";'), "The narrowest tool tray must collapse to icon-only controls before labels collide");
 assert(toolTrayTabs.includes('if (width < 720) return "compact";'), "Medium tool trays must keep only the active label before the full tab strip can collide");
-assert(appTsx.includes("workbench--tools-${toolTrayMode}"), "Workbench must render the active tool tray mode class");
+assert(read("app/src/WorkbenchShell.tsx").includes("workbench--tools-${layout.toolTrayMode}"), "Workbench must render the active tool tray mode class");
 assert(workbenchResizers.includes('props.trayMode === "split" ? ('), "Editor/browser splitter must render only in split tray mode");
 assert(toolDockMenu.includes("Hide tools"), "Tool dock menu must expose a direct way to return to the agent-only layout");
 assert(toolDockMenu.includes('aria-label="Tools and dock position"'), "Tool dock controls must use one compact, labelled menu");
