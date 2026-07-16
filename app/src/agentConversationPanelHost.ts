@@ -46,7 +46,7 @@ type AgentConversationPanelInput = {
   contextMenuHost: { openContextMenu: (event: MouseEvent, items: ContextMenuItem[]) => void };
   editorSurface: { reviewRunCardFile: (path: string) => Promise<unknown> };
   focusedChatMessageId: string | null;
-  gitStatusHook: { status: { branch: string | null; staged: number; unstaged: number; untracked: number } | null };
+  gitStatusHook: { status: { branch: string | null; files: unknown[] } | null };
   setComposerNotice: (notice: string | null) => void;
   setSettingsOpen: (open: boolean) => void;
   shellLayout: ReturnType<typeof useShellLayout>;
@@ -81,9 +81,7 @@ const composerStateFrom = (input: AgentConversationPanelInput) => ({
   reasoningEffort: input.activeChat.activeComposerHarness.reasoningEffort, sending: input.composerSending,
   metadata: {
     branch: input.gitStatusHook.status?.branch ?? null,
-    changedFiles: input.gitStatusHook.status
-      ? input.gitStatusHook.status.staged + input.gitStatusHook.status.unstaged + input.gitStatusHook.status.untracked
-      : 0,
+    changedFiles: input.gitStatusHook.status?.files.length ?? 0,
     provider: input.activeChat.activeComposerProvider,
     repositoryPath: input.workspacePath,
     usage: input.activeChat.activeChatConversation.usage,

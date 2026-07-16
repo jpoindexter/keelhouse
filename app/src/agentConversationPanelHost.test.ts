@@ -34,7 +34,7 @@ const createOptions = () =>
     editorSurface: { reviewRunCardFile: vi.fn() },
     focusedChatMessageId: null,
     gitStatusHook: {
-      status: { branch: "main", staged: 1, unstaged: 2, untracked: 1, files: [] },
+      status: { branch: "main", staged: 1, unstaged: 2, untracked: 1, files: [{}, {}, {}] },
     },
     setComposerNotice: vi.fn(),
     setSettingsOpen: vi.fn(),
@@ -53,7 +53,7 @@ describe("agentConversationPanelPropsFrom", () => {
     expect(props.composer.mentionResults).toEqual([]);
     expect(props.composer.metadata).toEqual({
       branch: "main",
-      changedFiles: 4,
+      changedFiles: 3,
       provider: "codex",
       repositoryPath: "/repo",
       usage: undefined,
