@@ -12,7 +12,6 @@ import { BrowserPreviewPanel } from "./BrowserPreviewPanel";
 import { AppTitlebar } from "./AppTitlebar";
 import { BottomUtilityTray } from "./BottomUtilityTray";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
-import { FilesDock, SourceControlDock } from "./WorkbenchDocks";
 import { WorkbenchResizers } from "./WorkbenchResizers";
 import { DRAWER_MODES, drawerTitleFor } from "./drawerModes";
 import { AppRuntimeDialogs } from "./AppRuntimeDialogs";
@@ -67,6 +66,7 @@ import { deriveOrchestrationDialogState } from "./orchestrationDialogState";
 import { settingsAgentProfileOptions } from "./settingsModalData";
 import { deriveAppSurfaceLabels } from "./appSurfaceLabels";
 import { AppSettingsHost } from "./appSettingsHost";
+import { WorkbenchDockPanels } from "./WorkbenchDockPanels";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -1848,33 +1848,26 @@ function App() {
             onClose={() => setWorkbenchLayout("hidden")}
           />
         ) : null}
-        <FilesDock
-          files={drawerSearchQuery.trim() ? drawerSearchResults : searchableFiles}
-          loading={fileTreeLoading}
-          error={fileTreeError}
-          query={drawerSearchQuery}
-          selectedFilePath={selectedFile?.path ?? null}
+        <WorkbenchDockPanels
+          files={{
+            error: fileTreeError, loading: fileTreeLoading, query: drawerSearchQuery,
+            results: drawerSearchResults, searchable: searchableFiles,
+            selectedFilePath: selectedFile?.path ?? null,
+          }}
+          git={{ error: gitStatusError, loading: gitStatusLoading, status: gitStatus }}
+          handlers={{
+            createFile: () => void createFileInRail(),
+            createFolder: () => void createFolderInRail(),
+            gitFileContextMenu: (event, file) => openContextMenu(
+              event, buildGitFileContextMenuItems(file, workspaceContextMenuActions),
+            ),
+            openDiff: (gitFile) => void openGitDiff(gitFile),
+            openFile: (treeFile) => void requestOpenEditorFile(treeFile, { focusEditor: true }),
+            refreshFiles: refreshFileTree,
+            refreshGit: () => void refreshGitStatus(),
+            setQuery: setDrawerSearchQuery,
+          }}
           workspacePath={workspacePath}
-          onCreateFile={() => void createFileInRail()}
-          onCreateFolder={() => void createFolderInRail()}
-          onOpenFile={(file) => void requestOpenEditorFile(file, { focusEditor: true })}
-          onQueryChange={setDrawerSearchQuery}
-          onRefresh={refreshFileTree}
-        />
-        <SourceControlDock
-          branch={gitStatus?.branch ?? null}
-          error={gitStatusError}
-          files={gitStatus?.files ?? []}
-          isRepository={gitStatus?.isRepository ?? null}
-          loading={gitStatusLoading}
-          staged={gitStatus?.staged ?? 0}
-          untracked={gitStatus?.untracked ?? 0}
-          workspacePath={workspacePath}
-          onFileContextMenu={(event, file) => openContextMenu(
-            event, buildGitFileContextMenuItems(file, workspaceContextMenuActions),
-          )}
-          onOpenDiff={(file) => void openGitDiff(file)}
-          onRefresh={() => void refreshGitStatus()}
         />
         <WorkbenchEditorSection
           activeFileMissing={activeFileMissing}
