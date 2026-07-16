@@ -3,7 +3,7 @@ import { AppIcon } from "./icons";
 import type { LaunchProfile } from "./launchProfiles";
 import type { ToolTrayMode, WorkbenchLayoutMode } from "./workbenchLayout";
 
-type QuickSettingsDrawerProps = {
+export type QuickSettingsDrawerProps = {
   approvalMode: AgentApprovalMode;
   canSetApproval: boolean;
   hasWorkspace: boolean;

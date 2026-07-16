@@ -13,11 +13,6 @@ import { AppTitlebar } from "./AppTitlebar";
 import type { UtilityTrayMode } from "./BottomUtilityTabs";
 import { BottomUtilityTray } from "./BottomUtilityTray";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
-import { BrowserToolsDrawer } from "./BrowserToolsDrawer";
-import { SourceControlDrawer } from "./SourceControlDrawer";
-import { QuickSettingsDrawer } from "./QuickSettingsDrawer";
-import { FilesSideDrawer } from "./FilesSideDrawer";
-import { ProjectThreadsDrawer } from "./ProjectThreadsDrawer";
 import { FilesDock, SourceControlDock } from "./WorkbenchDocks";
 import { WorkbenchResizers } from "./WorkbenchResizers";
 import { DRAWER_MODES, drawerTitleFor } from "./drawerModes";
@@ -51,6 +46,7 @@ import {
 } from "./editorState";
 import { createEditorViewLifecycle } from "./editorViewLifecycle";
 import { createWorkspaceBootstrapController } from "./workspaceBootstrapController";
+import { WorkspaceSideRail } from "./WorkspaceSideRail";
 import type { EditorFileLoadState } from "./editorFileLoadState";
 import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
@@ -80,7 +76,6 @@ import {
   createActiveAgentSessionHandle,
 } from "./agentSessionHandle";
 import type { AgentApprovalMode, AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
-import { AppIcon } from "./icons";
 import type { AppIconName } from "./icons";
 import {
   setActiveKeybindingOverrides,
@@ -2234,124 +2229,63 @@ function App() {
         onToggleTools={() => setWorkbenchLayout(renderedWorkbenchLayout === "hidden" ? workbenchLayout === "hidden" ? "right" : workbenchLayout : "hidden")}
         onToolModeChange={setToolTrayMode}
       />
-      <aside className={`file-rail ${sideDrawerCollapsed ? "file-rail--collapsed" : ""}`} aria-label={`${sideDrawerMode === "projects" ? "Project threads" : drawerActiveTitle} drawer`}>
-        <div className="drawer-toolbar">
-          <span>{sideDrawerMode === "projects" ? "Threads" : drawerActiveTitle}</span>
-        </div>
-        <div className="drawer-mode-switcher" role="tablist" aria-label="Side drawer">
-          {DRAWER_MODES.map((mode) => (
-            <button
-              className={`drawer-mode-switcher__button ${sideDrawerMode === mode.id ? "drawer-mode-switcher__button--active" : ""}`}
-              type="button"
-              role="tab"
-              key={mode.id}
-              aria-selected={sideDrawerMode === mode.id}
-              title={mode.label}
-              onClick={() => {
-                if (mode.id === "settings") {
-                  setSettingsOpen(true);
-                  return;
-                }
-                setSideDrawerMode(mode.id);
-              }}
-            >
-              <AppIcon name={mode.icon} />
-              <span>{mode.label}</span>
-            </button>
-          ))}
-        </div>
-        {!sideDrawerCollapsed && sideDrawerMode === "projects" ? (
-          <ProjectThreadsDrawer
-            activeProjectPath={workspacePath}
-            activeSessionId={activeSessionId}
-            backgroundExits={backgroundExits}
-            expandedProjects={expandedSessionProjects}
-            projects={visibleOpenProjects}
-            sessionsByProject={projectSessions}
-            showArchived={showArchivedSessions}
-            projectStatus={projectRailStatus}
-            sessionStatus={projectSessionStatus}
-            onProjectContextMenu={(event, project) => openContextMenu(event, projectRailContextMenuItems(project))}
-            onSelectProject={(path) => void requestOpenWorkspace(path)}
-            onSelectSession={(path, sessionId) => void switchProjectSession(path, sessionId)}
-            onSessionContextMenu={(event, path, session) => openContextMenu(event, projectSessionContextMenuItems(path, session))}
-            onToggleArchived={() => setShowArchivedSessions((show) => !show)}
-            onToggleExpanded={(path) => setExpandedSessionProjects((expanded) => ({ ...expanded, [path]: !(expanded[path] ?? false) }))}
-          />
-        ) : null}
-        {!sideDrawerCollapsed && sideDrawerMode === "git" ? (
-          <SourceControlDrawer
-            error={gitStatusError}
-            hasWorkspace={Boolean(workspacePath)}
-            loading={gitStatusLoading}
-            status={gitStatus}
-            onOpenDiff={(file) => void openGitDiff(file)}
-            onRefresh={() => void refreshGitStatus()}
-          />
-        ) : null}
-        {!sideDrawerCollapsed && sideDrawerMode === "browser" ? (
-          <BrowserToolsDrawer
-            address={browser.address}
-            canGoBack={browser.canGoBack}
-            canGoForward={browser.canGoForward}
-            detectedPaneLabel={browser.activeDetectedServer?.paneLabel ?? null}
-            detectedUrl={browser.activeDetectedServer?.url ?? null}
-            error={browser.error}
-            url={browser.url}
-            onAddressChange={(address) => { browser.setAddress(address); browser.setError(null); }}
-            onBack={() => browser.goHistory(-1)}
-            onForward={() => browser.goHistory(1)}
-            onOpenDetected={() => void browser.openDetectedServer()}
-            onOpenExternal={() => void openUrl(browser.url)}
-            onReload={browser.reload}
-            onShow={() => setWorkbenchLayout(workbenchLayout === "hidden" ? "right" : workbenchLayout)}
-            onSubmit={browser.submitAddress}
-          />
-        ) : null}
-        {!sideDrawerCollapsed && sideDrawerMode === "settings" ? (
-          <QuickSettingsDrawer
-            approvalMode={activeComposerHarness.approvalMode}
-            canSetApproval={Boolean(activeComposerHarnessKey)}
-            hasWorkspace={Boolean(workspacePath)}
-            launchProfile={profiles.terminalProfile}
-            launchProfileChanging={profiles.changing}
-            launchProfiles={profiles.allProfiles}
-            terminalOpen={agentSurfaceMode === "terminal"}
-            toolMode={toolTrayMode}
-            workbenchLayout={renderedWorkbenchLayout}
-            onApprovalChange={(mode) => void setComposerApprovalMode(mode)}
-            onBottomTrayChange={(open) => open ? void toggleRawTerminal() : setAgentSurfaceMode("chat")}
-            onLayoutChange={setWorkbenchLayout}
-            onOpenFolder={() => void pickWorkspace()}
-            onProfileChange={(profileId) => {
-              void profiles.switchTerminalProfile(profiles.resolveProfile(profileId));
-            }}
-            onRefreshFiles={refreshFileTree}
-            onToolModeChange={setToolTrayMode}
-          />
-        ) : null}
-        {!sideDrawerCollapsed && sideDrawerMode === "files" ? (
-          <FilesSideDrawer
-            fileOpError={fileOpError}
-            fileTree={fileTree}
-            fileTreeError={fileTreeError}
-            fileTreeLoading={fileTreeLoading}
-            fileTreeTruncated={fileTreeTruncated}
-            railBodyRef={railBodyRef}
-            railHeight={railHeight}
-            selectedFileId={selectedFile?.id}
-            treeRef={treeRef}
-            visibleFileTree={visibleFileTree}
-            workspaceName={workspacePath ? basename(workspacePath) : null}
-            workspacePath={workspacePath}
-            onCreateFile={() => void createFileInRail()}
-            onCreateFolder={() => void createFolderInRail()}
-            onOpenFile={(file) => void requestOpenEditorFile(file, { focusEditor: true })}
-            onOpenFolder={() => void pickWorkspace()}
-            onWorkspaceContextMenu={(event) => openContextMenu(event, workspaceContextMenuItems())}
-          />
-        ) : null}
-      </aside>
+      <WorkspaceSideRail
+        activeTitle={drawerActiveTitle}
+        collapsed={sideDrawerCollapsed}
+        mode={sideDrawerMode}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onSelectMode={setSideDrawerMode}
+        projects={{
+          activeProjectPath: workspacePath, activeSessionId, backgroundExits,
+          expandedProjects: expandedSessionProjects, projects: visibleOpenProjects,
+          sessionsByProject: projectSessions, showArchived: showArchivedSessions,
+          projectStatus: projectRailStatus, sessionStatus: projectSessionStatus,
+          onProjectContextMenu: (event, project) => openContextMenu(event, projectRailContextMenuItems(project)),
+          onSelectProject: (path) => void requestOpenWorkspace(path),
+          onSelectSession: (path, sessionId) => void switchProjectSession(path, sessionId),
+          onSessionContextMenu: (event, path, session) => openContextMenu(event, projectSessionContextMenuItems(path, session)),
+          onToggleArchived: () => setShowArchivedSessions((show) => !show),
+          onToggleExpanded: (path) => setExpandedSessionProjects((expanded) => ({ ...expanded, [path]: !(expanded[path] ?? false) })),
+        }}
+        git={{
+          error: gitStatusError, hasWorkspace: Boolean(workspacePath), loading: gitStatusLoading,
+          status: gitStatus,
+          onOpenDiff: (file) => void openGitDiff(file), onRefresh: () => void refreshGitStatus(),
+        }}
+        browser={{
+          address: browser.address, canGoBack: browser.canGoBack, canGoForward: browser.canGoForward,
+          detectedPaneLabel: browser.activeDetectedServer?.paneLabel ?? null,
+          detectedUrl: browser.activeDetectedServer?.url ?? null,
+          error: browser.error, url: browser.url,
+          onAddressChange: (address) => { browser.setAddress(address); browser.setError(null); },
+          onBack: () => browser.goHistory(-1), onForward: () => browser.goHistory(1),
+          onOpenDetected: () => void browser.openDetectedServer(),
+          onOpenExternal: () => void openUrl(browser.url), onReload: browser.reload,
+          onShow: () => setWorkbenchLayout(workbenchLayout === "hidden" ? "right" : workbenchLayout),
+          onSubmit: browser.submitAddress,
+        }}
+        settings={{
+          approvalMode: activeComposerHarness.approvalMode,
+          canSetApproval: Boolean(activeComposerHarnessKey), hasWorkspace: Boolean(workspacePath),
+          launchProfile: profiles.terminalProfile, launchProfileChanging: profiles.changing,
+          launchProfiles: profiles.allProfiles, terminalOpen: agentSurfaceMode === "terminal",
+          toolMode: toolTrayMode, workbenchLayout: renderedWorkbenchLayout,
+          onApprovalChange: (mode) => void setComposerApprovalMode(mode),
+          onBottomTrayChange: (open) => open ? void toggleRawTerminal() : setAgentSurfaceMode("chat"),
+          onLayoutChange: setWorkbenchLayout, onOpenFolder: () => void pickWorkspace(),
+          onProfileChange: (profileId) => { void profiles.switchTerminalProfile(profiles.resolveProfile(profileId)); },
+          onRefreshFiles: refreshFileTree, onToolModeChange: setToolTrayMode,
+        }}
+        files={{
+          fileOpError, fileTree, fileTreeError, fileTreeLoading, fileTreeTruncated,
+          railBodyRef, railHeight, selectedFileId: selectedFile?.id, treeRef, visibleFileTree,
+          workspaceName: workspacePath ? basename(workspacePath) : null, workspacePath,
+          onCreateFile: () => void createFileInRail(), onCreateFolder: () => void createFolderInRail(),
+          onOpenFile: (file) => void requestOpenEditorFile(file, { focusEditor: true }),
+          onOpenFolder: () => void pickWorkspace(),
+          onWorkspaceContextMenu: (event) => openContextMenu(event, workspaceContextMenuItems()),
+        }}
+      />
       {!sideDrawerCollapsed ? (
         <button
           className="side-drawer-resizer"

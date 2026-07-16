@@ -13,7 +13,7 @@ export type SourceControlSummary = {
   files: GitStatusFile[];
 };
 
-type SourceControlDrawerProps = {
+export type SourceControlDrawerProps = {
   error: string | null;
   hasWorkspace: boolean;
   loading: boolean;
