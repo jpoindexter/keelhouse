@@ -87,7 +87,7 @@ import { createTerminalResize } from "./terminalResize";
 import { searchDialogPropsFrom } from "./searchCommandDialogHost";
 import { transcriptsModalPropsFrom } from "./transcriptsModalHost";
 import { sourceRepoStatusTitleFrom, statusBarRepoPropsFrom } from "./statusBarHost";
-import { nextToolsLayout } from "./appTitlebarHost";
+import { appTitlebarPropsFrom } from "./appTitlebarHost";
 import { appNoticesPropsFrom } from "./appNoticesHost";
 import { draftNavigationPropsFrom } from "./draftNavigationHost";
 import {
@@ -1587,28 +1587,27 @@ function App() {
       }}
       refs={{ workbenchRef }}
       slots={{
-        titlebar: <AppTitlebar
-        activeSessionTitle={activeSessionTitle}
-        hasWorkspace={Boolean(workspacePath)}
-        layout={renderedWorkbenchLayout}
-        primarySurfaceLabel={primarySurfaceLabel}
-        primarySurfaceState={primarySurfaceState}
-        primarySurfaceStatusLabel={primarySurfaceStatusLabel}
-        sideDrawerOpen={!sideDrawerCollapsed}
-        terminalOpen={agentSurfaceMode === "terminal"}
-        toolMode={toolTrayMode}
-        toolsOpen={renderedWorkbenchLayout !== "hidden"}
-        onCreateChat={() => { if (workspacePath) void projectSessionNavigationActions.createSession(workspacePath); }}
-        onLayoutChange={setWorkbenchLayout}
-        onOpenCommandPalette={commandPalette.openDialog}
-        onOpenSettings={() => setSettingsOpen(true)}
-        onOpenWorkspace={() => { if (workspacePath) void openPath(workspacePath); }}
-        onResetInterface={resetInterface}
-        onToggleSideDrawer={() => setSideDrawerCollapsed((collapsed) => !collapsed)}
-        onToggleTerminal={() => void utilityTrayControls.toggleRawTerminal()}
-        onToggleTools={() => setWorkbenchLayout(nextToolsLayout(renderedWorkbenchLayout, workbenchLayout))}
-        onToolModeChange={setToolTrayMode}
-      />,
+        titlebar: <AppTitlebar {...appTitlebarPropsFrom({
+        activeSessionTitle,
+        createSession: projectSessionNavigationActions.createSession,
+        openCommandPalette: commandPalette.openDialog,
+        openSettings: () => setSettingsOpen(true),
+        openWorkspaceFolder: openPath,
+        renderedLayout: renderedWorkbenchLayout,
+        resetInterface,
+        setLayout: setWorkbenchLayout,
+        setToolMode: setToolTrayMode,
+        sideDrawerCollapsed,
+        storedLayout: workbenchLayout,
+        surfaceLabel: primarySurfaceLabel,
+        surfaceState: primarySurfaceState,
+        surfaceStatusLabel: primarySurfaceStatusLabel,
+        terminalOpen: agentSurfaceMode === "terminal",
+        toggleRawTerminal: utilityTrayControls.toggleRawTerminal,
+        toggleSideDrawer: () => setSideDrawerCollapsed((collapsed) => !collapsed),
+        toolMode: toolTrayMode,
+        workspacePath,
+      })} />,
         rail: <WorkspaceSideRail
         activeTitle={drawerActiveTitle}
         collapsed={sideDrawerCollapsed}

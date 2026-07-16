@@ -236,7 +236,7 @@ assert(appTitlebar.includes('aria-label="Toggle Tools"'), "Titlebar must expose 
 assert(!`${appTsx}\n${appTitlebar}`.includes('aria-label="Thread settings"'), "Titlebar must not duplicate the global settings action");
 assert(appTitlebar.includes('aria-label="Open settings and more"'), "Titlebar must keep one global settings and more entry point");
 assert(appTitlebar.includes('aria-label="Toggle Terminal tray"'), "Titlebar must expose the approved bottom terminal tray toggle");
-assert(appTsx.includes('onToggleTerminal={() => void utilityTrayControls.toggleRawTerminal()}'), "Bottom terminal tray toggle must use the existing raw-terminal lifecycle path");
+assert(appTsx.includes('toggleRawTerminal: utilityTrayControls.toggleRawTerminal') && read("app/src/appTitlebarHost.ts").includes('onToggleTerminal: () => void input.toggleRawTerminal()'), "Bottom terminal tray toggle must use the existing raw-terminal lifecycle path");
 assert(icons.includes("panelBottom: PanelBottom"), "Bottom terminal tray toggle must use the standard PanelBottom icon");
 assert(icons.includes("panelLeft: PanelLeft"), "Threads toggle must use the standard PanelLeft icon");
 assert(icons.includes("panelRight: PanelRight"), "Tools toggle must use the standard PanelRight icon");

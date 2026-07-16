@@ -115,3 +115,5 @@ these files to their own pool/environment (vitest poolMatchGlobs or per-file thr
 isolation) instead of relying on reruns.
 Resolution 2026-07-16: switched vitest to the forks pool (vite.config.ts `test.pool`),
 two consecutive full runs green; suite ~26s (was ~16s). Remove the rerun ritual.
+
+- 2026-07-16 recurrence: `SettingsWorkspace.interaction.test.tsx` failed once in a full run even with the forks pool, passed in isolation and in two consecutive full reruns. The forks pool reduced but did not eliminate the jsdom parallel flake class; on a single full-suite failure, rerun the file in isolation plus one full suite before treating it as real.
