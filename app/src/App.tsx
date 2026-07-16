@@ -26,11 +26,9 @@ import { EditorDiffView } from "./EditorDiffView";
 import { EditorCodeSurface } from "./EditorCodeSurface";
 import { AgentComposerSurface } from "./AgentComposerSurface";
 import { AppRuntimeDialogs } from "./AppRuntimeDialogs";
-import { DEFAULT_BROWSER_PREVIEW_URL, detectLocalDevServerUrl } from "./browserPreview";
-import {
-  useBrowserPreviewController,
-  type DetectedLocalDevServer,
-} from "./useBrowserPreviewController";
+import { DEFAULT_BROWSER_PREVIEW_URL } from "./browserPreview";
+import { useBrowserPreviewController } from "./useBrowserPreviewController";
+import { resolveBrowserDevServerDetection } from "./browserDevServerDetection";
 import { useFilesRailHeight } from "./useFilesRailHeight";
 import { useComposerLocalState } from "./useComposerLocalState";
 import { createComposerSettingsActions } from "./composerSettingsActions";
@@ -945,46 +943,25 @@ function App() {
     activeAgentSessionDescriptorRef.current ?? activeChatActivityHandle();
 
   const detectLocalDevServerFromSnapshot = (paneId: number, snapshot: Snapshot) => {
-    const url = detectLocalDevServerUrl(terminalSnapshotText(snapshot));
-    if (!url) return;
     const context = paneContextForPaneId(paneId);
-    const root = context?.projectRoot ?? workspacePathRef.current;
-    const panes = context?.panes ?? terminalPanesRef.current;
-    const paneIndex = panes.findIndex((pane) => pane.id === paneId);
-    const pane = paneIndex >= 0 ? panes[paneIndex] : null;
-    const sessionId = context?.sessionId ?? activeSessionForProject(root);
-    if (!root || !sessionId || !pane) return;
-    const previous = browser.detectedServerRef.current;
-    if (previous?.url === url && previous.paneId === paneId && previous.projectId === root && previous.projectSessionId === sessionId) return;
-    const paneLabel = terminalPaneLabelForDisplay(pane.label, pane.profile.label, paneIndex >= 0 ? paneIndex : pane.slot);
-    const next: DetectedLocalDevServer = {
-      url,
+    const detection = resolveBrowserDevServerDetection({
+      approvalMode: (root, sessionId) =>
+        composerHarnessBySessionRef.current[composerHarnessSessionKey(root, sessionId)]?.approvalMode ?? "ask",
+      context,
+      fallbackPanes: terminalPanesRef.current,
+      fallbackRoot: workspacePathRef.current,
+      fallbackSessionId: activeSessionForProject,
+      now: Date.now,
       paneId,
-      projectId: root,
-      projectSessionId: sessionId,
-      paneLabel,
-      detectedAt: Date.now(),
-    };
-    browser.setDetectedServer(next);
-    const harnessKey = composerHarnessSessionKey(root, sessionId);
-    const approvalMode = composerHarnessBySessionRef.current[harnessKey]?.approvalMode ?? "ask";
-    recordAgentActivity(
-      buildAgentSessionHandleDescriptor({
-        pane,
-        projectId: root,
-        projectSessionId: sessionId,
-        label: paneLabel,
-        approvalMode,
-      }),
-      {
-        kind: "browser",
-        label: "Detected dev server",
-        detail: url,
-        target: url,
-        outputRef: "terminal",
-        status: "complete",
-      },
-    );
+      previous: browser.detectedServerRef.current,
+      text: terminalSnapshotText(snapshot),
+    });
+    if (!detection) return;
+    browser.setDetectedServer(detection.server);
+    recordAgentActivity(detection.handle, {
+      kind: "browser", label: "Detected dev server", detail: detection.server.url,
+      target: detection.server.url, outputRef: "terminal", status: "complete",
+    });
   };
 
   const shouldLogAppActionAudit = (audit: AppActionAuditEvent) =>
