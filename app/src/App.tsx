@@ -39,7 +39,6 @@ import {
   assembleCommandPaletteCommands,
   visibleCommandPaletteCommands,
 } from "./commandPaletteAssembly";
-import { createSettingsConnectionActionsController } from "./settingsConnectionActionsController";
 import { createProjectSessionMetadataActions } from "./projectSessionMetadataActions";
 import { createEditorSurfaceActions } from "./editorSurfaceActions";
 import type { GitStatusFile } from "./fileGitStatus";
@@ -94,7 +93,6 @@ import {
   defaultTerminalLaunchProfile,
 } from "./launchProfiles";
 import type { LaunchProfile } from "./launchProfiles";
-import { resolveScopedSetting } from "./scopedSettings";
 import {
   createActiveAgentSessionHandle,
 } from "./agentSessionHandle";
@@ -124,9 +122,6 @@ import {
   DEFAULT_AI_CONNECTION_SETTINGS,
   connectionEnvironmentInputs,
   type AiConnectionSettings,
-  type ConnectionTargetStatus,
-  type McpOAuthStart,
-  type McpOAuthStatus,
 } from "./connectionSettings";
 import { createRenderPerfState, recordIpcPayloadBytes } from "./renderPerf";
 import { useTerminalCanvasRuntime } from "./useTerminalCanvasRuntime";
@@ -144,9 +139,7 @@ import {
   clearBackgroundExitsForProject,
   notifyBackgroundExit,
 } from "./backgroundExits";
-import { requestPermission } from "@tauri-apps/plugin-notification";
-import { createSettingsPreferenceActions } from "./settingsPreferenceActions";
-import { createSettingsScopedActions } from "./settingsScopedActions";
+import { buildSettingsActions } from "./settingsActionsHost";
 import { deriveActiveAgentSessionState } from "./activeAgentSessionState";
 import { deriveEditorWorkspaceState } from "./editorWorkspaceState";
 import { TranscriptsModal } from "./TranscriptsModal";
@@ -1218,62 +1211,11 @@ function App() {
   });
   const drawerActiveTitle = drawerTitleFor(shellLayout.sideDrawerMode);
   const sourceRepoStatusTitle = sourceRepoStatusTitleFrom(settingsRuntime.repoLocation, settingsRuntime.sourceControlStatus);
-  const settingsPreferenceActions = createSettingsPreferenceActions({
-    commandPaletteSources,
-    keybindingOverrides,
-    requestNotificationPermission: requestPermission,
-    saveSetting: (key, value) => {
-      void storeRef.current?.set(key, value);
-      void storeRef.current?.save();
-    },
-    setCommandPaletteSources,
-    setKeybindingOverrides: (next) => { setActiveKeybindingOverrides(next); setKeybindingOverrides(next); },
-    setNotificationsEnabled: chrome.setNotificationsEnabled,
-    setTheme: chrome.setAppTheme,
-  });
-  const settingsScopedActions = createSettingsScopedActions({
-    clearScopedSetting: composerWorkspace.clearScopedSetting,
-    readEffectiveBrowserUrl: () => resolveScopedSetting(
-      composerWorkspace.scopedSettingsRef.current, "browserUrl", workspacePathRef.current,
-      persistence.activeSessionForProject(workspacePathRef.current),
-    ).value,
-    resolveLaunchProfile: profiles.resolveProfile,
-    restoreBrowserPreview: () => browser.restoreScopedUrl(
-      workspacePathRef.current, persistence.activeSessionForProject(workspacePathRef.current),
-    ),
-    setBrowserLocation: browser.setLocation,
-    setComposerApprovalMode: composerSettingsActions.setApprovalMode,
-    switchLaunchProfile: profiles.switchLaunchProfile,
-    updateScopedSetting: composerWorkspace.updateScopedSetting,
-  });
-
-  const settingsConnectionActions = createSettingsConnectionActionsController({
-    applySettings: (next) => {
-      aiConnectionSettingsRef.current = next;
-      setAiConnectionSettings(next);
-    },
-    persistSettings: async (next) => {
-      await storeRef.current?.set("aiConnectionSettings", next);
-      await storeRef.current?.save();
-    },
-    clearSecretPresence: (keys) => mcpOAuth.setSecretPresence((current) => ({
-      ...current, ...Object.fromEntries(keys.map((key) => [key, false])),
-    })),
-    clearStore: async () => {
-      const store = storeRef.current;
-      if (store) { await store.clear(); await store.save(); }
-    },
-    confirmReset: (message) => confirmDialog(message),
-    deleteSecret: (key) => invoke("delete_connection_secret", { key }),
-    disconnectOAuth: (input) => invoke<McpOAuthStatus>("disconnect_mcp_oauth", input),
-    getSettings: () => aiConnectionSettingsRef.current,
-    getWorkspacePath: () => workspacePath,
-    probe: (input) => invoke<ConnectionTargetStatus>("probe_mcp_server", input),
-    recordOAuthStatus: (id, status) => mcpOAuth.setStatuses((current) => ({ ...current, [id]: status })),
-    reload: () => window.location.reload(),
-    resetDurableChats: resetDurableChatStore,
-    resetNativeState: () => invoke("reset_local_state"),
-    startOAuth: (input) => invoke<McpOAuthStart>("begin_mcp_oauth", input),
+  const { settingsConnectionActions, settingsPreferenceActions, settingsScopedActions } = buildSettingsActions({
+    aiConnectionSettingsRef, browser, chrome, commandPaletteSources, composerSettingsActions,
+    composerWorkspace, keybindingOverrides, mcpOAuth, persistence, profiles,
+    resetDurableChats: resetDurableChatStore, setActiveKeybindingOverrides, setAiConnectionSettings,
+    setCommandPaletteSources, setKeybindingOverrides, storeRef, workspacePath, workspacePathRef,
   });
 
   return (
