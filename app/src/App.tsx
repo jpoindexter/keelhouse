@@ -36,6 +36,7 @@ import { useComposerAttachments } from "./useComposerAttachments";
 import { useEditorNavigationLifecycle } from "./useEditorNavigationLifecycle";
 import { createWorkspacePersistence } from "./workspacePersistence";
 import { useTerminalPaneController } from "./useTerminalPaneController";
+import { useEditorSessionController } from "./useEditorSessionController";
 import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import {
@@ -47,17 +48,13 @@ import {
   setProjectSessionArchived,
   setProjectSessionPinned,
 } from "./workspaceState";
-import type { ActiveFileByWorkspace, ActiveSessionByProject, OpenProject, ProjectRailStatus, ProjectSession, ProjectSessionsByProject } from "./workspaceState";
+import type { ActiveSessionByProject, OpenProject, ProjectRailStatus, ProjectSession, ProjectSessionsByProject } from "./workspaceState";
 import {
   clampEditorViewState,
   findFileTreeNode,
   reconcileActiveFileNode,
 } from "./editorState";
-import type { CursorPosition, EditorViewState } from "./editorState";
-import {
-  type EditorFileBuffer,
-  type EditorFileLoadState,
-} from "./editorFileLoadState";
+import type { EditorFileLoadState } from "./editorFileLoadState";
 import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
   removeEditorBuffersWithin,
@@ -302,13 +299,6 @@ type OpenWorkspaceResponse = { root: string; paneId: number };
 type ResolveWorkspaceResponse = { root: string };
 type OpenPaneResponse = { paneId: number };
 type SaveEditorFileOptions = { force?: boolean };
-type EditorBuffer = EditorFileBuffer;
-type ProjectEditorSnapshot = {
-  tabs: FileTreeNode[];
-  activePath: string | null;
-  buffers: Record<string, EditorBuffer>;
-  viewStates: Record<string, EditorViewState>;
-};
 type CommandPaletteCommand = SearchDialogCommand;
 type WorkspaceBootstrapSnapshot = Awaited<ReturnType<typeof loadWorkspaceBootstrap>>;
 type OpenedWorkspaceTarget = {
@@ -356,18 +346,6 @@ function App() {
   const aiConnectionSettingsRef = useRef<AiConnectionSettings>(DEFAULT_AI_CONNECTION_SETTINGS);
   const activeAgentSessionDescriptorRef = useRef<AgentSessionHandleDescriptor | null>(null);
   const fileNodeContextMenuItemsRef = useRef<(node: FileTreeNode) => ContextMenuItem[]>(() => []);
-  const activeFilesByWorkspaceRef = useRef<ActiveFileByWorkspace>({});
-  const restoredActiveFileWorkspaceRef = useRef<string | null>(null);
-  const selectedFileRef = useRef<FileTreeNode | null>(null);
-  const saveEditorFileRef = useRef<() => Promise<boolean>>(async () => false);
-  const openEditorSearchRef = useRef<() => void>(() => {});
-  const closeActiveEditorTabRef = useRef<() => Promise<void>>(async () => {});
-  const editorViewRef = useRef<EditorView | null>(null);
-  const editorViewStatesRef = useRef<Record<string, EditorViewState>>({});
-  const editorBuffersRef = useRef<Record<string, EditorBuffer>>({});
-  const sessionEditorSnapshotsRef = useRef<Record<string, ProjectEditorSnapshot>>({});
-  const pendingEditorFocusRef = useRef(false);
-  const editorLoadSeq = useRef(0);
   const latest = useRef<Snapshot | null>(null);
   const frame = useRef<number | null>(null);
   const metrics = useRef({ cw: 9, ch: 19 });
@@ -377,6 +355,18 @@ function App() {
   const selecting = useRef(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
+  const {
+    activeFilesByWorkspaceRef, captureCurrentEditorBuffer, captureCurrentEditorViewState,
+    closeActiveEditorTabRef, editorBuffersRef, editorBytes, editorCursor, editorError,
+    editorLoadSeq, editorLoading, editorModifiedMs, editorRecoveryError, editorSaving,
+    editorTabs, editorText, editorViewRef, editorViewStatesRef, fileOpError,
+    openEditorSearchRef, pendingEditorFocusRef, resetEditor, restoredActiveFileWorkspaceRef,
+    saveEditorFileRef, savedEditorText, selectedFile, selectedFileRef,
+    sessionEditorSnapshotsRef, setEditorBufferRevision, setEditorBytes, setEditorCursor,
+    setEditorError, setEditorLoading, setEditorModifiedMs, setEditorRecoveryError,
+    setEditorSaving, setEditorTabs, setEditorText, setFileOpError, setSavedEditorText,
+    setSelectedFile,
+  } = useEditorSessionController();
   const terminal = useTerminalPaneController<Snapshot>({
     activeSessionForProject: (root) => activeSessionForProject(root),
     activeWorkspace: workspacePathRef,
@@ -407,19 +397,6 @@ function App() {
     onRootResolved: (root) => { workspacePathRef.current = root; },
     workspacePath,
   });
-  const [fileOpError, setFileOpError] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<FileTreeNode | null>(null);
-  const [editorTabs, setEditorTabs] = useState<FileTreeNode[]>([]);
-  const [, setEditorBufferRevision] = useState(0);
-  const [editorText, setEditorText] = useState("");
-  const [savedEditorText, setSavedEditorText] = useState("");
-  const [editorLoading, setEditorLoading] = useState(false);
-  const [editorSaving, setEditorSaving] = useState(false);
-  const [editorError, setEditorError] = useState<string | null>(null);
-  const [editorRecoveryError, setEditorRecoveryError] = useState<string | null>(null);
-  const [editorBytes, setEditorBytes] = useState<number | null>(null);
-  const [editorModifiedMs, setEditorModifiedMs] = useState<number | null>(null);
-  const [editorCursor, setEditorCursor] = useState<CursorPosition>({ line: 1, column: 1 });
   const [recentProjects, setRecentProjects] = useState<string[]>([]);
   const [openProjects, setOpenProjects] = useState<OpenProject[]>([]);
   const [agentHookStatus, setAgentHookStatus] = useState<AgentHookStatus | null>(null);
@@ -685,7 +662,6 @@ function App() {
   useSyncRef(activeSessionByProjectRef, activeSessionByProject);
   useSyncRef(composerHarnessBySessionRef, composerHarnessBySession);
   useSyncRef(scopedSettingsRef, scopedSettings);
-  useSyncRef(selectedFileRef, selectedFile);
 
   useEffect(() => {
     if (!selectedFile) return;
@@ -713,49 +689,6 @@ function App() {
     const syncedFile = reconcileActiveFileNode(fileTree, selectedFile);
     if (syncedFile !== selectedFile) setSelectedFile(syncedFile);
   }, [fileTree, selectedFile]);
-
-  const resetEditor = () => {
-    editorViewRef.current = null;
-    editorLoadSeq.current += 1;
-    editorBuffersRef.current = {};
-    setEditorTabs([]);
-    setEditorBufferRevision((value) => value + 1);
-    setSelectedFile(null);
-    setEditorText("");
-    setSavedEditorText("");
-    setEditorError(null);
-    setEditorRecoveryError(null);
-    setEditorBytes(null);
-    setEditorModifiedMs(null);
-    setEditorCursor({ line: 1, column: 1 });
-  };
-
-  const captureCurrentEditorViewState = () => {
-    const file = selectedFileRef.current;
-    const view = editorViewRef.current;
-    if (!file || !view) return;
-    const { anchor, head } = view.state.selection.main;
-    editorViewStatesRef.current[file.path] = {
-      anchor,
-      head,
-      scrollTop: view.scrollDOM.scrollTop,
-      focused: view.hasFocus,
-    };
-  };
-
-  const captureCurrentEditorBuffer = () => {
-    const file = selectedFileRef.current;
-    if (!file) return;
-    editorBuffersRef.current[file.path] = {
-      text: editorText,
-      savedText: savedEditorText,
-      bytes: editorBytes,
-      modifiedMs: editorModifiedMs,
-      error: editorError,
-      recoveryError: editorRecoveryError,
-    };
-    setEditorBufferRevision((value) => value + 1);
-  };
 
   const {
     clearActiveFile: clearPersistedActiveFile,
