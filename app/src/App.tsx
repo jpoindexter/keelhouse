@@ -65,6 +65,7 @@ import { createDevServerDetection } from "./devServerDetectionSurface";
 import { createPaneTranscriptCapture } from "./paneTranscriptCapture";
 import { deriveOrchestrationDialogState } from "./orchestrationDialogState";
 import { settingsAgentProfileOptions } from "./settingsModalData";
+import { deriveAppSurfaceLabels } from "./appSurfaceLabels";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -97,7 +98,6 @@ import { useAgentActivityController } from "./useAgentActivityController";
 import { useComposerWorkspaceState } from "./useComposerWorkspaceState";
 import { usePaneTranscriptController } from "./usePaneTranscriptController";
 import { terminalPaneLabelForDisplay } from "./terminalPane";
-import type { TerminalPaneState } from "./terminalPane";
 import { useGitStatus } from "./useGitStatus";
 import { useGitDiffReview } from "./useGitDiffReview";
 import { useShellLayout, type SideDrawerMode } from "./useShellLayout";
@@ -543,10 +543,6 @@ function App() {
   const terminalFind = useTerminalFind(activeTerminalPane != null);
   useSyncRef(activeAgentSessionDescriptorRef, activeAgentSessionDescriptor);
   const activeTerminalProfile = activeTerminalPane?.profile ?? profiles.terminalProfile;
-  const primarySurfaceState: TerminalPaneState = activeChatConversation.activeRunId ? "starting" : "idle";
-  const primarySurfaceLabel = "Codex";
-  const primarySurfaceStatusLabel = activeChatConversation.activeRunId ? "Working" : "Ready";
-  const utilityTrayStatusLabel = utilityTrayMode.charAt(0).toUpperCase() + utilityTrayMode.slice(1);
 
 
   useEffect(() => {
@@ -1685,10 +1681,16 @@ function App() {
   const activeTerminalPaneLabel = activeTerminalPane
     ? terminalPaneLabel(activeTerminalPane, activeTerminalPaneIndex >= 0 ? activeTerminalPaneIndex : activeTerminalPane.slot)
     : null;
-  const activeWorkspaceName = workspacePath ? basename(workspacePath) : "Open workspace";
-  const activeSessionTitle = activeSessionId
-    ? projectSessionsFor(workspacePath ?? "").find((session) => session.id === activeSessionId)?.title ?? "New chat"
-    : "No chat";
+  const {
+    activeSessionTitle, activeWorkspaceName, primarySurfaceLabel,
+    primarySurfaceState, primarySurfaceStatusLabel, utilityTrayStatusLabel,
+  } = deriveAppSurfaceLabels({
+    activeRunId: activeChatConversation.activeRunId,
+    activeSessionId,
+    sessions: projectSessionsFor(workspacePath ?? ""),
+    trayMode: utilityTrayMode,
+    workspacePath,
+  });
   const drawerActiveTitle = drawerTitleFor(sideDrawerMode);
   const sourceHostToolStatus = repoLocation?.kind === "github" ? sourceControlStatus?.gh : sourceControlStatus?.glab;
   const sourceRepoStatusTitle = sourceRepoStatusTitleFor(repoLocation, sourceHostToolStatus);
