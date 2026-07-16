@@ -50,6 +50,7 @@ import {
   reconcileActiveFileNode,
 } from "./editorState";
 import { createEditorViewLifecycle } from "./editorViewLifecycle";
+import { createWorkspaceBootstrapController } from "./workspaceBootstrapController";
 import type { EditorFileLoadState } from "./editorFileLoadState";
 import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
@@ -257,7 +258,6 @@ type Snapshot = { cols: number; rows: number; cx: number; cy: number; cvis: bool
 type OpenPaneResponse = { paneId: number };
 type SaveEditorFileOptions = { force?: boolean };
 type CommandPaletteCommand = SearchDialogCommand;
-type WorkspaceBootstrapSnapshot = Awaited<ReturnType<typeof loadWorkspaceBootstrap>>;
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 const fileNodeFromPath = (path: string, kind: FileTreeNode["kind"]): FileTreeNode => ({
   id: path, kind, name: basename(path), path,
@@ -2074,60 +2074,53 @@ function App() {
     workspacePath,
   });
 
-  const applyBootstrapRefs = (data: WorkspaceBootstrapSnapshot) => {
-    storeRef.current = data.store;
-    recentProjectsRef.current = data.recentProjects;
-    openProjectsRef.current = data.openProjects;
-    projectSessionsRef.current = data.projectSessions;
-    activeSessionByProjectRef.current = data.activeSessions;
-    browser.projectRecordsRef.current = data.browserProjects;
-    browser.sessionRecordsRef.current = data.browserSessions;
-    composerHarnessBySessionRef.current = data.composerHarness;
-    scopedSettingsRef.current = data.scopedSettings;
-    chatConversationsRef.current = data.chatConversations;
-    sessionEditorSnapshotsRef.current = data.sessionSnapshots;
-    paneLayoutsBySessionRef.current = data.paneLayouts;
-    aiConnectionSettingsRef.current = data.aiConnectionSettings;
-    activeFilesByWorkspaceRef.current = data.activeFiles;
-  };
-
-  const applyBootstrapState = (data: WorkspaceBootstrapSnapshot) => {
-    profiles.hydrate({
-      customProfiles: data.customProfiles,
-      launchProfile: data.launchProfile,
-      terminalProfile: data.terminalProfile,
-    });
-    setAiConnectionSettings(data.aiConnectionSettings);
-    void refreshConnectionSecretPresence(data.aiConnectionSettings);
-    setRecentProjects(data.recentProjects);
-    setOpenProjects(data.openProjects);
-    setProjectSessions(data.projectSessions);
-    setActiveSessionByProjectState(data.activeSessions);
-    browser.setProjectRecords(data.browserProjects);
-    browser.setSessionRecords(data.browserSessions);
-    setComposerHarnessBySession(data.composerHarness);
-    setScopedSettings(data.scopedSettings);
-    setChatConversations(data.chatConversations);
-    setPaneLabelsBySession(data.paneLabels);
-    setAgentActivityEvents(data.agentActivity);
-    setActiveKeybindingOverrides(data.keybindings);
-    setKeybindingOverrides(data.keybindings);
-    setCommandPaletteSources(data.commandPaletteSources);
-    if (data.theme) setAppTheme(data.theme);
-    if (data.notificationsEnabled) setNotificationsEnabled(true);
-    setPaneTranscripts(data.paneTranscripts);
-    setWorktrees(data.worktrees);
-  };
-
   // Reopen the last folder on startup, otherwise ask for a workspace.
-  const initWorkspace = async () => {
-    const data = await loadWorkspaceBootstrap();
-    applyBootstrapRefs(data);
-    applyBootstrapState(data);
-    if (data.lastFolder) await openWorkspaceDirect(data.lastFolder, data.launchProfile);
-    else await pickWorkspace();
-    sendTerminalResize();
-  };
+  const workspaceBootstrapController = createWorkspaceBootstrapController({
+    hydrateProfiles: profiles.hydrate,
+    loadBootstrap: loadWorkspaceBootstrap,
+    openWorkspace: (folder, profile) => openWorkspaceDirect(folder, profile),
+    pickWorkspace,
+    refreshSecretPresence: (settings) => { void refreshConnectionSecretPresence(settings); },
+    refs: {
+      activeFiles: activeFilesByWorkspaceRef,
+      activeSessions: activeSessionByProjectRef,
+      aiConnectionSettings: aiConnectionSettingsRef,
+      browserProjects: browser.projectRecordsRef,
+      browserSessions: browser.sessionRecordsRef,
+      chatConversations: chatConversationsRef,
+      composerHarness: composerHarnessBySessionRef,
+      openProjects: openProjectsRef,
+      paneLayouts: paneLayoutsBySessionRef,
+      projectSessions: projectSessionsRef,
+      recentProjects: recentProjectsRef,
+      scopedSettings: scopedSettingsRef,
+      sessionSnapshots: sessionEditorSnapshotsRef,
+      store: storeRef,
+    },
+    sendResize: sendTerminalResize,
+    setters: {
+      setActiveSessions: setActiveSessionByProjectState,
+      setAgentActivity: setAgentActivityEvents,
+      setAiConnectionSettings,
+      setBrowserProjects: browser.setProjectRecords,
+      setBrowserSessions: browser.setSessionRecords,
+      setChatConversations,
+      setCommandPaletteSources,
+      setComposerHarness: setComposerHarnessBySession,
+      setKeybindingOverrides,
+      setKeybindings: setActiveKeybindingOverrides,
+      setNotificationsEnabled,
+      setOpenProjects,
+      setPaneLabels: setPaneLabelsBySession,
+      setPaneTranscripts,
+      setProjectSessions,
+      setRecentProjects,
+      setScopedSettings,
+      setTheme: setAppTheme,
+      setWorktrees,
+    },
+  });
+  const initWorkspace = workspaceBootstrapController.initWorkspace;
 
   useTerminalCanvasRuntime({
     canvasRef,
