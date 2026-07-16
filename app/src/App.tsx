@@ -59,6 +59,10 @@ import { createComposerSurface } from "./composerSurfaceController";
 import { createComposerHistoryNavigation } from "./composerHistoryNavigation";
 import { createUtilityTrayControls } from "./utilityTrayControls";
 import { createTerminalPaneRename } from "./terminalPaneRename";
+import {
+  projectRailStatusFromConversations,
+  projectSessionStatusFromConversations,
+} from "./projectChatStatus";
 import type { EditorFileLoadState } from "./editorFileLoadState";
 import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
@@ -1104,21 +1108,13 @@ function App() {
     invoke("resize_pty", { cols, rows }).catch(() => {});
   };
 
-  const projectRailStatus = (project: OpenProject): ProjectRailStatus => {
-    const conversations = Object.entries(chatConversations).filter(([key]) => key.startsWith(`${project.path}\n`));
-    if (conversations.some(([, conversation]) => conversation.activeRunId)) return "running";
-    if (conversations.some(([, conversation]) => conversation.messages[conversation.messages.length - 1]?.role === "error")) return "attention";
-    return "exited";
-  };
+  const projectRailStatus = (project: OpenProject): ProjectRailStatus =>
+    projectRailStatusFromConversations(chatConversations, project.path);
 
   const projectSessionsFor = (projectPath: string) => projectSessions[projectPath] ?? [];
 
-  const projectSessionStatus = (projectPath: string, session: ProjectSession): ProjectRailStatus => {
-    const conversation = chatConversations[`${projectPath}\n${session.id}`];
-    if (conversation?.activeRunId) return "running";
-    if (conversation?.messages[conversation.messages.length - 1]?.role === "error") return "attention";
-    return "exited";
-  };
+  const projectSessionStatus = (projectPath: string, session: ProjectSession): ProjectRailStatus =>
+    projectSessionStatusFromConversations(chatConversations, projectPath, session.id);
 
   const visibleOpenProjects = openProjects.length > 0
     ? openProjects
