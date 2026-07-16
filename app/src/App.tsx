@@ -47,7 +47,7 @@ import type { GitStatusFile } from "./fileGitStatus";
 import { buildAgentHookSnapshot, hookReportToActivity } from "./agentHookIntegration";
 import { AgentConversationPanel } from "./AgentConversationPanel";
 import { useContextMenuHost } from "./useContextMenuHost";
-import { createTerminalSurfaceActions } from "./terminalSurfaceController";
+import { createTerminalSurfaceActions, terminalSurfaceDepsFromHook } from "./terminalSurfaceController";
 import { createWorkspaceOpenSurface } from "./workspaceOpenSurface";
 import { createChatRunControls } from "./chatRunControls";
 import { createComposerSurface } from "./composerSurfaceController";
@@ -706,6 +706,7 @@ function App() {
 
   const projectCloseController = createProjectCloseController({
     activePanes: activeTerminalPaneByContextRef,
+    intentionallyTerminatedPaneIds: intentionallyTerminatedPaneIdsRef.current,
     clearActiveWorkspace: () => {
       setWorkspacePath(null); setManagedTerminalPanes([]); setFocusedTerminalPane(null);
       latest.current = null; setFileTree([]); resetEditor();
@@ -715,7 +716,6 @@ function App() {
     deleteStoredFolder: async () => { await storeRef.current?.delete("folder"); },
     dirtyTabCount: dirtyTabPaths.length, getPanes: terminalPanesForProject,
     hasSelectedFile: () => selectedFileRef.current != null,
-    intentionallyTerminatedPaneIds: intentionallyTerminatedPaneIdsRef.current,
     openProjects: openProjectsRef, openWorkspace: openWorkspaceDirect,
     persistOpenProjects, projectPanes: terminalPanesByContextRef,
     saveStore: async () => { await storeRef.current?.save(); },
@@ -918,12 +918,12 @@ function App() {
   const setComposerRuntime = composerSettingsActions.setRuntime;
   const setComposerReasoningEffort = composerSettingsActions.setReasoningEffort;
 
-  const terminalSurface = createTerminalSurfaceActions<Snapshot, SelectionRange>({
+  const terminalSurface = createTerminalSurfaceActions<Snapshot, SelectionRange>(terminalSurfaceDepsFromHook(terminal, {
+    getChanging: () => profiles.changing,
+    getSessionId: activeSessionForProject,
     activeAgentDescriptor: () => activeAgentSessionDescriptor,
     activeAgentHandle: () => activeAgentSessionHandle,
     activePane: () => activeTerminalPane,
-    activePaneId: activeTerminalPaneIdRef,
-    activePaneIds: activeTerminalPaneByContextRef,
     approvalMode: () => agentApprovalMode,
     closePane: async (paneId) =>
       (await invoke<{ activePaneId: number | null }>("close_pane", { paneId })).activePaneId,
@@ -940,12 +940,9 @@ function App() {
     finalizePane: finalizeCreatedTerminalPane,
     focusPane: (paneId) => invoke("focus_pane", { paneId }),
     gateAction: async (action, handle) => (await gateAppAction(action, handle)).decision,
-    getChanging: () => profiles.changing, getPanes: terminalPanesForSession,
-    getProjectStatus: projectStatusForRoot, getSessionId: activeSessionForProject,
     getWorkspacePath: () => workspacePathRef.current,
     getWorkspacePathOrState: () => workspacePathRef.current ?? workspacePath,
     getWorktrees: () => worktrees,
-    intentionallyTerminatedPaneIds: intentionallyTerminatedPaneIdsRef.current,
     latest, now: Date.now,
     paste: (text) => invoke("paste", { text }),
     persistWorktreeRecord: (record) => setWorktrees((current) => {
@@ -978,14 +975,10 @@ function App() {
     }),
     setChanging: profiles.setChanging,
     setComposerError, setLaunchError,
-    setFocusedPane: setFocusedTerminalPane,
-    setPaneExited: (paneId) => setPaneState(paneId, "exited", null),
-    setSessionPanes: setSessionTerminalPanes,
-    snapshots: terminalSnapshotsRef, statusForPanes: terminalPaneProjectStatus,
     terminatePane: (paneId) => invoke("terminate_pane", { paneId }),
     updateProjectStatus: updateOpenProjectStatus,
     updateSessionStatus: (root, status) => updateActiveSessionStatus(root, status),
-  });
+  }));
   const closeTerminalPane = terminalSurface.closeTerminalPane;
   const closeWorktreePane = terminalSurface.closeWorktreePane;
   const createTerminalPane = terminalSurface.createTerminalPane;

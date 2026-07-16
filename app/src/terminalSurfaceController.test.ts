@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
 import type { LaunchProfile } from "./launchProfiles";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
-import { createTerminalSurfaceActions } from "./terminalSurfaceController";
+import { createTerminalSurfaceActions, terminalSurfaceDepsFromHook } from "./terminalSurfaceController";
 
 const profile: LaunchProfile = {
   id: "codex", label: "Codex", command: "codex", args: [], useLoginShell: false,
@@ -117,5 +117,34 @@ describe("createTerminalSurfaceActions", () => {
 
     expect(deps.terminatePane).toHaveBeenCalledWith(1);
     expect(deps.intentionallyTerminatedPaneIds).toContain(1);
+  });
+});
+
+describe("terminalSurfaceDepsFromHook", () => {
+  it("maps the terminal hook bundle onto the surface dependency names", () => {
+    const deps = createDeps();
+    const hook = {
+      activePaneIdRef: deps.activePaneId,
+      activePaneIdsRef: deps.activePaneIds,
+      intentionallyTerminatedPaneIdsRef: { current: deps.intentionallyTerminatedPaneIds },
+      panesForSession: deps.getPanes,
+      projectStatusForRoot: deps.getProjectStatus,
+      setFocusedPane: deps.setFocusedPane,
+      setPaneState: (paneId: number, state: "exited", exitCode: number | null) => {
+        void paneId; void state; void exitCode;
+        return deps.setPaneExited();
+      },
+      setSessionPanes: deps.setSessionPanes,
+      snapshotsRef: deps.snapshots,
+      statusForPanes: deps.statusForPanes,
+    };
+
+    const mapped = terminalSurfaceDepsFromHook(hook, deps);
+
+    expect(mapped.activePaneId).toBe(deps.activePaneId);
+    expect(mapped.getPanes).toBe(deps.getPanes);
+    expect(mapped.getProjectStatus).toBe(deps.getProjectStatus);
+    expect(mapped.snapshots).toBe(deps.snapshots);
+    expect(mapped.setPaneExited(1)).toHaveLength(2);
   });
 });

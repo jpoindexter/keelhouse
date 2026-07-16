@@ -173,3 +173,40 @@ export const createTerminalSurfaceActions = <TSnapshot, TSelection>(
   ...wireProcessActions(deps),
   ...wireClipboard(deps),
 });
+
+type TerminalHookBundle<TSnapshot> = {
+  activePaneIdRef: Ref<number | null>;
+  activePaneIdsRef: Ref<Record<string, number>>;
+  intentionallyTerminatedPaneIdsRef: Ref<Set<number>>;
+  panesForSession: (root: string, sessionId: string) => ManagedTerminalPane[];
+  projectStatusForRoot: (root: string) => ProjectRailStatus;
+  setFocusedPane: (paneId: number) => void;
+  setPaneState: (paneId: number, state: "exited", exitCode: number | null) => ManagedTerminalPane[];
+  setSessionPanes: (
+    root: string, sessionId: string, panes: ManagedTerminalPane[], activePaneId: number | null,
+  ) => void;
+  snapshotsRef: Ref<Record<number, TSnapshot>>;
+  statusForPanes: (panes: ManagedTerminalPane[]) => TerminalPaneProjectStatus;
+};
+
+type TerminalHookDerivedKeys =
+  | "activePaneId" | "activePaneIds" | "getPanes" | "getProjectStatus"
+  | "intentionallyTerminatedPaneIds" | "setFocusedPane" | "setPaneExited"
+  | "setSessionPanes" | "snapshots" | "statusForPanes";
+
+export const terminalSurfaceDepsFromHook = <TSnapshot, TSelection>(
+  hook: TerminalHookBundle<TSnapshot>,
+  rest: Omit<TerminalSurfaceDeps<TSnapshot, TSelection>, TerminalHookDerivedKeys>,
+): TerminalSurfaceDeps<TSnapshot, TSelection> => ({
+  ...rest,
+  activePaneId: hook.activePaneIdRef,
+  activePaneIds: hook.activePaneIdsRef,
+  getPanes: hook.panesForSession,
+  getProjectStatus: hook.projectStatusForRoot,
+  intentionallyTerminatedPaneIds: hook.intentionallyTerminatedPaneIdsRef.current,
+  setFocusedPane: hook.setFocusedPane,
+  setPaneExited: (paneId) => hook.setPaneState(paneId, "exited", null),
+  setSessionPanes: hook.setSessionPanes,
+  snapshots: hook.snapshotsRef,
+  statusForPanes: hook.statusForPanes,
+});
