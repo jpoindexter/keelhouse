@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keelhouse · Local Studio chrome study</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #15161a;
+      --rail: #191a1f;
+      --panel: #17181c;
+      --surface: #202127;
+      --surface-raised: #25272e;
+      --border: #ffffff14;
+      --separator: #ffffff0a;
+      --hover: #ffffff0d;
+      --active: #ffffff14;
+      --text: #f4f5f7;
+      --muted: #b6b8c3;
+      --faint: #7d808d;
+      --accent: #67c3d1;
+      --accent-strong: #9bd9e3;
+      --accent-soft: #162c33;
+      --success: #87b08a;
+      --warning: #d7a65a;
+      --danger: #d16d6d;
+      --thread-w: 292px;
+      --inspector-w: 340px;
+      --top-h: 40px;
+      --pane-h: 40px;
+      --tray-h: 38px;
+      --status-h: 24px;
+      --composer-w: 760px;
+      --ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SF Mono", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      background: #08090b;
+      color: var(--text);
+      font-family: var(--ui);
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, textarea, input { color: inherit; font: inherit; }
+    button { border: 0; background: transparent; cursor: default; }
+    button:focus-visible, textarea:focus-visible, input:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    svg { pointer-events: none; }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: var(--top-h) minmax(0, 1fr) var(--status-h);
+      background: var(--bg);
+    }
+    .icon-svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.75;
+    }
+    .icon-button {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      color: var(--faint);
+      border-radius: 8px;
+    }
+    .icon-button:hover, .icon-button[aria-pressed="true"] {
+      color: var(--text);
+      background: var(--hover);
+    }
+    .text-action { color: var(--text); font-weight: 600; }
+    .text-action:hover { color: var(--accent-strong); }
+    .grow { flex: 1; min-width: 0; }
+    .mono { font-family: var(--mono); }
+
+    .titlebar {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: var(--rail);
+      -webkit-app-region: drag;
+    }
+    .traffic {
+      width: 80px;
+      padding-left: 14px;
+      display: flex;
+      gap: 8px;
+    }
+    .traffic span { width: 11px; height: 11px; border-radius: 50%; }
+    .traffic span:nth-child(1) { background: #d66961; }
+    .traffic span:nth-child(2) { background: #d0ad56; }
+    .traffic span:nth-child(3) { background: #67b266; }
+    .titlebar button { -webkit-app-region: no-drag; }
+    .title-identity {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+    }
+    .title-identity strong {
+      max-width: 36vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .branch { color: var(--faint); font-family: var(--mono); font-size: 11px; }
+    .title-actions { display: flex; align-items: center; margin-left: auto; padding-right: 4px; }
+    .provider {
+      height: 26px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .provider-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+    .workspace {
+      position: relative;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: var(--thread-w) minmax(0, 1fr) var(--inspector-w);
+      grid-template-rows: minmax(0, 1fr) var(--tray-h);
+      transition: grid-template-columns 160ms ease;
+    }
+    body.threads-collapsed { --thread-w: 0px; }
+    body.inspector-collapsed { --inspector-w: 0px; }
+
+    .threads {
+      grid-row: 1 / 3;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: var(--pane-h) auto minmax(0, 1fr) auto;
+      border-right: 1px solid var(--border);
+      background: var(--rail);
+      opacity: 1;
+      transition: opacity 120ms ease;
+    }
+    body.threads-collapsed .threads { opacity: 0; pointer-events: none; border-right: 0; }
+    .pane-head {
+      min-width: 0;
+      height: var(--pane-h);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px 0 12px;
+      border-bottom: 1px solid var(--separator);
+    }
+    .pane-head strong { font-weight: 600; }
+    .pane-head .icon-button { width: 32px; height: 32px; }
+    .thread-search {
+      height: 32px;
+      margin: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      border-radius: 8px;
+      background: var(--hover);
+      color: var(--muted);
+    }
+    .thread-search .icon-svg { width: 14px; height: 14px; }
+    .thread-scroll { min-height: 0; overflow: auto; padding: 4px 8px 12px; }
+    .section-label {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      color: var(--faint);
+      font-size: 11px;
+      letter-spacing: .05em;
+    }
+    .project-row, .thread-row {
+      width: 100%;
+      min-width: 0;
+      height: 30px;
+      display: grid;
+      align-items: center;
+      gap: 8px;
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: left;
+    }
+    .project-row { grid-template-columns: 16px minmax(0, 1fr) auto; padding: 0 8px; color: var(--text); }
+    .thread-row { grid-template-columns: minmax(0, 1fr) auto; padding: 0 8px 0 32px; }
+    .project-row:hover, .thread-row:hover { background: var(--hover); color: var(--text); }
+    .thread-row.active { background: var(--active); color: var(--text); }
+    .row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row-meta { color: var(--faint); font-size: 11px; }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .rail-foot { height: 42px; padding: 5px 8px; border-top: 1px solid var(--separator); }
+    .rail-foot button {
+      width: 100%; height: 30px; display: flex; align-items: center; gap: 9px;
+      padding: 0 8px; border-radius: 8px; color: var(--muted); text-align: left;
+    }
+    .rail-foot button:hover { background: var(--hover); color: var(--text); }
+
+    .conversation-pane {
+      grid-column: 2;
+      grid-row: 1;
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: var(--pane-h) minmax(0, 1fr);
+      background: var(--bg);
+    }
+    .thread-head {
+      min-width: 0;
+      height: var(--pane-h);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px 0 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .thread-head strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .thread-head .icon-button { width: 32px; height: 32px; }
+    .conversation {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+    .messages {
+      width: min(100% - 48px, var(--composer-w));
+      min-height: 0;
+      margin: 0 auto;
+      padding: 28px 0 18px;
+      overflow: auto;
+    }
+    .turn { margin-bottom: 24px; }
+    .turn-meta { margin-bottom: 7px; color: var(--faint); font-size: 11px; }
+    .turn-body { color: var(--text); font-size: 14px; line-height: 1.55; }
+    .turn.user .turn-body { color: var(--muted); }
+    .evidence-card {
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .2), inset 0 0 0 1px var(--border);
+    }
+    .evidence-head {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--separator);
+      font-weight: 600;
+    }
+    .evidence-head .icon-svg { color: var(--accent); }
+    .evidence-body { padding: 10px 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .evidence-row {
+      min-height: 30px;
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px solid var(--separator);
+      color: var(--muted);
+    }
+    .evidence-row .ok { color: var(--success); }
+    .evidence-row code { color: var(--faint); font-family: var(--mono); font-size: 11px; }
+    .direction {
+      margin-top: 12px;
+      padding: 11px 12px;
+      border-left: 2px solid var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .composer-wrap { padding: 8px 24px 12px; background: linear-gradient(transparent, var(--bg) 22%); }
+    .composer-shell { width: min(100%, var(--composer-w)); margin: 0 auto; }
+    .composer {
+      overflow: hidden;
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .26), inset 0 0 0 1px var(--border);
+    }
+    .composer textarea {
+      width: 100%; min-height: 70px; resize: none; border: 0; outline: 0;
+      padding: 13px 14px 8px; background: transparent; font-size: 14px; line-height: 1.45;
+    }
+    .composer textarea::placeholder { color: var(--faint); }
+    .composer-actions { min-height: 38px; display: flex; align-items: center; gap: 4px; padding: 0 8px 6px; }
+    .composer-actions .icon-button { width: 32px; height: 32px; }
+    .composer-chip {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 7px;
+      color: var(--muted);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .composer-chip:hover { color: var(--text); background: var(--hover); }
+    .send {
+      width: 28px; height: 28px; margin-left: 4px; display: grid; place-items: center;
+      border-radius: 50%; background: var(--accent); color: #102127;
+    }
+    .send:hover { background: var(--accent-strong); }
+    .composer-meta {
+      min-width: 0;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 3px;
+      color: var(--faint);
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+    .composer-meta span { white-space: nowrap; }
+    .composer-meta .path { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .composer-meta .add { color: var(--success); }
+    .composer-meta .del { color: var(--danger); }
+
+    .inspector {
+      grid-column: 3;
+      grid-row: 1 / 3;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: var(--pane-h) minmax(0, 1fr);
+      border-left: 1px solid var(--border);
+      background: var(--panel);
+      opacity: 1;
+      transition: opacity 120ms ease;
+    }
+    body.inspector-collapsed .inspector { opacity: 0; pointer-events: none; border-left: 0; }
+    .inspector-tabs { display: flex; align-items: center; gap: 1px; border-bottom: 1px solid var(--border); }
+    .inspector-tab {
+      position: relative;
+      height: var(--pane-h);
+      padding: 0 9px;
+      color: var(--faint);
+      font-size: 11px;
+    }
+    .inspector-tab:hover { color: var(--text); }
+    .inspector-tab.active { color: var(--text); }
+    .inspector-tab.active::after {
+      content: "";
+      position: absolute;
+      left: 8px; right: 8px; bottom: 0;
+      height: 2px; background: var(--accent);
+    }
+    .inspector-tabs .icon-button { width: 34px; height: 34px; margin-left: auto; }
+    .inspector-body { min-height: 0; overflow: auto; padding: 14px; }
+    .inspector-panel[hidden] { display: none; }
+    .stat-hero { display: grid; grid-template-columns: 1fr repeat(3, auto); gap: 18px; align-items: end; padding-bottom: 13px; }
+    .stat-hero strong { font-size: 13px; }
+    .metric { text-align: right; }
+    .metric label, .section-title { color: var(--faint); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+    .metric b { display: block; margin-top: 5px; color: var(--text); font-family: var(--mono); font-size: 12px; font-weight: 500; }
+    .inspector-section { padding: 13px 0; border-top: 1px solid var(--border); }
+    .section-title { margin-bottom: 8px; }
+    .stat-row { min-height: 24px; display: grid; grid-template-columns: 1fr minmax(0, 58%); gap: 12px; align-items: center; color: var(--muted); font-size: 11px; }
+    .stat-row span:last-child { overflow: hidden; text-align: right; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-family: var(--mono); }
+    .take-list { display: grid; gap: 6px; }
+    .take-item { display: grid; grid-template-columns: 15px 1fr; gap: 8px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .take-item span:first-child { color: var(--accent); }
+    .file-row {
+      min-height: 29px; display: grid; grid-template-columns: 16px minmax(0, 1fr) auto;
+      align-items: center; gap: 7px; padding: 0 6px; border-radius: 6px; color: var(--muted);
+    }
+    .file-row.active { background: var(--active); color: var(--text); }
+    .file-row code { color: var(--success); font-family: var(--mono); font-size: 10px; }
+    .browser-preview { overflow: hidden; border-radius: 8px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--border); }
+    .browser-bar { height: 32px; display: flex; align-items: center; gap: 7px; padding: 0 9px; border-bottom: 1px solid var(--border); color: var(--faint); font-size: 10px; }
+    .browser-card { padding: 18px; }
+    .browser-card strong { display: block; margin-bottom: 6px; }
+    .browser-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .diff-line { min-height: 24px; display: grid; grid-template-columns: 24px 1fr; align-items: center; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+    .diff-line.added { background: rgba(135, 176, 138, .08); color: var(--success); }
+
+    .utility {
+      grid-column: 2 / 4;
+      grid-row: 2;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: var(--tray-h) minmax(0, 1fr);
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+      transition: height 160ms ease;
+    }
+    .utility.expanded { height: 176px; }
+    .workspace:has(.utility.expanded) { grid-template-rows: minmax(0, 1fr) 176px; }
+    .utility-tabs { display: flex; align-items: center; min-width: 0; }
+    .utility-tab { position: relative; height: var(--tray-h); padding: 0 12px; color: var(--faint); font-size: 11px; }
+    .utility-tab:hover, .utility-tab.active { color: var(--text); }
+    .utility-tab.active::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px; background: var(--accent); }
+    .utility-tabs .icon-button { width: 34px; height: 34px; }
+    .utility-content { min-height: 0; overflow: auto; padding: 10px 14px; border-top: 1px solid var(--separator); color: var(--muted); font-family: var(--mono); font-size: 11px; line-height: 1.6; }
+    .utility:not(.expanded) .utility-content { display: none; }
+    .prompt { color: var(--accent-strong); }
+
+    .statusbar {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      padding: 0 10px;
+      border-top: 1px solid var(--border);
+      background: var(--rail);
+      color: var(--faint);
+      font-size: 10px;
+    }
+    .statusbar div { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .statusbar div:nth-child(2) { color: var(--muted); text-align: center; }
+    .statusbar div:last-child { text-align: right; }
+    .status-live { color: var(--accent-strong); }
+
+    @media (max-width: 1180px) {
+      :root { --thread-w: 272px; --inspector-w: 320px; --composer-w: 680px; }
+      .messages { width: min(100% - 36px, var(--composer-w)); }
+    }
+    @media (max-width: 1040px) {
+      :root { --composer-w: 640px; }
+      .inspector {
+        position: absolute;
+        z-index: 20;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 320px;
+        box-shadow: -18px 0 44px rgba(0, 0, 0, .34);
+      }
+      .workspace { grid-template-columns: var(--thread-w) minmax(0, 1fr); }
+      .conversation-pane { grid-column: 2; }
+      .utility { grid-column: 2; }
+    }
+    @media (max-width: 900px) {
+      :root { --composer-w: 620px; }
+      .threads {
+        position: absolute;
+        z-index: 25;
+        inset: 0 auto 0 0;
+        width: 272px;
+        box-shadow: 18px 0 44px rgba(0, 0, 0, .34);
+      }
+      .workspace { grid-template-columns: minmax(0, 1fr); }
+      .conversation-pane, .utility { grid-column: 1; }
+      .messages { width: calc(100% - 28px); }
+      .composer-wrap { padding-inline: 14px; }
+      .provider span:last-child, .title-identity .branch { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute;visibility:hidden" aria-hidden="true">
+    <symbol id="i-panel-left" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></symbol>
+    <symbol id="i-panel-right" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16.5 16.5 4 4"></path></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="m7 9 3 3-3 3M13 15h4"></path></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 5h5v5m0-5-9 9"></path><path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4"></path></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"></path></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6Z"></path><path d="M14 3v5h4"></path></symbol>
+    <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="m9 12 5-5a3 3 0 0 1 4 4l-7 7a5 5 0 0 1-7-7l7-7"></path></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7M12 5v14"></path></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1A8 8 0 0 0 15 6l-.3-2.6h-4L10.5 6A8 8 0 0 0 9 7.1l-2.4-1-2 3.4L6.6 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1A8 8 0 0 0 10.5 18l.3 2.6h4L15 18a8 8 0 0 0 1.5-1.1l2.4 1 2-3.4-2-1.5a7 7 0 0 0 .1-1Z"></path></symbol>
+  </svg>
+
+  <main class="app">
+    <header class="titlebar">
+      <div class="traffic" aria-hidden="true"><span></span><span></span><span></span></div>
+      <button class="icon-button" data-action="threads" aria-label="Collapse project chats" aria-pressed="true" title="Toggle project chats (⌘B)"><svg class="icon-svg"><use href="#i-panel-left"></use></svg></button>
+      <div class="title-identity"><strong>agent cli · Local Studio chrome pass</strong><span class="branch">main</span></div>
+      <div class="title-actions">
+        <button class="icon-button" data-action="terminal" aria-label="Expand terminal tray" aria-pressed="false" title="Toggle terminal tray (⌘J)"><svg class="icon-svg"><use href="#i-terminal"></use></svg></button>
+        <button class="icon-button" data-action="inspector" aria-label="Hide context inspector" aria-pressed="true" title="Toggle context inspector (⇧⌘B)"><svg class="icon-svg"><use href="#i-panel-right"></use></svg></button>
+        <div class="provider"><span class="provider-dot"></span><span>Codex ready</span></div>
+        <button class="icon-button" aria-label="Open workspace menu" title="Workspace menu"><svg class="icon-svg"><use href="#i-more"></use></svg></button>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <aside class="threads" aria-label="Project chats">
+        <div class="pane-head"><strong>Project chats</strong><span class="grow"></span><button class="icon-button" aria-label="Create chat" title="New chat"><svg class="icon-svg"><use href="#i-plus"></use></svg></button></div>
+        <button class="thread-search" aria-label="Search chats"><svg class="icon-svg"><use href="#i-search"></use></svg><span>Search chats</span><span class="grow"></span><span class="row-meta">⌘K</span></button>
+        <div class="thread-scroll">
+          <div class="section-label">Today</div>
+          <button class="project-row"><svg class="icon-svg"><use href="#i-folder"></use></svg><span class="row-title">agent cli</span><span class="live-dot"></span></button>
+          <button class="thread-row active" data-thread="Local Studio chrome pass"><span class="row-title">Local Studio chrome pass</span><span class="row-meta">now</span></button>
+          <button class="thread-row" data-thread="Fix black-screen launch"><span class="row-title">Fix black-screen launch</span><span class="row-meta">8m</span></button>
+          <button class="thread-row" data-thread="Modularity ratchet"><span class="row-title">Modularity ratchet</span><span class="row-meta">42m</span></button>
+          <button class="project-row"><svg class="icon-svg"><use href="#i-folder"></use></svg><span class="row-title">Influence</span><span></span></button>
+          <button class="thread-row" data-thread="Local launch recovery"><span class="row-title">Local launch recovery</span><span class="row-meta">2h</span></button>
+          <div class="section-label">Recent projects</div>
+          <button class="project-row"><svg class="icon-svg"><use href="#i-folder"></use></svg><span class="row-title">Vanta</span><span></span></button>
+          <button class="thread-row" data-thread="Acceptance evidence"><span class="row-title">Acceptance evidence</span><span class="row-meta">1d</span></button>
+          <button class="project-row"><svg class="icon-svg"><use href="#i-folder"></use></svg><span class="row-title">NeuroNav</span><span></span></button>
+          <button class="thread-row" data-thread="Navigation audit"><span class="row-title">Navigation audit</span><span class="row-meta">3d</span></button>
+        </div>
+        <div class="rail-foot"><button><svg class="icon-svg"><use href="#i-settings"></use></svg><span>Settings</span></button></div>
+      </aside>
+
+      <section class="conversation-pane" aria-label="Agent conversation">
+        <header class="thread-head">
+          <strong id="activeTitle">Local Studio chrome pass</strong>
+          <span class="grow"></span>
+          <button class="icon-button" aria-label="Open workspace externally" title="Open workspace externally"><svg class="icon-svg"><use href="#i-external"></use></svg></button>
+          <button class="icon-button" aria-label="Open chat actions" title="Chat actions"><svg class="icon-svg"><use href="#i-more"></use></svg></button>
+        </header>
+        <div class="conversation">
+          <div class="messages">
+            <article class="turn user">
+              <div class="turn-meta">You · 9:42 PM</div>
+              <div class="turn-body">Pull down Local Studio, examine its chrome, and show me an updated Keelhouse HTML demo using the parts that fit.</div>
+            </article>
+            <article class="turn">
+              <div class="turn-meta">Codex · working</div>
+              <div class="turn-body">
+                I rendered Local Studio's workbench at commit <span class="mono">07be5be7</span>, inspected its expanded rail, zero-width collapse, and right inspector, then translated the useful behaviors into Keelhouse's project-chat model.
+                <div class="evidence-card">
+                  <div class="evidence-head"><svg class="icon-svg"><use href="#i-check"></use></svg><span>Chrome extraction</span><span class="grow"></span><button class="text-action">Review audit</button></div>
+                  <div class="evidence-body">The reference is strongest when it removes chrome: one graphite canvas, 30px rows, a 40px pane strip, anchored composer metadata, and tools that appear only when requested.</div>
+                  <div class="evidence-row"><span class="ok">✓</span><span>True zero-width project-chat collapse</span><code>adopt</code></div>
+                  <div class="evidence-row"><span class="ok">✓</span><span>Context inspector inside the existing right dock</span><code>adapt</code></div>
+                  <div class="evidence-row"><span class="ok">✓</span><span>Repository and context state below the composer</span><code>adopt</code></div>
+                </div>
+                <div class="evidence-card">
+                  <div class="evidence-head"><svg class="icon-svg"><use href="#i-file"></use></svg><span>Added reference audit</span><span class="grow"></span><button class="text-action">Open file</button></div>
+                  <div class="evidence-body mono">docs/local-studio-chrome-extraction-2026-07-16.md</div>
+                </div>
+                <div class="direction">Keelhouse stays task-first: project chats on the left, the active run in the center, Files / Browser / Git / Context on the right, and Terminal / Processes / Logs below. Local Studio improves the calm and collapse behavior; it does not replace Keelhouse's product model.</div>
+              </div>
+            </article>
+          </div>
+          <div class="composer-wrap">
+            <div class="composer-shell">
+              <div class="composer">
+                <textarea aria-label="Agent composer" placeholder="Ask Keelhouse to run agents, open files, inspect git, or use the browser..."></textarea>
+                <div class="composer-actions">
+                  <button class="icon-button" aria-label="Attach files" title="Attach files"><svg class="icon-svg"><use href="#i-paperclip"></use></svg></button>
+                  <button class="composer-chip">Full access</button>
+                  <button class="composer-chip">Goal</button>
+                  <span class="grow"></span>
+                  <button class="composer-chip">Codex · High</button>
+                  <button class="send" aria-label="Send message" title="Send"><svg class="icon-svg"><use href="#i-send"></use></svg></button>
+                </div>
+              </div>
+              <div class="composer-meta">
+                <span class="path">~/Documents/GitHub/apps/agent cli</span><span>main</span><span class="add">+55</span><span class="del">−0</span><span class="grow"></span><span>Codex ready</span><span>18k/128k</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="inspector" aria-label="Context inspector">
+        <div class="inspector-tabs" role="tablist" aria-label="Right dock modes">
+          <button class="inspector-tab active" role="tab" aria-selected="true" data-panel="context">Context</button>
+          <button class="inspector-tab" role="tab" aria-selected="false" data-panel="files">Files</button>
+          <button class="inspector-tab" role="tab" aria-selected="false" data-panel="browser">Browser</button>
+          <button class="inspector-tab" role="tab" aria-selected="false" data-panel="git">Git</button>
+          <button class="icon-button" data-action="inspector" aria-label="Close context inspector" title="Close inspector"><svg class="icon-svg"><use href="#i-panel-right"></use></svg></button>
+        </div>
+        <div class="inspector-body">
+          <section class="inspector-panel" data-content="context">
+            <div class="stat-hero"><strong>Chrome pass</strong><div class="metric"><label>msgs</label><b>4</b></div><div class="metric"><label>tools</label><b>12</b></div><div class="metric"><label>files</label><b>2</b></div></div>
+            <div class="inspector-section"><div class="section-title">Session</div><div class="stat-row"><span>State</span><span>running</span></div><div class="stat-row"><span>Provider</span><span>Codex</span></div><div class="stat-row"><span>Context</span><span>18k / 128k</span></div><div class="stat-row"><span>Approval</span><span>full access</span></div></div>
+            <div class="inspector-section"><div class="section-title">Workspace</div><div class="stat-row"><span>Project</span><span>agent cli</span></div><div class="stat-row"><span>Branch</span><span>main</span></div><div class="stat-row"><span>Working tree</span><span>clean</span></div><div class="stat-row"><span>Reference</span><span>local-studio</span></div></div>
+            <div class="inspector-section"><div class="section-title">What carries over</div><div class="take-list"><div class="take-item"><span>✓</span><span>Zero-width chat collapse with a persistent reveal target.</span></div><div class="take-item"><span>✓</span><span>Repository and context state anchored below the composer.</span></div><div class="take-item"><span>✓</span><span>Grouped context inside the existing right dock.</span></div><div class="take-item"><span>×</span><span>No generic Status / Configure / Usage navigation.</span></div></div></div>
+          </section>
+          <section class="inspector-panel" data-content="files" hidden>
+            <div class="section-title">Working files</div>
+            <div class="file-row"><svg class="icon-svg"><use href="#i-folder"></use></svg><span>demo</span><span></span></div>
+            <div class="file-row active"><svg class="icon-svg"><use href="#i-file"></use></svg><span>keelhouse-local-studio-chrome-demo.html</span><code>A</code></div>
+            <div class="file-row"><svg class="icon-svg"><use href="#i-folder"></use></svg><span>docs</span><span></span></div>
+            <div class="file-row"><svg class="icon-svg"><use href="#i-file"></use></svg><span>local-studio-chrome-extraction-2026-07-16.md</span><code>A</code></div>
+          </section>
+          <section class="inspector-panel" data-content="browser" hidden>
+            <div class="browser-preview"><div class="browser-bar"><span>●</span><span>localhost · Local Studio reference</span></div><div class="browser-card"><strong>Rendered workbench</strong><p>Expanded rail, collapsed rail, and Context inspector were checked from the live Next.js app before this demo was composed.</p></div></div>
+          </section>
+          <section class="inspector-panel" data-content="git" hidden>
+            <div class="section-title">Pending demo slice</div>
+            <div class="diff-line added"><span>+</span><span>zero-width project-chat collapse</span></div>
+            <div class="diff-line added"><span>+</span><span>right-dock Context mode</span></div>
+            <div class="diff-line added"><span>+</span><span>composer repository metadata</span></div>
+            <div class="diff-line added"><span>+</span><span>responsive utility tray</span></div>
+          </section>
+        </div>
+      </aside>
+
+      <section class="utility" aria-label="Utility tray">
+        <div class="utility-tabs" role="tablist" aria-label="Utility tray modes">
+          <button class="utility-tab active" role="tab" aria-selected="true">Terminal</button>
+          <button class="utility-tab" role="tab" aria-selected="false">Processes</button>
+          <button class="utility-tab" role="tab" aria-selected="false">Logs</button>
+          <span class="grow"></span>
+          <button class="icon-button" data-action="terminal" aria-label="Expand terminal tray" title="Expand tray"><svg class="icon-svg"><use href="#i-terminal"></use></svg></button>
+        </div>
+        <div class="utility-content"><span class="prompt">agent cli %</span> git status --short<br>clean<br><span class="prompt">agent cli %</span> open demo/keelhouse-local-studio-chrome-demo.html</div>
+      </section>
+    </section>
+
+    <footer class="statusbar"><div>main · synced · 0 errors</div><div><span class="status-live">Codex ready</span> · Chat</div><div>Project chats · Context · Terminal</div></footer>
+  </main>
+
+  <script>
+    const body = document.body;
+    const utility = document.querySelector(".utility");
+
+    function iconButtons(action) {
+      return document.querySelectorAll(`[data-action="${action}"]`);
+    }
+
+    function syncToggle(action, pressed, openLabel, closedLabel) {
+      iconButtons(action).forEach((button) => {
+        button.setAttribute("aria-pressed", String(pressed));
+        button.setAttribute("aria-label", pressed ? openLabel : closedLabel);
+      });
+    }
+
+    function toggleThreads() {
+      body.classList.toggle("threads-collapsed");
+      const open = !body.classList.contains("threads-collapsed");
+      syncToggle("threads", open, "Collapse project chats", "Expand project chats");
+    }
+
+    function toggleInspector() {
+      body.classList.toggle("inspector-collapsed");
+      const open = !body.classList.contains("inspector-collapsed");
+      syncToggle("inspector", open, "Hide context inspector", "Show context inspector");
+    }
+
+    function toggleUtility() {
+      utility.classList.toggle("expanded");
+      const open = utility.classList.contains("expanded");
+      syncToggle("terminal", open, "Collapse terminal tray", "Expand terminal tray");
+    }
+
+    function showInspectorPanel(name) {
+      document.querySelectorAll("[data-content]").forEach((panel) => {
+        panel.hidden = panel.dataset.content !== name;
+      });
+      document.querySelectorAll("[data-panel]").forEach((tab) => {
+        const active = tab.dataset.panel === name;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+      });
+    }
+
+    function selectThread(button) {
+      document.querySelectorAll("[data-thread]").forEach((row) => row.classList.remove("active"));
+      button.classList.add("active");
+      document.getElementById("activeTitle").textContent = button.dataset.thread;
+      if (innerWidth <= 900) toggleThreads();
+    }
+
+    iconButtons("threads").forEach((button) => button.addEventListener("click", toggleThreads));
+    iconButtons("inspector").forEach((button) => button.addEventListener("click", toggleInspector));
+    iconButtons("terminal").forEach((button) => button.addEventListener("click", toggleUtility));
+    document.querySelectorAll("[data-panel]").forEach((tab) => tab.addEventListener("click", () => showInspectorPanel(tab.dataset.panel)));
+    document.querySelectorAll("[data-thread]").forEach((row) => row.addEventListener("click", () => selectThread(row)));
+
+    document.addEventListener("keydown", (event) => {
+      const command = event.metaKey || event.ctrlKey;
+      if (command && event.key.toLowerCase() === "b" && !event.shiftKey) { event.preventDefault(); toggleThreads(); }
+      if (command && event.key.toLowerCase() === "b" && event.shiftKey) { event.preventDefault(); toggleInspector(); }
+      if (command && event.key.toLowerCase() === "j") { event.preventDefault(); toggleUtility(); }
+    });
+
+    if (innerWidth <= 900) {
+      body.classList.add("threads-collapsed");
+      syncToggle("threads", false, "Collapse project chats", "Expand project chats");
+    }
+    if (innerWidth <= 1040) {
+      body.classList.add("inspector-collapsed");
+      syncToggle("inspector", false, "Hide context inspector", "Show context inspector");
+    }
+  </script>
+</body>
+</html>
