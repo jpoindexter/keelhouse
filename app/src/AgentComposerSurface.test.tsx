@@ -7,6 +7,7 @@ const noop = vi.fn();
 const props = (overrides: Partial<AgentComposerSurfaceProps> = {}): AgentComposerSurfaceProps => ({
   activeRun: false, approvalMode: "ask", attachments: [], configuredModels: {}, draft: "", error: null,
   goal: "", hasHarness: true, hasHistory: false, historyCursorActive: false, mentionResults: [], model: "",
+  metadata: { branch: null, changedFiles: 0, provider: null, repositoryPath: null, usage: undefined },
   notice: null, provider: null, reasoningEffort: "default", sending: false, onApprovalChange: noop,
   onAttachMention: noop, onClearGoal: noop, onContextMenu: noop, onDismissNotice: noop, onDraftChange: noop,
   onGoalChange: noop, onGoalCommit: noop, onManageModels: noop, onNextHistory: noop, onOpenAddMenu: noop,

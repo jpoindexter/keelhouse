@@ -20,7 +20,9 @@ const props = (overrides: Partial<AgentConversationPanelProps> = {}): AgentConve
   composer: {
     activeRun: false, approvalMode: "ask", attachments: [], configuredModels: {},
     draft: "", error: null, goal: "", hasHarness: true, hasHistory: false,
-    historyCursorActive: false, mentionResults: [], model: "", notice: null,
+    historyCursorActive: false, mentionResults: [], metadata: {
+      branch: "main", changedFiles: 0, provider: "codex", repositoryPath: "/repo", usage: undefined,
+    }, model: "", notice: null,
     provider: "codex", reasoningEffort: "medium", sending: false,
     onApprovalChange: vi.fn(), onAttachMention: vi.fn(), onClearGoal: vi.fn(),
     onContextMenu: vi.fn(), onDismissNotice: vi.fn(), onDraftChange: vi.fn(),

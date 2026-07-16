@@ -33,9 +33,13 @@ const createOptions = () =>
     contextMenuHost: { openContextMenu: vi.fn() },
     editorSurface: { reviewRunCardFile: vi.fn() },
     focusedChatMessageId: null,
+    gitStatusHook: {
+      status: { branch: "main", staged: 1, unstaged: 2, untracked: 1, files: [] },
+    },
     setComposerNotice: vi.fn(),
     setSettingsOpen: vi.fn(),
     shellLayout: { agentSurfaceMode: "chat" },
+    workspacePath: "/repo",
   }) as unknown as Parameters<typeof agentConversationPanelPropsFrom>[0];
 
 describe("agentConversationPanelPropsFrom", () => {
@@ -47,6 +51,13 @@ describe("agentConversationPanelPropsFrom", () => {
     expect(props.composer.draft).toBe("hi");
     expect(props.composer.hasHarness).toBe(true);
     expect(props.composer.mentionResults).toEqual([]);
+    expect(props.composer.metadata).toEqual({
+      branch: "main",
+      changedFiles: 4,
+      provider: "codex",
+      repositoryPath: "/repo",
+      usage: undefined,
+    });
   });
 
   it("routes composer and chat handlers to their controllers", () => {

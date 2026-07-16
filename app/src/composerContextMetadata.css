@@ -1,0 +1,51 @@
+.composer-context-metadata {
+  display: flex;
+  width: var(--run-column-width);
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+  margin: 7px auto 0;
+  color: var(--color-text-subtle);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.composer-context-metadata > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.composer-context-metadata dt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.composer-context-metadata dd {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-context-metadata > div:not(:first-child)::before {
+  content: "·";
+  margin-right: 10px;
+  color: var(--color-border-strong);
+}
+
+.composer-context-metadata > div:first-child {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 900px) {
+  .composer-context-metadata > div:nth-child(3),
+  .composer-context-metadata > div:nth-child(5) {
+    display: none;
+  }
+}

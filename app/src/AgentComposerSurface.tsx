@@ -3,6 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 
 import type { AgentApprovalMode } from "./agentSessionHandle";
 import type { ChatProvider } from "./chatConversation";
+import { ComposerContextMetadata, type ComposerContextMetadataProps } from "./ComposerContextMetadata";
 import { ComposerModelPicker } from "./ComposerModelPicker";
 import { ComposerReasoningPicker } from "./ComposerReasoningPicker";
 import { handleComposerMenuToggle } from "./composerPopover";
@@ -16,7 +17,7 @@ export type AgentComposerSurfaceProps = {
   configuredModels: Partial<Record<ChatProvider, string>>; draft: string; error: string | null;
   goal: string; hasHarness: boolean; hasHistory: boolean; historyCursorActive: boolean;
   mentionResults: FileTreeNode[]; model: string; notice: string | null; provider: ChatProvider | null;
-  reasoningEffort: ComposerReasoningEffort; sending: boolean;
+  reasoningEffort: ComposerReasoningEffort; sending: boolean; metadata: ComposerContextMetadataProps;
   onApprovalChange: (mode: AgentApprovalMode) => void; onAttachMention: (file: FileTreeNode) => void;
   onClearGoal: () => void; onContextMenu: (event: MouseEvent<HTMLDivElement>) => void;
   onDismissNotice: () => void; onDraftChange: (draft: string) => void; onGoalChange: (goal: string) => void;
@@ -103,6 +104,7 @@ export function AgentComposerSurface(props: AgentComposerSurfaceProps) {
         <MentionResults props={props} />
         <div className="agent-composer__bar"><Attachments props={props} /><RuntimeActions props={props} /></div>
       </div>
+      <ComposerContextMetadata {...props.metadata} />
       {props.error ? <div className="agent-composer__error">{props.error}</div> : null}
       {props.notice ? <div className="agent-composer__notice" role="status"><pre>{props.notice}</pre><button className="agent-composer__button" type="button" aria-label="Dismiss app command help" onClick={props.onDismissNotice}><AppIcon name="close" /></button></div> : null}
     </div>

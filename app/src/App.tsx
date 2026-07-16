@@ -1292,7 +1292,7 @@ function App() {
           chatRunControls, composerAttachments, composerError, composerHistoryNavigation, composerLocal,
           composerMentionQuery, composerMentionResults, composerNotice, composerSending,
           composerSettingsActions, composerSurface, contextMenuHost, editorSurface, focusedChatMessageId,
-          setComposerNotice, setSettingsOpen, shellLayout,
+          gitStatusHook, setComposerNotice, setSettingsOpen, shellLayout, workspacePath,
         })} />
         <BottomUtilityTray {...bottomUtilityTrayPropsFrom({
           activeAgentSession, activeAgentSessionHandle, activeTerminalProfile, appMenuAssembly, canvasRef,
