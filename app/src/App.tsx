@@ -1,4 +1,4 @@
-import { type CSSProperties, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { confirm as confirmDialog, open } from "@tauri-apps/plugin-dialog";
@@ -53,6 +53,7 @@ import type { GitStatusFile } from "./fileGitStatus";
 import { buildAgentHookSnapshot, hookReportToActivity } from "./agentHookIntegration";
 import { AgentConversationPanel } from "./AgentConversationPanel";
 import { createTerminalClipboardActions } from "./terminalClipboardActions";
+import { useContextMenuHost } from "./useContextMenuHost";
 import type { EditorFileLoadState } from "./editorFileLoadState";
 import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
@@ -195,7 +196,7 @@ import {
 } from "./chatOrchestration";
 import { launchOrchestration as launchOrchestrationWithContext } from "./orchestrationLaunch";
 import { createOrchestrationChildActions } from "./orchestrationChildActions";
-import { ContextMenu, type ContextMenuItem, type ContextMenuState } from "./ContextMenu";
+import type { ContextMenuItem } from "./ContextMenu";
 import { composerReasoningLabel } from "./ComposerReasoningPicker";
 import { createProjectCloseController } from "./projectCloseController";
 import { createProjectSessionNavigationActions } from "./projectSessionNavigationActions";
@@ -350,7 +351,12 @@ function App() {
     setScopedSettings,
     setStoreValue: async (key, value) => { await storeRef.current?.set(key, value); },
   });
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const contextMenuHost = useContextMenuHost({
+    buildFileNodeItems: (node) => fileNodeContextMenuItemsRef.current(node),
+    onActionError: (item, error) => setLaunchError(`${item.label} failed: ${String(error)}`),
+  });
+  const setContextMenu = contextMenuHost.setContextMenu;
+  const openContextMenu = contextMenuHost.openContextMenu;
   const commandPalette = useCommandPalette(() => setContextMenu(null));
   const [commandPaletteSources, setCommandPaletteSources] = useState({ ...DEFAULT_COMMAND_PALETTE_SOURCES });
   const [orchestrationOpen, setOrchestrationOpen] = useState(false);
@@ -565,22 +571,6 @@ function App() {
     if (!selectedFile) return;
     treeRef.current?.scrollTo(selectedFile.id, "smart");
   }, [selectedFile, visibleFileTree]);
-
-  useEffect(() => {
-    const onContextMenu = (event: Event) => {
-      const detail = (event as CustomEvent<{ node: FileTreeNode; x: number; y: number }>).detail;
-      if (!detail?.node) return;
-      setContextMenu({
-        x: detail.x,
-        y: detail.y,
-        items: fileNodeContextMenuItemsRef.current(detail.node),
-      });
-    };
-    window.addEventListener("file-tree-context-menu", onContextMenu);
-    return () => {
-      window.removeEventListener("file-tree-context-menu", onContextMenu);
-    };
-  }, []);
 
   useEffect(() => {
     if (!selectedFile || fileTree.length === 0) return;
@@ -1433,12 +1423,6 @@ function App() {
   const copyActivePaneTail = terminalClipboardActions.copyActivePaneTail;
   const pasteIntoTerminal = terminalClipboardActions.pasteIntoTerminal;
   const clearActiveTerminal = terminalClipboardActions.clearActiveTerminal;
-
-  const openContextMenu = (event: ReactMouseEvent, items: ContextMenuItem[]) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setContextMenu({ x: event.clientX, y: event.clientY, items });
-  };
 
 
 
@@ -2438,13 +2422,7 @@ function App() {
           provider: activeComposerProvider ?? activeChatConversation.provider,
         }}
       />
-      {contextMenu ? (
-        <ContextMenu
-          state={contextMenu}
-          onDismiss={() => setContextMenu(null)}
-          onActionError={(item, error) => setLaunchError(`${item.label} failed: ${String(error)}`)}
-        />
-      ) : null}
+      {contextMenuHost.element}
       {commandPalette.open ? (
         <SearchCommandDialog
           commands={visiblePaletteCommands}

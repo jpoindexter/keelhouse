@@ -28,7 +28,6 @@ describe("production context-menu coverage", () => {
     for (const marker of [
       "projectRailContextMenuItems(project)",
       "projectSessionContextMenuItems(path, session)",
-      "file-tree-context-menu",
       "editorTabContextMenuItems(tab)",
       "editorContextMenuItems()",
       "buildGitFileContextMenuItems(file, workspaceContextMenuActions)",
@@ -42,6 +41,8 @@ describe("production context-menu coverage", () => {
       expect(app).toContain(marker);
     }
     expect(appMenuAssembly).toContain("buildComposerAddMenuItems(composerMenuInput(options))");
+    const contextMenuHost = readFileSync(new URL("./useContextMenuHost.tsx", import.meta.url), "utf8");
+    expect(contextMenuHost).toContain("file-tree-context-menu");
     expect(projectThreadsDrawer).toContain("props.onProjectContextMenu(event, project)");
     expect(projectThreadsDrawer).toContain("onContextMenu(event, path, session)");
   });
