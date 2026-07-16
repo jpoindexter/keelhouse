@@ -7,6 +7,7 @@ const browserComposerContextMenu = readFileSync(new URL("./browserComposerContex
 const editorContextMenus = readFileSync(new URL("./editorContextMenus.ts", import.meta.url), "utf8");
 const projectThreadsDrawer = readFileSync(new URL("./ProjectThreadsDrawer.tsx", import.meta.url), "utf8");
 const projectSessionContextMenu = readFileSync(new URL("./projectSessionContextMenu.ts", import.meta.url), "utf8");
+const projectSessionDeletionController = readFileSync(new URL("./projectSessionDeletionController.ts", import.meta.url), "utf8");
 const shellLayout = readFileSync(new URL("./useShellLayout.ts", import.meta.url), "utf8");
 const terminalViewport = readFileSync(new URL("./TerminalViewport.tsx", import.meta.url), "utf8");
 const terminalContextMenu = readFileSync(new URL("./terminalContextMenu.ts", import.meta.url), "utf8");
@@ -64,7 +65,8 @@ describe("production context-menu coverage", () => {
     const projectMenu = workspaceContextMenus.slice(workspaceContextMenus.indexOf("buildProjectRailContextMenuItems"));
     expect(projectMenu).toContain('menuItem("project.close"');
     expect(projectMenu.slice(projectMenu.indexOf('"project.close"'))).not.toContain("disabled:");
-    expect(app).toContain("intentionallyTerminatedPaneIdsRef.current.add(pane.id)");
+    expect(app).toContain("createProjectSessionDeletionController");
+    expect(projectSessionDeletionController).toContain("options.intentionallyTerminatedPaneIds.add(pane.id)");
   });
 
   it("keeps chat and raw-terminal launch defaults separate", () => {

@@ -132,7 +132,6 @@ import { useAppChromeState } from "./useAppChromeState";
 import { useSettingsRuntimeStatus } from "./useSettingsRuntimeStatus";
 import { useSyncRef } from "./useSyncRef";
 import { loadWorkspaceBootstrap } from "./workspaceBootstrap";
-import { applyWorkspaceCleanupRecord } from "./workspaceOpenRecovery";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { SettingsModal } from "./SettingsModal";
 import { crashRecoveryMessage, deriveCrashRecovery } from "./crashRecovery";
@@ -180,8 +179,6 @@ import {
   buildComposerContextMenuItems,
 } from "./browserComposerContextMenu";
 import { planPaneExit } from "./paneExitPlan";
-import { planProjectSessionDelete } from "./deleteProjectSessionPlan";
-import { executeProjectSessionDelete } from "./projectSessionDelete";
 import { executeTerminalPaneRestart } from "./terminalPaneRestartWorkflow";
 import { executeTerminalPaneTerminate } from "./terminalPaneTerminate";
 import { createSessionCheckpointActions } from "./sessionCheckpointActions";
@@ -248,7 +245,7 @@ import { paneContextKey } from "./paneOwnership";
 import { composerReasoningLabel } from "./ComposerReasoningPicker";
 import { createProjectCloseController } from "./projectCloseController";
 import { createProjectSessionNavigationActions } from "./projectSessionNavigationActions";
-import { planSessionScopedRecordRemoval } from "./sessionScopedRecords";
+import { createProjectSessionDeletionController } from "./projectSessionDeletionController";
 import {
   buildCreatedPaneActivity,
   buildCreatedWorktreePaneActivity,
@@ -946,36 +943,27 @@ function App() {
   const createProjectSession = projectSessionNavigationActions.createSession;
   const renameProjectSession = projectSessionNavigationActions.renameSession;
 
-  const closeSessionTerminalPanes = async (projectPath: string, sessionId: string) => {
-    for (const pane of terminalPanesForSession(projectPath, sessionId)) {
-      intentionallyTerminatedPaneIdsRef.current.add(pane.id);
-      try {
-        await invoke("close_pane", { paneId: pane.id });
-      } catch (error) {
-        intentionallyTerminatedPaneIdsRef.current.delete(pane.id);
-        throw error;
-      }
-      delete terminalSnapshotsRef.current[pane.id];
-    }
-  };
-
-  const removeSessionScopedRecords = async (plan: Extract<ReturnType<typeof planProjectSessionDelete>, { canDelete: true }>) => {
-    const removed = planSessionScopedRecordRemoval({
-      activePanes: activeTerminalPaneByContextRef.current,
-      browserSessionKey: plan.browserSessionKey, browserSessions: browser.sessionRecordsRef.current,
-      chatSessionKey: plan.chatSessionKey, composerHarness: composerHarnessBySessionRef.current,
-      contextKey: plan.contextKey, conversations: chatConversationsRef.current,
-      projectPanes: terminalPanesByContextRef.current,
-    });
-    applyWorkspaceCleanupRecord(activeTerminalPaneByContextRef, removed.activePanes);
-    applyWorkspaceCleanupRecord(terminalPanesByContextRef, removed.projectPanes);
-    applyWorkspaceCleanupRecord(
-      browser.sessionRecordsRef, removed.browserSessions, browser.setSessionRecords,
-    );
-    applyWorkspaceCleanupRecord(chatConversationsRef, removed.conversations, setChatConversations);
-    await storeRef.current?.set("browserPreviewBySession", removed.browserSessions);
-    await persistComposerHarnessRecords(removed.composerHarness);
-  };
+  const projectSessionDeletionController = createProjectSessionDeletionController({
+    activePanes: activeTerminalPaneByContextRef, activeSessionId,
+    activeSessions: activeSessionByProjectRef, browserSessions: browser.sessionRecordsRef,
+    closePane: (paneId) => invoke("close_pane", { paneId }),
+    composerHarness: composerHarnessBySessionRef, confirmDelete: confirmDialog,
+    conversations: chatConversationsRef, deleteHistory: deleteDurableChatConversation,
+    getPanes: terminalPanesForSession,
+    intentionallyTerminatedPaneIds: intentionallyTerminatedPaneIdsRef.current,
+    persistBrowserSessions: async (records) => {
+      await storeRef.current?.set("browserPreviewBySession", records);
+    },
+    persistComposerHarness: persistComposerHarnessRecords, persistSessions: persistProjectSessions,
+    projectPanes: terminalPanesByContextRef, removePersistedRestore: removePersistedSessionRestore,
+    reopenActiveWorkspace: (projectPath) => openWorkspaceDirect(
+      projectPath, profiles.launchProfileRef.current, { captureCurrentSession: false },
+    ),
+    sessions: projectSessionsRef, setBrowserSessions: browser.setSessionRecords,
+    setConversations: setChatConversations, setError: setLaunchError,
+    snapshots: terminalSnapshotsRef, workspacePath: workspacePathRef,
+  });
+  const deleteProjectSession = projectSessionDeletionController.deleteProjectSession;
 
   const recordRestartedPaneActivity = (
     restarted: ManagedTerminalPane | undefined,
@@ -1017,32 +1005,6 @@ function App() {
     setTimeout(sendTerminalResize, 0);
     await updateOpenProjectStatus(root, projectStatusForRoot(root));
     await updateActiveSessionStatus(root, terminalPaneProjectStatus(nextPanes));
-  };
-
-  const deleteProjectSession = async (projectPath: string, session: ProjectSession) => {
-    const plan = planProjectSessionDelete({
-      activeSessionByProject: activeSessionByProjectRef.current,
-      activeSessionId,
-      activeWorkspacePath: workspacePathRef.current,
-      projectPath,
-      projectSessions: projectSessionsRef.current,
-      sessionId: session.id,
-    });
-    if (!plan.canDelete) return;
-    const result = await executeProjectSessionDelete({
-      closeTerminalPanes: () => closeSessionTerminalPanes(projectPath, session.id),
-      confirmDelete: confirmDialog,
-      deleteHistory: () => deleteDurableChatConversation(composerHarnessSessionKey(projectPath, session.id)),
-      persistSessions: persistProjectSessions,
-      plan,
-      removePersistedRestore: () => removePersistedSessionRestore(projectPath, session.id),
-      removeScopedRecords: () => removeSessionScopedRecords(plan),
-      reopenActiveWorkspace: () => openWorkspaceDirect(
-        projectPath, profiles.launchProfileRef.current, { captureCurrentSession: false },
-      ),
-      title: session.title,
-    });
-    if (result.status === "failed") setLaunchError(result.message);
   };
 
   const pickWorkspace = async (options: { openTerminal?: boolean } = {}) => {
