@@ -397,14 +397,7 @@ function App() {
     getRecords: () => composerWorkspace.composerHarnessBySessionRef.current,
     persistRecords: (records) => composerWorkspace.persistComposerHarnessRecords(records),
   });
-  const {
-    attachLocalFiles: attachLocalFileToComposer,
-    attachPreview: attachPreviewToComposer,
-    attachWorkspaceFile: attachWorkspaceFileToComposer,
-    pasteImage: pasteComposerImage,
-    removeAttachment: removeComposerAttachmentById,
-    reviewContext: reviewComposerContext,
-  } = useComposerAttachments({
+  const composerAttachments = useComposerAttachments({
     active: shellLayout.agentSurfaceMode === "chat",
     activeHarness: activeChat.activeComposerHarness,
     activeKey: activeChat.activeComposerHarnessKey,
@@ -417,22 +410,19 @@ function App() {
     setNotice: setComposerNotice,
     updateHarness: composerLocal.updateHarness,
   });
-  const attachSelectedFileToComposer = async () => attachWorkspaceFileToComposer(editorSession.selectedFile);
+  const attachSelectedFileToComposer = async () => composerAttachments.attachWorkspaceFile(editorSession.selectedFile);
   const composerMentionQuery = composerMentionQueryFrom(composerLocal.draft);
   const composerMentionResults = useMemo(
     () => composerMentionQuery == null ? [] : filterWorkspaceFiles(editorWorkspace.searchableFiles, composerMentionQuery, 8),
     [composerMentionQuery, editorWorkspace.searchableFiles],
   );
-  const {
-    activeAgentSessionDescriptor, activeTerminalPane,
-    selectedAgentActivityLog,
-  } = deriveActiveAgentSessionState({
+  const activeAgentSession = deriveActiveAgentSessionState({
     activeSessionId: activeChat.activeSessionId, activeTerminalPaneId: terminal.activePaneId, agentActivityEvents: agentActivityHook.agentActivityEvents, agentActivityFilter: agentActivityHook.agentActivityFilter,
     agentApprovalMode, terminalPanes: terminal.panes, workspacePath,
   });
-  const terminalFind = useTerminalFind(activeTerminalPane != null);
-  useSyncRef(activeAgentSessionDescriptorRef, activeAgentSessionDescriptor);
-  const activeTerminalProfile = activeTerminalPane?.profile ?? profiles.terminalProfile;
+  const terminalFind = useTerminalFind(activeAgentSession.activeTerminalPane != null);
+  useSyncRef(activeAgentSessionDescriptorRef, activeAgentSession.activeAgentSessionDescriptor);
+  const activeTerminalProfile = activeAgentSession.activeTerminalPane?.profile ?? profiles.terminalProfile;
 
 
   useEffect(() => {
@@ -486,7 +476,7 @@ function App() {
   });
 
   const logComposerHarnessEvent = createComposerHarnessEventLog({
-    getDescriptor: () => activeAgentSessionDescriptor,
+    getDescriptor: () => activeAgentSession.activeAgentSessionDescriptor,
     recordActivity: agentActivityHook.recordAgentActivity,
   });
 
@@ -516,7 +506,7 @@ function App() {
 
   const restoreSessionEditorSnapshot = createSessionSnapshotRestore({
     makeKey: persistence.sessionKey,
-    openFile: (...args: Parameters<typeof openEditorFileDirect>) => openEditorFileDirect(...args),
+    openFile: (...args: Parameters<typeof editorFileWorkflow.openDirect>) => editorFileWorkflow.openDirect(...args),
     restore: editorSession.restoreSessionSnapshot,
   });
 
@@ -534,7 +524,7 @@ function App() {
       getPreviousRoot: () => workspacePathRef.current,
       getSelectedFilePath: () => editorSession.selectedFileRef.current?.path ?? null,
       getStore: () => storeRef.current,
-      openEditorFile: (file) => openEditorFileDirect(file),
+      openEditorFile: (file) => editorFileWorkflow.openDirect(file),
       setFocusedPane: terminal.setFocusedPane,
     },
     connectionSettings: aiConnectionSettingsRef,
@@ -568,7 +558,7 @@ function App() {
   });
 
   const requestOpenWorkspace = (path: string) => workspaceOpenActions.requestOpenWorkspace(
-    path, () => requestPendingNavigation({ kind: "workspace", path }),
+    path, () => editorNavigation.requestNavigation({ kind: "workspace", path }),
   );
 
   const projectCloseController = createProjectCloseController(projectCloseFromHook(terminal, {
@@ -590,7 +580,7 @@ function App() {
     workspacePath: workspacePathRef,
   }));
   const requestCloseProject = (project: OpenProject) => projectCloseController.requestCloseProject(
-    project, () => requestPendingNavigation({ kind: "close-project", projectPath: project.path }),
+    project, () => editorNavigation.requestNavigation({ kind: "close-project", projectPath: project.path }),
   );
 
   const projectSessionNavigationActions = createProjectSessionNavigationActions({
@@ -772,9 +762,9 @@ function App() {
     }),
     getChanging: () => profiles.changing,
     getSessionId: persistence.activeSessionForProject,
-    activeAgentDescriptor: () => activeAgentSessionDescriptor,
+    activeAgentDescriptor: () => activeAgentSession.activeAgentSessionDescriptor,
     activeAgentHandle: () => activeAgentSessionHandle,
-    activePane: () => activeTerminalPane,
+    activePane: () => activeAgentSession.activeTerminalPane,
     approvalMode: () => agentApprovalMode,
     copyText: writeText,
     defaultProfile: () => profiles.terminalProfileRef.current,
@@ -813,11 +803,11 @@ function App() {
     setTrayMode: shellLayout.setUtilityTrayMode,
   });
 
-  const activeAgentSessionHandle: AgentSessionHandle | null = activeAgentSessionDescriptor
+  const activeAgentSessionHandle: AgentSessionHandle | null = activeAgentSession.activeAgentSessionDescriptor
     ? createActiveAgentSessionHandle({
         activePaneId: () => terminal.activePaneIdRef.current,
         closePane: terminalSurface.closeTerminalPane,
-        descriptor: activeAgentSessionDescriptor,
+        descriptor: activeAgentSession.activeAgentSessionDescriptor,
         focusPane: terminalSurface.focusTerminalPane,
         recordClosed: (descriptor) => agentActivityHook.recordAgentActivity(descriptor, {
           kind: "process", label: "Closed pane", detail: descriptor.label, status: "exited",
@@ -860,21 +850,17 @@ function App() {
 
   const visibleOpenProjects = visibleProjectsFrom(persistence.openProjects, workspacePath, terminal.activeProjectStatus);
 
-  const {
-    openDirect: openEditorFileDirect,
-    requestOpen: requestOpenEditorFile,
-    save: saveEditorFileWithForce,
-  } = wireEditorFileWorkflow(editorSession, {
+  const editorFileWorkflow = wireEditorFileWorkflow(editorSession, {
     closeDiffReview: () => diffReviewHook.close(),
     gateAction: (action) => agentActivityHook.gateAppAction(action),
     getDirty: () => editorWorkspace.editorDirty,
     getRoot: () => workspacePathRef.current ?? workspacePath,
     persistActiveFile: persistence.persistActiveFile,
-    recordEdit: (file) => agentActivityHook.recordAgentActivity(activeAgentSessionDescriptor, {
+    recordEdit: (file) => agentActivityHook.recordAgentActivity(activeAgentSession.activeAgentSessionDescriptor, {
       kind: "file", label: "Edited a file", detail: file.name, status: "complete",
     }),
   });
-  const saveEditorFile = (options: SaveEditorFileOptions = {}) => saveEditorFileWithForce(options.force ?? false);
+  const saveEditorFile = (options: SaveEditorFileOptions = {}) => editorFileWorkflow.save(options.force ?? false);
 
   const editorSurface = createEditorSurfaceActions<
     FileTreeNode, EditorView, GitStatusFile, ReturnType<typeof EditorView.scrollIntoView>
@@ -888,10 +874,10 @@ function App() {
       makeFileNode: (path) => fileTreeNodeFromPath(path, "file"),
       notify: chrome.setActionNotice,
       openExternal: openPath,
-      openFileDirect: (file, fileOptions) => openEditorFileDirect(file, fileOptions),
+      openFileDirect: (file, fileOptions) => editorFileWorkflow.openDirect(file, fileOptions),
       openGitDiff: async (file) => Boolean(await diffReviewHook.open(file)),
       openSearchPanel,
-      requestOpenFile: async (file, fileOptions) => Boolean(await requestOpenEditorFile(file, fileOptions)),
+      requestOpenFile: async (file, fileOptions) => Boolean(await editorFileWorkflow.requestOpen(file, fileOptions)),
       revealEditorTools: () => {
         if (shellLayout.workbenchLayout === "hidden") shellLayout.setWorkbenchLayout("right");
         shellLayout.setToolTrayMode("editor");
@@ -905,22 +891,15 @@ function App() {
   );
   const handleEditorUpdate = (update: ViewUpdate) => editorSurface.handleEditorUpdate(update);
 
-  const {
-    createFile: createFileInRail,
-    createFolder: createFolderInRail,
-    delete: deleteRailNode,
-    duplicate: duplicateRailNode,
-    rename: renameRailNode,
-    reveal: revealRailNode,
-  } = wireWorkspaceFileActions(editorSession, {
+  const workspaceFileActions = wireWorkspaceFileActions(editorSession, {
     clearPersistedActiveFile: persistence.clearActiveFile,
     getDirty: () => editorWorkspace.editorDirty,
     getPersistRoot: () => workspacePathRef.current,
     getRoot: () => workspacePathRef.current ?? workspacePath,
     getSelectedFile: () => editorSession.selectedFile,
-    openFileDirect: (file, fileOptions) => openEditorFileDirect(file, fileOptions),
+    openFileDirect: (file, fileOptions) => editorFileWorkflow.openDirect(file, fileOptions),
     refresh: workspaceTree.refresh,
-    requestOpenFile: (file, fileOptions) => requestOpenEditorFile(file, fileOptions),
+    requestOpenFile: (file, fileOptions) => editorFileWorkflow.requestOpen(file, fileOptions),
     setError: editorSession.setFileOpError,
   });
 
@@ -929,14 +908,14 @@ function App() {
   const workspaceContextMenuActions = {
     closeProject: requestCloseProject,
     copyPath: editorSurface.copyPath,
-    deleteNode: deleteRailNode,
-    duplicateNode: duplicateRailNode,
-    newFile: createFileInRail,
-    newFolder: createFolderInRail,
+    deleteNode: workspaceFileActions.delete,
+    duplicateNode: workspaceFileActions.duplicate,
+    newFile: workspaceFileActions.createFile,
+    newFolder: workspaceFileActions.createFolder,
     openDiff: diffReviewHook.open,
     openWorkspace: pickWorkspace,
-    renameNode: renameRailNode,
-    revealNode: revealRailNode,
+    renameNode: workspaceFileActions.rename,
+    revealNode: workspaceFileActions.reveal,
     revealPath: revealItemInDir,
     runGitAction: diffReviewHook.runFileAction,
     shortcut: shortcutKeys,
@@ -959,15 +938,12 @@ function App() {
     persist: persistence.persistProjectSessions,
   });
 
-  const {
-    capture: captureSessionCheckpoint,
-    restore: restoreSessionCheckpoint,
-  } = wireSessionCheckpointActions(editorSession, {
+  const sessionCheckpoints = wireSessionCheckpointActions(editorSession, {
     gateAction: (action) => agentActivityHook.gateAppAction(action),
     getDirtyTabPaths: () => editorWorkspace.dirtyTabPaths,
     getWorkspacePath: () => workspacePathRef.current,
     onMetadata: projectSessionMetadataActions.updateSessionMetadata,
-    openFileDirect: (file) => openEditorFileDirect(file),
+    openFileDirect: (file) => editorFileWorkflow.openDirect(file),
     refreshFiles: workspaceTree.refresh,
     refreshGit: () => gitStatusHook.refresh(),
     setError: setLaunchError,
@@ -988,14 +964,14 @@ function App() {
       session,
       actions: {
         archive: () => projectSessionMetadataActions.archiveSession(projectPath, session, !session.archived),
-        captureCheckpoint: () => captureSessionCheckpoint(projectPath, session),
+        captureCheckpoint: () => sessionCheckpoints.capture(projectPath, session),
         copyName: async () => { await writeText(session.title); chrome.setActionNotice("Copied chat name"); },
         delete: () => projectSessionDeletionController.deleteProjectSession(projectPath, session),
         pin: () => projectSessionMetadataActions.pinSession(projectPath, session, !session.pinnedAt),
         removeChildWorktree: () => composerSurface.removeChildWorktree(projectPath, session),
         rename: () => projectSessionNavigationActions.renameSession(projectPath, session),
-        restoreCheckpoint: () => session.checkpointId ? restoreSessionCheckpoint(projectPath, session, session.checkpointId) : undefined,
-        restoreRecoveryCheckpoint: () => session.recoveryCheckpointId ? restoreSessionCheckpoint(projectPath, session, session.recoveryCheckpointId) : undefined,
+        restoreCheckpoint: () => session.checkpointId ? sessionCheckpoints.restore(projectPath, session, session.checkpointId) : undefined,
+        restoreRecoveryCheckpoint: () => session.recoveryCheckpointId ? sessionCheckpoints.restore(projectPath, session, session.recoveryCheckpointId) : undefined,
         returnChildResult: () => composerSurface.returnChildResult(projectPath, session),
         stopChildRun: () => composerSurface.stopChildChatRun(projectPath, session),
         switchChat: () => projectSessionNavigationActions.switchSession(projectPath, session.id),
@@ -1005,14 +981,14 @@ function App() {
 
   const editorContextMenuActions = {
     closeDiff: diffReviewHook.close,
-    closeTab: (tab: FileTreeNode) => closeEditorTab(tab),
+    closeTab: (tab: FileTreeNode) => editorNavigation.closeTab(tab),
     copyDiff: diffReviewHook.copy,
     copyPath: editorSurface.copyPath,
     find: editorSurface.openEditorSearch,
     openDiffFile: editorSurface.openDiffFile,
     openExternal: editorSurface.openExternally,
-    openTab: (tab: FileTreeNode) => requestOpenEditorFile(tab, { focusEditor: true }),
-    revealNode: revealRailNode,
+    openTab: (tab: FileTreeNode) => editorFileWorkflow.requestOpen(tab, { focusEditor: true }),
+    revealNode: workspaceFileActions.reveal,
     revealSelected: editorSurface.reveal,
     runGitAction: diffReviewHook.runFileAction,
     save: saveEditorFile,
@@ -1030,7 +1006,7 @@ function App() {
   }, editorContextMenuActions);
 
   const saveActivePaneTranscript = createPaneTranscriptCapture({
-    getActivePane: () => activeTerminalPane,
+    getActivePane: () => activeAgentSession.activeTerminalPane,
     getPanes: () => terminal.panes,
     getRoot: () => workspacePathRef.current,
     getSessionId: () => activeChat.activeSessionId,
@@ -1051,12 +1027,12 @@ function App() {
   });
 
   const terminalContextMenuItems = (): ContextMenuItem[] => buildTerminalContextMenuItems({
-    activePaneState: activeTerminalPane?.state ?? null,
+    activePaneState: activeAgentSession.activeTerminalPane?.state ?? null,
     hasActiveHandle: Boolean(activeAgentSessionHandle),
-    hasActivePane: Boolean(activeTerminalPane),
+    hasActivePane: Boolean(activeAgentSession.activeTerminalPane),
     hasSelection: Boolean(terminalSurface.terminalSelectedText()),
     hasWorkspace: Boolean(workspacePath),
-    hasWorktreeForActivePane: Boolean(activeTerminalPane && worktreeForPaneId(worktrees, String(activeTerminalPane.id))),
+    hasWorktreeForActivePane: Boolean(activeAgentSession.activeTerminalPane && worktreeForPaneId(worktrees, String(activeAgentSession.activeTerminalPane.id))),
     launchProfileChanging: profiles.changing,
     launchProfileLabel: profiles.terminalProfile.label,
     shortcuts: {
@@ -1073,17 +1049,17 @@ function App() {
       createPane: () => terminalSurface.createTerminalPane(profiles.terminalProfile),
       createWorktreePane: () => terminalSurface.createWorktreePane(profiles.terminalProfile),
       interrupt: () => terminalSurface.interruptActivePane(),
-      killPane: () => activeTerminalPane ? terminalSurface.terminateTerminalPane(activeTerminalPane) : undefined,
+      killPane: () => activeAgentSession.activeTerminalPane ? terminalSurface.terminateTerminalPane(activeAgentSession.activeTerminalPane) : undefined,
       paste: () => terminalSurface.pasteIntoTerminal(),
-      removeWorktree: () => activeTerminalPane ? terminalSurface.closeWorktreePane(activeTerminalPane.id) : undefined,
-      renamePane: () => activeTerminalPane ? renameTerminalPane(activeTerminalPane) : undefined,
-      restartPane: () => activeTerminalPane ? terminalSurface.restartTerminalPane(activeTerminalPane) : undefined,
+      removeWorktree: () => activeAgentSession.activeTerminalPane ? terminalSurface.closeWorktreePane(activeAgentSession.activeTerminalPane.id) : undefined,
+      renamePane: () => activeAgentSession.activeTerminalPane ? renameTerminalPane(activeAgentSession.activeTerminalPane) : undefined,
+      restartPane: () => activeAgentSession.activeTerminalPane ? terminalSurface.restartTerminalPane(activeAgentSession.activeTerminalPane) : undefined,
       saveTranscript: saveActivePaneTranscript,
     },
   });
 
   const appMenuAssembly = createAppMenuAssembly({
-    activityLog: () => selectedAgentActivityLog,
+    activityLog: () => activeAgentSession.selectedAgentActivityLog,
     browser: {
       back: () => browser.goHistory(-1), canGoBack: browser.canGoBack,
       canGoForward: browser.canGoForward, forward: () => browser.goHistory(1),
@@ -1092,8 +1068,8 @@ function App() {
     composer: {
       activeRun: Boolean(activeChat.activeChatConversation.activeRunId),
       attachCurrent: () => attachSelectedFileToComposer(),
-      attachLocal: () => attachLocalFileToComposer(),
-      attachPreview: () => attachPreviewToComposer(),
+      attachLocal: () => composerAttachments.attachLocalFiles(),
+      attachPreview: () => composerAttachments.attachPreview(),
       canAttachCurrent: Boolean(editorSession.selectedFile),
       canRunParallel: Boolean(workspacePath && activeChat.activeSessionId && !activeChat.activeChatConversation.activeRunId),
       clearDraft: () => composerLocal.setLocalState(activeChat.activeComposerHarnessKey, "", composerLocal.history),
@@ -1118,20 +1094,20 @@ function App() {
     },
     setContextMenu: contextMenuHost.setContextMenu,
     tray: {
-      activeMode: shellLayout.utilityTrayMode, activePaneState: activeTerminalPane?.state ?? null,
+      activeMode: shellLayout.utilityTrayMode, activePaneState: activeAgentSession.activeTerminalPane?.state ?? null,
       activeSurface: shellLayout.agentSurfaceMode === "terminal",
-      closePane: () => activeTerminalPane ? terminalSurface.closeTerminalPane(activeTerminalPane.id) : undefined,
+      closePane: () => activeAgentSession.activeTerminalPane ? terminalSurface.closeTerminalPane(activeAgentSession.activeTerminalPane.id) : undefined,
       createShell: () => terminalSurface.createTerminalPane(defaultTerminalLaunchProfile()),
-      hasActivePane: Boolean(activeTerminalPane), hasWorkspace: Boolean(workspacePath),
+      hasActivePane: Boolean(activeAgentSession.activeTerminalPane), hasWorkspace: Boolean(workspacePath),
       hide: () => shellLayout.setAgentSurfaceMode("chat"),
-      killPane: () => activeTerminalPane ? terminalSurface.terminateTerminalPane(activeTerminalPane) : undefined,
+      killPane: () => activeAgentSession.activeTerminalPane ? terminalSurface.terminateTerminalPane(activeAgentSession.activeTerminalPane) : undefined,
       launchProfileChanging: profiles.changing,
-      restartPane: () => activeTerminalPane ? terminalSurface.restartTerminalPane(activeTerminalPane) : undefined,
+      restartPane: () => activeAgentSession.activeTerminalPane ? terminalSurface.restartTerminalPane(activeAgentSession.activeTerminalPane) : undefined,
       show: (nextMode) => { shellLayout.setUtilityTrayMode(nextMode); shellLayout.setAgentSurfaceMode("terminal"); },
     },
   });
 
-  const activeTerminalPaneLabelForCommands = activePaneDisplayLabel(terminal.panes, activeTerminalPane);
+  const activeTerminalPaneLabelForCommands = activePaneDisplayLabel(terminal.panes, activeAgentSession.activeTerminalPane);
   const commandPaletteNavigation = {
     drawerModes: DRAWER_MODES,
     editorTabs: editorSession.editorTabs,
@@ -1141,7 +1117,7 @@ function App() {
       void terminalSurface.focusTerminalPane(paneId);
     },
     onLayoutChange: shellLayout.setWorkbenchLayout,
-    onOpenFile: (file: FileTreeNode) => void requestOpenEditorFile(file, { focusEditor: true }),
+    onOpenFile: (file: FileTreeNode) => void editorFileWorkflow.requestOpen(file, { focusEditor: true }),
     onShowDrawer: (mode: SideDrawerMode) => {
       shellLayout.setSideDrawerCollapsed(false);
       shellLayout.setSideDrawerMode(mode);
@@ -1153,7 +1129,7 @@ function App() {
     worktrees,
   };
   const commandPaletteTerminal = {
-    activePane: activeTerminalPane,
+    activePane: activeAgentSession.activeTerminalPane,
     activePaneLabel: activeTerminalPaneLabelForCommands,
     canClose: Boolean(activeAgentSessionHandle),
     launchProfileChanging: profiles.changing,
@@ -1178,8 +1154,8 @@ function App() {
     editorLoading: editorSession.editorLoading,
     editorSaving: editorSession.editorSaving,
     onAttachCurrentFile: () => void attachSelectedFileToComposer(),
-    onAttachPreview: () => void attachPreviewToComposer(),
-    onCloseEditorTab: () => { if (editorSession.selectedFile) void closeEditorTab(editorSession.selectedFile); },
+    onAttachPreview: () => void composerAttachments.attachPreview(),
+    onCloseEditorTab: () => { if (editorSession.selectedFile) void editorNavigation.closeTab(editorSession.selectedFile); },
     onExportPerformance: () => void exportRenderPerfSnapshot(),
     onFindEditor: editorSurface.openEditorSearch,
     onOpenDetectedBrowser: () => void browser.openDetectedServer(),
@@ -1220,16 +1196,7 @@ function App() {
     commandPaletteSources,
   );
   const tabIsDirty = (path: string) => editorWorkspace.dirtyTabPathSet.has(path);
-  const {
-    cancelNavigation: cancelPendingNavigation,
-    closeActiveTab: closeActiveEditorTab,
-    closeTab: closeEditorTab,
-    discardAndContinue: discardDraftAndContinue,
-    draftDialogError,
-    pendingNavigation,
-    requestNavigation: requestPendingNavigation,
-    saveAndContinue: saveDraftAndContinue,
-  } = useEditorNavigationLifecycle({
+  const editorNavigation = useEditorNavigationLifecycle({
     activeFile: editorSession.selectedFile,
     captureEditor: () => { editorSession.captureCurrentEditorViewState(); editorSession.captureCurrentEditorBuffer(); },
     closeProject: async (projectPath) => { await projectCloseController.closeProjectDirect(projectPath); },
@@ -1239,7 +1206,7 @@ function App() {
     onActivateTab: async (tab) => {
       editorSession.selectedFileRef.current = null;
       editorSession.setSelectedFile(null);
-      await openEditorFileDirect(tab, { focusEditor: true });
+      await editorFileWorkflow.openDirect(tab, { focusEditor: true });
     },
     onRemoveTab: (path) => {
       delete editorSession.editorBuffersRef.current[path];
@@ -1250,7 +1217,7 @@ function App() {
       if (workspacePathRef.current) void persistence.clearActiveFile(workspacePathRef.current);
       editorSession.resetEditor();
     },
-    openFile: async (file, options) => { await openEditorFileDirect(file, options); },
+    openFile: async (file, options) => { await editorFileWorkflow.openDirect(file, options); },
     openWorkspace: async (path) => { await workspaceOpenActions.openWorkspaceDirect(path); },
     saveEditorFile: () => saveEditorFile(),
     setEditorTabs: editorSession.setEditorTabs,
@@ -1258,7 +1225,7 @@ function App() {
 
   editorSession.saveEditorFileRef.current = saveEditorFile;
   editorSession.openEditorSearchRef.current = editorSurface.openEditorSearch;
-  editorSession.closeActiveEditorTabRef.current = closeActiveEditorTab;
+  editorSession.closeActiveEditorTabRef.current = editorNavigation.closeActiveTab;
 
   useEffect(() => {
     void invoke("update_agent_hook_snapshot", {
@@ -1278,7 +1245,7 @@ function App() {
     isPaneOpen: (paneId) => terminal.panesRef.current.some((pane) => pane.id === paneId),
     focusPane: (paneId) => terminalSurface.focusTerminalPane(paneId, "agent"),
     getWorkspacePath: () => workspacePathRef.current,
-    openFile: (root, path) => requestOpenEditorFile(
+    openFile: (root, path) => editorFileWorkflow.requestOpen(
       fileTreeNodeFromPath(`${root}/${path}`, "file"),
       { focusEditor: true },
       "agent",
@@ -1297,7 +1264,7 @@ function App() {
     if (!savedActiveFile) return;
     const node = findFileTreeNode(workspaceTree.tree, savedActiveFile);
     if (node?.kind === "file") {
-      void openEditorFileDirect(node);
+      void editorFileWorkflow.openDirect(node);
       return;
     }
     void persistence.clearActiveFile(workspacePath);
@@ -1388,11 +1355,8 @@ function App() {
     onPaneExit: terminalRuntimeEventHandlers.handlePaneExit,
   });
 
-  const activeTerminalPaneLabel = activePaneDisplayLabel(terminal.panes, activeTerminalPane);
-  const {
-    activeSessionTitle, activeWorkspaceName, primarySurfaceLabel,
-    primarySurfaceState, primarySurfaceStatusLabel, utilityTrayStatusLabel,
-  } = deriveAppSurfaceLabels({
+  const activeTerminalPaneLabel = activePaneDisplayLabel(terminal.panes, activeAgentSession.activeTerminalPane);
+  const surfaceLabels = deriveAppSurfaceLabels({
     activeRunId: activeChat.activeChatConversation.activeRunId,
     activeSessionId: activeChat.activeSessionId,
     sessions: projectSessionsFor(workspacePath ?? ""),
@@ -1474,7 +1438,7 @@ function App() {
       refs={{ workbenchRef: shellLayout.workbenchRef }}
       slots={{
         titlebar: <AppTitlebar {...appTitlebarPropsFrom({
-        activeSessionTitle,
+        activeSessionTitle: surfaceLabels.activeSessionTitle,
         createSession: projectSessionNavigationActions.createSession,
         openCommandPalette: commandPalette.openDialog,
         openSettings: () => setSettingsOpen(true),
@@ -1485,9 +1449,9 @@ function App() {
         setToolMode: shellLayout.setToolTrayMode,
         sideDrawerCollapsed: shellLayout.sideDrawerCollapsed,
         storedLayout: shellLayout.workbenchLayout,
-        surfaceLabel: primarySurfaceLabel,
-        surfaceState: primarySurfaceState,
-        surfaceStatusLabel: primarySurfaceStatusLabel,
+        surfaceLabel: surfaceLabels.primarySurfaceLabel,
+        surfaceState: surfaceLabels.primarySurfaceState,
+        surfaceStatusLabel: surfaceLabels.primarySurfaceStatusLabel,
         terminalOpen: shellLayout.agentSurfaceMode === "terminal",
         toggleRawTerminal: utilityTrayControls.toggleRawTerminal,
         toggleSideDrawer: () => shellLayout.setSideDrawerCollapsed((collapsed) => !collapsed),
@@ -1546,8 +1510,8 @@ function App() {
           fileOpError: editorSession.fileOpError, fileTree: workspaceTree.tree, fileTreeError: workspaceTree.error, fileTreeLoading: workspaceTree.loading, fileTreeTruncated: workspaceTree.truncated,
           railBodyRef, railHeight, selectedFileId: editorSession.selectedFile?.id, treeRef, visibleFileTree: editorWorkspace.visibleFileTree,
           workspaceName: workspacePath ? pathBasename(workspacePath) : null, workspacePath,
-          onCreateFile: () => void createFileInRail(), onCreateFolder: () => void createFolderInRail(),
-          onOpenFile: (file) => void requestOpenEditorFile(file, { focusEditor: true }),
+          onCreateFile: () => void workspaceFileActions.createFile(), onCreateFolder: () => void workspaceFileActions.createFolder(),
+          onOpenFile: (file) => void editorFileWorkflow.requestOpen(file, { focusEditor: true }),
           onOpenFolder: () => void pickWorkspace(),
           onWorkspaceContextMenu: (event) => contextMenuHost.openContextMenu(event, workspaceContextMenuItems()),
         }}
@@ -1561,13 +1525,13 @@ function App() {
           }}
           git={{ error: gitStatusHook.error, loading: gitStatusHook.loading, status: gitStatusHook.status }}
           handlers={{
-            createFile: () => void createFileInRail(),
-            createFolder: () => void createFolderInRail(),
+            createFile: () => void workspaceFileActions.createFile(),
+            createFolder: () => void workspaceFileActions.createFolder(),
             gitFileContextMenu: (event, file) => contextMenuHost.openContextMenu(
               event, buildGitFileContextMenuItems(file, workspaceContextMenuActions),
             ),
             openDiff: (gitFile) => void diffReviewHook.open(gitFile),
-            openFile: (treeFile) => void requestOpenEditorFile(treeFile, { focusEditor: true }),
+            openFile: (treeFile) => void editorFileWorkflow.requestOpen(treeFile, { focusEditor: true }),
             refreshFiles: workspaceTree.refresh,
             refreshGit: () => void gitStatusHook.refresh(),
             setQuery: setDrawerSearchQuery,
@@ -1594,9 +1558,9 @@ function App() {
           editorLoading={editorSession.editorLoading}
           editorSaving={editorSession.editorSaving}
           handlers={{
-            closeActiveTab: () => void closeActiveEditorTab(),
+            closeActiveTab: () => void editorNavigation.closeActiveTab(),
             closeDiff: diffReviewHook.close,
-            closeTab: (tab) => void closeEditorTab(tab),
+            closeTab: (tab) => void editorNavigation.closeTab(tab),
             copyDiff: () => void diffReviewHook.copy(),
             find: editorSurface.openEditorSearch,
             onChange: editorSession.setEditorText,
@@ -1611,7 +1575,7 @@ function App() {
             reload: () => void editorSurface.reloadFromDisk(),
             runDiffAction: (action) => { if (diffReviewHook.review) void diffReviewHook.runFileAction(action, diffReviewHook.review.file); },
             save: () => void saveEditorFile(),
-            selectTab: (tab) => void requestOpenEditorFile(tab, { focusEditor: true }),
+            selectTab: (tab) => void editorFileWorkflow.requestOpen(tab, { focusEditor: true }),
             tabContextMenu: (event, tab) => contextMenuHost.openContextMenu(event, editorTabContextMenuItems(tab)),
           }}
           selectedFile={editorSession.selectedFile}
@@ -1636,7 +1600,7 @@ function App() {
           surfaceMode={shellLayout.agentSurfaceMode}
           chat={{
             conversation: activeChat.activeChatConversation,
-            events: selectedAgentActivityLog,
+            events: activeAgentSession.selectedAgentActivityLog,
             hidden: false,
             onSuggestion: (draft) => composerLocal.setLocalState(activeChat.activeComposerHarnessKey, draft, composerLocal.history),
             onRetry: (prompt) => void composerSurface.submitComposerDraft(prompt),
@@ -1662,7 +1626,7 @@ function App() {
             onApprovalChange: (mode) => void composerSettingsActions.setApprovalMode(mode),
             onAttachMention: (file) => {
               composerLocal.setLocalState(activeChat.activeComposerHarnessKey, composerLocal.draft.replace(/@[^\s@]*$/, ""), composerLocal.history);
-              void attachWorkspaceFileToComposer(file);
+              void composerAttachments.attachWorkspaceFile(file);
             },
             onClearGoal: () => void composerSettingsActions.setGoal(""),
             onContextMenu: (event) => contextMenuHost.openContextMenu(event, appMenuAssembly.composerContextMenuItems()),
@@ -1676,20 +1640,20 @@ function App() {
             onManageModels: () => setSettingsOpen(true),
             onNextHistory: composerHistoryNavigation.showNext,
             onOpenAddMenu: appMenuAssembly.openComposerAddMenu,
-            onPasteImage: () => void pasteComposerImage(),
+            onPasteImage: () => void composerAttachments.pasteImage(),
             onPreviousHistory: composerHistoryNavigation.showPrevious,
             onReasoningChange: composerSettingsActions.setReasoningEffort,
-            onRemoveAttachment: (attachment) => void removeComposerAttachmentById(attachment),
-            onReviewContext: () => void reviewComposerContext(),
+            onRemoveAttachment: (attachment) => void composerAttachments.removeAttachment(attachment),
+            onReviewContext: () => void composerAttachments.reviewContext(),
             onRuntimeChange: composerSettingsActions.setRuntime,
             onStop: () => void chatRunControls.stopActiveChatRun(),
             onSubmit: () => void composerSurface.submitComposerDraft(),
           }}
         />
         <BottomUtilityTray
-          activePane={activeTerminalPane} activePaneId={terminal.activePaneId}
+          activePane={activeAgentSession.activeTerminalPane} activePaneId={terminal.activePaneId}
           activeProfileLabel={activeTerminalProfile.label} canClose={Boolean(activeAgentSessionHandle)}
-          canvasRef={canvasRef} events={selectedAgentActivityLog} find={terminalFind}
+          canvasRef={canvasRef} events={activeAgentSession.selectedAgentActivityLog} find={terminalFind}
           hasWorkspace={Boolean(workspacePath)} imeInputRef={imeInputRef}
           launchProfile={profiles.terminalProfile} launchProfileChanging={profiles.changing}
           launchProfiles={profiles.allProfiles}
@@ -1697,7 +1661,7 @@ function App() {
           terminalHostRef={terminalHostRef}
           onClose={() => { if (activeAgentSessionHandle) void activeAgentSessionHandle.close(); }}
           onCreate={(profile) => void terminalSurface.createTerminalPane(profile)} onFocus={(paneId) => void terminalSurface.focusTerminalPane(paneId)}
-          onKill={() => { if (activeTerminalPane) void terminalSurface.terminateTerminalPane(activeTerminalPane); }}
+          onKill={() => { if (activeAgentSession.activeTerminalPane) void terminalSurface.terminateTerminalPane(activeAgentSession.activeTerminalPane); }}
           onOpenFolder={() => void pickWorkspace({ openTerminal: true })}
           onOpenTab={(mode) => void utilityTrayControls.openUtilityTray(mode)}
           onPaneContextMenu={(event, pane) => contextMenuHost.openContextMenu(event, appMenuAssembly.terminalPaneContextMenuItems(pane))}
@@ -1707,7 +1671,7 @@ function App() {
           }}
           onRename={(pane) => void renameTerminalPane(pane)}
           onResizeStart={(event) => { shellLayout.setAgentSurfaceMode("terminal"); shellLayout.beginUtilityTrayResize(event); }}
-          onRestart={() => { if (activeTerminalPane) void terminalSurface.restartTerminalPane(activeTerminalPane); }}
+          onRestart={() => { if (activeAgentSession.activeTerminalPane) void terminalSurface.restartTerminalPane(activeAgentSession.activeTerminalPane); }}
           onStartShell={() => void terminalSurface.createTerminalPane(defaultTerminalLaunchProfile())}
           onTabContextMenu={(event, mode) => contextMenuHost.openContextMenu(event, appMenuAssembly.utilityTrayTabContextMenuItems(mode))}
           onTerminalContextMenu={(event) => contextMenuHost.openContextMenu(event, terminalContextMenuItems())}
@@ -1749,11 +1713,11 @@ function App() {
           profileSetting: activeChat.activeAgentProfileSetting,
           profiles: settingsAgentProfileOptions(LAUNCH_PROFILES),
           repoLocation: settingsRuntime.repoLocation,
-          sessionTitle: activeSessionTitle,
+          sessionTitle: surfaceLabels.activeSessionTitle,
           sourceControlStatus: settingsRuntime.sourceControlStatus,
           theme: chrome.appTheme,
           trayMode: shellLayout.toolTrayMode,
-          workspaceName: activeWorkspaceName,
+          workspaceName: surfaceLabels.activeWorkspaceName,
           workspacePath: workspacePath ?? "",
         }}
       />
@@ -1803,29 +1767,29 @@ function App() {
         controller={quickOpen}
         shortcut={shortcutKeys("workspace.quick-open")}
         workspacePath={workspacePath}
-        onOpenFile={(file) => void requestOpenEditorFile(file, { focusEditor: true })}
+        onOpenFile={(file) => void editorFileWorkflow.requestOpen(file, { focusEditor: true })}
       />
       {(() => {
         const draftProps = draftNavigationPropsFrom({
-          cancel: cancelPendingNavigation,
-          discard: discardDraftAndContinue,
-          error: draftDialogError,
-          hasPendingNavigation: Boolean(pendingNavigation),
-          save: saveDraftAndContinue,
+          cancel: editorNavigation.cancelNavigation,
+          discard: editorNavigation.discardAndContinue,
+          error: editorNavigation.draftDialogError,
+          hasPendingNavigation: Boolean(editorNavigation.pendingNavigation),
+          save: editorNavigation.saveAndContinue,
           saving: editorSession.editorSaving,
           selectedFile: editorSession.selectedFile,
         });
         return draftProps ? <DraftNavigationDialog {...draftProps} /> : null;
       })()}
       <StatusBar
-        workspaceName={activeWorkspaceName}
-        primarySurfaceState={primarySurfaceState}
-        primarySurfaceLabel={primarySurfaceLabel}
-        primarySurfaceStatusLabel={primarySurfaceStatusLabel}
+        workspaceName={surfaceLabels.activeWorkspaceName}
+        primarySurfaceState={surfaceLabels.primarySurfaceState}
+        primarySurfaceLabel={surfaceLabels.primarySurfaceLabel}
+        primarySurfaceStatusLabel={surfaceLabels.primarySurfaceStatusLabel}
         {...statusBarRepoPropsFrom(settingsRuntime.repoLocation, openUrl)}
         repoTitle={sourceRepoStatusTitle}
         surfaceMode={shellLayout.agentSurfaceMode}
-        utilityLabel={utilityTrayStatusLabel}
+        utilityLabel={surfaceLabels.utilityTrayStatusLabel}
       />
         </>,
       }}
