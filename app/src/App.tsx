@@ -62,6 +62,7 @@ import { createTerminalPaneRename } from "./terminalPaneRename";
 import { wireEditorFileWorkflow } from "./editorFileWorkflowSurface";
 import { wireWorkspaceFileActions } from "./workspaceFileActionsSurface";
 import { wireSessionCheckpointActions } from "./sessionCheckpointSurface";
+import { deriveProjectSessionMenuState } from "./projectSessionMenuSurface";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -1247,15 +1248,16 @@ function App() {
   });
 
   const projectSessionContextMenuItems = (projectPath: string, session: ProjectSession): ContextMenuItem[] => {
-    const sessions = projectSessionsRef.current[projectPath] ?? [];
-    const conversation = chatConversationsRef.current[composerHarnessSessionKey(projectPath, session.id)];
     return buildProjectSessionContextMenuItems({
-      activeProjectSessionCount: sessions.filter((s) => !s.archived).length,
-      hasAssistantMessage: Boolean(conversation?.messages.some((message) => message.role === "assistant")),
-      hasRunningChildRun: Boolean(conversation?.activeRunId),
-      isActiveSession: projectPath === workspacePath && session.id === activeSessionId,
-      isWorkspaceProject: projectPath === workspacePath,
-      projectSessionCount: sessions.length,
+      ...deriveProjectSessionMenuState({
+        activeSessionId,
+        chatIdForSession: composerHarnessSessionKey,
+        conversations: chatConversationsRef.current,
+        projectPath,
+        session,
+        sessions: projectSessionsRef.current[projectPath] ?? [],
+        workspacePath,
+      }),
       session,
       actions: {
         archive: () => archiveProjectSession(projectPath, session, !session.archived),
