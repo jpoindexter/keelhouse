@@ -48,6 +48,10 @@ import { createEditorViewLifecycle } from "./editorViewLifecycle";
 import { createWorkspaceBootstrapController } from "./workspaceBootstrapController";
 import { WorkspaceSideRail } from "./WorkspaceSideRail";
 import { createAppMenuAssembly } from "./appMenuAssembly";
+import {
+  assembleCommandPaletteCommands,
+  visibleCommandPaletteCommands,
+} from "./commandPaletteAssembly";
 import type { EditorFileLoadState } from "./editorFileLoadState";
 import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
@@ -68,7 +72,6 @@ import {
   composerHistoryAt,
   nextComposerHistoryIndex,
   previousComposerHistoryIndex,
-  COMPOSER_APP_COMMANDS,
 } from "./agentComposer";
 import type { ComposerAppCommand } from "./agentComposer";
 import { runComposerAppCommand as runComposerAppCommandWithContext } from "./composerAppCommands";
@@ -77,31 +80,12 @@ import {
   createActiveAgentSessionHandle,
 } from "./agentSessionHandle";
 import type { AgentApprovalMode, AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
-import type { AppIconName } from "./icons";
 import {
   setActiveKeybindingOverrides,
   shortcutKeys,
   type KeybindingOverrides,
 } from "./shortcuts";
-import { filterCommandPaletteCommands } from "./commandPalette";
-import { buildChatPaletteCommands } from "./commandPaletteChats";
-import {
-  buildCommandPaletteLayoutCommands,
-  buildCommandPaletteResourceCommands,
-} from "./commandPaletteNavigation";
-import {
-  buildTerminalFindCommands,
-  buildTerminalLifecycleCommands,
-} from "./commandPaletteTerminal";
-import {
-  buildBrowserCommands,
-  buildChromeCommands,
-  buildComposerAttachmentCommands,
-  buildEditorCommands,
-  buildWorkspaceCommands,
-  buildWorkspaceOpenCommands,
-} from "./commandPaletteWorkbench";
-import { SearchCommandDialog, type SearchDialogCommand } from "./SearchCommandDialog";
+import { SearchCommandDialog } from "./SearchCommandDialog";
 import { useCommandPalette } from "./useCommandPalette";
 import { QuickOpenDialog } from "./QuickOpenDialog";
 import { useQuickOpen } from "./useQuickOpen";
@@ -245,7 +229,6 @@ type Cell = { t: string; f: [number, number, number]; b: [number, number, number
 type Snapshot = { cols: number; rows: number; cx: number; cy: number; cvis: boolean; sb: number; cells: Cell[] };
 type OpenPaneResponse = { paneId: number };
 type SaveEditorFileOptions = { force?: boolean };
-type CommandPaletteCommand = SearchDialogCommand;
 const basename = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 const fileNodeFromPath = (path: string, kind: FileTreeNode["kind"]): FileTreeNode => ({
   id: path, kind, name: basename(path), path,
@@ -1862,34 +1845,17 @@ function App() {
     searchResults: chatSearchViewResults,
     workspacePath,
   };
-  const commandPaletteCommands: CommandPaletteCommand[] = [
-    ...buildChatPaletteCommands(commandPaletteChats),
-    ...buildWorkspaceOpenCommands(commandPaletteWorkbench),
-    ...COMPOSER_APP_COMMANDS.map((info) => ({
-      id: `composer.${info.command}`,
-      label: `App Command ${info.label}`,
-      detail: info.detail,
-      icon: "send" as AppIconName,
-      keywords: ["composer", "app command", ...info.aliases],
-      run: () => void runComposerAppCommand(info.command),
-    })),
-    ...buildChromeCommands(commandPaletteWorkbench),
-    ...buildTerminalFindCommands(commandPaletteTerminal),
-    ...buildWorkspaceCommands(commandPaletteWorkbench),
-    ...buildEditorCommands(commandPaletteWorkbench),
-    ...buildTerminalLifecycleCommands(commandPaletteTerminal),
-    ...buildBrowserCommands(commandPaletteWorkbench),
-    ...buildCommandPaletteLayoutCommands(commandPaletteNavigation),
-    ...buildComposerAttachmentCommands(commandPaletteWorkbench),
-    ...buildCommandPaletteResourceCommands(commandPaletteNavigation),
-  ];
-  const filteredCommandPaletteCommands = filterCommandPaletteCommands(commandPaletteCommands, commandPalette.query, commandPaletteSources);
-  const visibleCommandPaletteCommands = commandPalette.query.trim()
-    ? filteredCommandPaletteCommands.slice(0, 120)
-    : [
-        ...filteredCommandPaletteCommands.filter((command) => command.source === "chats").slice(0, 6),
-        ...filteredCommandPaletteCommands.filter((command) => command.source !== "chats").slice(0, 6),
-      ];
+  const visiblePaletteCommands = visibleCommandPaletteCommands(
+    assembleCommandPaletteCommands({
+      chats: commandPaletteChats,
+      navigation: commandPaletteNavigation,
+      runAppCommand: runComposerAppCommand,
+      terminal: commandPaletteTerminal,
+      workbench: commandPaletteWorkbench,
+    }),
+    commandPalette.query,
+    commandPaletteSources,
+  );
   const tabIsDirty = (path: string) => dirtyTabPathSet.has(path);
   const {
     cancelNavigation: cancelPendingNavigation,
@@ -2597,7 +2563,7 @@ function App() {
       ) : null}
       {commandPalette.open ? (
         <SearchCommandDialog
-          commands={visibleCommandPaletteCommands}
+          commands={visiblePaletteCommands}
           activeIndex={commandPalette.activeIndex}
           query={commandPalette.query}
           shortcut={shortcutKeys("chrome.command-palette")}
@@ -2606,7 +2572,7 @@ function App() {
           inputRef={commandPalette.inputRef}
           onClose={commandPalette.close}
           onQueryChange={commandPalette.setQuery}
-          onKeyDown={(event) => commandPalette.onKeyDown(event, visibleCommandPaletteCommands)}
+          onKeyDown={(event) => commandPalette.onKeyDown(event, visiblePaletteCommands)}
           onActiveIndexChange={commandPalette.setActiveIndex}
           onRun={commandPalette.run}
         />

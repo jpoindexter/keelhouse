@@ -33,6 +33,7 @@ const appChromeState = read("app/src/useAppChromeState.ts");
 const drawerModes = read("app/src/drawerModes.ts");
 const searchCommandDialog = read("app/src/SearchCommandDialog.tsx");
 const commandPaletteController = read("app/src/useCommandPalette.ts");
+const commandPaletteAssembly = read("app/src/commandPaletteAssembly.ts");
 const commandPaletteSurface = [
   appTsx,
   read("app/src/commandPaletteChats.ts"),
@@ -260,12 +261,17 @@ assert(commandPaletteController.includes("const [open, setOpen] = useState(false
 assert(appTsx.includes("shortcutKeys(\"chrome.command-palette\")"), "Command palette must show its shortcut label");
 assert(appTitlebar.includes('<div className="titlebar-identity"') && appTitlebar.includes('title="New chat"') && appTitlebar.includes('title="Search tasks or run a command"') && appTitlebar.includes('title="Reset interface"'), "Thread actions must share the native titlebar lane with the traffic lights");
 assert(!appTsx.includes('className="drawer-collapse-button"'), "The Threads section header must not duplicate titlebar actions");
-assert(appTsx.includes("filterCommandPaletteCommands(commandPaletteCommands, commandPalette.query, commandPaletteSources)"), "Command palette source settings must filter live results");
+assert(
+  appTsx.includes("visibleCommandPaletteCommands(")
+    && appTsx.includes("commandPaletteSources,")
+    && commandPaletteAssembly.includes("filterCommandPaletteCommands(commands, query, sources)"),
+  "Command palette source settings must filter live results",
+);
 assert(commandPaletteSurface.includes('source: "chats"') && commandPaletteSurface.includes('"files" | "tabs"') && commandPaletteSurface.includes('source: "worktrees"'), "Command palette must include real chat, file, tab, and worktree sources");
 assert(commandPaletteSources.includes('COMMAND_PALETTE_SOURCE_IDS = ["chats", "commands", "files", "tabs", "worktrees"]'), "Command palette sources must use the persisted typed source contract");
 assert(searchCommandDialog.includes('placeholder="Search tasks or run a command"'), "Search must use the centered task and command palette");
 assert(searchCommandDialog.includes('label="Tasks"') && searchCommandDialog.includes('label="Actions"'), "Centered search must separate tasks from actions");
-assert(appTsx.includes('command.source === "chats").slice(0, 6)') && appTsx.includes('command.source !== "chats").slice(0, 6)'), "Centered search must keep both tasks and actions visible before a query");
+assert(commandPaletteAssembly.includes('command.source === "chats").slice(0, EMPTY_QUERY_GROUP_LIMIT)') && commandPaletteAssembly.includes('command.source !== "chats").slice(0, EMPTY_QUERY_GROUP_LIMIT)'), "Centered search must keep both tasks and actions visible before a query");
 assert(!appTsx.includes('sideDrawerMode === "search"'), "Search must not render as a duplicate side drawer");
 assert(!appCss.includes(".search-scope-tabs"), "Removed search drawer tabs must not leave capsule styling behind");
 assert(settingsWorkspace.includes("onCommandPaletteSourceChange") && settingsWorkspace.includes("Toggle ${source.label} command palette source"), "Settings must expose functional command-palette source controls");
