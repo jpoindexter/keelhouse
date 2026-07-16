@@ -37,11 +37,7 @@ import { createComposerSettingsActions } from "./composerSettingsActions";
 import { useComposerAttachments } from "./useComposerAttachments";
 import { useEditorNavigationLifecycle } from "./useEditorNavigationLifecycle";
 import { createWorkspacePersistence } from "./workspacePersistence";
-import {
-  createTerminalPaneContexts,
-  type ActiveTerminalPaneByContext,
-  type TerminalPanesByContext,
-} from "./terminalPaneContexts";
+import { useTerminalPaneController } from "./useTerminalPaneController";
 import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import {
@@ -157,12 +153,11 @@ import type { TerminalPaneState } from "./terminalPane";
 import type { GitStatusFile } from "./fileGitStatus";
 import { useGitStatus } from "./useGitStatus";
 import { useGitDiffReview } from "./useGitDiffReview";
-import type { PaneLayoutsBySession } from "./sessionRestore";
 import { useShellLayout, type SideDrawerMode } from "./useShellLayout";
 import { useAppChromeState } from "./useAppChromeState";
 import { useSettingsRuntimeStatus } from "./useSettingsRuntimeStatus";
 import { useSyncRef } from "./useSyncRef";
-import { loadWorkspaceBootstrap, type PaneLabelsBySession } from "./workspaceBootstrap";
+import { loadWorkspaceBootstrap } from "./workspaceBootstrap";
 import { applyWorkspaceCleanupRecord } from "./workspaceOpenRecovery";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { SettingsModal } from "./SettingsModal";
@@ -349,17 +344,8 @@ function App() {
   const scopedSettingsRef = useRef<ScopedSettingsState>(defaultScopedSettings());
   const chatConversationsRef = useRef<ChatConversationRecords>({});
   const aiConnectionSettingsRef = useRef<AiConnectionSettings>(DEFAULT_AI_CONNECTION_SETTINGS);
-  const intentionallyTerminatedPaneIdsRef = useRef<Set<number>>(new Set());
-  const terminalPanesRef = useRef<ManagedTerminalPane[]>([]);
   const activeAgentSessionDescriptorRef = useRef<AgentSessionHandleDescriptor | null>(null);
   const fileNodeContextMenuItemsRef = useRef<(node: FileTreeNode) => ContextMenuItem[]>(() => []);
-  const terminalPanesByContextRef = useRef<TerminalPanesByContext>({});
-  const activeTerminalPaneByContextRef = useRef<ActiveTerminalPaneByContext>({});
-  const paneLabelsBySessionRef = useRef<PaneLabelsBySession>({});
-  const paneLayoutsBySessionRef = useRef<PaneLayoutsBySession>({});
-  const activeTerminalPaneIdRef = useRef<number | null>(null);
-  const terminalSnapshotsRef = useRef<Record<number, Snapshot>>({});
-  const requestTerminalPaintRef = useRef<() => void>(() => {});
   const activeFilesByWorkspaceRef = useRef<ActiveFileByWorkspace>({});
   const restoredActiveFileWorkspaceRef = useRef<string | null>(null);
   const selectedFileRef = useRef<FileTreeNode | null>(null);
@@ -380,10 +366,28 @@ function App() {
   const selection = useRef<SelectionRange | null>(null);
   const selecting = useRef(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
-  const [terminalPanes, setTerminalPanes] = useState<ManagedTerminalPane[]>([]);
-  const [activeTerminalPaneId, setActiveTerminalPaneId] = useState<number | null>(null);
-  const [paneLabelsBySession, setPaneLabelsBySession] = useState<PaneLabelsBySession>({});
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
+  const terminal = useTerminalPaneController<Snapshot>({
+    activeSessionForProject: (root) => activeSessionForProject(root),
+    activeWorkspace: workspacePathRef,
+    persistPaneLayout: (root, sessionId, panes) => {
+      persistPaneLayoutForSession(root, sessionId, panes);
+    },
+  });
+  const {
+    activePaneForSession, activePaneId: activeTerminalPaneId,
+    activePaneIdRef: activeTerminalPaneIdRef, activePaneIdsRef: activeTerminalPaneByContextRef,
+    activeProjectStatus, activeSessionStatus, contextForPaneId: paneContextForPaneId,
+    intentionallyTerminatedPaneIdsRef, paneLabelsRef: paneLabelsBySessionRef,
+    paneLayoutsRef: paneLayoutsBySessionRef,
+    panes: terminalPanes, panesByContextRef: terminalPanesByContextRef,
+    panesForProject: terminalPanesForProject, panesForSession: terminalPanesForSession,
+    panesRef: terminalPanesRef, projectStatusForRoot,
+    requestPaintRef: requestTerminalPaintRef, setFocusedPane: setFocusedTerminalPane,
+    setManagedPanes: setManagedTerminalPanes, setPaneLabels: setPaneLabelsBySession,
+    setPaneState, setSessionPanes: setSessionTerminalPanes,
+    snapshotsRef: terminalSnapshotsRef, statusForPanes: terminalPaneProjectStatus,
+  } = terminal;
   const {
     error: fileTreeError, loading: fileTreeLoading, refresh: refreshFileTree,
     refreshKey: treeRefreshNonce, setError: setFileTreeError, setTree: setFileTree,
@@ -669,12 +673,8 @@ function App() {
   useSyncRef(openProjectsRef, openProjects);
   useSyncRef(projectSessionsRef, projectSessions);
   useSyncRef(activeSessionByProjectRef, activeSessionByProject);
-  useSyncRef(paneLabelsBySessionRef, paneLabelsBySession);
-
   useSyncRef(composerHarnessBySessionRef, composerHarnessBySession);
   useSyncRef(scopedSettingsRef, scopedSettings);
-  useSyncRef(terminalPanesRef, terminalPanes);
-  useSyncRef(activeTerminalPaneIdRef, activeTerminalPaneId);
   useSyncRef(selectedFileRef, selectedFile);
 
   useEffect(() => {
@@ -891,32 +891,6 @@ function App() {
 
   const activeSessionForProject = (root: string | null) =>
     activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, root);
-  const {
-    activePaneForSession,
-    activeProjectStatus,
-    activeSessionStatus,
-    contextForPaneId: paneContextForPaneId,
-    panesForProject: terminalPanesForProject,
-    panesForSession: terminalPanesForSession,
-    projectStatusForRoot,
-    setFocusedPane: setFocusedTerminalPane,
-    setManagedPanes: setManagedTerminalPanes,
-    setPaneState,
-    setSessionPanes: setSessionTerminalPanes,
-    statusForPanes: terminalPaneProjectStatus,
-  } = createTerminalPaneContexts({
-    activePaneIds: activeTerminalPaneByContextRef,
-    activeSessionForProject,
-    activeWorkspace: workspacePathRef,
-    panes: terminalPanesRef,
-    panesByContext: terminalPanesByContextRef,
-    persistPaneLayout: persistPaneLayoutForSession,
-    setActivePaneId: (paneId) => {
-      activeTerminalPaneIdRef.current = paneId;
-      setActiveTerminalPaneId(paneId);
-    },
-    setPanes: setTerminalPanes,
-  });
 
   const terminalPaneLabel = (pane: ManagedTerminalPane, index: number) => terminalPaneLabelForDisplay(pane.label, pane.profile.label, index);
 
@@ -2823,7 +2797,6 @@ function App() {
     composerHarnessBySessionRef.current = data.composerHarness;
     scopedSettingsRef.current = data.scopedSettings;
     chatConversationsRef.current = data.chatConversations;
-    paneLabelsBySessionRef.current = data.paneLabels;
     sessionEditorSnapshotsRef.current = data.sessionSnapshots;
     paneLayoutsBySessionRef.current = data.paneLayouts;
     aiConnectionSettingsRef.current = data.aiConnectionSettings;
