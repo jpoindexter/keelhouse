@@ -49,6 +49,7 @@ import type { GitStatusFile } from "./fileGitStatus";
 import { buildAgentHookSnapshot, hookReportToActivity } from "./agentHookIntegration";
 import { AgentConversationPanel } from "./AgentConversationPanel";
 import { useContextMenuHost } from "./useContextMenuHost";
+import { createTerminalPaneCommands, createWorktreePersistence } from "./terminalPaneCommands";
 import { createTerminalSurfaceActions, terminalSurfaceDepsFromHook } from "./terminalSurfaceController";
 import {
   workspaceOpenRecordsFromHooks, createWorkspaceOpenSurface, workspaceOpenTargetFromHook } from "./workspaceOpenSurface";
@@ -131,8 +132,6 @@ import { loadWorkspaceBootstrap } from "./workspaceBootstrap";
 import { terminalSnapshotText } from "./terminalTranscript";
 import { crashRecoveryMessage, deriveCrashRecovery } from "./crashRecovery";
 import {
-  addWorktree,
-  removeWorktreeByPaneId,
   worktreeForPaneId,
   type WorktreeRecord,
 } from "./worktrees";
@@ -218,7 +217,6 @@ import "./workbenchTransitions.css";
 
 type Cell = { t: string; f: [number, number, number]; b: [number, number, number]; bold: boolean };
 type Snapshot = { cols: number; rows: number; cx: number; cy: number; cvis: boolean; sb: number; cells: Cell[] };
-type OpenPaneResponse = { paneId: number };
 type SaveEditorFileOptions = { force?: boolean };
 const formatBytes = (bytes: number | null) => {
   if (bytes == null) return "--";
@@ -904,63 +902,39 @@ function App() {
   const setComposerReasoningEffort = composerSettingsActions.setReasoningEffort;
 
   const terminalSurface = createTerminalSurfaceActions<Snapshot, SelectionRange>(terminalSurfaceDepsFromHook(terminal, {
+    ...createTerminalPaneCommands({
+      environmentForRoot: (root) => connectionEnvironmentInputs(aiConnectionSettingsRef.current, root),
+    }),
+    ...createWorktreePersistence({
+      save: (next) => {
+        void storeRef.current?.set("worktrees", next); void storeRef.current?.save();
+      },
+      setWorktrees,
+    }),
     getChanging: () => profiles.changing,
     getSessionId: activeSessionForProject,
     activeAgentDescriptor: () => activeAgentSessionDescriptor,
     activeAgentHandle: () => activeAgentSessionHandle,
     activePane: () => activeTerminalPane,
     approvalMode: () => agentApprovalMode,
-    closePane: async (paneId) =>
-      (await invoke<{ activePaneId: number | null }>("close_pane", { paneId })).activePaneId,
     copyText: writeText,
-    createPane: async (root, profile) => (await invoke<OpenPaneResponse>("create_pane", {
-      path: root, profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root),
-    })).paneId,
-    createWorktree: (root, label) => invoke("create_project_worktree", { root, label }),
-    createWorktreePane: async (path, profile, projectRoot) =>
-      (await invoke<OpenPaneResponse>("create_pane", {
-        path, profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, projectRoot),
-      })).paneId,
     defaultProfile: () => profiles.terminalProfileRef.current,
     finalizePane: finalizeCreatedTerminalPane,
-    focusPane: (paneId) => invoke("focus_pane", { paneId }),
     gateAction: async (action, handle) => (await gateAppAction(action, handle)).decision,
     getWorkspacePath: () => workspacePathRef.current,
     getWorkspacePathOrState: () => workspacePathRef.current ?? workspacePath,
     getWorktrees: () => worktrees,
     latest, now: Date.now,
-    paste: (text) => invoke("paste", { text }),
-    persistWorktreeRecord: (record) => setWorktrees((current) => {
-      const next = addWorktree(current, record);
-      void storeRef.current?.set("worktrees", next); void storeRef.current?.save();
-      return next;
-    }),
-    persistWorktreeRemoval: (paneId) => setWorktrees((current) => {
-      const next = removeWorktreeByPaneId(current, paneId);
-      void storeRef.current?.set("worktrees", next); void storeRef.current?.save();
-      return next;
-    }),
     promptWorktreeLabel: () => window.prompt("Worktree label (used for the branch name)"),
     readClipboard: readText,
     recordActivity: recordAgentActivity,
     recordCreated: recordCreatedPaneActivity,
     recordCreatedWorktree: recordCreatedWorktreePaneActivity,
-    removeWorktree: (root, worktree) => invoke("remove_project_worktree", {
-      root, worktreePath: worktree.path, branch: worktree.branch,
-    }),
     requestPaint: () => requestTerminalPaintRef.current(), savedLabel: savedPaneLabelForSlot,
-    restartPane: async (root, pane) => (await invoke<OpenPaneResponse>("restart_pane", {
-      path: root, paneId: pane.id, profile: pane.profile,
-      environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root),
-    })).paneId,
     scheduleResize: () => setTimeout(sendTerminalResize, 0), selection,
     selectionText: (snap, snapSelection) => selectionToText(snap.cells, snap.cols, snapSelection),
-    sendClearKey: () => invoke("send_key", {
-      code: "KeyL", text: null, shift: false, alt: false, ctrl: true, sup: false,
-    }),
     setChanging: profiles.setChanging,
     setComposerError, setLaunchError,
-    terminatePane: (paneId) => invoke("terminate_pane", { paneId }),
     updateProjectStatus: updateOpenProjectStatus,
     updateSessionStatus: (root, status) => updateActiveSessionStatus(root, status),
   }));
