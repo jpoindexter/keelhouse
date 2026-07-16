@@ -18,7 +18,6 @@ import { DRAWER_MODES, drawerTitleFor } from "./drawerModes";
 import { AppRuntimeDialogs } from "./AppRuntimeDialogs";
 import { DEFAULT_BROWSER_PREVIEW_URL } from "./browserPreview";
 import { useBrowserPreviewController } from "./useBrowserPreviewController";
-import { resolveBrowserDevServerDetection } from "./browserDevServerDetection";
 import { useFilesRailHeight } from "./useFilesRailHeight";
 import { useComposerLocalState } from "./useComposerLocalState";
 import { createComposerSettingsActions } from "./composerSettingsActions";
@@ -62,6 +61,7 @@ import { wireSessionCheckpointActions } from "./sessionCheckpointSurface";
 import { deriveProjectSessionMenuState } from "./projectSessionMenuSurface";
 import { WorkbenchEditorSection } from "./WorkbenchEditorSection";
 import { createRenderPerfExport } from "./renderPerfExport";
+import { createDevServerDetection } from "./devServerDetectionSurface";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -614,27 +614,18 @@ function App() {
 
   const terminalPaneLabel = (pane: ManagedTerminalPane, index: number) => terminalPaneLabelForDisplay(pane.label, pane.profile.label, index);
 
-  const detectLocalDevServerFromSnapshot = (paneId: number, snapshot: Snapshot) => {
-    const context = paneContextForPaneId(paneId);
-    const detection = resolveBrowserDevServerDetection({
-      approvalMode: (root, sessionId) =>
-        composerHarnessBySessionRef.current[composerHarnessSessionKey(root, sessionId)]?.approvalMode ?? "ask",
-      context,
-      fallbackPanes: terminalPanesRef.current,
-      fallbackRoot: workspacePathRef.current,
-      fallbackSessionId: activeSessionForProject,
-      now: Date.now,
-      paneId,
-      previous: browser.detectedServerRef.current,
-      text: terminalSnapshotText(snapshot),
-    });
-    if (!detection) return;
-    browser.setDetectedServer(detection.server);
-    recordAgentActivity(detection.handle, {
-      kind: "browser", label: "Detected dev server", detail: detection.server.url,
-      target: detection.server.url, outputRef: "terminal", status: "complete",
-    });
-  };
+  const detectLocalDevServerFromSnapshot = createDevServerDetection({
+    approvalMode: (root, sessionId) =>
+      composerHarnessBySessionRef.current[composerHarnessSessionKey(root, sessionId)]?.approvalMode ?? "ask",
+    contextForPane: paneContextForPaneId,
+    fallbackPanes: () => terminalPanesRef.current,
+    fallbackRoot: () => workspacePathRef.current,
+    fallbackSessionId: activeSessionForProject,
+    getPrevious: () => browser.detectedServerRef.current,
+    now: Date.now,
+    recordActivity: recordAgentActivity,
+    setDetectedServer: browser.setDetectedServer,
+  });
 
   const captureCurrentSessionSnapshot = () => {
     const root = workspacePathRef.current;
