@@ -320,37 +320,25 @@ function App() {
   const [drawerSearchQuery, setDrawerSearchQuery] = useState("");
   const chatSearch = useChatSearch({ open: commandPalette.open, query: commandPalette.query });
   const [focusedChatMessageId, setFocusedChatMessageId] = useState<string | null>(null);
-  const {
-    error: gitStatusError, loading: gitStatusLoading, refresh: refreshGitStatus,
-    root: gitStatusRoot, setRoot: setGitStatusRoot, setStatus: setGitStatus, status: gitStatus,
-  } = useGitStatus({
+  const gitStatusHook = useGitStatus({
     active: shellLayout.sideDrawerMode === "files" || shellLayout.sideDrawerMode === "git", refreshKey: workspaceTree.refreshKey,
     resolveRoot: () => workspacePathRef.current ?? workspacePath, workspacePath,
   });
-  const {
-    close: closeDiffReview, copy: copyShownDiff, error: diffReviewError,
-    loading: diffReviewLoading, open: openGitDiff, review: diffReview,
-    runFileAction: runGitFileAction,
-  } = useGitDiffReview({
-    gateAction: (action) => gateAppAction(action),
+  const diffReviewHook = useGitDiffReview({
+    gateAction: (action) => agentActivityHook.gateAppAction(action),
     getRoot: () => workspacePathRef.current ?? workspacePath,
     hasUnsaved: (path) => editorSurface.editorHasUnsavedBufferForPath(path),
     onRefreshFiles: workspaceTree.refresh,
-    onStatus: (status, root) => { setGitStatus(status); setGitStatusRoot(root); },
+    onStatus: (status, root) => { gitStatusHook.setStatus(status); gitStatusHook.setRoot(root); },
   });
-  const {
-    activeFileMissing, diffBreadcrumbs, dirtyTabPathSet, dirtyTabPaths,
-    editorBreadcrumbs, editorDirty, editorLanguage, editorSaveConflict,
-    diffReviewCanDiscard, diffReviewCanOpenFile, diffReviewCanStage, diffReviewCanUnstage,
-    searchableFiles, visibleFileTree,
-  } = deriveEditorWorkspaceState({
-    diffReview, editorBuffers: editorSession.editorBuffersRef.current, editorError: editorSession.editorError, editorTabs: editorSession.editorTabs,
-    editorText: editorSession.editorText, fileTree: workspaceTree.tree, gitStatus, gitStatusRoot, savedEditorText: editorSession.savedEditorText,
+  const editorWorkspace = deriveEditorWorkspaceState({
+    diffReview: diffReviewHook.review, editorBuffers: editorSession.editorBuffersRef.current, editorError: editorSession.editorError, editorTabs: editorSession.editorTabs,
+    editorText: editorSession.editorText, fileTree: workspaceTree.tree, gitStatus: gitStatusHook.status, gitStatusRoot: gitStatusHook.root, savedEditorText: editorSession.savedEditorText,
     selectedFile: editorSession.selectedFile, workspacePath,
   });
   const drawerSearchResults = useMemo(() => {
-    return filterWorkspaceFiles(searchableFiles, drawerSearchQuery, drawerSearchQuery.trim() ? 80 : 40);
-  }, [drawerSearchQuery, searchableFiles]);
+    return filterWorkspaceFiles(editorWorkspace.searchableFiles, drawerSearchQuery, drawerSearchQuery.trim() ? 80 : 40);
+  }, [drawerSearchQuery, editorWorkspace.searchableFiles]);
   const chatSearchViewResults = useMemo<ChatSearchViewResult[]>(
     () => mergeChatDiscoveryResults(
       chatSearch.results,
@@ -361,25 +349,18 @@ function App() {
     ),
     [composerWorkspace.chatConversations, chatSearch.results, commandPalette.query, persistence.projectSessions],
   );
-  const quickOpen = useQuickOpen(searchableFiles, () => contextMenuHost.setContextMenu(null));
-  const {
-    activeAgentProfileSetting, activeApprovalSetting, activeBrowserSetting,
-    activeChatConversation, activeComposerHarness, activeComposerHarnessKey,
-    activeComposerProvider, activeComposerProviderLabel, activeSessionId,
-  } = deriveActiveChatState({
+  const quickOpen = useQuickOpen(editorWorkspace.searchableFiles, () => contextMenuHost.setContextMenu(null));
+  const activeChat = deriveActiveChatState({
     activeSessionByProject: persistence.activeSessionByProject, chatConversations: composerWorkspace.chatConversations, composerHarnessBySession: composerWorkspace.composerHarnessBySession,
     launchProfileId: profiles.launchProfile.id, projectSessions: persistence.projectSessions,
     resolveLaunchProfile: profiles.resolveProfile,
     scopedSettings: composerWorkspace.scopedSettings, workspacePath,
   });
-  const agentApprovalMode: AgentApprovalMode = activeComposerHarness.approvalMode;
-  const {
-    activeChatActivityHandle, agentActivityEvents,
-    agentActivityFilter, gateAppAction, recordAgentActivity, setAgentActivityEvents,
-  } = useAgentActivityController({
+  const agentApprovalMode: AgentApprovalMode = activeChat.activeComposerHarness.approvalMode;
+  const agentActivityHook = useAgentActivityController({
     activeAgentDescriptor: activeAgentSessionDescriptorRef,
-    activeProviderId: activeComposerProvider,
-    activeProviderLabel: activeComposerProviderLabel,
+    activeProviderId: activeChat.activeComposerProvider,
+    activeProviderLabel: activeChat.activeComposerProviderLabel,
     approvalMode: agentApprovalMode,
     confirmAction: (_action, message) => confirmDialog(message),
     getChatApprovalMode: (root, sessionId) =>
@@ -389,18 +370,18 @@ function App() {
       persistence.activeSessionByProjectRef.current, persistence.projectSessionsRef.current, root,
     ),
     persistEvents: (events) => {
-      void storeRef.current?.set("agentActivityEvents", events);
+      void storeRef.current?.set("agentActivityHook.agentActivityEvents", events);
       void storeRef.current?.save();
     },
   });
   const browser = useBrowserPreviewController({
     activeRoot: workspacePath,
-    activeSessionId,
+    activeSessionId: activeChat.activeSessionId,
     ensureVisible: () => {
       if (shellLayout.workbenchLayout === "hidden") shellLayout.setWorkbenchLayout("right");
       if (shellLayout.toolTrayMode === "editor") shellLayout.setToolTrayMode("browser");
     },
-    gateAction: async (action) => (await gateAppAction(action)).decision,
+    gateAction: async (action) => (await agentActivityHook.gateAppAction(action)).decision,
     getCurrentRoot: () => workspacePathRef.current,
     getCurrentSessionId: () => activeProjectSessionId(
       persistence.activeSessionByProjectRef.current, persistence.projectSessionsRef.current, workspacePathRef.current,
@@ -410,13 +391,8 @@ function App() {
     setScopedSettings: composerWorkspace.setScopedSettings,
     setStoreValue: async (key, value) => { await storeRef.current?.set(key, value); },
   });
-  const {
-    draft: composerDraft, flush: flushActiveComposerLocalState,
-    history: composerHistory, historyIndex: composerHistoryIndex,
-    setHistoryIndex: setComposerHistoryIndex, setLocalState: setComposerLocalState,
-    updateHarness: updateActiveComposerHarness,
-  } = useComposerLocalState({
-    activeHarness: activeComposerHarness, activeKey: activeComposerHarnessKey,
+  const composerLocal = useComposerLocalState({
+    activeHarness: activeChat.activeComposerHarness, activeKey: activeChat.activeComposerHarnessKey,
     getDefaultProfileId: () => profiles.launchProfileRef.current.id,
     getRecords: () => composerWorkspace.composerHarnessBySessionRef.current,
     persistRecords: (records) => composerWorkspace.persistComposerHarnessRecords(records),
@@ -430,28 +406,28 @@ function App() {
     reviewContext: reviewComposerContext,
   } = useComposerAttachments({
     active: shellLayout.agentSurfaceMode === "chat",
-    activeHarness: activeComposerHarness,
-    activeKey: activeComposerHarnessKey,
-    draft: composerDraft,
-    gateAction: (action) => gateAppAction(action),
+    activeHarness: activeChat.activeComposerHarness,
+    activeKey: activeChat.activeComposerHarnessKey,
+    draft: composerLocal.draft,
+    gateAction: (action) => agentActivityHook.gateAppAction(action),
     getBrowserUrl: () => browser.urlRef.current,
     getRoot: () => workspacePathRef.current,
     logEvent: (label, detail) => logComposerHarnessEvent(label, detail),
     setError: setComposerError,
     setNotice: setComposerNotice,
-    updateHarness: updateActiveComposerHarness,
+    updateHarness: composerLocal.updateHarness,
   });
   const attachSelectedFileToComposer = async () => attachWorkspaceFileToComposer(editorSession.selectedFile);
-  const composerMentionQuery = composerMentionQueryFrom(composerDraft);
+  const composerMentionQuery = composerMentionQueryFrom(composerLocal.draft);
   const composerMentionResults = useMemo(
-    () => composerMentionQuery == null ? [] : filterWorkspaceFiles(searchableFiles, composerMentionQuery, 8),
-    [composerMentionQuery, searchableFiles],
+    () => composerMentionQuery == null ? [] : filterWorkspaceFiles(editorWorkspace.searchableFiles, composerMentionQuery, 8),
+    [composerMentionQuery, editorWorkspace.searchableFiles],
   );
   const {
     activeAgentSessionDescriptor, activeTerminalPane,
     selectedAgentActivityLog,
   } = deriveActiveAgentSessionState({
-    activeSessionId, activeTerminalPaneId: terminal.activePaneId, agentActivityEvents, agentActivityFilter,
+    activeSessionId: activeChat.activeSessionId, activeTerminalPaneId: terminal.activePaneId, agentActivityEvents: agentActivityHook.agentActivityEvents, agentActivityFilter: agentActivityHook.agentActivityFilter,
     agentApprovalMode, terminalPanes: terminal.panes, workspacePath,
   });
   const terminalFind = useTerminalFind(activeTerminalPane != null);
@@ -462,7 +438,7 @@ function App() {
   useEffect(() => {
     if (!editorSession.selectedFile) return;
     treeRef.current?.scrollTo(editorSession.selectedFile.id, "smart");
-  }, [editorSession.selectedFile, visibleFileTree]);
+  }, [editorSession.selectedFile, editorWorkspace.visibleFileTree]);
 
   useEffect(() => {
     if (!editorSession.selectedFile || workspaceTree.tree.length === 0) return;
@@ -474,7 +450,7 @@ function App() {
 
   const chatConversationActions = createChatConversationActions({
     createCheckpoint: createWorkspaceCheckpoint,
-    getActiveChatId: () => activeComposerHarnessKey,
+    getActiveChatId: () => activeChat.activeComposerHarnessKey,
     getConversations: () => composerWorkspace.chatConversationsRef.current,
     getForkContext: () => {
       const projectPath = workspacePathRef.current;
@@ -511,7 +487,7 @@ function App() {
 
   const logComposerHarnessEvent = createComposerHarnessEventLog({
     getDescriptor: () => activeAgentSessionDescriptor,
-    recordActivity: recordAgentActivity,
+    recordActivity: agentActivityHook.recordAgentActivity,
   });
 
 
@@ -524,7 +500,7 @@ function App() {
     fallbackSessionId: persistence.activeSessionForProject,
     getPrevious: () => browser.detectedServerRef.current,
     now: Date.now,
-    recordActivity: recordAgentActivity,
+    recordActivity: agentActivityHook.recordAgentActivity,
     setDetectedServer: browser.setDetectedServer,
   });
 
@@ -550,8 +526,8 @@ function App() {
       clearBackgroundExits: (path) => {
         setBackgroundExits((exits) => clearBackgroundExitsForProject(exits, path));
       },
-      dirtyTabPaths, editorDirty, editorTabs: editorSession.editorTabs,
-      flushComposer: flushActiveComposerLocalState,
+      dirtyTabPaths: editorWorkspace.dirtyTabPaths, editorDirty: editorWorkspace.editorDirty, editorTabs: editorSession.editorTabs,
+      flushComposer: composerLocal.flush,
       getDefaultProfile: () => profiles.launchProfileRef.current,
       getPreviousActivePaneId: () => terminal.activePaneIdRef.current,
       getPreviousPanes: () => terminal.panesRef.current,
@@ -603,7 +579,7 @@ function App() {
     closePane: (paneId) => invoke("close_pane", { paneId }),
     confirmClose: (message) => confirmDialog(message), conversations: composerWorkspace.chatConversationsRef,
     deleteStoredFolder: async () => { await storeRef.current?.delete("folder"); },
-    dirtyTabCount: dirtyTabPaths.length,
+    dirtyTabCount: editorWorkspace.dirtyTabPaths.length,
     hasSelectedFile: () => editorSession.selectedFileRef.current != null,
     openProjects: persistence.openProjectsRef, openWorkspace: workspaceOpenActions.openWorkspaceDirect,
     persistOpenProjects: persistence.persistOpenProjects,
@@ -620,7 +596,7 @@ function App() {
   const projectSessionNavigationActions = createProjectSessionNavigationActions({
     captureCurrentSession: captureCurrentSessionSnapshot,
     defaultBrowserUrl: DEFAULT_BROWSER_PREVIEW_URL,
-    flushComposer: flushActiveComposerLocalState,
+    flushComposer: composerLocal.flush,
     getPreviousStatus: terminal.activeSessionStatus,
     getState: () => ({
       activeSessions: persistence.activeSessionByProjectRef.current,
@@ -658,7 +634,7 @@ function App() {
 
 
   const projectSessionDeletionController = createProjectSessionDeletionController(projectSessionDeletionFromHook(terminal, {
-    activeSessionId,
+    activeSessionId: activeChat.activeSessionId,
     activeSessions: persistence.activeSessionByProjectRef, browserSessions: browser.sessionRecordsRef,
     closePane: (paneId) => invoke("close_pane", { paneId }),
     composerHarness: composerWorkspace.composerHarnessBySessionRef, confirmDelete: confirmDialog,
@@ -678,7 +654,7 @@ function App() {
 
   const paneActivityLog = createPaneActivityLog({
     approvalMode: () => agentApprovalMode,
-    recordActivity: recordAgentActivity,
+    recordActivity: agentActivityHook.recordAgentActivity,
   });
 
   const finalizeCreatedTerminalPane = createTerminalPaneFinalize({
@@ -705,17 +681,17 @@ function App() {
   const composerSurface = createComposerSurface({
     chatIdForSession: composerHarnessSessionKey,
     clearTerminal: () => terminalSurface.clearActiveTerminal(),
-    gateAction: (action) => gateAppAction(action, activeAgentSessionHandle),
-    getActiveConversation: () => activeChatConversation,
-    getActiveProvider: () => activeComposerProvider,
-    getActiveSessionId: () => activeSessionId,
+    gateAction: (action) => agentActivityHook.gateAppAction(action, activeAgentSessionHandle),
+    getActiveConversation: () => activeChat.activeChatConversation,
+    getActiveProvider: () => activeChat.activeComposerProvider,
+    getActiveSessionId: () => activeChat.activeSessionId,
     getActiveSessions: () => persistence.activeSessionByProjectRef.current,
-    getChatId: () => activeComposerHarnessKey,
-    getComposerDraft: () => composerDraft,
-    getComposerHistory: () => composerHistory,
+    getChatId: () => activeChat.activeComposerHarnessKey,
+    getComposerDraft: () => composerLocal.draft,
+    getComposerHistory: () => composerLocal.history,
     getComposerSending: () => composerSending,
     getConversations: () => composerWorkspace.chatConversationsRef.current,
-    getHarness: () => activeComposerHarness,
+    getHarness: () => activeChat.activeComposerHarness,
     getHarnessRecords: () => composerWorkspace.composerHarnessBySessionRef.current,
     getSelectedFilePath: () => editorSession.selectedFile?.path ?? null,
     getSessions: () => persistence.projectSessionsRef.current,
@@ -724,19 +700,19 @@ function App() {
     getWorkspacePath: () => workspacePathRef.current,
     now: Date.now,
     openSearch: () => editorSurface.openEditorSearch(),
-    orchestrationGateAction: (action) => gateAppAction(action),
+    orchestrationGateAction: (action) => agentActivityHook.gateAppAction(action),
     persistHarnessRecords: (records) => composerWorkspace.persistComposerHarnessRecords(records),
     persistSessions: (sessions, activeSessions) => persistence.persistProjectSessions(sessions, activeSessions),
     pickWorkspace: () => pickWorkspace(),
-    recordActivity: (event) => recordAgentActivity(activeAgentSessionHandle, event),
+    recordActivity: (event) => agentActivityHook.recordAgentActivity(activeAgentSessionHandle, event),
     removeWorktree: (input) => invoke("remove_project_worktree", input),
     replaceConversations: composerWorkspace.setChatConversations,
     resolveProfileLabel: (id) => profiles.resolveProfile(id).label,
     saveFile: () => saveEditorFile(),
     setActionNotice: chrome.setActionNotice,
     setComposerError,
-    setComposerHistoryIndex,
-    setComposerLocalState,
+    setComposerHistoryIndex: composerLocal.setHistoryIndex,
+    setComposerLocalState: composerLocal.setLocalState,
     setComposerNotice,
     setComposerSending,
     setOrchestrationError,
@@ -744,13 +720,13 @@ function App() {
     setOrchestrationOpen,
     stopRun: (runId) => invoke("stop_chat_run", { runId }),
     updateConversation: chatConversationActions.updateConversation,
-    updateHarness: (update) => updateActiveComposerHarness(update),
+    updateHarness: (update) => composerLocal.updateHarness(update),
     updateSessionMetadata: (projectPath, sessionId, orchestration) =>
       projectSessionMetadataActions.updateSessionMetadata(projectPath, sessionId, { orchestration }),
   });
 
   const chatRunControls = createChatRunControls({
-    getActiveRunId: () => activeChatConversation.activeRunId,
+    getActiveRunId: () => activeChat.activeChatConversation.activeRunId,
     respondApproval: ({ decision, requestId, runId }) =>
       invoke("respond_chat_approval", { runId, requestId, decision }),
     setError: setComposerError,
@@ -758,27 +734,27 @@ function App() {
   });
 
   const composerHistoryNavigation = createComposerHistoryNavigation({
-    getChatId: () => activeComposerHarnessKey,
-    getHistory: () => composerHistory,
-    getHistoryIndex: () => composerHistoryIndex,
-    setHistoryIndex: setComposerHistoryIndex,
-    setLocalState: setComposerLocalState,
+    getChatId: () => activeChat.activeComposerHarnessKey,
+    getHistory: () => composerLocal.history,
+    getHistoryIndex: () => composerLocal.historyIndex,
+    setHistoryIndex: composerLocal.setHistoryIndex,
+    setLocalState: composerLocal.setLocalState,
   });
 
 
 
   const composerSettingsActions = createComposerSettingsActions({
     getRuntimeState: () => ({
-      activeRunId: activeChatConversation.activeRunId,
-      chatId: activeComposerHarnessKey,
-      provider: activeComposerProvider,
+      activeRunId: activeChat.activeChatConversation.activeRunId,
+      chatId: activeChat.activeComposerHarnessKey,
+      provider: activeChat.activeComposerProvider,
     }),
     labelProvider: chatProviderLabel,
     labelReasoning: composerReasoningLabel,
     logEvent: logComposerHarnessEvent,
     now: Date.now,
     updateConversation: chatConversationActions.updateConversation,
-    updateHarness: updateActiveComposerHarness,
+    updateHarness: composerLocal.updateHarness,
     updateScopedSetting: (key, value) => key === "approvalMode"
       ? composerWorkspace.updateScopedSetting("chat", "approvalMode", value as AgentApprovalMode)
       : composerWorkspace.updateScopedSetting("chat", "agentProfileId", value as ChatProvider),
@@ -803,14 +779,14 @@ function App() {
     copyText: writeText,
     defaultProfile: () => profiles.terminalProfileRef.current,
     finalizePane: finalizeCreatedTerminalPane,
-    gateAction: async (action, handle) => (await gateAppAction(action, handle)).decision,
+    gateAction: async (action, handle) => (await agentActivityHook.gateAppAction(action, handle)).decision,
     getWorkspacePath: () => workspacePathRef.current,
     getWorkspacePathOrState: () => workspacePathRef.current ?? workspacePath,
     getWorktrees: () => worktrees,
     latest, now: Date.now,
     promptWorktreeLabel: () => window.prompt("Worktree label (used for the branch name)"),
     readClipboard: readText,
-    recordActivity: recordAgentActivity,
+    recordActivity: agentActivityHook.recordAgentActivity,
     recordCreated: paneActivityLog.recordCreated,
     recordCreatedWorktree: paneActivityLog.recordCreatedWorktree,
     requestPaint: () => terminal.requestPaintRef.current(), savedLabel: persistence.savedPaneLabel,
@@ -843,7 +819,7 @@ function App() {
         closePane: terminalSurface.closeTerminalPane,
         descriptor: activeAgentSessionDescriptor,
         focusPane: terminalSurface.focusTerminalPane,
-        recordClosed: (descriptor) => recordAgentActivity(descriptor, {
+        recordClosed: (descriptor) => agentActivityHook.recordAgentActivity(descriptor, {
           kind: "process", label: "Closed pane", detail: descriptor.label, status: "exited",
         }),
         sendEnter: () => invoke("send_key", {
@@ -889,12 +865,12 @@ function App() {
     requestOpen: requestOpenEditorFile,
     save: saveEditorFileWithForce,
   } = wireEditorFileWorkflow(editorSession, {
-    closeDiffReview: () => closeDiffReview(),
-    gateAction: (action) => gateAppAction(action),
-    getDirty: () => editorDirty,
+    closeDiffReview: () => diffReviewHook.close(),
+    gateAction: (action) => agentActivityHook.gateAppAction(action),
+    getDirty: () => editorWorkspace.editorDirty,
     getRoot: () => workspacePathRef.current ?? workspacePath,
     persistActiveFile: persistence.persistActiveFile,
-    recordEdit: (file) => recordAgentActivity(activeAgentSessionDescriptor, {
+    recordEdit: (file) => agentActivityHook.recordAgentActivity(activeAgentSessionDescriptor, {
       kind: "file", label: "Edited a file", detail: file.name, status: "complete",
     }),
   });
@@ -906,14 +882,14 @@ function App() {
     editorSession,
     {
       copyText: writeText,
-      getDiffReviewPath: () => diffReview?.absolutePath ?? null,
-      getGitFiles: () => gitStatus?.files ?? [],
+      getDiffReviewPath: () => diffReviewHook.review?.absolutePath ?? null,
+      getGitFiles: () => gitStatusHook.status?.files ?? [],
       getRoot: () => workspacePathRef.current,
       makeFileNode: (path) => fileTreeNodeFromPath(path, "file"),
       notify: chrome.setActionNotice,
       openExternal: openPath,
       openFileDirect: (file, fileOptions) => openEditorFileDirect(file, fileOptions),
-      openGitDiff: async (file) => Boolean(await openGitDiff(file)),
+      openGitDiff: async (file) => Boolean(await diffReviewHook.open(file)),
       openSearchPanel,
       requestOpenFile: async (file, fileOptions) => Boolean(await requestOpenEditorFile(file, fileOptions)),
       revealEditorTools: () => {
@@ -938,7 +914,7 @@ function App() {
     reveal: revealRailNode,
   } = wireWorkspaceFileActions(editorSession, {
     clearPersistedActiveFile: persistence.clearActiveFile,
-    getDirty: () => editorDirty,
+    getDirty: () => editorWorkspace.editorDirty,
     getPersistRoot: () => workspacePathRef.current,
     getRoot: () => workspacePathRef.current ?? workspacePath,
     getSelectedFile: () => editorSession.selectedFile,
@@ -957,12 +933,12 @@ function App() {
     duplicateNode: duplicateRailNode,
     newFile: createFileInRail,
     newFolder: createFolderInRail,
-    openDiff: openGitDiff,
+    openDiff: diffReviewHook.open,
     openWorkspace: pickWorkspace,
     renameNode: renameRailNode,
     revealNode: revealRailNode,
     revealPath: revealItemInDir,
-    runGitAction: runGitFileAction,
+    runGitAction: diffReviewHook.runFileAction,
     shortcut: shortcutKeys,
     switchProject: (project: OpenProject) => requestOpenWorkspace(project.path),
   };
@@ -987,13 +963,13 @@ function App() {
     capture: captureSessionCheckpoint,
     restore: restoreSessionCheckpoint,
   } = wireSessionCheckpointActions(editorSession, {
-    gateAction: (action) => gateAppAction(action),
-    getDirtyTabPaths: () => dirtyTabPaths,
+    gateAction: (action) => agentActivityHook.gateAppAction(action),
+    getDirtyTabPaths: () => editorWorkspace.dirtyTabPaths,
     getWorkspacePath: () => workspacePathRef.current,
     onMetadata: projectSessionMetadataActions.updateSessionMetadata,
     openFileDirect: (file) => openEditorFileDirect(file),
     refreshFiles: workspaceTree.refresh,
-    refreshGit: () => refreshGitStatus(),
+    refreshGit: () => gitStatusHook.refresh(),
     setError: setLaunchError,
     setNotice: chrome.setActionNotice,
   });
@@ -1001,7 +977,7 @@ function App() {
   const projectSessionContextMenuItems = (projectPath: string, session: ProjectSession): ContextMenuItem[] => {
     return buildProjectSessionContextMenuItems({
       ...deriveProjectSessionMenuState({
-        activeSessionId,
+        activeSessionId: activeChat.activeSessionId,
         chatIdForSession: composerHarnessSessionKey,
         conversations: composerWorkspace.chatConversationsRef.current,
         projectPath,
@@ -1028,9 +1004,9 @@ function App() {
   };
 
   const editorContextMenuActions = {
-    closeDiff: closeDiffReview,
+    closeDiff: diffReviewHook.close,
     closeTab: (tab: FileTreeNode) => closeEditorTab(tab),
-    copyDiff: copyShownDiff,
+    copyDiff: diffReviewHook.copy,
     copyPath: editorSurface.copyPath,
     find: editorSurface.openEditorSearch,
     openDiffFile: editorSurface.openDiffFile,
@@ -1038,26 +1014,26 @@ function App() {
     openTab: (tab: FileTreeNode) => requestOpenEditorFile(tab, { focusEditor: true }),
     revealNode: revealRailNode,
     revealSelected: editorSurface.reveal,
-    runGitAction: runGitFileAction,
+    runGitAction: diffReviewHook.runFileAction,
     save: saveEditorFile,
     shortcut: shortcutKeys,
   };
   const editorTabContextMenuItems = (tab: FileTreeNode) =>
     buildEditorTabContextMenuItems(tab, editorContextMenuActions);
   const editorContextMenuItems = () => buildEditorContextMenuItems({
-    editorDirty, editorLoading: editorSession.editorLoading, editorSaving: editorSession.editorSaving, selectedFile: editorSession.selectedFile,
+    editorDirty: editorWorkspace.editorDirty, editorLoading: editorSession.editorLoading, editorSaving: editorSession.editorSaving, selectedFile: editorSession.selectedFile,
   }, editorContextMenuActions);
   const diffContextMenuItems = () => buildDiffContextMenuItems({
-    canDiscard: diffReviewCanDiscard, canOpenFile: diffReviewCanOpenFile,
-    canStage: diffReviewCanStage, canUnstage: diffReviewCanUnstage,
-    loading: diffReviewLoading, review: diffReview,
+    canDiscard: editorWorkspace.diffReviewCanDiscard, canOpenFile: editorWorkspace.diffReviewCanOpenFile,
+    canStage: editorWorkspace.diffReviewCanStage, canUnstage: editorWorkspace.diffReviewCanUnstage,
+    loading: diffReviewHook.loading, review: diffReviewHook.review,
   }, editorContextMenuActions);
 
   const saveActivePaneTranscript = createPaneTranscriptCapture({
     getActivePane: () => activeTerminalPane,
     getPanes: () => terminal.panes,
     getRoot: () => workspacePathRef.current,
-    getSessionId: () => activeSessionId,
+    getSessionId: () => activeChat.activeSessionId,
     getSnapshot: (paneId) => terminal.snapshotsRef.current[paneId],
     now: Date.now,
     persist: paneTranscripts.persistPaneTranscript,
@@ -1114,15 +1090,15 @@ function App() {
       openExternal: () => openUrl(browser.url), reload: browser.reload, url: browser.url,
     },
     composer: {
-      activeRun: Boolean(activeChatConversation.activeRunId),
+      activeRun: Boolean(activeChat.activeChatConversation.activeRunId),
       attachCurrent: () => attachSelectedFileToComposer(),
       attachLocal: () => attachLocalFileToComposer(),
       attachPreview: () => attachPreviewToComposer(),
       canAttachCurrent: Boolean(editorSession.selectedFile),
-      canRunParallel: Boolean(workspacePath && activeSessionId && !activeChatConversation.activeRunId),
-      clearDraft: () => setComposerLocalState(activeComposerHarnessKey, "", composerHistory),
+      canRunParallel: Boolean(workspacePath && activeChat.activeSessionId && !activeChat.activeChatConversation.activeRunId),
+      clearDraft: () => composerLocal.setLocalState(activeChat.activeComposerHarnessKey, "", composerLocal.history),
       copyWorkspace: () => workspacePath ? editorSurface.copyPath(workspacePath) : undefined,
-      draft: composerDraft, hasWorkspace: Boolean(workspacePath),
+      draft: composerLocal.draft, hasWorkspace: Boolean(workspacePath),
       parallel: () => { setOrchestrationError(null); setOrchestrationOpen(true); },
       send: () => composerSurface.submitComposerDraft(), sending: composerSending,
       shortcut: shortcutKeys("composer.send"), stop: () => chatRunControls.stopActiveChatRun(),
@@ -1159,7 +1135,7 @@ function App() {
   const commandPaletteNavigation = {
     drawerModes: DRAWER_MODES,
     editorTabs: editorSession.editorTabs,
-    files: searchableFiles,
+    files: editorWorkspace.searchableFiles,
     onFocusWorktree: (paneId: number) => {
       shellLayout.setAgentSurfaceMode("terminal");
       void terminalSurface.focusTerminalPane(paneId);
@@ -1195,10 +1171,10 @@ function App() {
     worktrees,
   };
   const commandPaletteWorkbench = {
-    activeComposerHarnessKey,
+    activeComposerHarnessKey: activeChat.activeComposerHarnessKey,
     browserUrl: browser.url,
     detectedBrowserUrl: browser.activeDetectedServer?.url ?? null,
-    editorDirty,
+    editorDirty: editorWorkspace.editorDirty,
     editorLoading: editorSession.editorLoading,
     editorSaving: editorSession.editorSaving,
     onAttachCurrentFile: () => void attachSelectedFileToComposer(),
@@ -1219,8 +1195,8 @@ function App() {
     workspacePath,
   };
   const commandPaletteChats = {
-    activeRun: Boolean(activeChatConversation.activeRunId),
-    activeSessionId,
+    activeRun: Boolean(activeChat.activeChatConversation.activeRunId),
+    activeSessionId: activeChat.activeSessionId,
     onOpenSearchResult: (result: ChatSearchViewResult) => void openChatSearchResult(result),
     onOpenSession: (projectPath: string, sessionId: string) => void projectSessionNavigationActions.switchSession(projectPath, sessionId),
     onParallel: () => {
@@ -1243,7 +1219,7 @@ function App() {
     commandPalette.query,
     commandPaletteSources,
   );
-  const tabIsDirty = (path: string) => dirtyTabPathSet.has(path);
+  const tabIsDirty = (path: string) => editorWorkspace.dirtyTabPathSet.has(path);
   const {
     cancelNavigation: cancelPendingNavigation,
     closeActiveTab: closeActiveEditorTab,
@@ -1287,7 +1263,7 @@ function App() {
   useEffect(() => {
     void invoke("update_agent_hook_snapshot", {
       snapshot: buildAgentHookSnapshot({
-        activeChatId: activeSessionId,
+        activeChatId: activeChat.activeSessionId,
         activeProjectPath: workspacePath,
         editorTabs: editorSession.editorTabs,
         openProjects: persistence.openProjects,
@@ -1295,7 +1271,7 @@ function App() {
         selectedFilePath: editorSession.selectedFile?.path ?? null,
       }),
     }).catch(() => {});
-  }, [activeSessionId, editorSession.editorTabs, persistence.openProjects, editorSession.selectedFile?.path, terminal.panes, workspacePath]);
+  }, [activeChat.activeSessionId, editorSession.editorTabs, persistence.openProjects, editorSession.selectedFile?.path, terminal.panes, workspacePath]);
 
   useAgentHookRequests({
     setStatus: setAgentHookStatus,
@@ -1308,7 +1284,7 @@ function App() {
       "agent",
     ),
     createShell: () => terminalSurface.createTerminalPane(defaultTerminalLaunchProfile(), "agent"),
-    recordReport: (report) => recordAgentActivity(activeChatActivityHandle(), hookReportToActivity(report)),
+    recordReport: (report) => agentActivityHook.recordAgentActivity(agentActivityHook.activeChatActivityHandle(), hookReportToActivity(report)),
   });
 
   useSyncRef(workspacePathRef, workspacePath);
@@ -1353,7 +1329,7 @@ function App() {
       composer: composerWorkspace,
       persistence,
       rest: {
-        setAgentActivity: setAgentActivityEvents,
+        setAgentActivity: agentActivityHook.setAgentActivityEvents,
         setAiConnectionSettings,
         setCommandPaletteSources,
         setKeybindingOverrides,
@@ -1395,7 +1371,7 @@ function App() {
     detectLocalServer: detectLocalDevServerFromSnapshot,
     ipcSampleCounter, latest, notificationsEnabled: chrome.notificationsEnabledRef,
     notifyBackgroundExit, now: Date.now, persistTranscript: paneTranscripts.persistPaneTranscript,
-    recordActivity: recordAgentActivity,
+    recordActivity: agentActivityHook.recordAgentActivity,
     recordIpcPayload: recordIpcPayloadBytes, renderPerf: renderPerfRef,
     requestPaint: () => terminal.requestPaintRef.current(), setBackgroundExits,
     setError: setLaunchError, snapshotText: terminalSnapshotText,
@@ -1417,8 +1393,8 @@ function App() {
     activeSessionTitle, activeWorkspaceName, primarySurfaceLabel,
     primarySurfaceState, primarySurfaceStatusLabel, utilityTrayStatusLabel,
   } = deriveAppSurfaceLabels({
-    activeRunId: activeChatConversation.activeRunId,
-    activeSessionId,
+    activeRunId: activeChat.activeChatConversation.activeRunId,
+    activeSessionId: activeChat.activeSessionId,
     sessions: projectSessionsFor(workspacePath ?? ""),
     trayMode: shellLayout.utilityTrayMode,
     workspacePath,
@@ -1525,7 +1501,7 @@ function App() {
         onOpenSettings={() => setSettingsOpen(true)}
         onSelectMode={shellLayout.setSideDrawerMode}
         projects={{
-          activeProjectPath: workspacePath, activeSessionId, backgroundExits,
+          activeProjectPath: workspacePath, activeSessionId: activeChat.activeSessionId, backgroundExits,
           expandedProjects: persistence.expandedSessionProjects, projects: visibleOpenProjects,
           sessionsByProject: persistence.projectSessions, showArchived: persistence.showArchivedSessions,
           projectStatus: projectRailStatus, sessionStatus: projectSessionStatus,
@@ -1537,9 +1513,9 @@ function App() {
           onToggleExpanded: (path) => persistence.setExpandedSessionProjects((expanded) => toggleExpandedProject(expanded, path)),
         }}
         git={{
-          error: gitStatusError, hasWorkspace: Boolean(workspacePath), loading: gitStatusLoading,
-          status: gitStatus,
-          onOpenDiff: (file) => void openGitDiff(file), onRefresh: () => void refreshGitStatus(),
+          error: gitStatusHook.error, hasWorkspace: Boolean(workspacePath), loading: gitStatusHook.loading,
+          status: gitStatusHook.status,
+          onOpenDiff: (file) => void diffReviewHook.open(file), onRefresh: () => void gitStatusHook.refresh(),
         }}
         browser={browserToolsDrawerPropsFrom(browser, {
           openExternal: openUrl,
@@ -1547,8 +1523,8 @@ function App() {
         })}
         settings={quickSettingsDrawerPropsFrom({
           composer: {
-            approvalMode: activeComposerHarness.approvalMode,
-            canSetApproval: Boolean(activeComposerHarnessKey),
+            approvalMode: activeChat.activeComposerHarness.approvalMode,
+            canSetApproval: Boolean(activeChat.activeComposerHarnessKey),
           },
           handlers: {
             approvalChange: composerSettingsActions.setApprovalMode,
@@ -1568,7 +1544,7 @@ function App() {
         })}
         files={{
           fileOpError: editorSession.fileOpError, fileTree: workspaceTree.tree, fileTreeError: workspaceTree.error, fileTreeLoading: workspaceTree.loading, fileTreeTruncated: workspaceTree.truncated,
-          railBodyRef, railHeight, selectedFileId: editorSession.selectedFile?.id, treeRef, visibleFileTree,
+          railBodyRef, railHeight, selectedFileId: editorSession.selectedFile?.id, treeRef, visibleFileTree: editorWorkspace.visibleFileTree,
           workspaceName: workspacePath ? pathBasename(workspacePath) : null, workspacePath,
           onCreateFile: () => void createFileInRail(), onCreateFolder: () => void createFolderInRail(),
           onOpenFile: (file) => void requestOpenEditorFile(file, { focusEditor: true }),
@@ -1580,48 +1556,48 @@ function App() {
         <WorkbenchDockPanels
           files={{
             error: workspaceTree.error, loading: workspaceTree.loading, query: drawerSearchQuery,
-            results: drawerSearchResults, searchable: searchableFiles,
+            results: drawerSearchResults, searchable: editorWorkspace.searchableFiles,
             selectedFilePath: editorSession.selectedFile?.path ?? null,
           }}
-          git={{ error: gitStatusError, loading: gitStatusLoading, status: gitStatus }}
+          git={{ error: gitStatusHook.error, loading: gitStatusHook.loading, status: gitStatusHook.status }}
           handlers={{
             createFile: () => void createFileInRail(),
             createFolder: () => void createFolderInRail(),
             gitFileContextMenu: (event, file) => contextMenuHost.openContextMenu(
               event, buildGitFileContextMenuItems(file, workspaceContextMenuActions),
             ),
-            openDiff: (gitFile) => void openGitDiff(gitFile),
+            openDiff: (gitFile) => void diffReviewHook.open(gitFile),
             openFile: (treeFile) => void requestOpenEditorFile(treeFile, { focusEditor: true }),
             refreshFiles: workspaceTree.refresh,
-            refreshGit: () => void refreshGitStatus(),
+            refreshGit: () => void gitStatusHook.refresh(),
             setQuery: setDrawerSearchQuery,
           }}
           workspacePath={workspacePath}
         />
         <WorkbenchEditorSection
-          activeFileMissing={activeFileMissing}
+          activeFileMissing={editorWorkspace.activeFileMissing}
           code={{
-            conflict: editorSaveConflict, error: editorSession.editorError, loading: editorSession.editorLoading,
+            conflict: editorWorkspace.editorSaveConflict, error: editorSession.editorError, loading: editorSession.editorLoading,
             recoveryError: editorSession.editorRecoveryError, saving: editorSession.editorSaving, text: editorSession.editorText,
           }}
           cursor={editorSession.editorCursor}
           diff={{
-            breadcrumbs: diffBreadcrumbs, canDiscard: diffReviewCanDiscard,
-            canOpenFile: diffReviewCanOpenFile, canStage: diffReviewCanStage,
-            canUnstage: diffReviewCanUnstage, error: diffReviewError,
-            loading: diffReviewLoading, review: diffReview,
+            breadcrumbs: editorWorkspace.diffBreadcrumbs, canDiscard: editorWorkspace.diffReviewCanDiscard,
+            canOpenFile: editorWorkspace.diffReviewCanOpenFile, canStage: editorWorkspace.diffReviewCanStage,
+            canUnstage: editorWorkspace.diffReviewCanUnstage, error: diffReviewHook.error,
+            loading: diffReviewHook.loading, review: diffReviewHook.review,
           }}
-          editorBreadcrumbs={editorBreadcrumbs}
+          editorBreadcrumbs={editorWorkspace.editorBreadcrumbs}
           editorBytesLabel={formatBytes(editorSession.editorBytes)}
-          editorDirty={editorDirty}
-          editorLanguage={editorLanguage}
+          editorDirty={editorWorkspace.editorDirty}
+          editorLanguage={editorWorkspace.editorLanguage}
           editorLoading={editorSession.editorLoading}
           editorSaving={editorSession.editorSaving}
           handlers={{
             closeActiveTab: () => void closeActiveEditorTab(),
-            closeDiff: closeDiffReview,
+            closeDiff: diffReviewHook.close,
             closeTab: (tab) => void closeEditorTab(tab),
-            copyDiff: () => void copyShownDiff(),
+            copyDiff: () => void diffReviewHook.copy(),
             find: editorSurface.openEditorSearch,
             onChange: editorSession.setEditorText,
             onCreateEditor: editorSurface.restoreEditorView,
@@ -1633,7 +1609,7 @@ function App() {
             openExternally: () => void editorSurface.openExternally(),
             overwrite: () => void editorSurface.overwrite(),
             reload: () => void editorSurface.reloadFromDisk(),
-            runDiffAction: (action) => { if (diffReview) void runGitFileAction(action, diffReview.file); },
+            runDiffAction: (action) => { if (diffReviewHook.review) void diffReviewHook.runFileAction(action, diffReviewHook.review.file); },
             save: () => void saveEditorFile(),
             selectTab: (tab) => void requestOpenEditorFile(tab, { focusEditor: true }),
             tabContextMenu: (event, tab) => contextMenuHost.openContextMenu(event, editorTabContextMenuItems(tab)),
@@ -1659,10 +1635,10 @@ function App() {
         <AgentConversationPanel
           surfaceMode={shellLayout.agentSurfaceMode}
           chat={{
-            conversation: activeChatConversation,
+            conversation: activeChat.activeChatConversation,
             events: selectedAgentActivityLog,
             hidden: false,
-            onSuggestion: (draft) => setComposerLocalState(activeComposerHarnessKey, draft, composerHistory),
+            onSuggestion: (draft) => composerLocal.setLocalState(activeChat.activeComposerHarnessKey, draft, composerLocal.history),
             onRetry: (prompt) => void composerSurface.submitComposerDraft(prompt),
             onApprovalDecision: (message, decision) => void chatRunControls.resolveChatApproval(message, decision),
             onToggleBookmark: chatConversationActions.toggleBookmark,
@@ -1671,32 +1647,32 @@ function App() {
             focusMessageId: focusedChatMessageId,
           }}
           composer={{
-            activeRun: Boolean(activeChatConversation.activeRunId),
-            approvalMode: activeComposerHarness.approvalMode,
-            attachments: activeComposerHarness.attachments,
+            activeRun: Boolean(activeChat.activeChatConversation.activeRunId),
+            approvalMode: activeChat.activeComposerHarness.approvalMode,
+            attachments: activeChat.activeComposerHarness.attachments,
             configuredModels: aiConnectionSettings.providerModels,
-            draft: composerDraft, error: composerError, goal: activeComposerHarness.goal,
-            hasHarness: Boolean(activeComposerHarnessKey),
-            hasHistory: composerHistory.length > 0,
-            historyCursorActive: composerHistoryIndex != null,
+            draft: composerLocal.draft, error: composerError, goal: activeChat.activeComposerHarness.goal,
+            hasHarness: Boolean(activeChat.activeComposerHarnessKey),
+            hasHistory: composerLocal.history.length > 0,
+            historyCursorActive: composerLocal.historyIndex != null,
             mentionResults: composerMentionQuery != null ? composerMentionResults : [],
-            model: activeComposerHarness.model, notice: composerNotice,
-            provider: activeComposerProvider,
-            reasoningEffort: activeComposerHarness.reasoningEffort, sending: composerSending,
+            model: activeChat.activeComposerHarness.model, notice: composerNotice,
+            provider: activeChat.activeComposerProvider,
+            reasoningEffort: activeChat.activeComposerHarness.reasoningEffort, sending: composerSending,
             onApprovalChange: (mode) => void composerSettingsActions.setApprovalMode(mode),
             onAttachMention: (file) => {
-              setComposerLocalState(activeComposerHarnessKey, composerDraft.replace(/@[^\s@]*$/, ""), composerHistory);
+              composerLocal.setLocalState(activeChat.activeComposerHarnessKey, composerLocal.draft.replace(/@[^\s@]*$/, ""), composerLocal.history);
               void attachWorkspaceFileToComposer(file);
             },
             onClearGoal: () => void composerSettingsActions.setGoal(""),
             onContextMenu: (event) => contextMenuHost.openContextMenu(event, appMenuAssembly.composerContextMenuItems()),
             onDismissNotice: () => setComposerNotice(null),
             onDraftChange: (draft) => {
-              setComposerLocalState(activeComposerHarnessKey, draft, composerHistory);
-              setComposerHistoryIndex(null);
+              composerLocal.setLocalState(activeChat.activeComposerHarnessKey, draft, composerLocal.history);
+              composerLocal.setHistoryIndex(null);
             },
             onGoalChange: (goal) => void composerSettingsActions.setGoal(goal),
-            onGoalCommit: () => void composerSettingsActions.setGoal(activeComposerHarness.goal, { log: true }),
+            onGoalCommit: () => void composerSettingsActions.setGoal(activeChat.activeComposerHarness.goal, { log: true }),
             onManageModels: () => setSettingsOpen(true),
             onNextHistory: composerHistoryNavigation.showNext,
             onOpenAddMenu: appMenuAssembly.openComposerAddMenu,
@@ -1761,16 +1737,16 @@ function App() {
         modal={{
           agentConnectionsRefreshing: settingsRuntime.agentConnectionsRefreshing, agentConnectionsStatus: settingsRuntime.agentConnectionsStatus, agentHookStatus,
           aiConnectionSettings,
-          approvalSetting: activeApprovalSetting,
-          browserSetting: activeBrowserSetting,
+          approvalSetting: activeChat.activeApprovalSetting,
+          browserSetting: activeChat.activeBrowserSetting,
           commandPaletteSources, connectionSecretPresence: mcpOAuth.secretPresence,
           customTerminalProfiles: profiles.customProfiles,
-          gitBranch: gitStatus?.branch ?? null,
-          gitChangeCount: gitStatus ? gitStatus.files.length : null,
+          gitBranch: gitStatusHook.status?.branch ?? null,
+          gitChangeCount: gitStatusHook.status ? gitStatusHook.status.files.length : null,
           keybindingOverrides,
           layout: shellLayout.renderedWorkbenchLayout,
           mcpOAuthStatuses: mcpOAuth.statuses, notificationsEnabled: chrome.notificationsEnabled,
-          profileSetting: activeAgentProfileSetting,
+          profileSetting: activeChat.activeAgentProfileSetting,
           profiles: settingsAgentProfileOptions(LAUNCH_PROFILES),
           repoLocation: settingsRuntime.repoLocation,
           sessionTitle: activeSessionTitle,
@@ -1783,7 +1759,7 @@ function App() {
       />
       <TranscriptsModal {...transcriptsModalPropsFrom(
         { openTranscriptId: paneTranscripts.openTranscriptId, paneTranscripts: paneTranscripts.paneTranscripts, setOpenTranscriptId: paneTranscripts.setOpenTranscriptId, setTranscriptsOpen: paneTranscripts.setTranscriptsOpen, transcriptsOpen: paneTranscripts.transcriptsOpen },
-        { projectId: workspacePath, projectSessionId: activeSessionId },
+        { projectId: workspacePath, projectSessionId: activeChat.activeSessionId },
       )} />
       <AppRuntimeDialogs
         notices={appNoticesPropsFrom({
@@ -1798,11 +1774,11 @@ function App() {
           },
         })}
         orchestration={orchestrationDialogPropsFrom({
-          activeProvider: activeComposerProvider,
-          approvalMode: activeComposerHarness.approvalMode,
-          conversationProvider: activeChatConversation.provider,
+          activeProvider: activeChat.activeComposerProvider,
+          approvalMode: activeChat.activeComposerHarness.approvalMode,
+          conversationProvider: activeChat.activeChatConversation.provider,
           derived: deriveOrchestrationDialogState({
-            activeSessionId, conversations: composerWorkspace.chatConversations,
+            activeSessionId: activeChat.activeSessionId, conversations: composerWorkspace.chatConversations,
             sessions: persistence.projectSessions, workspacePath,
           }),
           error: orchestrationError,

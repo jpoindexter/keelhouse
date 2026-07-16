@@ -78,7 +78,7 @@ describe("run card provenance", () => {
     const source = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
     const hookHandler = source.slice(source.indexOf("useAgentHookRequests({"), source.indexOf("const continuePendingNavigation"));
 
-    expect(hookHandler).toContain("recordAgentActivity(activeChatActivityHandle()");
+    expect(hookHandler).toContain("agentActivityHook.recordAgentActivity(agentActivityHook.activeChatActivityHandle()");
     expect(hookHandler).not.toContain("recordAgentActivity(activeAgentActivityHandle()");
   });
 });
