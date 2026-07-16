@@ -87,11 +87,6 @@ import { runComposerAppCommand as runComposerAppCommandWithContext } from "./com
 import type { ComposerHarnessRecords } from "./composerHarness";
 import { submitComposerDraft as submitComposerDraftWithContext } from "./composerSubmission";
 import {
-  appActionAuditLabel,
-  resolveAppAction,
-} from "./appActions";
-import type { AppActionAuditEvent, AppActionDescriptor } from "./appActions";
-import {
   buildAgentSessionHandleDescriptor,
   createActiveAgentSessionHandle,
 } from "./agentSessionHandle";
@@ -133,12 +128,7 @@ import {
   DEFAULT_COMMAND_PALETTE_SOURCES,
 } from "./commandPaletteSources";
 import { filterWorkspaceFiles } from "./workspaceSearch";
-import {
-  MAX_AGENT_ACTIVITY_LOG_EVENTS,
-  createAgentActivityEvent,
-  pushAgentActivityEvent,
-} from "./agentActivity";
-import type { AgentActivityEvent, AgentActivityLogFilter } from "./agentActivity";
+import { useAgentActivityController } from "./useAgentActivityController";
 import {
   normalizeTerminalPaneLabel,
   terminalPaneLabelForDisplay,
@@ -450,8 +440,6 @@ function App() {
   const [keybindingOverrides, setKeybindingOverrides] = useState<KeybindingOverrides>({});
   const [composerSending, setComposerSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
-  const [agentActivityEvents, setAgentActivityEvents] = useState<AgentActivityEvent[]>([]);
-  const agentActivityFilter: AgentActivityLogFilter = "all";
   const {
     agentSurfaceMode,
     appShellStyle,
@@ -537,6 +525,27 @@ function App() {
     resolveLaunchProfile: profiles.resolveProfile,
     scopedSettings, workspacePath,
   });
+  const agentApprovalMode: AgentApprovalMode = activeComposerHarness.approvalMode;
+  const {
+    activeChatActivityHandle, agentActivityEvents,
+    agentActivityFilter, gateAppAction, recordAgentActivity, setAgentActivityEvents,
+  } = useAgentActivityController({
+    activeAgentDescriptor: activeAgentSessionDescriptorRef,
+    activeProviderId: activeComposerProvider,
+    activeProviderLabel: activeComposerProviderLabel,
+    approvalMode: agentApprovalMode,
+    confirmAction: (_action, message) => confirmDialog(message),
+    getChatApprovalMode: (root, sessionId) =>
+      composerHarnessBySessionRef.current[`${root}\n${sessionId}`]?.approvalMode ?? "ask",
+    getRoot: () => workspacePathRef.current,
+    getSessionId: (root) => activeProjectSessionId(
+      activeSessionByProjectRef.current, projectSessionsRef.current, root,
+    ),
+    persistEvents: (events) => {
+      void storeRef.current?.set("agentActivityEvents", events);
+      void storeRef.current?.save();
+    },
+  });
   const browser = useBrowserPreviewController({
     activeRoot: workspacePath,
     activeSessionId,
@@ -594,7 +603,6 @@ function App() {
     () => composerMentionQuery == null ? [] : filterWorkspaceFiles(searchableFiles, composerMentionQuery, 8),
     [composerMentionQuery, searchableFiles],
   );
-  const agentApprovalMode: AgentApprovalMode = activeComposerHarness.approvalMode;
   const {
     activeAgentSessionDescriptor, activeTerminalPane,
     selectedAgentActivityLog,
@@ -807,7 +815,7 @@ function App() {
   const logComposerHarnessEvent = (
     label: string,
     detail: string,
-    status: Parameters<typeof createAgentActivityEvent>[1]["status"] = "complete",
+    status: Parameters<typeof recordAgentActivity>[1]["status"] = "complete",
   ) => {
     recordAgentActivity(activeAgentSessionDescriptor, {
       kind: "app",
@@ -837,44 +845,6 @@ function App() {
 
   const terminalPaneLabel = (pane: ManagedTerminalPane, index: number) => terminalPaneLabelForDisplay(pane.label, pane.profile.label, index);
 
-  const recordAgentActivity = (
-    handle: AgentSessionHandleDescriptor | null,
-    event: Parameters<typeof createAgentActivityEvent>[1],
-  ) => {
-    if (!handle) return;
-    const nextEvent = createAgentActivityEvent(handle, event);
-    setAgentActivityEvents((events) => {
-      const next = pushAgentActivityEvent(events, nextEvent, MAX_AGENT_ACTIVITY_LOG_EVENTS);
-      void storeRef.current?.set("agentActivityEvents", next);
-      void storeRef.current?.save();
-      return next;
-    });
-  };
-
-  const activeChatActivityHandle = (): AgentSessionHandleDescriptor | null => {
-    const projectId = workspacePathRef.current;
-    const projectSessionId = activeSessionForProject(projectId);
-    if (!projectId || !projectSessionId) return null;
-    return {
-      id: `chat:${projectSessionId}`,
-      paneId: -1,
-      projectId,
-      projectSessionId,
-      cwd: projectId,
-      label: "Structured chat",
-      agentProfileId: activeComposerProvider ?? "codex",
-      agentProfileLabel: activeComposerProviderLabel,
-      processState: "running",
-      approvalMode: composerHarnessBySessionRef.current[composerHarnessSessionKey(projectId, projectSessionId)]?.approvalMode ?? "ask",
-      exitCode: null,
-      createdAt: Date.now(),
-      activity: { label: "Agent hook", status: "running", updatedAt: Date.now() },
-    };
-  };
-
-  const activeAgentActivityHandle = (): AgentSessionHandleDescriptor | null =>
-    activeAgentSessionDescriptorRef.current ?? activeChatActivityHandle();
-
   const detectLocalDevServerFromSnapshot = (paneId: number, snapshot: Snapshot) => {
     const context = paneContextForPaneId(paneId);
     const detection = resolveBrowserDevServerDetection({
@@ -895,29 +865,6 @@ function App() {
       kind: "browser", label: "Detected dev server", detail: detection.server.url,
       target: detection.server.url, outputRef: "terminal", status: "complete",
     });
-  };
-
-  const shouldLogAppActionAudit = (audit: AppActionAuditEvent) =>
-    audit.prompted || audit.decision !== "approved" || audit.requestedBy !== "user";
-
-  const gateAppAction = async (
-    action: AppActionDescriptor,
-    handle: AgentSessionHandleDescriptor | null = activeAgentActivityHandle(),
-  ) => {
-    const audit = await resolveAppAction(action, agentApprovalMode, (_action, message) => confirmDialog(message));
-    if (shouldLogAppActionAudit(audit)) {
-      recordAgentActivity(handle, {
-        kind: "approval",
-        label: appActionAuditLabel(audit),
-        detail: audit.label,
-        target: audit.target,
-        undoHint: audit.undoHint,
-        status: audit.decision === "approved" ? "complete" : "error",
-        provenance: "app-action",
-        runCardKind: "approval",
-      });
-    }
-    return audit;
   };
 
   const captureCurrentSessionSnapshot = () => {
