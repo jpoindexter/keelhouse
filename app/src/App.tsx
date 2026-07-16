@@ -62,6 +62,7 @@ import { deriveProjectSessionMenuState } from "./projectSessionMenuSurface";
 import { WorkbenchEditorSection } from "./WorkbenchEditorSection";
 import { createRenderPerfExport } from "./renderPerfExport";
 import { createDevServerDetection } from "./devServerDetectionSurface";
+import { createPaneTranscriptCapture } from "./paneTranscriptCapture";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -1292,16 +1293,15 @@ function App() {
     loading: diffReviewLoading, review: diffReview,
   }, editorContextMenuActions);
 
-  const saveActivePaneTranscript = () => {
-    const pane = activeTerminalPane;
-    const root = workspacePathRef.current;
-    const sessionId = activeSessionId;
-    if (!pane || !root || !sessionId) return;
-    const snapshot = terminalSnapshotsRef.current[pane.id];
-    if (!snapshot) return;
-    const paneIndex = terminalPanes.findIndex((p) => p.id === pane.id);
-    persistPaneTranscript(root, sessionId, pane, paneIndex, terminalSnapshotText(snapshot), Date.now());
-  };
+  const saveActivePaneTranscript = createPaneTranscriptCapture({
+    getActivePane: () => activeTerminalPane,
+    getPanes: () => terminalPanes,
+    getRoot: () => workspacePathRef.current,
+    getSessionId: () => activeSessionId,
+    getSnapshot: (paneId) => terminalSnapshotsRef.current[paneId],
+    now: Date.now,
+    persist: persistPaneTranscript,
+  });
 
   const exportRenderPerfSnapshot = createRenderPerfExport({
     createFile: (root, parent, name) => invoke("create_workspace_file", { root, parent, name }),
