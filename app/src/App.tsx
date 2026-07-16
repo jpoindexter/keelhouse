@@ -77,6 +77,7 @@ import { fileTreeNodeFromPath, pathBasename } from "./fileTreeTypes";
 import { createTerminalPaneFinalize } from "./terminalPaneFinalize";
 import { createChatSearchNavigation } from "./chatSearchNavigation";
 import { createSessionSnapshotCapture } from "./sessionSnapshotCapture";
+import { createComposerHarnessEventLog } from "./composerHarnessEvents";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -603,18 +604,10 @@ function App() {
       applyChatRunEnvelope(conversation, envelope));
   });
 
-  const logComposerHarnessEvent = (
-    label: string,
-    detail: string,
-    status: Parameters<typeof recordAgentActivity>[1]["status"] = "complete",
-  ) => {
-    recordAgentActivity(activeAgentSessionDescriptor, {
-      kind: "app",
-      label,
-      detail,
-      status,
-    });
-  };
+  const logComposerHarnessEvent = createComposerHarnessEventLog({
+    getDescriptor: () => activeAgentSessionDescriptor,
+    recordActivity: recordAgentActivity,
+  });
 
 
   const detectLocalDevServerFromSnapshot = createDevServerDetection({
