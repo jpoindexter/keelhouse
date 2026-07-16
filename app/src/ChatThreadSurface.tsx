@@ -12,7 +12,7 @@ import { useMessageCopy } from "./useMessageCopy";
 
 export { chatElapsedLabel, isNearChatBottom } from "./chatThreadHelpers";
 
-type ChatThreadSurfaceProps = {
+export type ChatThreadSurfaceProps = {
   conversation: ChatConversation;
   events: AgentActivityEvent[];
   hidden?: boolean;

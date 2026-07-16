@@ -181,7 +181,7 @@ assert(
 );
 assert(tauriBackend.includes("fn resolve_workspace"), "The backend must expose a no-pty project open path for chat mode");
 assert(bottomUtilityTray.includes('className={`utility-tray ${props.open ?') && appTsx.includes('open={agentSurfaceMode === "terminal"}'), "Raw terminal must live in the approved bottom utility tray");
-assert(appTsx.includes('hidden={false}'), "Opening the bottom tray must keep the chat timeline visible");
+assert(appTsx.includes("hidden: false"), "Opening the bottom tray must keep the chat timeline visible");
 assert(composerSurface.includes('className="agent-composer" aria-label="Agent composer"'), "Opening the bottom tray must keep the chat composer visible");
 assert(bottomUtilityTabs.includes('aria-label="Utility tray surfaces"'), "Bottom tray must expose Terminal, Processes, and Logs modes");
 assert(bottomUtilityTabs.includes('aria-label={open ? "Collapse utility tray" : "Expand utility tray"}'), "Bottom tray chevron must describe its current open or closed action");
@@ -196,7 +196,7 @@ assert(/\.terminal-pane-button--active\s*\{[^}]*border-bottom-color:\s*var\(--co
 assert(composerSurface.includes('aria-label="Composer permission mode"'), "Composer must expose the real approval-mode menu");
 assert(composerSurface.includes('aria-label="Composer goal"'), "Composer must expose its persisted goal control");
 assert(composerModelPopover.includes('aria-label="Search models"') && composerModelPopover.includes("Custom model ID"), "Composer must expose searchable provider models and custom model IDs");
-assert(composerSurface.includes("onSelect={props.onRuntimeChange}") && appTsx.includes("onRuntimeChange={setComposerRuntime}"), "Composer model selection must persist through the runtime boundary");
+assert(composerSurface.includes("onSelect={props.onRuntimeChange}") && appTsx.includes("onRuntimeChange: setComposerRuntime"), "Composer model selection must persist through the runtime boundary");
 assert(composerReasoningPicker.includes("OPTIONS.map") && composerReasoningPicker.includes('role="menuitemradio"'), "Composer must expose separate accessible reasoning effort choices");
 assert(composerSubmission.includes('reasoningEffort: context.harness.reasoningEffort'), "Composer reasoning selection must reach the native chat request");
 assert(chatHarness.includes('params["effort"] = json!(effort);'), "Native chat runs must apply the selected Codex reasoning effort");
@@ -204,7 +204,7 @@ assert(claudeAdapter.includes('args.extend(["--effort".into(), effort.into()]);'
 assert(appTsx.includes("drawerActiveTitle"), "App drawer header must be mode-aware, not a generic Drawer label");
 assert(!appTsx.includes("<span>Drawer</span>"), "App drawer header must not render a generic Drawer label");
 assert(drawerModes.includes("Project chats"), "Projects drawer must present independent chats under each project");
-assert(appTsx.includes('aria-label="Agent conversation"'), "Center surface must remain the agent conversation");
+assert(read("app/src/AgentConversationPanel.tsx").includes('aria-label="Agent conversation"') && appTsx.includes("<AgentConversationPanel"), "Center surface must remain the agent conversation");
 assert(!appTsx.includes('className="agent-surface-switcher"'), "The agent header must not duplicate the titlebar chat/terminal toggle");
 assert(!appTsx.includes('className="terminal-titlebar"'), "The conversation must not duplicate the active chat title below the native titlebar");
 assert((appTitlebar.match(/<span>\{props\.activeSessionTitle\}<\/span>/g) ?? []).length === 1, "The active chat title must render exactly once in application chrome");

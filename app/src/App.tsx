@@ -19,7 +19,6 @@ import { DRAWER_MODES, drawerTitleFor } from "./drawerModes";
 import { EditorChrome } from "./EditorChrome";
 import { EditorDiffView } from "./EditorDiffView";
 import { EditorCodeSurface } from "./EditorCodeSurface";
-import { AgentComposerSurface } from "./AgentComposerSurface";
 import { AppRuntimeDialogs } from "./AppRuntimeDialogs";
 import { DEFAULT_BROWSER_PREVIEW_URL } from "./browserPreview";
 import { useBrowserPreviewController } from "./useBrowserPreviewController";
@@ -52,6 +51,7 @@ import { createProjectSessionMetadataActions } from "./projectSessionMetadataAct
 import { createEditorSurfaceActions } from "./editorSurfaceActions";
 import type { GitStatusFile } from "./fileGitStatus";
 import { buildAgentHookSnapshot, hookReportToActivity } from "./agentHookIntegration";
+import { AgentConversationPanel } from "./AgentConversationPanel";
 import type { EditorFileLoadState } from "./editorFileLoadState";
 import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
@@ -165,7 +165,6 @@ import {
 } from "./workspaceOpenTargetController";
 import { TranscriptsModal } from "./TranscriptsModal";
 import { useTerminalFind } from "./useTerminalFind";
-import { ChatThreadSurface } from "./ChatThreadSurface";
 import {
   applyChatRunEnvelope,
   chatProviderLabel,
@@ -2276,65 +2275,60 @@ function App() {
           url={browser.url}
         />
 
-        <section className={`terminal-panel terminal-panel--${agentSurfaceMode}`} aria-label="Agent conversation">
-          <div className={`agent-surface agent-surface--${agentSurfaceMode}`}>
-            <ChatThreadSurface
-              conversation={activeChatConversation}
-              events={selectedAgentActivityLog}
-              hidden={false}
-              onSuggestion={(draft) => setComposerLocalState(activeComposerHarnessKey, draft, composerHistory)}
-              onRetry={(prompt) => void submitComposerDraft(prompt)}
-              onApprovalDecision={(message, decision) => void resolveChatApproval(message, decision)}
-              onToggleBookmark={toggleChatMessageBookmark}
-              onForkMessage={(message) => void forkChatFromMessage(message)}
-              onReviewFile={(path) => void reviewRunCardFile(path)}
-              focusMessageId={focusedChatMessageId}
-            />
-          </div>
-          <AgentComposerSurface
-            activeRun={Boolean(activeChatConversation.activeRunId)}
-            approvalMode={activeComposerHarness.approvalMode}
-            attachments={activeComposerHarness.attachments}
-            configuredModels={aiConnectionSettings.providerModels}
-            draft={composerDraft}
-            error={composerError}
-            goal={activeComposerHarness.goal}
-            hasHarness={Boolean(activeComposerHarnessKey)}
-            hasHistory={composerHistory.length > 0}
-            historyCursorActive={composerHistoryIndex != null}
-            mentionResults={composerMentionQuery != null ? composerMentionResults : []}
-            model={activeComposerHarness.model}
-            notice={composerNotice}
-            provider={activeComposerProvider}
-            reasoningEffort={activeComposerHarness.reasoningEffort}
-            sending={composerSending}
-            onApprovalChange={(mode) => void setComposerApprovalMode(mode)}
-            onAttachMention={(file) => {
+        <AgentConversationPanel
+          surfaceMode={agentSurfaceMode}
+          chat={{
+            conversation: activeChatConversation,
+            events: selectedAgentActivityLog,
+            hidden: false,
+            onSuggestion: (draft) => setComposerLocalState(activeComposerHarnessKey, draft, composerHistory),
+            onRetry: (prompt) => void submitComposerDraft(prompt),
+            onApprovalDecision: (message, decision) => void resolveChatApproval(message, decision),
+            onToggleBookmark: toggleChatMessageBookmark,
+            onForkMessage: (message) => void forkChatFromMessage(message),
+            onReviewFile: (path) => void reviewRunCardFile(path),
+            focusMessageId: focusedChatMessageId,
+          }}
+          composer={{
+            activeRun: Boolean(activeChatConversation.activeRunId),
+            approvalMode: activeComposerHarness.approvalMode,
+            attachments: activeComposerHarness.attachments,
+            configuredModels: aiConnectionSettings.providerModels,
+            draft: composerDraft, error: composerError, goal: activeComposerHarness.goal,
+            hasHarness: Boolean(activeComposerHarnessKey),
+            hasHistory: composerHistory.length > 0,
+            historyCursorActive: composerHistoryIndex != null,
+            mentionResults: composerMentionQuery != null ? composerMentionResults : [],
+            model: activeComposerHarness.model, notice: composerNotice,
+            provider: activeComposerProvider,
+            reasoningEffort: activeComposerHarness.reasoningEffort, sending: composerSending,
+            onApprovalChange: (mode) => void setComposerApprovalMode(mode),
+            onAttachMention: (file) => {
               setComposerLocalState(activeComposerHarnessKey, composerDraft.replace(/@[^\s@]*$/, ""), composerHistory);
               void attachWorkspaceFileToComposer(file);
-            }}
-            onClearGoal={() => void setComposerGoal("")}
-            onContextMenu={(event) => openContextMenu(event, composerContextMenuItems())}
-            onDismissNotice={() => setComposerNotice(null)}
-            onDraftChange={(draft) => {
+            },
+            onClearGoal: () => void setComposerGoal(""),
+            onContextMenu: (event) => openContextMenu(event, composerContextMenuItems()),
+            onDismissNotice: () => setComposerNotice(null),
+            onDraftChange: (draft) => {
               setComposerLocalState(activeComposerHarnessKey, draft, composerHistory);
               setComposerHistoryIndex(null);
-            }}
-            onGoalChange={(goal) => void setComposerGoal(goal)}
-            onGoalCommit={() => void setComposerGoal(activeComposerHarness.goal, { log: true })}
-            onManageModels={() => setSettingsOpen(true)}
-            onNextHistory={showNextComposerHistory}
-            onOpenAddMenu={openComposerAddMenu}
-            onPasteImage={() => void pasteComposerImage()}
-            onPreviousHistory={showPreviousComposerHistory}
-            onReasoningChange={setComposerReasoningEffort}
-            onRemoveAttachment={(attachment) => void removeComposerAttachmentById(attachment)}
-            onReviewContext={() => void reviewComposerContext()}
-            onRuntimeChange={setComposerRuntime}
-            onStop={() => void stopActiveChatRun()}
-            onSubmit={() => void submitComposerDraft()}
-          />
-        </section>
+            },
+            onGoalChange: (goal) => void setComposerGoal(goal),
+            onGoalCommit: () => void setComposerGoal(activeComposerHarness.goal, { log: true }),
+            onManageModels: () => setSettingsOpen(true),
+            onNextHistory: showNextComposerHistory,
+            onOpenAddMenu: openComposerAddMenu,
+            onPasteImage: () => void pasteComposerImage(),
+            onPreviousHistory: showPreviousComposerHistory,
+            onReasoningChange: setComposerReasoningEffort,
+            onRemoveAttachment: (attachment) => void removeComposerAttachmentById(attachment),
+            onReviewContext: () => void reviewComposerContext(),
+            onRuntimeChange: setComposerRuntime,
+            onStop: () => void stopActiveChatRun(),
+            onSubmit: () => void submitComposerDraft(),
+          }}
+        />
         <BottomUtilityTray
           activePane={activeTerminalPane} activePaneId={activeTerminalPaneId}
           activeProfileLabel={activeTerminalProfile.label} canClose={Boolean(activeAgentSessionHandle)}

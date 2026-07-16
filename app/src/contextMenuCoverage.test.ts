@@ -49,7 +49,7 @@ describe("production context-menu coverage", () => {
   it("opens a Keelhouse add menu from the composer plus control", () => {
     expect(agentComposerSurface).toContain('aria-label="Add context or action"');
     expect(agentComposerSurface).toContain("onClick={props.onOpenAddMenu}");
-    expect(app).toContain("onOpenAddMenu={openComposerAddMenu}");
+    expect(app).toContain("onOpenAddMenu: openComposerAddMenu");
     expect(appMenuAssembly).toContain('querySelectorAll("details.agent-composer__menu[open]")');
     expect(browserComposerContextMenu).toContain('menuItem("composer.add.files", "Files and folders"');
     expect(browserComposerContextMenu).toContain('menuItem("composer.add.parallel", "Parallel child chats"');
