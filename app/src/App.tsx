@@ -197,7 +197,7 @@ import { executeProjectSessionDelete } from "./projectSessionDelete";
 import { executeTerminalPaneRestart } from "./terminalPaneRestartWorkflow";
 import { executeTerminalPaneTerminate } from "./terminalPaneTerminate";
 import { createSessionCheckpointActions } from "./sessionCheckpointActions";
-import { buildCreatedWorktreePaneState } from "./terminalWorktreePaneCreate";
+import { executeTerminalWorktreePaneCreate } from "./terminalWorktreePaneCreateWorkflow";
 import { openWorkspaceTerminalPanes } from "./workspaceOpenPanes";
 import { prepareWorkspaceOpenSession } from "./workspaceOpenSession";
 import { persistMissingWorkspaceCleanup } from "./workspaceOpenRecoveryPersistence";
@@ -290,7 +290,6 @@ type PaneExit = { paneId: number; command: string; code: number; message: string
 type OpenWorkspaceResponse = { root: string; paneId: number };
 type ResolveWorkspaceResponse = { root: string };
 type OpenPaneResponse = { paneId: number };
-type WorktreeResponse = { path: string; branch: string };
 type SaveEditorFileOptions = { force?: boolean };
 type EditorBuffer = EditorFileBuffer;
 type ProjectEditorSnapshot = {
@@ -1751,51 +1750,35 @@ function App() {
   const createWorktreePane = async (profile: LaunchProfile = profiles.terminalProfileRef.current) => {
     const root = workspacePathRef.current ?? workspacePath;
     const sessionId = activeSessionForProject(root);
-    if (!root || !sessionId || profiles.changing) return;
-    const rawLabel = window.prompt("Worktree label (used for the branch name)");
-    const label = rawLabel?.trim();
-    if (!label) return;
-    const audit = await gateAppAction(createAppAction({
-      kind: "create-worktree",
-      label: "Create worktree",
-      target: `${label} in ${root}`,
-      risk: "medium",
-      requestedBy: "user",
-      undoHint: "Remove the worktree from the pane's context menu.",
-    }));
-    if (audit.decision !== "approved") return;
-    profiles.setChanging(true);
-    try {
-      const worktree = await invoke<WorktreeResponse>("create_project_worktree", { root, label });
-      const result = await invoke<OpenPaneResponse>("create_pane", { path: worktree.path, profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root) });
-      const existingPanes = terminalPanesForSession(root, sessionId);
-      const { pane, record } = buildCreatedWorktreePaneState({
-        branch: worktree.branch,
-        createdAt: Date.now(),
-        existingPanes,
-        label,
-        paneId: result.paneId,
-        path: worktree.path,
-        profile,
-        projectRoot: root,
-      });
-      const nextPanes = [...existingPanes, pane];
-      setSessionTerminalPanes(root, sessionId, nextPanes, result.paneId);
-      setWorktrees((current) => {
+    if (!root || !sessionId || profiles.changing) return false;
+    return executeTerminalWorktreePaneCreate({
+      createPane: async (path, paneProfile) => (await invoke<OpenPaneResponse>("create_pane", {
+        path, profile: paneProfile,
+        environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root),
+      })).paneId,
+      createWorktree: (label) => invoke("create_project_worktree", { root, label }),
+      currentPanes: () => terminalPanesForSession(root, sessionId),
+      finalizePane: (panes) => finalizeCreatedTerminalPane(root, panes, profile),
+      gateAction: async (action) => (await gateAppAction(action)).decision,
+      now: Date.now,
+      persistRecord: (record) => setWorktrees((current) => {
         const next = addWorktree(current, record);
         void storeRef.current?.set("worktrees", next);
         void storeRef.current?.save();
         return next;
-      });
-      recordCreatedWorktreePaneActivity(pane, root, sessionId, worktree.branch);
-      await finalizeCreatedTerminalPane(root, nextPanes, profile);
-    } catch (err) {
-      setLaunchError(String(err));
-      await updateOpenProjectStatus(root, "attention");
-      await updateActiveSessionStatus(root, "attention");
-    } finally {
-      profiles.setChanging(false);
-    }
+      }),
+      profile,
+      projectRoot: root,
+      promptLabel: () => window.prompt("Worktree label (used for the branch name)"),
+      recordCreated: (pane, branch) => {
+        recordCreatedWorktreePaneActivity(pane, root, sessionId, branch);
+      },
+      setChanging: profiles.setChanging,
+      setError: setLaunchError,
+      setSessionPanes: (panes, paneId) => setSessionTerminalPanes(root, sessionId, panes, paneId),
+      updateProjectStatus: (status) => updateOpenProjectStatus(root, status),
+      updateSessionStatus: (status) => updateActiveSessionStatus(root, status),
+    });
   };
 
   const closeWorktreePane = async (paneId: number) => {
