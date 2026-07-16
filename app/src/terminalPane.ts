@@ -32,3 +32,12 @@ export const terminalPaneProjectStatus = (panes: Array<{ state: TerminalPaneStat
   if (panes.length > 0 && panes.every((pane) => pane.state === "exited")) return "exited";
   return "attention";
 };
+
+export const activePaneDisplayLabel = (
+  panes: { id: number }[],
+  active: { id: number; label: string | null; profile: { label: string }; slot: number } | null,
+): string | null => {
+  if (!active) return null;
+  const index = panes.findIndex((pane) => pane.id === active.id);
+  return terminalPaneLabelForDisplay(active.label, active.profile.label, index >= 0 ? index : active.slot);
+};

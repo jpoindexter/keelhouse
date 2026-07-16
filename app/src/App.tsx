@@ -104,7 +104,7 @@ import { filterWorkspaceFiles } from "./workspaceSearch";
 import { useAgentActivityController } from "./useAgentActivityController";
 import { useComposerWorkspaceState } from "./useComposerWorkspaceState";
 import { usePaneTranscriptController } from "./usePaneTranscriptController";
-import { terminalPaneLabelForDisplay } from "./terminalPane";
+import { activePaneDisplayLabel } from "./terminalPane";
 import { useGitStatus } from "./useGitStatus";
 import { useGitDiffReview } from "./useGitDiffReview";
 import { useShellLayout, type SideDrawerMode } from "./useShellLayout";
@@ -616,7 +616,6 @@ function App() {
     });
   };
 
-  const terminalPaneLabel = (pane: ManagedTerminalPane, index: number) => terminalPaneLabelForDisplay(pane.label, pane.profile.label, index);
 
   const detectLocalDevServerFromSnapshot = createDevServerDetection({
     approvalMode: (root, sessionId) =>
@@ -1399,10 +1398,7 @@ function App() {
   const composerContextMenuItems = appMenuAssembly.composerContextMenuItems;
   const openComposerAddMenu = appMenuAssembly.openComposerAddMenu;
 
-  const activeTerminalPaneCommandIndex = activeTerminalPane ? terminalPanes.findIndex((pane) => pane.id === activeTerminalPane.id) : -1;
-  const activeTerminalPaneLabelForCommands = activeTerminalPane
-    ? terminalPaneLabel(activeTerminalPane, activeTerminalPaneCommandIndex >= 0 ? activeTerminalPaneCommandIndex : activeTerminalPane.slot)
-    : null;
+  const activeTerminalPaneLabelForCommands = activePaneDisplayLabel(terminalPanes, activeTerminalPane);
   const commandPaletteNavigation = {
     drawerModes: DRAWER_MODES,
     editorTabs,
@@ -1678,10 +1674,7 @@ function App() {
     onPaneExit: terminalRuntimeEventHandlers.handlePaneExit,
   });
 
-  const activeTerminalPaneIndex = activeTerminalPane ? terminalPanes.findIndex((pane) => pane.id === activeTerminalPane.id) : -1;
-  const activeTerminalPaneLabel = activeTerminalPane
-    ? terminalPaneLabel(activeTerminalPane, activeTerminalPaneIndex >= 0 ? activeTerminalPaneIndex : activeTerminalPane.slot)
-    : null;
+  const activeTerminalPaneLabel = activePaneDisplayLabel(terminalPanes, activeTerminalPane);
   const {
     activeSessionTitle, activeWorkspaceName, primarySurfaceLabel,
     primarySurfaceState, primarySurfaceStatusLabel, utilityTrayStatusLabel,

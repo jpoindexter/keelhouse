@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTerminalPaneLabel, terminalPaneCwdLabel, terminalPaneDisplayName, terminalPaneLabelForDisplay, terminalPaneProjectStatus, terminalPaneStateLabel } from "./terminalPane";
+import { activePaneDisplayLabel, normalizeTerminalPaneLabel, terminalPaneCwdLabel, terminalPaneDisplayName, terminalPaneLabelForDisplay, terminalPaneProjectStatus, terminalPaneStateLabel } from "./terminalPane";
 
 describe("terminal pane metadata", () => {
   it("formats lifecycle state for the terminal header", () => {
@@ -33,5 +33,24 @@ describe("terminal pane metadata", () => {
     expect(terminalPaneProjectStatus([{ state: "exited" }, { state: "exited" }])).toBe("exited");
     expect(terminalPaneProjectStatus([])).toBe("attention");
     expect(terminalPaneProjectStatus([{ state: "error" }])).toBe("attention");
+  });
+});
+
+describe("activePaneDisplayLabel", () => {
+  const profile = { id: "zsh", label: "zsh", command: "zsh", args: [], useLoginShell: true };
+  const pane = (id: number, slot: number) => ({
+    createdAt: 1, cwd: "/repo", exitCode: null, id, label: null, profile, slot, state: "running" as const,
+  });
+
+  it("labels the active pane by its list position", () => {
+    expect(activePaneDisplayLabel([pane(1, 0), pane(2, 5)], pane(2, 5))).toBe("zsh 2");
+  });
+
+  it("falls back to the pane slot when it is not in the list", () => {
+    expect(activePaneDisplayLabel([pane(1, 0)], pane(9, 3))).toBe("zsh 4");
+  });
+
+  it("returns null without an active pane", () => {
+    expect(activePaneDisplayLabel([pane(1, 0)], null)).toBeNull();
   });
 });
