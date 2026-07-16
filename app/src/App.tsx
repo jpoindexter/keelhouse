@@ -76,7 +76,6 @@ import type { ComposerAppCommand } from "./agentComposer";
 import { runComposerAppCommand as runComposerAppCommandWithContext } from "./composerAppCommands";
 import { submitComposerDraft as submitComposerDraftWithContext } from "./composerSubmission";
 import {
-  buildAgentSessionHandleDescriptor,
   createActiveAgentSessionHandle,
 } from "./agentSessionHandle";
 import type { AgentApprovalMode, AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
@@ -178,14 +177,12 @@ import {
   buildComposerAddMenuItems,
   buildComposerContextMenuItems,
 } from "./browserComposerContextMenu";
-import { planPaneExit } from "./paneExitPlan";
 import { executeTerminalPaneRestart } from "./terminalPaneRestartWorkflow";
 import { executeTerminalPaneTerminate } from "./terminalPaneTerminate";
 import { createSessionCheckpointActions } from "./sessionCheckpointActions";
 import { executeTerminalWorktreePaneCreate } from "./terminalWorktreePaneCreateWorkflow";
 import { executeTerminalWorktreePaneClose } from "./terminalWorktreePaneCloseWorkflow";
 import {
-  addBackgroundExit,
   clearBackgroundExitsForProject,
   notifyBackgroundExit,
   type BackgroundExit,
@@ -246,6 +243,11 @@ import { createProjectCloseController } from "./projectCloseController";
 import { createProjectSessionNavigationActions } from "./projectSessionNavigationActions";
 import { createProjectSessionDeletionController } from "./projectSessionDeletionController";
 import {
+  createTerminalRuntimeEventHandlers,
+  type TerminalGridPayload,
+  type TerminalPaneExitPayload,
+} from "./terminalRuntimeEventHandlers";
+import {
   buildCreatedPaneActivity,
   buildCreatedWorktreePaneActivity,
   buildRestartedPaneActivity,
@@ -260,8 +262,6 @@ import "./workbenchTransitions.css";
 
 type Cell = { t: string; f: [number, number, number]; b: [number, number, number]; bold: boolean };
 type Snapshot = { cols: number; rows: number; cx: number; cy: number; cvis: boolean; sb: number; cells: Cell[] };
-type GridPayload = { paneId: number; snapshot: Snapshot };
-type PaneExit = { paneId: number; command: string; code: number; message: string };
 type OpenPaneResponse = { paneId: number };
 type SaveEditorFileOptions = { force?: boolean };
 type CommandPaletteCommand = SearchDialogCommand;
@@ -2305,72 +2305,28 @@ function App() {
     },
   });
 
-  const handleGridPayload = (payload: GridPayload) => {
-    ipcSampleCounter.current += 1;
-    if (ipcSampleCounter.current % 20 === 0) {
-      recordIpcPayloadBytes(renderPerfRef.current, JSON.stringify(payload).length);
-    }
-    terminalSnapshotsRef.current[payload.paneId] = payload.snapshot;
-    detectLocalDevServerFromSnapshot(payload.paneId, payload.snapshot);
-    if (payload.paneId === activeTerminalPaneIdRef.current) {
-      latest.current = payload.snapshot;
-      requestTerminalPaintRef.current();
-    }
-  };
+  const terminalRuntimeEventHandlers = createTerminalRuntimeEventHandlers({
+    activePaneId: activeTerminalPaneIdRef, activeSessionForProject,
+    approvalMode: agentApprovalMode, contextForPaneId: paneContextForPaneId,
+    detectLocalServer: detectLocalDevServerFromSnapshot,
+    intentionallyTerminatedPaneIds: intentionallyTerminatedPaneIdsRef.current,
+    ipcSampleCounter, latest, notificationsEnabled: notificationsEnabledRef,
+    notifyBackgroundExit, now: Date.now, persistTranscript: persistPaneTranscript,
+    projectStatus: projectStatusForRoot, recordActivity: recordAgentActivity,
+    recordIpcPayload: recordIpcPayloadBytes, renderPerf: renderPerfRef,
+    requestPaint: () => requestTerminalPaintRef.current(), setBackgroundExits,
+    setError: setLaunchError, setPaneState, snapshotText: terminalSnapshotText,
+    snapshots: terminalSnapshotsRef, updateProjectStatus: updateOpenProjectStatus,
+    updateSessionStatus, workspacePath: workspacePathRef,
+  });
 
-  const handlePaneExit = (payload: PaneExit) => {
-      const intentionallyTerminated = intentionallyTerminatedPaneIdsRef.current.delete(payload.paneId);
-      const context = paneContextForPaneId(payload.paneId);
-      const root = context?.projectRoot ?? workspacePathRef.current;
-      const sessionId = context?.sessionId ?? activeSessionForProject(root);
-      const plan = planPaneExit({
-        ...payload,
-        intentionallyTerminated,
-        contextRoot: root,
-        contextSessionId: sessionId,
-        workspaceRoot: workspacePathRef.current,
-        activePaneId: activeTerminalPaneIdRef.current,
-        activeSessionId: activeSessionForProject(root),
-        panes: setPaneState(payload.paneId, "exited", payload.code),
-      });
-      if (plan.root && plan.sessionId && plan.pane) {
-        recordAgentActivity(
-          buildAgentSessionHandleDescriptor({
-            pane: plan.pane,
-            projectId: plan.root,
-            projectSessionId: plan.sessionId,
-            label: terminalPaneLabelForDisplay(plan.pane.label, plan.pane.profile.label, plan.paneIndex),
-            approvalMode: agentApprovalMode,
-          }),
-          {
-            ...plan.activity,
-            target: plan.root,
-            outputRef: "terminal",
-          },
-        );
-      }
-      if (plan.showLaunchError) setLaunchError(plan.launchError);
-      void updateOpenProjectStatus(plan.root, projectStatusForRoot(plan.root));
-      void updateSessionStatus(plan.root, plan.sessionId, plan.status);
-      if (plan.root && plan.sessionId && plan.pane) {
-        const snapshot = terminalSnapshotsRef.current[payload.paneId];
-        if (snapshot) persistPaneTranscript(plan.root, plan.sessionId, plan.pane, plan.paneIndex, terminalSnapshotText(snapshot), Date.now());
-      }
-      if (plan.backgroundExit) {
-        setBackgroundExits((exits) => addBackgroundExit(exits, plan.backgroundExit!));
-        if (notificationsEnabledRef.current) {
-          void notifyBackgroundExit(plan.backgroundExit).catch(() => {});
-        }
-      }
-  };
-
-  useNativeAppEvents<GridPayload, PaneExit>({
-    onGrid: handleGridPayload,
+  useNativeAppEvents<TerminalGridPayload<Snapshot>, TerminalPaneExitPayload>({
+    onGrid: terminalRuntimeEventHandlers.handleGridPayload,
     onOpenFolder: () => { void pickWorkspace(); },
     onSaveFile: () => { void saveEditorFileRef.current(); },
     onFindInFile: () => openEditorSearchRef.current(),
     onCloseEditorTab: () => { void closeActiveEditorTabRef.current(); },
-    onPaneExit: handlePaneExit,
+    onPaneExit: terminalRuntimeEventHandlers.handlePaneExit,
   });
 
   const activeTerminalPaneIndex = activeTerminalPane ? terminalPanes.findIndex((pane) => pane.id === activeTerminalPane.id) : -1;
