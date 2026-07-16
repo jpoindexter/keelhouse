@@ -46,10 +46,10 @@ import {
 } from "./workspaceState";
 import type { OpenProject, ProjectRailStatus, ProjectSession } from "./workspaceState";
 import {
-  clampEditorViewState,
   findFileTreeNode,
   reconcileActiveFileNode,
 } from "./editorState";
+import { createEditorViewLifecycle } from "./editorViewLifecycle";
 import type { EditorFileLoadState } from "./editorFileLoadState";
 import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
@@ -2056,37 +2056,16 @@ function App() {
     void clearPersistedActiveFile(workspacePath);
   }, [fileTree, fileTreeError, fileTreeLoading, selectedFile, workspacePath]);
 
-  const handleEditorUpdate = (update: ViewUpdate) => {
-    const file = selectedFileRef.current;
-    if (!file) return;
-    const { anchor, head } = update.state.selection.main;
-    editorViewStatesRef.current[file.path] = {
-      anchor,
-      head,
-      scrollTop: update.view.scrollDOM.scrollTop,
-      focused: update.view.hasFocus,
-    };
-    const line = update.state.doc.lineAt(head);
-    setEditorCursor({ line: line.number, column: head - line.from + 1 });
-  };
-
-  const restoreEditorView = (view: EditorView) => {
-    editorViewRef.current = view;
-    const file = selectedFileRef.current;
-    if (!file) return;
-    const restored = clampEditorViewState(editorViewStatesRef.current[file.path], view.state.doc.length);
-    if (restored) {
-      view.dispatch({
-        selection: { anchor: restored.anchor, head: restored.head },
-        scrollIntoView: false,
-      });
-    }
-    requestAnimationFrame(() => {
-      if (restored) view.scrollDOM.scrollTop = restored.scrollTop;
-      if (pendingEditorFocusRef.current || restored?.focused) view.focus();
-      pendingEditorFocusRef.current = false;
-    });
-  };
+  const editorViewLifecycle = createEditorViewLifecycle<EditorView>({
+    getSelectedFilePath: () => selectedFileRef.current?.path ?? null,
+    pendingFocus: pendingEditorFocusRef,
+    scheduleFrame: (callback) => requestAnimationFrame(callback),
+    setCursor: setEditorCursor,
+    setView: (view) => { editorViewRef.current = view; },
+    viewStates: editorViewStatesRef,
+  });
+  const handleEditorUpdate = (update: ViewUpdate) => editorViewLifecycle.handleEditorUpdate(update);
+  const restoreEditorView = editorViewLifecycle.restoreEditorView;
 
   useWorkspaceTreeWatcher({
     getActiveRoot: () => workspacePathRef.current,
