@@ -10,7 +10,7 @@ import { TerminalPaneControls } from "./TerminalPaneControls";
 import { TerminalViewport } from "./TerminalViewport";
 import { UtilityTrayLogs, UtilityTrayProcesses } from "./UtilityTrayViews";
 
-type BottomUtilityTrayProps = {
+export type BottomUtilityTrayProps = {
   activePane: ManagedTerminalPane | null; activePaneId: number | null; activeProfileLabel: string;
   canClose: boolean; canvasRef: RefObject<HTMLCanvasElement | null>; events: AgentActivityEvent[];
   find: TerminalFindController; hasWorkspace: boolean; imeInputRef: RefObject<HTMLTextAreaElement | null>;

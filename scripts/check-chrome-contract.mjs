@@ -180,7 +180,7 @@ assert(
   "Opening a chat must resolve its project without spawning a hidden terminal",
 );
 assert(tauriBackend.includes("fn resolve_workspace"), "The backend must expose a no-pty project open path for chat mode");
-assert(bottomUtilityTray.includes('className={`utility-tray ${props.open ?') && appTsx.includes('open={shellLayout.agentSurfaceMode === "terminal"}'), "Raw terminal must live in the approved bottom utility tray");
+assert(bottomUtilityTray.includes('className={`utility-tray ${props.open ?') && read("app/src/bottomUtilityTrayHost.ts").includes('open: input.shellLayout.agentSurfaceMode === "terminal"'), "Raw terminal must live in the approved bottom utility tray");
 assert(read("app/src/agentConversationPanelHost.ts").includes("hidden: false"), "Opening the bottom tray must keep the chat timeline visible");
 assert(composerSurface.includes('className="agent-composer" aria-label="Agent composer"'), "Opening the bottom tray must keep the chat composer visible");
 assert(bottomUtilityTabs.includes('aria-label="Utility tray surfaces"'), "Bottom tray must expose Terminal, Processes, and Logs modes");
@@ -188,11 +188,11 @@ assert(bottomUtilityTabs.includes('aria-label={open ? "Collapse utility tray" : 
 const utilityTrayControls = read("app/src/utilityTrayControls.ts");
 assert(utilityTrayControls.includes("toggleUtilityTrayVisibility: () => {"), "Bottom tray chevron must have a layout-only visibility toggle");
 assert(utilityTrayControls.includes('options.setSurfaceMode((current) => current === "terminal" ? "chat" : "terminal");'), "Bottom tray chevron must toggle tray visibility without launching a process");
-assert(appTsx.includes('onToggleVisibility={utilityTrayControls.toggleUtilityTrayVisibility}'), "Bottom tray chevron must use the layout-only visibility toggle");
+assert(read("app/src/bottomUtilityTrayHost.ts").includes("onToggleVisibility: input.utilityTrayControls.toggleUtilityTrayVisibility"), "Bottom tray chevron must use the layout-only visibility toggle");
 assert(bottomUtilityTabs.includes('name={open ? "chevronDown" : "chevronUp"}'), "Bottom tray chevron direction must reflect tray state");
 assert(!appTsx.includes('utilityTrayMode === "browser"'), "Browser must not be duplicated in the bottom utility tray");
-assert(appTsx.includes("utilityTrayTabContextMenuItems"), "Bottom utility tabs must expose app-owned context menus");
-assert(appTsx.includes("terminalPaneContextMenuItems"), "Terminal pane tabs must expose lifecycle context menus");
+assert(read("app/src/bottomUtilityTrayHost.ts").includes("utilityTrayTabContextMenuItems"), "Bottom utility tabs must expose app-owned context menus");
+assert(read("app/src/bottomUtilityTrayHost.ts").includes("terminalPaneContextMenuItems"), "Terminal pane tabs must expose lifecycle context menus");
 assert(/\.terminal-pane-button--active\s*\{[^}]*border-bottom-color:\s*var\(--color-accent-border\);[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/s.test(appCss), "Active terminal pane tabs must use a flat underline, not rounded capsule chrome");
 assert(composerSurface.includes('aria-label="Composer permission mode"'), "Composer must expose the real approval-mode menu");
 assert(composerSurface.includes('aria-label="Composer goal"'), "Composer must expose its persisted goal control");

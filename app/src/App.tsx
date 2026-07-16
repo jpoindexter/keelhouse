@@ -11,6 +11,7 @@ import { DraftNavigationDialog } from "./DraftNavigationDialog";
 import { BrowserPreviewPanel } from "./BrowserPreviewPanel";
 import { AppTitlebar } from "./AppTitlebar";
 import { BottomUtilityTray } from "./BottomUtilityTray";
+import { bottomUtilityTrayPropsFrom } from "./bottomUtilityTrayHost";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
 import { WorkbenchResizers } from "./WorkbenchResizers";
 import { DRAWER_MODES, drawerTitleFor } from "./drawerModes";
@@ -1369,33 +1370,13 @@ function App() {
           composerSettingsActions, composerSurface, contextMenuHost, editorSurface, focusedChatMessageId,
           setComposerNotice, setSettingsOpen, shellLayout,
         })} />
-        <BottomUtilityTray
-          activePane={activeAgentSession.activeTerminalPane} activePaneId={terminal.activePaneId}
-          activeProfileLabel={activeTerminalProfile.label} canClose={Boolean(activeAgentSessionHandle)}
-          canvasRef={canvasRef} events={activeAgentSession.selectedAgentActivityLog} find={terminalFind}
-          hasWorkspace={Boolean(workspacePath)} imeInputRef={imeInputRef}
-          launchProfile={profiles.terminalProfile} launchProfileChanging={profiles.changing}
-          launchProfiles={profiles.allProfiles}
-          mode={shellLayout.utilityTrayMode} open={shellLayout.agentSurfaceMode === "terminal"} panes={terminal.panes}
-          terminalHostRef={terminalHostRef}
-          onClose={() => { if (activeAgentSessionHandle) void activeAgentSessionHandle.close(); }}
-          onCreate={(profile) => void terminalSurface.createTerminalPane(profile)} onFocus={(paneId) => void terminalSurface.focusTerminalPane(paneId)}
-          onKill={() => { if (activeAgentSession.activeTerminalPane) void terminalSurface.terminateTerminalPane(activeAgentSession.activeTerminalPane); }}
-          onOpenFolder={() => void pickWorkspace({ openTerminal: true })}
-          onOpenTab={(mode) => void utilityTrayControls.openUtilityTray(mode)}
-          onPaneContextMenu={(event, pane) => contextMenuHost.openContextMenu(event, appMenuAssembly.terminalPaneContextMenuItems(pane))}
-          onPaste={(text) => { invoke("paste", { text }).catch(() => {}); }}
-          onProfileChange={(profileId) => {
-            void profiles.switchTerminalProfile(profiles.resolveProfile(profileId));
-          }}
-          onRename={(pane) => void renameTerminalPane(pane)}
-          onResizeStart={(event) => { shellLayout.setAgentSurfaceMode("terminal"); shellLayout.beginUtilityTrayResize(event); }}
-          onRestart={() => { if (activeAgentSession.activeTerminalPane) void terminalSurface.restartTerminalPane(activeAgentSession.activeTerminalPane); }}
-          onStartShell={() => void terminalSurface.createTerminalPane(defaultTerminalLaunchProfile())}
-          onTabContextMenu={(event, mode) => contextMenuHost.openContextMenu(event, appMenuAssembly.utilityTrayTabContextMenuItems(mode))}
-          onTerminalContextMenu={(event) => contextMenuHost.openContextMenu(event, terminalContextMenuItems())}
-          onToggleVisibility={utilityTrayControls.toggleUtilityTrayVisibility}
-        />
+        <BottomUtilityTray {...bottomUtilityTrayPropsFrom({
+          activeAgentSession, activeAgentSessionHandle, activeTerminalProfile, appMenuAssembly, canvasRef,
+          contextMenuHost, defaultTerminalLaunchProfile, imeInputRef,
+          paste: (text) => { invoke("paste", { text }).catch(() => {}); },
+          pickWorkspace, profiles, renameTerminalPane, shellLayout, terminal, terminalContextMenuItems,
+          terminalFind, terminalHostRef, terminalSurface, utilityTrayControls, workspacePath,
+        })} />
         </>,
         overlays: <>
 

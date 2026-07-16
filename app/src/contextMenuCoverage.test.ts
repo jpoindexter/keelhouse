@@ -6,6 +6,7 @@ const appMenuAssembly = readFileSync(new URL("./appMenuAssembly.ts", import.meta
 const sideRailHost = readFileSync(new URL("./workspaceSideRailHost.ts", import.meta.url), "utf8");
 const editorSectionHost = readFileSync(new URL("./workbenchEditorSectionHost.ts", import.meta.url), "utf8");
 const panelHost = readFileSync(new URL("./agentConversationPanelHost.ts", import.meta.url), "utf8");
+const trayHost = readFileSync(new URL("./bottomUtilityTrayHost.ts", import.meta.url), "utf8");
 const agentComposerSurface = readFileSync(new URL("./AgentComposerSurface.tsx", import.meta.url), "utf8");
 const browserComposerContextMenu = readFileSync(new URL("./browserComposerContextMenu.ts", import.meta.url), "utf8");
 const editorContextMenus = readFileSync(new URL("./editorContextMenus.ts", import.meta.url), "utf8");
@@ -41,7 +42,7 @@ describe("production context-menu coverage", () => {
       "utilityTrayTabContextMenuItems(mode)",
       "composerContextMenuItems()",
     ]) {
-      expect(`${app}\n${sideRailHost}\n${editorSectionHost}\n${panelHost}`).toContain(marker);
+      expect(`${app}\n${sideRailHost}\n${editorSectionHost}\n${panelHost}\n${trayHost}`).toContain(marker);
     }
     expect(appMenuAssembly).toContain("buildComposerAddMenuItems(composerMenuInput(options))");
     const contextMenuHost = readFileSync(new URL("./useContextMenuHost.tsx", import.meta.url), "utf8");
@@ -77,7 +78,7 @@ describe("production context-menu coverage", () => {
   it("keeps chat and raw-terminal launch defaults separate", () => {
     expect(shellLayout).toContain('useState<AgentSurfaceMode>("chat")');
     expect(app).toContain("createTerminalPane(defaultTerminalLaunchProfile())");
-    expect(app).toContain('pickWorkspace({ openTerminal: true })');
+    expect(trayHost).toContain('pickWorkspace({ openTerminal: true })');
     expect(terminalViewport).toContain("Open a folder to start a terminal");
     expect(app).toContain('set("terminalLaunchProfile", profile)');
     expect(app).not.toContain("createTerminalPane(launchProfileRef.current)");
