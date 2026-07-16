@@ -54,6 +54,7 @@ import { buildAgentHookSnapshot, hookReportToActivity } from "./agentHookIntegra
 import { AgentConversationPanel } from "./AgentConversationPanel";
 import { useContextMenuHost } from "./useContextMenuHost";
 import { createTerminalSurfaceActions } from "./terminalSurfaceController";
+import { createWorkspaceOpenSurface } from "./workspaceOpenSurface";
 import type { EditorFileLoadState } from "./editorFileLoadState";
 import { createEditorFileWorkflow } from "./editorFileWorkflow";
 import {
@@ -159,11 +160,6 @@ import { createSettingsScopedActions } from "./settingsScopedActions";
 import { deriveActiveChatState } from "./activeChatState";
 import { deriveActiveAgentSessionState } from "./activeAgentSessionState";
 import { deriveEditorWorkspaceState } from "./editorWorkspaceState";
-import { createWorkspaceOpenActions } from "./workspaceOpenActions";
-import { createWorkspaceOpenLifecycleController } from "./workspaceOpenLifecycleController";
-import {
-  createWorkspaceOpenTargetController,
-} from "./workspaceOpenTargetController";
 import { TranscriptsModal } from "./TranscriptsModal";
 import { useTerminalFind } from "./useTerminalFind";
 import {
@@ -675,86 +671,65 @@ function App() {
     });
   };
 
-  const {
-    applyOpenedWorkspaceTarget, prepareAndOpenWorkspaceTarget,
-  } = createWorkspaceOpenTargetController({
-    activePaneForSession, activePaneIds: activeTerminalPaneByContextRef,
-    activeSessions: activeSessionByProjectRef,
-    createPane: (target, paneProfile, environment) => invoke<OpenPaneResponse>("create_pane", {
-      path: target, profile: paneProfile, environment,
-    }),
-    defaultProfileId: defaultTerminalLaunchProfile().id,
-    focusPane: (paneId) => invoke("focus_pane", { paneId }),
-    getEnvironment: (target) => connectionEnvironmentInputs(aiConnectionSettingsRef.current, target),
-    getSurfaceMode: () => agentSurfaceMode, latest, now: Date.now,
-    openWorkspace: (target, firstProfile, environment) => invoke("open_workspace", {
-      path: target, profile: firstProfile, environment,
-    }),
-    paneLayouts: paneLayoutsBySessionRef, panesByContext: terminalPanesByContextRef,
-    panesForSession: terminalPanesForSession,
-    requestPaint: () => requestTerminalPaintRef.current(), resetEditor,
-    resolveProfile: profiles.resolveProfile,
-    resolveWorkspace: (target) => invoke("resolve_workspace", { path: target }),
-    restoredActiveFileWorkspace: restoredActiveFileWorkspaceRef,
-    savedLabelForSlot: savedPaneLabelForSlot,
-    scheduleResize: () => setTimeout(sendTerminalResize, 0), sessions: projectSessionsRef,
-    setFocusedPane: setFocusedTerminalPane, setLaunchError, setManagedPanes: setManagedTerminalPanes,
-    setWorkspacePath, snapshots: terminalSnapshotsRef, workspacePath: workspacePathRef,
-  });
-
-  const {
-    completeOpenedWorkspace, handleWorkspaceOpenError,
-  } = createWorkspaceOpenLifecycleController({
-    clearCurrentWorkspace: (path) => {
-      if (workspacePathRef.current !== path) return;
-      setManagedTerminalPanes([]); setFocusedTerminalPane(null); setWorkspacePath(null);
-      setFileTree([]); resetEditor();
+  const workspaceOpenActions = createWorkspaceOpenSurface({
+    actions: {
+      captureCurrentSession: captureCurrentSessionSnapshot,
+      clearBackgroundExits: (path) => {
+        setBackgroundExits((exits) => clearBackgroundExitsForProject(exits, path));
+      },
+      dirtyTabPaths, editorDirty, editorTabs,
+      flushComposer: flushActiveComposerLocalState,
+      getDefaultProfile: () => profiles.launchProfileRef.current,
+      getPreviousActivePaneId: () => activeTerminalPaneIdRef.current,
+      getPreviousPanes: () => terminalPanesRef.current,
+      getPreviousRoot: () => workspacePathRef.current,
+      getSelectedFilePath: () => selectedFileRef.current?.path ?? null,
+      getStore: () => storeRef.current,
+      openEditorFile: (file) => openEditorFileDirect(file),
+      setFocusedPane: setFocusedTerminalPane,
     },
-    deleteProjectChats: deleteDurableProjectChats,
-    logHealthEvent: (message) => invoke("log_health_event", { message }),
-    now: Date.now, persistPaneLayout: persistPaneLayoutForSession,
-    projectStatus: projectStatusForRoot,
-    records: {
-      activePanes: { ref: activeTerminalPaneByContextRef },
-      activeSessions: { ref: activeSessionByProjectRef, set: setActiveSessionByProjectState },
-      browserProjects: { ref: browser.projectRecordsRef, set: browser.setProjectRecords },
-      browserSessions: { ref: browser.sessionRecordsRef, set: browser.setSessionRecords },
-      conversations: { ref: chatConversationsRef, set: setChatConversations },
-      editorSnapshots: { ref: sessionEditorSnapshotsRef },
-      harnessRecords: { ref: composerHarnessBySessionRef, set: setComposerHarnessBySession },
-      openProjects: { ref: openProjectsRef, set: setOpenProjects },
-      paneLayouts: { ref: paneLayoutsBySessionRef },
-      projectPanes: { ref: terminalPanesByContextRef },
-      recentProjects: { ref: recentProjectsRef, set: setRecentProjects },
-      sessions: { ref: projectSessionsRef, set: setProjectSessions },
+    connectionSettings: aiConnectionSettingsRef,
+    lifecycle: {
+      clearCurrentWorkspace: (path) => {
+        if (workspacePathRef.current !== path) return;
+        setManagedTerminalPanes([]); setFocusedTerminalPane(null); setWorkspacePath(null);
+        setFileTree([]); resetEditor();
+      },
+      deleteProjectChats: deleteDurableProjectChats,
+      now: Date.now, persistPaneLayout: persistPaneLayoutForSession,
+      projectStatus: projectStatusForRoot,
+      records: {
+        activePanes: { ref: activeTerminalPaneByContextRef },
+        activeSessions: { ref: activeSessionByProjectRef, set: setActiveSessionByProjectState },
+        browserProjects: { ref: browser.projectRecordsRef, set: browser.setProjectRecords },
+        browserSessions: { ref: browser.sessionRecordsRef, set: browser.setSessionRecords },
+        conversations: { ref: chatConversationsRef, set: setChatConversations },
+        editorSnapshots: { ref: sessionEditorSnapshotsRef },
+        harnessRecords: { ref: composerHarnessBySessionRef, set: setComposerHarnessBySession },
+        openProjects: { ref: openProjectsRef, set: setOpenProjects },
+        paneLayouts: { ref: paneLayoutsBySessionRef },
+        projectPanes: { ref: terminalPanesByContextRef },
+        recentProjects: { ref: recentProjectsRef, set: setRecentProjects },
+        sessions: { ref: projectSessionsRef, set: setProjectSessions },
+      },
+      restoreBrowser: browser.restoreScopedUrl, restoreEditor: restoreSessionEditorSnapshot,
+      sessionStatus: terminalPaneProjectStatus, setFocusedPane: setFocusedTerminalPane,
+      setLaunchError, setManagedPanes: setManagedTerminalPanes,
     },
-    restoreBrowser: browser.restoreScopedUrl, restoreEditor: restoreSessionEditorSnapshot,
-    sessionStatus: terminalPaneProjectStatus, setFocusedPane: setFocusedTerminalPane,
-    setLaunchError, setManagedPanes: setManagedTerminalPanes,
-  });
-
-  const workspaceOpenActions = createWorkspaceOpenActions({
-    applyOpened: applyOpenedWorkspaceTarget,
-    captureCurrentSession: captureCurrentSessionSnapshot,
-    clearBackgroundExits: (path) => {
-      setBackgroundExits((exits) => clearBackgroundExitsForProject(exits, path));
+    target: {
+      activePaneForSession, activePaneIds: activeTerminalPaneByContextRef,
+      activeSessions: activeSessionByProjectRef,
+      getSurfaceMode: () => agentSurfaceMode, latest, now: Date.now,
+      paneLayouts: paneLayoutsBySessionRef, panesByContext: terminalPanesByContextRef,
+      panesForSession: terminalPanesForSession,
+      requestPaint: () => requestTerminalPaintRef.current(), resetEditor,
+      resolveProfile: profiles.resolveProfile,
+      restoredActiveFileWorkspace: restoredActiveFileWorkspaceRef,
+      savedLabelForSlot: savedPaneLabelForSlot,
+      scheduleResize: () => setTimeout(sendTerminalResize, 0), sessions: projectSessionsRef,
+      setFocusedPane: setFocusedTerminalPane, setLaunchError, setManagedPanes: setManagedTerminalPanes,
+      setWorkspacePath, snapshots: terminalSnapshotsRef, workspacePath: workspacePathRef,
     },
-    completeOpened: completeOpenedWorkspace,
-    confirmDiscard: (count) => confirmDialog(
-      `Switch workspace and discard ${count} unsaved editor tabs?`,
-    ),
-    dirtyTabPaths, editorDirty, editorTabs,
-    flushComposer: flushActiveComposerLocalState,
-    getDefaultProfile: () => profiles.launchProfileRef.current,
-    getPreviousActivePaneId: () => activeTerminalPaneIdRef.current,
-    getPreviousPanes: () => terminalPanesRef.current,
-    getPreviousRoot: () => workspacePathRef.current,
-    getSelectedFilePath: () => selectedFileRef.current?.path ?? null,
-    getStore: () => storeRef.current,
-    handleError: handleWorkspaceOpenError,
-    openEditorFile: (file) => openEditorFileDirect(file),
-    openTarget: prepareAndOpenWorkspaceTarget,
-    setFocusedPane: setFocusedTerminalPane,
   });
   const openWorkspaceDirect = workspaceOpenActions.openWorkspaceDirect;
 

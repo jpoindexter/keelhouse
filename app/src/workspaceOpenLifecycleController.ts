@@ -13,7 +13,7 @@ import { executeWorkspaceOpenSuccess } from "./workspaceOpenSuccessWorkflow";
 
 type Ref<T> = { current: T };
 type RecordBinding<T> = { ref: Ref<T>; set?: (value: T) => void };
-type WorkspaceOpenStore = {
+export type WorkspaceOpenStore = {
   delete: (key: string) => Promise<unknown>;
   save: () => Promise<unknown>;
   set: (key: string, value: unknown) => Promise<unknown>;

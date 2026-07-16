@@ -175,7 +175,7 @@ assert(chatHarness.includes('(\"thread/resume\", 2)'), "Structured Codex chat mu
 assert(chatConversation.includes('eventType === "item/agentMessage/delta"'), "Structured Codex chat must render provider-native response deltas");
 assert(composerSubmission.includes('route.kind === "chat"'), "Normal composer prompts must route to structured chat, not a pty paste path");
 assert(
-  appTsx.includes('resolveWorkspace: (target) => invoke("resolve_workspace"')
+  read("app/src/workspaceOpenSurface.ts").includes('invoke<{ root: string }>("resolve_workspace", { path })')
     && workspaceOpenTargetController.includes("resolveWorkspace: options.resolveWorkspace"),
   "Opening a chat must resolve its project without spawning a hidden terminal",
 );
