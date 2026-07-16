@@ -80,6 +80,7 @@ import { createSessionSnapshotCapture } from "./sessionSnapshotCapture";
 import { createComposerHarnessEventLog } from "./composerHarnessEvents";
 import { createWorkspacePicker } from "./workspacePicker";
 import { createPaneActivityLog } from "./paneActivityLog";
+import { createTerminalResize } from "./terminalResize";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -1054,21 +1055,12 @@ function App() {
     setSessionPanes: setSessionTerminalPanes,
   });
 
-  const terminalSize = () => {
-    const rect = terminalHostRef.current?.getBoundingClientRect();
-    if (rect && rect.width > 0 && rect.height > 0) {
-      return { width: rect.width, height: rect.height };
-    }
-    return { width: window.innerWidth, height: window.innerHeight };
-  };
-
-  const sendTerminalResize = () => {
-    const { cw, ch } = metrics.current;
-    const { width, height } = terminalSize();
-    const cols = Math.max(2, Math.floor(width / cw));
-    const rows = Math.max(2, Math.floor(height / ch));
-    invoke("resize_pty", { cols, rows }).catch(() => {});
-  };
+  const sendTerminalResize = createTerminalResize({
+    getCellMetrics: () => metrics.current,
+    getHostRect: () => terminalHostRef.current?.getBoundingClientRect(),
+    getWindowSize: () => ({ height: window.innerHeight, width: window.innerWidth }),
+    resize: (cols, rows) => invoke("resize_pty", { cols, rows }),
+  });
 
   const projectRailStatus = (project: OpenProject): ProjectRailStatus =>
     projectRailStatusFromConversations(chatConversations, project.path);
