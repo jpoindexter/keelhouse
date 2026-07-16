@@ -8,7 +8,7 @@ import { confirm } from "@tauri-apps/plugin-dialog";
 import { DEFAULT_AI_CONNECTION_SETTINGS } from "./connectionSettings";
 import type { LaunchProfile } from "./launchProfiles";
 import type { ManagedTerminalPane } from "./managedTerminalPane";
-import { createWorkspaceOpenSurface, workspaceOpenTargetFromHook } from "./workspaceOpenSurface";
+import { workspaceOpenRecordsFromHooks, createWorkspaceOpenSurface, workspaceOpenTargetFromHook } from "./workspaceOpenSurface";
 
 const profile: LaunchProfile = {
   id: "codex", label: "Codex", command: "codex", args: [], useLoginShell: false,
@@ -152,5 +152,47 @@ describe("workspaceOpenTargetFromHook", () => {
     expect(mapped.snapshots).toBe(input.target.snapshots);
     mapped.requestPaint();
     expect(requestPaintRef.current).toHaveBeenCalled();
+  });
+});
+
+describe("workspaceOpenRecordsFromHooks", () => {
+  it("collects the lifecycle records from each owning hook bundle", () => {
+    const ref = <T,>(current: T) => ({ current });
+    const set = () => {};
+    const hooks = {
+      browser: {
+        projectRecordsRef: ref(["bp"]), sessionRecordsRef: ref(["bs"]),
+        setProjectRecords: set, setSessionRecords: set,
+      },
+      composer: {
+        chatConversationsRef: ref({ chat: 1 }), composerHarnessBySessionRef: ref({ chat: 2 }),
+        setChatConversations: set, setComposerHarnessBySession: set,
+      },
+      editorSession: { sessionEditorSnapshotsRef: ref({ session: "snap" }) },
+      persistence: {
+        activeSessionByProjectRef: ref({ "/repo": "chat" }), openProjectsRef: ref(["open"]),
+        projectSessionsRef: ref({ "/repo": ["s"] }), recentProjectsRef: ref(["recent"]),
+        setActiveSessionByProjectState: set, setOpenProjects: set,
+        setProjectSessions: set, setRecentProjects: set,
+      },
+      terminal: {
+        activePaneIdsRef: ref({ ctx: 1 }), paneLayoutsRef: ref({ session: "layout" }),
+        panesByContextRef: ref({ ctx: [] }),
+      },
+    };
+
+    const records = workspaceOpenRecordsFromHooks(hooks);
+
+    expect(records.activePanes.ref).toBe(hooks.terminal.activePaneIdsRef);
+    expect(records.activeSessions).toEqual({
+      ref: hooks.persistence.activeSessionByProjectRef,
+      set: hooks.persistence.setActiveSessionByProjectState,
+    });
+    expect(records.browserProjects.set).toBe(hooks.browser.setProjectRecords);
+    expect(records.conversations.ref).toBe(hooks.composer.chatConversationsRef);
+    expect(records.editorSnapshots.ref).toBe(hooks.editorSession.sessionEditorSnapshotsRef);
+    expect(records.paneLayouts.ref).toBe(hooks.terminal.paneLayoutsRef);
+    expect(records.projectPanes.ref).toBe(hooks.terminal.panesByContextRef);
+    expect(records.sessions.set).toBe(hooks.persistence.setProjectSessions);
   });
 });

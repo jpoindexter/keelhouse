@@ -117,3 +117,71 @@ export const workspaceOpenTargetFromHook = <TSnapshot,>(
   setManagedPanes: hook.setManagedPanes,
   snapshots: hook.snapshotsRef,
 });
+
+type WorkspaceOpenRecordsHookShape = {
+  browser: {
+    projectRecordsRef: unknown;
+    sessionRecordsRef: unknown;
+    setProjectRecords: unknown;
+    setSessionRecords: unknown;
+  };
+  composer: {
+    chatConversationsRef: unknown;
+    composerHarnessBySessionRef: unknown;
+    setChatConversations: unknown;
+    setComposerHarnessBySession: unknown;
+  };
+  editorSession: { sessionEditorSnapshotsRef: unknown };
+  persistence: {
+    activeSessionByProjectRef: unknown;
+    openProjectsRef: unknown;
+    projectSessionsRef: unknown;
+    recentProjectsRef: unknown;
+    setActiveSessionByProjectState: unknown;
+    setOpenProjects: unknown;
+    setProjectSessions: unknown;
+    setRecentProjects: unknown;
+  };
+  terminal: { activePaneIdsRef: unknown; paneLayoutsRef: unknown; panesByContextRef: unknown };
+};
+
+export const workspaceOpenRecordsFromHooks = <H extends WorkspaceOpenRecordsHookShape>(hooks: H) => ({
+  activePanes: { ref: hooks.terminal.activePaneIdsRef as H["terminal"]["activePaneIdsRef"] },
+  activeSessions: {
+    ref: hooks.persistence.activeSessionByProjectRef as H["persistence"]["activeSessionByProjectRef"],
+    set: hooks.persistence.setActiveSessionByProjectState as H["persistence"]["setActiveSessionByProjectState"],
+  },
+  browserProjects: {
+    ref: hooks.browser.projectRecordsRef as H["browser"]["projectRecordsRef"],
+    set: hooks.browser.setProjectRecords as H["browser"]["setProjectRecords"],
+  },
+  browserSessions: {
+    ref: hooks.browser.sessionRecordsRef as H["browser"]["sessionRecordsRef"],
+    set: hooks.browser.setSessionRecords as H["browser"]["setSessionRecords"],
+  },
+  conversations: {
+    ref: hooks.composer.chatConversationsRef as H["composer"]["chatConversationsRef"],
+    set: hooks.composer.setChatConversations as H["composer"]["setChatConversations"],
+  },
+  editorSnapshots: {
+    ref: hooks.editorSession.sessionEditorSnapshotsRef as H["editorSession"]["sessionEditorSnapshotsRef"],
+  },
+  harnessRecords: {
+    ref: hooks.composer.composerHarnessBySessionRef as H["composer"]["composerHarnessBySessionRef"],
+    set: hooks.composer.setComposerHarnessBySession as H["composer"]["setComposerHarnessBySession"],
+  },
+  openProjects: {
+    ref: hooks.persistence.openProjectsRef as H["persistence"]["openProjectsRef"],
+    set: hooks.persistence.setOpenProjects as H["persistence"]["setOpenProjects"],
+  },
+  paneLayouts: { ref: hooks.terminal.paneLayoutsRef as H["terminal"]["paneLayoutsRef"] },
+  projectPanes: { ref: hooks.terminal.panesByContextRef as H["terminal"]["panesByContextRef"] },
+  recentProjects: {
+    ref: hooks.persistence.recentProjectsRef as H["persistence"]["recentProjectsRef"],
+    set: hooks.persistence.setRecentProjects as H["persistence"]["setRecentProjects"],
+  },
+  sessions: {
+    ref: hooks.persistence.projectSessionsRef as H["persistence"]["projectSessionsRef"],
+    set: hooks.persistence.setProjectSessions as H["persistence"]["setProjectSessions"],
+  },
+});

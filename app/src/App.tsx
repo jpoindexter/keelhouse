@@ -50,7 +50,8 @@ import { buildAgentHookSnapshot, hookReportToActivity } from "./agentHookIntegra
 import { AgentConversationPanel } from "./AgentConversationPanel";
 import { useContextMenuHost } from "./useContextMenuHost";
 import { createTerminalSurfaceActions, terminalSurfaceDepsFromHook } from "./terminalSurfaceController";
-import { createWorkspaceOpenSurface, workspaceOpenTargetFromHook } from "./workspaceOpenSurface";
+import {
+  workspaceOpenRecordsFromHooks, createWorkspaceOpenSurface, workspaceOpenTargetFromHook } from "./workspaceOpenSurface";
 import { createChatRunControls } from "./chatRunControls";
 import { createComposerSurface } from "./composerSurfaceController";
 import { createComposerHistoryNavigation } from "./composerHistoryNavigation";
@@ -262,7 +263,7 @@ function App() {
     chatConversations, chatConversationsRef, clearScopedSetting,
     composerHarnessBySession, composerHarnessBySessionRef, persistComposerHarnessRecords,
     scopedSettings, scopedSettingsRef, setChatConversations,
-    setComposerHarnessBySession, setScopedSettings, updateScopedSetting,
+    setScopedSettings, updateScopedSetting,
   } = composerWorkspace;
   const editorSession = useEditorSessionController();
   const {
@@ -287,12 +288,10 @@ function App() {
   });
   const {
     activePaneId: activeTerminalPaneId,
-    activePaneIdRef: activeTerminalPaneIdRef, activePaneIdsRef: activeTerminalPaneByContextRef,
-    activeProjectStatus, activeSessionStatus, contextForPaneId: paneContextForPaneId,
+    activePaneIdRef: activeTerminalPaneIdRef, activeProjectStatus, activeSessionStatus, contextForPaneId: paneContextForPaneId,
     paneLabelsRef: paneLabelsBySessionRef,
     paneLayoutsRef: paneLayoutsBySessionRef,
-    panes: terminalPanes, panesByContextRef: terminalPanesByContextRef,
-    panesForSession: terminalPanesForSession,
+    panes: terminalPanes, panesForSession: terminalPanesForSession,
     panesRef: terminalPanesRef, projectStatusForRoot,
     requestPaintRef: requestTerminalPaintRef, setFocusedPane: setFocusedTerminalPane,
     setManagedPanes: setManagedTerminalPanes, setPaneLabels: setPaneLabelsBySession,
@@ -323,11 +322,9 @@ function App() {
     openProjectsRef, persistActiveFile, persistOpenProjects,
     persistPaneLabel, persistPaneLayout: persistPaneLayoutForSession,
     persistProjectSessions, persistSessionSnapshots: persistSessionEditorSnapshots,
-    projectSessions, projectSessionsRef, recentProjectsRef,
-    removeSessionRestore: removePersistedSessionRestore,
+    projectSessions, projectSessionsRef, removeSessionRestore: removePersistedSessionRestore,
     savedPaneLabel: savedPaneLabelForSlot, sessionKey: sessionSnapshotKey,
-    setActiveSessionByProjectState, setExpandedSessionProjects, setOpenProjects,
-    setProjectSessions, setRecentProjects, setShowArchivedSessions,
+    setExpandedSessionProjects, setShowArchivedSessions,
     showArchivedSessions, updateActiveSessionStatus, updateOpenProjectStatus,
     updateSessionStatus,
   } = persistence;
@@ -671,20 +668,9 @@ function App() {
       deleteProjectChats: deleteDurableProjectChats,
       now: Date.now, persistPaneLayout: persistPaneLayoutForSession,
       projectStatus: projectStatusForRoot,
-      records: {
-        activePanes: { ref: activeTerminalPaneByContextRef },
-        activeSessions: { ref: activeSessionByProjectRef, set: setActiveSessionByProjectState },
-        browserProjects: { ref: browser.projectRecordsRef, set: browser.setProjectRecords },
-        browserSessions: { ref: browser.sessionRecordsRef, set: browser.setSessionRecords },
-        conversations: { ref: chatConversationsRef, set: setChatConversations },
-        editorSnapshots: { ref: sessionEditorSnapshotsRef },
-        harnessRecords: { ref: composerHarnessBySessionRef, set: setComposerHarnessBySession },
-        openProjects: { ref: openProjectsRef, set: setOpenProjects },
-        paneLayouts: { ref: paneLayoutsBySessionRef },
-        projectPanes: { ref: terminalPanesByContextRef },
-        recentProjects: { ref: recentProjectsRef, set: setRecentProjects },
-        sessions: { ref: projectSessionsRef, set: setProjectSessions },
-      },
+      records: workspaceOpenRecordsFromHooks({
+        browser, composer: composerWorkspace, editorSession, persistence, terminal,
+      }),
       restoreBrowser: browser.restoreScopedUrl, restoreEditor: restoreSessionEditorSnapshot,
       sessionStatus: terminalPaneProjectStatus, setFocusedPane: setFocusedTerminalPane,
       setLaunchError, setManagedPanes: setManagedTerminalPanes,
