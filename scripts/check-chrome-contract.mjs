@@ -180,7 +180,7 @@ assert(
   "Opening a chat must resolve its project without spawning a hidden terminal",
 );
 assert(tauriBackend.includes("fn resolve_workspace"), "The backend must expose a no-pty project open path for chat mode");
-assert(bottomUtilityTray.includes('className={`utility-tray ${props.open ?') && appTsx.includes('open={agentSurfaceMode === "terminal"}'), "Raw terminal must live in the approved bottom utility tray");
+assert(bottomUtilityTray.includes('className={`utility-tray ${props.open ?') && appTsx.includes('open={shellLayout.agentSurfaceMode === "terminal"}'), "Raw terminal must live in the approved bottom utility tray");
 assert(appTsx.includes("hidden: false"), "Opening the bottom tray must keep the chat timeline visible");
 assert(composerSurface.includes('className="agent-composer" aria-label="Agent composer"'), "Opening the bottom tray must keep the chat composer visible");
 assert(bottomUtilityTabs.includes('aria-label="Utility tray surfaces"'), "Bottom tray must expose Terminal, Processes, and Logs modes");
@@ -289,7 +289,7 @@ assert(mcpOAuth.includes('code_challenge_method", "S256"') && mcpOAuth.includes(
 assert(agentHooks.includes('TcpListener::bind("127.0.0.1:0")') && agentHooks.includes('format!("Bearer {token}")') && agentHooks.includes('fs::Permissions::from_mode(0o600)'), "Agent hooks must stay loopback-only with a private ephemeral bearer configuration");
 assert(agentHooks.includes('"list_projects"') && agentHooks.includes('"get_workspace_state"') && agentHooks.includes('"focus_pane"') && agentHooks.includes('"open_file"') && agentHooks.includes('"create_shell"') && agentHooks.includes('"report_status"'), "Agent-hook MCP must expose the documented minimal tool catalog");
 assert(agentHookRenderer.includes('invoke<AgentHookRequest[]>("take_agent_hook_requests")') && appTsx.includes('focusTerminalPane(paneId, "agent")') && appTsx.includes('createTerminalPane(defaultTerminalLaunchProfile(), "agent")') && appTsx.includes('"agent",\n    ),'), "Agent-hook actions must enter the renderer through the attributed app-action path");
-assert(statusBar.includes('className="status-bar__item status-bar__item--button"') && appTsx.includes("statusBarRepoPropsFrom(repoLocation") && read("app/src/statusBarHost.ts").includes("sourceRepoStatusLabel(repoLocation)"), "Active source-host status must be visible outside Settings");
+assert(statusBar.includes('className="status-bar__item status-bar__item--button"') && appTsx.includes("statusBarRepoPropsFrom(settingsRuntime.repoLocation") && read("app/src/statusBarHost.ts").includes("sourceRepoStatusLabel(repoLocation)"), "Active source-host status must be visible outside Settings");
 assert(sourceControlLinks.includes('isGitLabLocation(location) ? `${repoBaseUrl(location)}/-/merge_requests`') && sourceControlLinks.includes('isGitLabLocation(location) ? `${repoBaseUrl(location)}/-/pipelines`'), "Self-hosted non-GitHub remotes must use GitLab merge-request and pipeline routes");
 assert(appTsx.includes('storeRef.current?.set("aiConnectionSettings", next)') && !appTsx.includes('storeRef.current?.set("connectionSecret'), "Tauri Store may persist non-secret connection metadata but never secret values");
 assert(composerSubmission.includes("context.settings.providerModels[provider].trim()"), "Provider model defaults must reach structured chat runs");
