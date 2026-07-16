@@ -61,6 +61,7 @@ import { wireWorkspaceFileActions } from "./workspaceFileActionsSurface";
 import { wireSessionCheckpointActions } from "./sessionCheckpointSurface";
 import { deriveProjectSessionMenuState } from "./projectSessionMenuSurface";
 import { WorkbenchEditorSection } from "./WorkbenchEditorSection";
+import { createRenderPerfExport } from "./renderPerfExport";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -121,7 +122,7 @@ import {
 } from "./connectionSettings";
 import { useMcpOAuthStatus } from "./useMcpOAuthStatus";
 import { buildRepoUrl, sourceRepoStatusLabel, type RepoLocation } from "./sourceControlLinks";
-import { buildSnapshot, createRenderPerfState, recordIpcPayloadBytes } from "./renderPerf";
+import { createRenderPerfState, recordIpcPayloadBytes } from "./renderPerf";
 import { useTerminalCanvasRuntime } from "./useTerminalCanvasRuntime";
 import { useNativeAppEvents } from "./useNativeAppEvents";
 import { useAgentHookRequests, type AgentHookStatus } from "./useAgentHookRequests";
@@ -1311,28 +1312,16 @@ function App() {
     persistPaneTranscript(root, sessionId, pane, paneIndex, terminalSnapshotText(snapshot), Date.now());
   };
 
-  const exportRenderPerfSnapshot = async () => {
-    const root = workspacePathRef.current;
-    if (!root) return;
-    const paneCount = terminalPanesForSession(root).length;
-    const snapshot = buildSnapshot(renderPerfRef.current, paneCount, new Date().toISOString());
-    const absolutePath = `${root}/docs/qa/perf-budget/render-perf-live.json`;
-    // write_text_file's `path` is a raw filesystem path, not root-relative, and
-    // requires the target to already exist (it reads metadata for the editor's
-    // optimistic-concurrency check) — so create it first on a fresh run;
-    // "Path already exists" on later runs is expected and ignored.
-    await invoke("create_workspace_file", {
-      root,
-      parent: `${root}/docs/qa/perf-budget`,
-      name: "render-perf-live.json",
-    }).catch(() => {});
-    await invoke("write_text_file", {
-      root,
-      path: absolutePath,
-      content: `${JSON.stringify(snapshot, null, 2)}\n`,
-      expectedModifiedMs: null,
-    }).catch((err) => setLaunchError(`Render perf snapshot failed: ${String(err)}`));
-  };
+  const exportRenderPerfSnapshot = createRenderPerfExport({
+    createFile: (root, parent, name) => invoke("create_workspace_file", { root, parent, name }),
+    getPaneCount: (root) => terminalPanesForSession(root).length,
+    getPerfState: () => renderPerfRef.current,
+    getRoot: () => workspacePathRef.current,
+    now: () => new Date().toISOString(),
+    setError: setLaunchError,
+    writeFile: (root, path, content, expectedModifiedMs) =>
+      invoke("write_text_file", { root, path, content, expectedModifiedMs }),
+  });
 
   const terminalContextMenuItems = (): ContextMenuItem[] => buildTerminalContextMenuItems({
     activePaneState: activeTerminalPane?.state ?? null,
