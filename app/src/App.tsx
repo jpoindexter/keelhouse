@@ -76,6 +76,7 @@ import { toggleExpandedProject, visibleProjectsFrom } from "./projectRailView";
 import { fileTreeNodeFromPath, pathBasename } from "./fileTreeTypes";
 import { createTerminalPaneFinalize } from "./terminalPaneFinalize";
 import { createChatSearchNavigation } from "./chatSearchNavigation";
+import { createSessionSnapshotCapture } from "./sessionSnapshotCapture";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -629,18 +630,15 @@ function App() {
     setDetectedServer: browser.setDetectedServer,
   });
 
-  const captureCurrentSessionSnapshot = () => {
-    const root = workspacePathRef.current;
-    const sessionId = activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, root);
-    if (!root || !sessionId) return;
-    captureEditorSessionSnapshot({
-      key: sessionSnapshotKey(root, sessionId),
-      persistPaneLayout: persistPaneLayoutForSession,
-      persistSnapshots: persistSessionEditorSnapshots,
-      root,
-      sessionId,
-    });
-  };
+  const captureCurrentSessionSnapshot = createSessionSnapshotCapture({
+    capture: captureEditorSessionSnapshot,
+    getRoot: () => workspacePathRef.current,
+    makeKey: sessionSnapshotKey,
+    persistPaneLayout: persistPaneLayoutForSession,
+    persistSnapshots: persistSessionEditorSnapshots,
+    resolveSessionId: (root) =>
+      activeProjectSessionId(activeSessionByProjectRef.current, projectSessionsRef.current, root),
+  });
 
   const restoreSessionEditorSnapshot = (root: string, sessionId: string | null) => {
     restoreEditorSessionSnapshot({
