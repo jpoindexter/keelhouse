@@ -74,6 +74,7 @@ import { quickSettingsDrawerPropsFrom } from "./quickSettingsHost";
 import { composerMentionQuery as composerMentionQueryFrom } from "./agentComposer";
 import { toggleExpandedProject, visibleProjectsFrom } from "./projectRailView";
 import { fileTreeNodeFromPath, pathBasename } from "./fileTreeTypes";
+import { createTerminalPaneFinalize } from "./terminalPaneFinalize";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -821,19 +822,19 @@ function App() {
     recordAgentActivity(record.handle, record.event);
   };
 
-  const finalizeCreatedTerminalPane = async (
-    root: string,
-    nextPanes: ManagedTerminalPane[],
-    profile: LaunchProfile,
-  ) => {
-    profiles.setTerminalProfile(profile);
-    await storeRef.current?.set("terminalLaunchProfile", profile);
-    await storeRef.current?.save();
-    setLaunchError(null);
-    setTimeout(sendTerminalResize, 0);
-    await updateOpenProjectStatus(root, projectStatusForRoot(root));
-    await updateActiveSessionStatus(root, terminalPaneProjectStatus(nextPanes));
-  };
+  const finalizeCreatedTerminalPane = createTerminalPaneFinalize({
+    getProjectStatus: projectStatusForRoot,
+    persistProfile: async (profile) => {
+      await storeRef.current?.set("terminalLaunchProfile", profile);
+      await storeRef.current?.save();
+    },
+    scheduleResize: () => setTimeout(sendTerminalResize, 0),
+    setError: setLaunchError,
+    setTerminalProfile: profiles.setTerminalProfile,
+    statusForPanes: terminalPaneProjectStatus,
+    updateProjectStatus: updateOpenProjectStatus,
+    updateSessionStatus: updateActiveSessionStatus,
+  });
 
   const pickWorkspace = async (options: { openTerminal?: boolean } = {}) => {
     const dir = await open({ directory: true });
