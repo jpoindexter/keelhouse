@@ -80,9 +80,6 @@ import {
 } from "./agentSessionHandle";
 import type { AgentApprovalMode, AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
 import { executeAgentPaneInterrupt } from "./agentPaneInterrupt";
-import { executeTerminalPaneClose } from "./terminalPaneCloseWorkflow";
-import { executeTerminalPaneCreate } from "./terminalPaneCreateWorkflow";
-import { executeTerminalPaneFocus } from "./terminalPaneFocusWorkflow";
 import { AppIcon } from "./icons";
 import type { AppIconName } from "./icons";
 import {
@@ -180,8 +177,6 @@ import {
 import { executeTerminalPaneRestart } from "./terminalPaneRestartWorkflow";
 import { executeTerminalPaneTerminate } from "./terminalPaneTerminate";
 import { createSessionCheckpointActions } from "./sessionCheckpointActions";
-import { executeTerminalWorktreePaneCreate } from "./terminalWorktreePaneCreateWorkflow";
-import { executeTerminalWorktreePaneClose } from "./terminalWorktreePaneCloseWorkflow";
 import {
   clearBackgroundExitsForProject,
   notifyBackgroundExit,
@@ -237,7 +232,6 @@ import {
 } from "./settingsMcpActions";
 import { resetSettingsLocalData } from "./settingsLocalReset";
 import { ContextMenu, type ContextMenuItem, type ContextMenuState } from "./ContextMenu";
-import { paneContextKey } from "./paneOwnership";
 import { composerReasoningLabel } from "./ComposerReasoningPicker";
 import { createProjectCloseController } from "./projectCloseController";
 import { createProjectSessionNavigationActions } from "./projectSessionNavigationActions";
@@ -247,6 +241,7 @@ import {
   type TerminalGridPayload,
   type TerminalPaneExitPayload,
 } from "./terminalRuntimeEventHandlers";
+import { createTerminalPaneActionsController } from "./terminalPaneActionsController";
 import {
   buildCreatedPaneActivity,
   buildCreatedWorktreePaneActivity,
@@ -1217,63 +1212,58 @@ function App() {
   const setComposerRuntime = composerSettingsActions.setRuntime;
   const setComposerReasoningEffort = composerSettingsActions.setReasoningEffort;
 
-  const focusTerminalPane = (paneId: number, requestedBy: "user" | "agent" = "user") =>
-    executeTerminalPaneFocus({
-      activePaneId: () => activeTerminalPaneIdRef.current,
-      currentPanes: () => terminalPanesRef.current,
-      focusPane: (id) => invoke("focus_pane", { paneId: id }),
-      gateAction: async (action) => (await gateAppAction(action)).decision,
-      paneId,
-      recordActivePane: (id) => {
-        const root = workspacePathRef.current;
-        const sessionId = activeSessionForProject(root);
-        const contextKey = paneContextKey(root, sessionId);
-        if (contextKey) activeTerminalPaneByContextRef.current = {
-          ...activeTerminalPaneByContextRef.current, [contextKey]: id,
-        };
-      },
-      requestedBy,
-      restoreSnapshot: (id) => {
-        const cached = terminalSnapshotsRef.current[id];
-        if (!cached) return;
-        latest.current = cached;
-        selection.current = null;
-        requestTerminalPaintRef.current();
-      },
-      scheduleResize: () => setTimeout(sendTerminalResize, 0),
-      setError: setLaunchError,
-      setFocusedPane: setFocusedTerminalPane,
-    });
-
-  const createTerminalPane = async (
-    profile: LaunchProfile = profiles.terminalProfileRef.current,
-    requestedBy: "user" | "agent" = "user",
-  ) => {
-    const root = workspacePathRef.current ?? workspacePath;
-    const sessionId = activeSessionForProject(root);
-    if (!root || !sessionId || profiles.changing) return false;
-    return executeTerminalPaneCreate({
-      createPane: async () => (await invoke<OpenPaneResponse>("create_pane", {
-        path: root,
-        profile,
-        environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root),
+  const terminalPaneActionsController = createTerminalPaneActionsController({
+    activeAgentDescriptor: activeAgentSessionDescriptor, activePaneId: activeTerminalPaneIdRef,
+    activePaneIds: activeTerminalPaneByContextRef,
+    closePane: async (paneId) =>
+      (await invoke<{ activePaneId: number | null }>("close_pane", { paneId })).activePaneId,
+    createPane: async (root, profile) => (await invoke<OpenPaneResponse>("create_pane", {
+      path: root, profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root),
+    })).paneId,
+    createWorktree: (root, label) => invoke("create_project_worktree", { root, label }),
+    createWorktreePane: async (path, profile, projectRoot) =>
+      (await invoke<OpenPaneResponse>("create_pane", {
+        path, profile, environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, projectRoot),
       })).paneId,
-      currentPanes: () => terminalPanesForSession(root, sessionId),
-      finalizePane: (panes) => finalizeCreatedTerminalPane(root, panes, profile),
-      gateAction: async (action) => (await gateAppAction(action)).decision,
-      now: Date.now,
-      profile,
-      recordCreated: (pane) => recordCreatedPaneActivity(pane, root, sessionId),
-      requestedBy,
-      root,
-      savedLabel: (slot) => savedPaneLabelForSlot(root, slot),
-      setChanging: profiles.setChanging,
-      setError: setLaunchError,
-      setSessionPanes: (panes, activeId) => setSessionTerminalPanes(root, sessionId, panes, activeId),
-      updateProjectStatus: (status) => updateOpenProjectStatus(root, status),
-      updateSessionStatus: (status) => updateActiveSessionStatus(root, status),
-    });
-  };
+    defaultProfile: () => profiles.terminalProfileRef.current,
+    finalizePane: finalizeCreatedTerminalPane,
+    focusPane: (paneId) => invoke("focus_pane", { paneId }),
+    gateAction: async (action, handle) => (await gateAppAction(action, handle)).decision,
+    getChanging: () => profiles.changing, getPanes: terminalPanesForSession,
+    getProjectStatus: projectStatusForRoot, getSessionId: activeSessionForProject,
+    getWorkspacePath: () => workspacePathRef.current ?? workspacePath,
+    getWorktrees: () => worktrees,
+    intentionallyTerminatedPaneIds: intentionallyTerminatedPaneIdsRef.current,
+    latest, now: Date.now,
+    persistWorktreeRecord: (record) => setWorktrees((current) => {
+      const next = addWorktree(current, record);
+      void storeRef.current?.set("worktrees", next); void storeRef.current?.save();
+      return next;
+    }),
+    persistWorktreeRemoval: (paneId) => setWorktrees((current) => {
+      const next = removeWorktreeByPaneId(current, paneId);
+      void storeRef.current?.set("worktrees", next); void storeRef.current?.save();
+      return next;
+    }),
+    promptWorktreeLabel: () => window.prompt("Worktree label (used for the branch name)"),
+    recordCreated: recordCreatedPaneActivity,
+    recordCreatedWorktree: recordCreatedWorktreePaneActivity,
+    removeWorktree: (root, worktree) => invoke("remove_project_worktree", {
+      root, worktreePath: worktree.path, branch: worktree.branch,
+    }),
+    requestPaint: () => requestTerminalPaintRef.current(), savedLabel: savedPaneLabelForSlot,
+    scheduleResize: () => setTimeout(sendTerminalResize, 0), selection,
+    setChanging: profiles.setChanging, setError: setLaunchError,
+    setFocusedPane: setFocusedTerminalPane, setSessionPanes: setSessionTerminalPanes,
+    snapshots: terminalSnapshotsRef, statusForPanes: terminalPaneProjectStatus,
+    updateProjectStatus: updateOpenProjectStatus,
+    updateSessionStatus: (root, status) => updateActiveSessionStatus(root, status),
+  });
+  const closeTerminalPane = terminalPaneActionsController.closeTerminalPane;
+  const closeWorktreePane = terminalPaneActionsController.closeWorktreePane;
+  const createTerminalPane = terminalPaneActionsController.createTerminalPane;
+  const createWorktreePane = terminalPaneActionsController.createWorktreePane;
+  const focusTerminalPane = terminalPaneActionsController.focusTerminalPane;
 
   const toggleRawTerminal = async () => {
     if (agentSurfaceMode === "terminal" && utilityTrayMode === "terminal") {
@@ -1317,89 +1307,6 @@ function App() {
     if (!created) return;
     setUtilityTrayMode("terminal");
     setAgentSurfaceMode("terminal");
-  };
-
-  const closeTerminalPane = async (paneId: number) => {
-    const root = workspacePathRef.current;
-    const sessionId = activeSessionForProject(root);
-    if (!root || !sessionId) return false;
-    const pane = terminalPanesForSession(root, sessionId).find((item) => item.id === paneId);
-    if (!pane) return false;
-    return executeTerminalPaneClose({
-      clearPaneSnapshot: (id) => { delete terminalSnapshotsRef.current[id]; },
-      closePane: async (id) => (await invoke<{ activePaneId: number | null }>("close_pane", { paneId: id })).activePaneId,
-      currentPanes: () => terminalPanesForSession(root, sessionId),
-      focusPane: (id) => invoke("focus_pane", { paneId: id }),
-      gateAction: async (action) => (await gateAppAction(action, activeAgentSessionDescriptor)).decision,
-      markIntentionallyTerminated: (id) => intentionallyTerminatedPaneIdsRef.current.add(id),
-      pane,
-      projectStatus: () => projectStatusForRoot(root),
-      requestPaint: () => requestTerminalPaintRef.current(),
-      scheduleResize: () => setTimeout(sendTerminalResize, 0),
-      sessionStatus: terminalPaneProjectStatus,
-      setError: setLaunchError,
-      setLatestSnapshot: (id) => { latest.current = id == null ? null : terminalSnapshotsRef.current[id] ?? null; },
-      setSessionPanes: (panes, activeId) => setSessionTerminalPanes(root, sessionId, panes, activeId),
-      unmarkIntentionallyTerminated: (id) => intentionallyTerminatedPaneIdsRef.current.delete(id),
-      updateProjectStatus: (status) => updateOpenProjectStatus(root, status),
-      updateSessionStatus: (status) => updateActiveSessionStatus(root, status),
-    });
-  };
-
-  const createWorktreePane = async (profile: LaunchProfile = profiles.terminalProfileRef.current) => {
-    const root = workspacePathRef.current ?? workspacePath;
-    const sessionId = activeSessionForProject(root);
-    if (!root || !sessionId || profiles.changing) return false;
-    return executeTerminalWorktreePaneCreate({
-      createPane: async (path, paneProfile) => (await invoke<OpenPaneResponse>("create_pane", {
-        path, profile: paneProfile,
-        environment: connectionEnvironmentInputs(aiConnectionSettingsRef.current, root),
-      })).paneId,
-      createWorktree: (label) => invoke("create_project_worktree", { root, label }),
-      currentPanes: () => terminalPanesForSession(root, sessionId),
-      finalizePane: (panes) => finalizeCreatedTerminalPane(root, panes, profile),
-      gateAction: async (action) => (await gateAppAction(action)).decision,
-      now: Date.now,
-      persistRecord: (record) => setWorktrees((current) => {
-        const next = addWorktree(current, record);
-        void storeRef.current?.set("worktrees", next);
-        void storeRef.current?.save();
-        return next;
-      }),
-      profile,
-      projectRoot: root,
-      promptLabel: () => window.prompt("Worktree label (used for the branch name)"),
-      recordCreated: (pane, branch) => {
-        recordCreatedWorktreePaneActivity(pane, root, sessionId, branch);
-      },
-      setChanging: profiles.setChanging,
-      setError: setLaunchError,
-      setSessionPanes: (panes, paneId) => setSessionTerminalPanes(root, sessionId, panes, paneId),
-      updateProjectStatus: (status) => updateOpenProjectStatus(root, status),
-      updateSessionStatus: (status) => updateActiveSessionStatus(root, status),
-    });
-  };
-
-  const closeWorktreePane = async (paneId: number) => {
-    const root = workspacePathRef.current;
-    if (!root) return;
-    const worktree = worktreeForPaneId(worktrees, String(paneId));
-    if (!worktree) return;
-    await executeTerminalWorktreePaneClose({
-      closePane: () => closeTerminalPane(paneId),
-      gateAction: async (action) => (await gateAppAction(action, activeAgentSessionDescriptor)).decision,
-      persistRemoval: () => setWorktrees((current) => {
-        const next = removeWorktreeByPaneId(current, String(paneId));
-        void storeRef.current?.set("worktrees", next);
-        void storeRef.current?.save();
-        return next;
-      }),
-      removeWorktree: () => invoke("remove_project_worktree", {
-        root, worktreePath: worktree.path, branch: worktree.branch,
-      }),
-      setError: setLaunchError,
-      worktree,
-    });
   };
 
   const activeAgentSessionHandle: AgentSessionHandle | null = activeAgentSessionDescriptor
