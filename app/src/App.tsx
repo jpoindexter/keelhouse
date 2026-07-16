@@ -78,6 +78,7 @@ import { createTerminalPaneFinalize } from "./terminalPaneFinalize";
 import { createChatSearchNavigation } from "./chatSearchNavigation";
 import { createSessionSnapshotCapture } from "./sessionSnapshotCapture";
 import { createComposerHarnessEventLog } from "./composerHarnessEvents";
+import { createWorkspacePicker } from "./workspacePicker";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -825,14 +826,12 @@ function App() {
     updateSessionStatus: updateActiveSessionStatus,
   });
 
-  const pickWorkspace = async (options: { openTerminal?: boolean } = {}) => {
-    const dir = await open({ directory: true });
-    if (typeof dir !== "string") return false;
-    const opened = await requestOpenWorkspace(dir);
-    if (!opened) return false;
-    if (options.openTerminal) return createTerminalPane(defaultTerminalLaunchProfile());
-    return true;
-  };
+  const pickWorkspace = createWorkspacePicker({
+    createTerminalPane: (profile) => createTerminalPane(profile),
+    defaultProfile: defaultTerminalLaunchProfile,
+    openDirectoryDialog: () => open({ directory: true }),
+    requestOpenWorkspace: (path) => requestOpenWorkspace(path),
+  });
 
   const composerSurface = createComposerSurface({
     chatIdForSession: composerHarnessSessionKey,
