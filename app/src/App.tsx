@@ -63,6 +63,7 @@ import { WorkbenchEditorSection } from "./WorkbenchEditorSection";
 import { createRenderPerfExport } from "./renderPerfExport";
 import { createDevServerDetection } from "./devServerDetectionSurface";
 import { createPaneTranscriptCapture } from "./paneTranscriptCapture";
+import { deriveOrchestrationDialogState } from "./orchestrationDialogState";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -2111,14 +2112,16 @@ function App() {
         }}
         orchestration={{
           approvalMode: activeComposerHarness.approvalMode, error: orchestrationError,
-          activeRunCount: Object.values(chatConversations).filter((conversation) => conversation.activeRunId).length,
+          ...deriveOrchestrationDialogState({
+            activeSessionId, conversations: chatConversations,
+            sessions: projectSessions, workspacePath,
+          }),
           launching: orchestrationLaunching, open: orchestrationOpen,
           onClose: () => {
             if (orchestrationLaunching) return;
             setOrchestrationOpen(false);
             setOrchestrationError(null);
           },
-          parentTitle: projectSessions[workspacePath ?? ""]?.find((session) => session.id === activeSessionId)?.title ?? "Current chat",
           onLaunch: (children) => void launchOrchestration(children), projectPath: workspacePath ?? "",
           provider: activeComposerProvider ?? activeChatConversation.provider,
         }}
