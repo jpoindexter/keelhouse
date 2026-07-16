@@ -79,6 +79,7 @@ import { createChatSearchNavigation } from "./chatSearchNavigation";
 import { createSessionSnapshotCapture } from "./sessionSnapshotCapture";
 import { createComposerHarnessEventLog } from "./composerHarnessEvents";
 import { createWorkspacePicker } from "./workspacePicker";
+import { createPaneActivityLog } from "./paneActivityLog";
 import {
   projectRailStatusFromConversations,
   projectSessionStatusFromConversations,
@@ -199,10 +200,6 @@ import {
   type TerminalGridPayload,
   type TerminalPaneExitPayload,
 } from "./terminalRuntimeEventHandlers";
-import {
-  buildCreatedPaneActivity,
-  buildCreatedWorktreePaneActivity,
-} from "./paneActivityRecords";
 import "./App.css";
 import "./composerModelPicker.css";
 import "./responsive-shell.css";
@@ -797,20 +794,12 @@ function App() {
   });
   const deleteProjectSession = projectSessionDeletionController.deleteProjectSession;
 
-  const recordCreatedPaneActivity = (pane: ManagedTerminalPane, projectId: string, projectSessionId: string) => {
-    const record = buildCreatedPaneActivity({ approvalMode: agentApprovalMode, pane, projectId, projectSessionId });
-    recordAgentActivity(record.handle, record.event);
-  };
-
-  const recordCreatedWorktreePaneActivity = (
-    pane: ManagedTerminalPane,
-    projectId: string,
-    projectSessionId: string,
-    branch: string,
-  ) => {
-    const record = buildCreatedWorktreePaneActivity({ approvalMode: agentApprovalMode, branch, pane, projectId, projectSessionId });
-    recordAgentActivity(record.handle, record.event);
-  };
+  const paneActivityLog = createPaneActivityLog({
+    approvalMode: () => agentApprovalMode,
+    recordActivity: recordAgentActivity,
+  });
+  const recordCreatedPaneActivity = paneActivityLog.recordCreated;
+  const recordCreatedWorktreePaneActivity = paneActivityLog.recordCreatedWorktree;
 
   const finalizeCreatedTerminalPane = createTerminalPaneFinalize({
     getProjectStatus: projectStatusForRoot,
