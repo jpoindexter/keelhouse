@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createWorkspaceBootstrapController } from "./workspaceBootstrapController";
+import { bootstrapRefsFromHooks, createWorkspaceBootstrapController } from "./workspaceBootstrapController";
 
 const ref = <T,>(current: T) => ({ current });
 
@@ -162,5 +162,42 @@ describe("createWorkspaceBootstrapController", () => {
 
     expect(options.openWorkspace).not.toHaveBeenCalled();
     expect(options.pickWorkspace).toHaveBeenCalled();
+  });
+});
+
+describe("bootstrapRefsFromHooks", () => {
+  it("collects the bootstrap refs from each owning hook bundle", () => {
+    const options = createOptions();
+    const refs = bootstrapRefsFromHooks({
+      browser: {
+        projectRecordsRef: options.refs.browserProjects,
+        sessionRecordsRef: options.refs.browserSessions,
+      },
+      composer: {
+        chatConversationsRef: options.refs.chatConversations,
+        composerHarnessBySessionRef: options.refs.composerHarness,
+        scopedSettingsRef: options.refs.scopedSettings,
+      },
+      editorSession: {
+        activeFilesByWorkspaceRef: options.refs.activeFiles,
+        sessionEditorSnapshotsRef: options.refs.sessionSnapshots,
+      },
+      persistence: {
+        activeSessionByProjectRef: options.refs.activeSessions,
+        openProjectsRef: options.refs.openProjects,
+        projectSessionsRef: options.refs.projectSessions,
+        recentProjectsRef: options.refs.recentProjects,
+      },
+      settingsRef: options.refs.aiConnectionSettings,
+      storeRef: options.refs.store,
+      terminal: { paneLayoutsRef: options.refs.paneLayouts },
+    });
+
+    expect(refs.activeFiles).toBe(options.refs.activeFiles);
+    expect(refs.browserProjects).toBe(options.refs.browserProjects);
+    expect(refs.chatConversations).toBe(options.refs.chatConversations);
+    expect(refs.paneLayouts).toBe(options.refs.paneLayouts);
+    expect(refs.recentProjects).toBe(options.refs.recentProjects);
+    expect(refs.store).toBe(options.refs.store);
   });
 });

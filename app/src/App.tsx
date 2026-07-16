@@ -33,7 +33,7 @@ import {
   findFileTreeNode,
   reconcileActiveFileNode,
 } from "./editorState";
-import { createWorkspaceBootstrapController } from "./workspaceBootstrapController";
+import { bootstrapRefsFromHooks, createWorkspaceBootstrapController } from "./workspaceBootstrapController";
 import { WorkspaceSideRail } from "./WorkspaceSideRail";
 import { createAppMenuAssembly } from "./appMenuAssembly";
 import {
@@ -248,12 +248,7 @@ function App() {
   const selecting = useRef(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
-  const {
-    chatConversations, chatConversationsRef, clearScopedSetting,
-    composerHarnessBySession, composerHarnessBySessionRef, persistComposerHarnessRecords,
-    scopedSettings, scopedSettingsRef, setChatConversations,
-    setComposerHarnessBySession, setScopedSettings, updateScopedSetting,
-  } = useComposerWorkspaceState({
+  const composerWorkspace = useComposerWorkspaceState({
     getRoot: () => workspacePathRef.current,
     getSessionId: (root) => activeProjectSessionId(
       activeSessionByProjectRef.current, projectSessionsRef.current, root,
@@ -261,6 +256,12 @@ function App() {
     saveStore: async () => { await storeRef.current?.save(); },
     setStoreValue: async (key, value) => { await storeRef.current?.set(key, value); },
   });
+  const {
+    chatConversations, chatConversationsRef, clearScopedSetting,
+    composerHarnessBySession, composerHarnessBySessionRef, persistComposerHarnessRecords,
+    scopedSettings, scopedSettingsRef, setChatConversations,
+    setComposerHarnessBySession, setScopedSettings, updateScopedSetting,
+  } = composerWorkspace;
   const editorSession = useEditorSessionController();
   const {
     activeFilesByWorkspaceRef, captureCurrentEditorBuffer, captureCurrentEditorViewState,
@@ -305,6 +306,15 @@ function App() {
     onRootResolved: (root) => { workspacePathRef.current = root; },
     workspacePath,
   });
+  const persistence = useWorkspacePersistenceController({
+    activeFiles: activeFilesByWorkspaceRef,
+    getPanes: (root, sessionId) => terminalPanesForSession(root, sessionId),
+    paneLabels: paneLabelsBySessionRef,
+    paneLayouts: paneLayoutsBySessionRef,
+    sessionSnapshots: sessionEditorSnapshotsRef,
+    setPaneLabels: setPaneLabelsBySession,
+    store: storeRef,
+  });
   const {
     activeSessionByProject, activeSessionByProjectRef, activeSessionForProject,
     clearActiveFile: clearPersistedActiveFile, expandedSessionProjects, openProjects,
@@ -318,15 +328,7 @@ function App() {
     setProjectSessions, setRecentProjects, setShowArchivedSessions,
     showArchivedSessions, updateActiveSessionStatus, updateOpenProjectStatus,
     updateSessionStatus,
-  } = useWorkspacePersistenceController({
-    activeFiles: activeFilesByWorkspaceRef,
-    getPanes: (root, sessionId) => terminalPanesForSession(root, sessionId),
-    paneLabels: paneLabelsBySessionRef,
-    paneLayouts: paneLayoutsBySessionRef,
-    sessionSnapshots: sessionEditorSnapshotsRef,
-    setPaneLabels: setPaneLabelsBySession,
-    store: storeRef,
-  });
+  } = persistence;
   activeSessionLookupRef.current = activeSessionForProject;
   persistPaneLayoutRef.current = persistPaneLayoutForSession;
   const [agentHookStatus, setAgentHookStatus] = useState<AgentHookStatus | null>(null);
@@ -1529,22 +1531,10 @@ function App() {
     openWorkspace: (folder, profile) => openWorkspaceDirect(folder, profile),
     pickWorkspace,
     refreshSecretPresence: (settings) => { void refreshConnectionSecretPresence(settings); },
-    refs: {
-      activeFiles: activeFilesByWorkspaceRef,
-      activeSessions: activeSessionByProjectRef,
-      aiConnectionSettings: aiConnectionSettingsRef,
-      browserProjects: browser.projectRecordsRef,
-      browserSessions: browser.sessionRecordsRef,
-      chatConversations: chatConversationsRef,
-      composerHarness: composerHarnessBySessionRef,
-      openProjects: openProjectsRef,
-      paneLayouts: paneLayoutsBySessionRef,
-      projectSessions: projectSessionsRef,
-      recentProjects: recentProjectsRef,
-      scopedSettings: scopedSettingsRef,
-      sessionSnapshots: sessionEditorSnapshotsRef,
-      store: storeRef,
-    },
+    refs: bootstrapRefsFromHooks({
+      browser, composer: composerWorkspace, editorSession, persistence,
+      settingsRef: aiConnectionSettingsRef, storeRef, terminal,
+    }),
     sendResize: sendTerminalResize,
     setters: {
       setActiveSessions: setActiveSessionByProjectState,

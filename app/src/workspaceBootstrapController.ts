@@ -162,3 +162,39 @@ export const createWorkspaceBootstrapController = <
   applyBootstrap: (data: TData) => applyBootstrap(options, data),
   initWorkspace: () => initWorkspace(options),
 });
+
+type BootstrapHookShape = {
+  browser: { projectRecordsRef: unknown; sessionRecordsRef: unknown };
+  composer: {
+    chatConversationsRef: unknown;
+    composerHarnessBySessionRef: unknown;
+    scopedSettingsRef: unknown;
+  };
+  editorSession: { activeFilesByWorkspaceRef: unknown; sessionEditorSnapshotsRef: unknown };
+  persistence: {
+    activeSessionByProjectRef: unknown;
+    openProjectsRef: unknown;
+    projectSessionsRef: unknown;
+    recentProjectsRef: unknown;
+  };
+  settingsRef: unknown;
+  storeRef: unknown;
+  terminal: { paneLayoutsRef: unknown };
+};
+
+export const bootstrapRefsFromHooks = <H extends BootstrapHookShape>(hooks: H) => ({
+  activeFiles: hooks.editorSession.activeFilesByWorkspaceRef as H["editorSession"]["activeFilesByWorkspaceRef"],
+  activeSessions: hooks.persistence.activeSessionByProjectRef as H["persistence"]["activeSessionByProjectRef"],
+  aiConnectionSettings: hooks.settingsRef as H["settingsRef"],
+  browserProjects: hooks.browser.projectRecordsRef as H["browser"]["projectRecordsRef"],
+  browserSessions: hooks.browser.sessionRecordsRef as H["browser"]["sessionRecordsRef"],
+  chatConversations: hooks.composer.chatConversationsRef as H["composer"]["chatConversationsRef"],
+  composerHarness: hooks.composer.composerHarnessBySessionRef as H["composer"]["composerHarnessBySessionRef"],
+  openProjects: hooks.persistence.openProjectsRef as H["persistence"]["openProjectsRef"],
+  paneLayouts: hooks.terminal.paneLayoutsRef as H["terminal"]["paneLayoutsRef"],
+  projectSessions: hooks.persistence.projectSessionsRef as H["persistence"]["projectSessionsRef"],
+  recentProjects: hooks.persistence.recentProjectsRef as H["persistence"]["recentProjectsRef"],
+  scopedSettings: hooks.composer.scopedSettingsRef as H["composer"]["scopedSettingsRef"],
+  sessionSnapshots: hooks.editorSession.sessionEditorSnapshotsRef as H["editorSession"]["sessionEditorSnapshotsRef"],
+  store: hooks.storeRef as H["storeRef"],
+});
