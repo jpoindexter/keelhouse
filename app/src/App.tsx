@@ -205,7 +205,6 @@ import { TranscriptsModal } from "./TranscriptsModal";
 import { useTerminalFind } from "./useTerminalFind";
 import { ChatThreadSurface } from "./ChatThreadSurface";
 import {
-  appendToolChatMessage,
   applyChatRunEnvelope,
   chatProviderLabel,
 } from "./chatConversation";
@@ -233,7 +232,7 @@ import {
   type OrchestrationChildDraft,
 } from "./chatOrchestration";
 import { launchOrchestration as launchOrchestrationWithContext } from "./orchestrationLaunch";
-import { executeOrchestrationChildResult } from "./orchestrationChildResult";
+import { createOrchestrationChildActions } from "./orchestrationChildActions";
 import {
   beginSettingsMcpOAuth,
   disconnectSettingsMcpOAuth,
@@ -1144,42 +1143,17 @@ function App() {
     });
   };
 
-  const stopChildChatRun = async (projectPath: string, session: ProjectSession) => {
-    const runId = chatConversationsRef.current[composerHarnessSessionKey(projectPath, session.id)]?.activeRunId;
-    if (!runId) return;
-    await invoke("stop_chat_run", { runId });
-    setActionNotice(`Stopping ${session.title}`);
-  };
-
-  const returnChildResult = async (projectPath: string, session: ProjectSession) => {
-    return executeOrchestrationChildResult({
-      childConversation: chatConversationsRef.current[composerHarnessSessionKey(projectPath, session.id)],
-      now: Date.now,
-      returnResult: ({ itemId, parentSessionId, text, title }) => {
-        const parentChatId = composerHarnessSessionKey(projectPath, parentSessionId);
-        updateChatConversation(parentChatId, (conversation) => appendToolChatMessage(conversation, title, text, itemId));
-      },
-      session,
-      setNotice: setActionNotice,
-      updateSessionMetadata: (orchestration) => updateProjectSessionMetadata(projectPath, session.id, {
-        orchestration,
-      }),
-    });
-  };
-
-  const removeChildWorktree = async (projectPath: string, session: ProjectSession) => {
-    const metadata = session.orchestration;
-    if (!metadata?.worktreePath || !metadata.worktreeBranch) return;
-    await invoke("remove_project_worktree", {
-      root: projectPath,
-      worktreePath: metadata.worktreePath,
-      branch: metadata.worktreeBranch,
-    });
-    await updateProjectSessionMetadata(projectPath, session.id, {
-      orchestration: { ...metadata, worktreePath: undefined, worktreeBranch: undefined },
-    });
-    setActionNotice(`Removed ${session.title} worktree`);
-  };
+  const orchestrationChildActions = createOrchestrationChildActions({
+    conversations: chatConversationsRef, now: Date.now,
+    removeWorktree: (input) => invoke("remove_project_worktree", input),
+    setNotice: setActionNotice, stopRun: (runId) => invoke("stop_chat_run", { runId }),
+    updateConversation: updateChatConversation,
+    updateSessionMetadata: (projectPath, sessionId, orchestration) =>
+      updateProjectSessionMetadata(projectPath, sessionId, { orchestration }),
+  });
+  const removeChildWorktree = orchestrationChildActions.removeChildWorktree;
+  const returnChildResult = orchestrationChildActions.returnChildResult;
+  const stopChildChatRun = orchestrationChildActions.stopChildRun;
 
   const resolveChatApproval = async (
     message: ChatMessage,
