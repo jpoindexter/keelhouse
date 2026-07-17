@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { load } from "@tauri-apps/plugin-store";
@@ -16,7 +15,6 @@ import { drawerTitleFor } from "./drawerModes";
 import { AppRuntimeDialogs } from "./AppRuntimeDialogs";
 import { appRuntimeDialogsPropsFrom } from "./appRuntimeDialogsHost";
 import { useConversationRuntime } from "./useConversationRuntime";
-import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import { activeProjectSessionId } from "./workspaceState";
 import type { OpenProject, ProjectRailStatus, ProjectSession } from "./workspaceState";
@@ -27,10 +25,6 @@ import { visibleAppCommandPaletteCommands } from "./appCommandPaletteHost";
 import { AgentConversationPanel } from "./AgentConversationPanel";
 import { agentConversationPanelPropsFrom } from "./agentConversationPanelHost";
 import { useContextMenuHost } from "./useContextMenuHost";
-import { createTerminalPaneCommands, createWorktreePersistence } from "./terminalPaneCommands";
-import { createTerminalSurfaceActions, terminalSurfaceDepsFromHook } from "./terminalSurfaceController";
-import { createUtilityTrayControls } from "./utilityTrayControls";
-import { createTerminalPaneRename } from "./terminalPaneRename";
 import { WorkbenchEditorSection } from "./WorkbenchEditorSection";
 import { workbenchEditorSectionPropsFrom } from "./workbenchEditorSectionHost";
 import { createRenderPerfExport } from "./renderPerfExport";
@@ -46,7 +40,6 @@ import { browserPreviewPropsFrom } from "./browserPreviewHost";
 import { useComposerRuntime } from "./useComposerRuntime";
 import { visibleProjectsFrom } from "./projectRailView";
 import { createComposerHarnessEventLog } from "./composerHarnessEvents";
-import { createTerminalResize } from "./terminalResize";
 import { searchDialogPropsFrom } from "./searchCommandDialogHost";
 import { transcriptsModalPropsFrom } from "./transcriptsModalHost";
 import { sourceRepoStatusTitleFrom, statusBarRepoPropsFrom } from "./statusBarHost";
@@ -59,10 +52,7 @@ import {
 import {
   defaultTerminalLaunchProfile,
 } from "./launchProfiles";
-import {
-  createActiveAgentSessionHandle,
-} from "./agentSessionHandle";
-import type { AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
+import type { AgentSessionHandleDescriptor } from "./agentSessionHandle";
 import {
   setActiveKeybindingOverrides,
   shortcutKeys,
@@ -79,7 +69,6 @@ import { useAppShellDomain } from "./useAppShellDomain";
 import { useSyncRef } from "./useSyncRef";
 import {
   DEFAULT_AI_CONNECTION_SETTINGS,
-  connectionEnvironmentInputs,
   type AiConnectionSettings,
 } from "./connectionSettings";
 import { createRenderPerfState } from "./renderPerf";
@@ -91,6 +80,7 @@ import { appEditorMenusFrom } from "./appEditorMenuRuntime";
 import { appWorkspaceProjectRuntimeFrom } from "./appWorkspaceProjectRuntime";
 import { appProjectSessionRuntimeFrom } from "./appProjectSessionRuntime";
 import { appComposerSurfaceRuntimeFrom } from "./appComposerSurfaceRuntime";
+import { appTerminalSurfaceRuntimeFrom } from "./appTerminalSurfaceRuntime";
 import { buildSettingsActions } from "./settingsActionsHost";
 import { deriveActiveAgentSessionState } from "./activeAgentSessionState";
 import { deriveEditorWorkspaceState } from "./editorWorkspaceState";
@@ -321,94 +311,16 @@ function App() {
     setOrchestrationError, setOrchestrationLaunching, setOrchestrationOpen, workspacePathRef,
   });
 
-  const terminalSurface = createTerminalSurfaceActions<Snapshot, SelectionRange>(terminalSurfaceDepsFromHook(terminal, {
-    ...createTerminalPaneCommands({
-      environmentForRoot: (root) => connectionEnvironmentInputs(aiConnectionSettingsRef.current, root),
-    }),
-    ...createWorktreePersistence({
-      save: (next) => {
-        void storeRef.current?.set("worktrees", next); void storeRef.current?.save();
-      },
-      setWorktrees,
-    }),
-    getChanging: () => profiles.changing,
-    getSessionId: persistence.activeSessionForProject,
-    activeAgentDescriptor: () => activeAgentSession.activeAgentSessionDescriptor,
-    activeAgentHandle: () => activeAgentSessionHandle,
-    activePane: () => activeAgentSession.activeTerminalPane,
-    approvalMode: () => agentApprovalMode,
-    copyText: writeText,
-    defaultProfile: () => profiles.terminalProfileRef.current,
-    finalizePane: finalizeCreatedTerminalPane,
-    gateAction: async (action, handle) => (await agentActivityHook.gateAppAction(action, handle)).decision,
-    getWorkspacePath: () => workspacePathRef.current,
-    getWorkspacePathOrState: () => workspacePathRef.current ?? workspacePath,
-    getWorktrees: () => worktrees,
-    latest, now: Date.now,
-    promptWorktreeLabel: worktreeLabelRequest.requestLabel,
-    readClipboard: readText,
-    recordActivity: agentActivityHook.recordAgentActivity,
-    recordCreated: paneActivityLog.recordCreated,
-    recordCreatedWorktree: paneActivityLog.recordCreatedWorktree,
-    requestPaint: () => terminal.requestPaintRef.current(), savedLabel: persistence.savedPaneLabel,
-    scheduleResize: () => setTimeout(sendTerminalResize, 0), selection,
-    selectionText: (snap, snapSelection) => selectionToText(snap.cells, snap.cols, snapSelection),
-    setChanging: profiles.setChanging,
-    setComposerError, setLaunchError,
-    updateProjectStatus: persistence.updateOpenProjectStatus,
-    updateSessionStatus: (root, status) => persistence.updateActiveSessionStatus(root, status),
-  }));
-
-  const utilityTrayControls = createUtilityTrayControls({
-    closeSettings: () => setSettingsOpen(false),
-    createTerminalPane: (profile) => terminalSurface.createTerminalPane(profile),
-    defaultProfile: defaultTerminalLaunchProfile,
-    getRoot: () => workspacePathRef.current ?? workspacePath,
-    getSessionId: persistence.activeSessionForProject,
-    getSurfaceMode: () => shellLayout.agentSurfaceMode,
-    getTrayMode: () => shellLayout.utilityTrayMode,
-    hasTerminalPanes: (root, sessionId) => terminal.panesForSession(root, sessionId).length > 0,
-    pickWorkspace: (pickOptions) => pickWorkspace(pickOptions),
-    resolveProfile: profiles.resolveProfile,
-    setSurfaceMode: shellLayout.setAgentSurfaceMode,
-    setTrayMode: shellLayout.setUtilityTrayMode,
-  });
-
-  const activeAgentSessionHandle: AgentSessionHandle | null = activeAgentSession.activeAgentSessionDescriptor
-    ? createActiveAgentSessionHandle({
-        activePaneId: () => terminal.activePaneIdRef.current,
-        closePane: terminalSurface.closeTerminalPane,
-        descriptor: activeAgentSession.activeAgentSessionDescriptor,
-        focusPane: terminalSurface.focusTerminalPane,
-        recordClosed: (descriptor) => agentActivityHook.recordAgentActivity(descriptor, {
-          kind: "process", label: "Closed pane", detail: descriptor.label, status: "exited",
-        }),
-        sendEnter: () => invoke("send_key", {
-          code: "Enter", text: null, shift: false, alt: false, ctrl: false, sup: false,
-        }),
-        sendInterrupt: () => invoke("send_key", {
-          code: "KeyC", text: null, shift: false, alt: false, ctrl: true, sup: false,
-        }),
-        sendText: (text) => invoke("paste", { text }),
-        snapshot: (paneId) => terminal.snapshotsRef.current[paneId] ??
-          (terminal.activePaneIdRef.current === paneId ? latest.current : null),
-      })
-    : null;
-
-  const renameTerminalPane = createTerminalPaneRename({
-    getPanes: terminal.panesForSession,
-    getRoot: () => workspacePathRef.current,
-    getSessionId: persistence.activeSessionForProject,
-    persistLabel: persistence.persistPaneLabel,
-    promptLabel: (current) => window.prompt("Pane name or task label", current),
-    setSessionPanes: terminal.setSessionPanes,
-  });
-
-  const sendTerminalResize = createTerminalResize({
-    getCellMetrics: () => metrics.current,
-    getHostRect: () => terminalHostRef.current?.getBoundingClientRect(),
-    getWindowSize: () => ({ height: window.innerHeight, width: window.innerWidth }),
-    resize: (cols, rows) => invoke("resize_pty", { cols, rows }),
+  const {
+    activeAgentSessionHandle, renameTerminalPane, sendTerminalResize,
+    terminalSurface, utilityTrayControls,
+  } = appTerminalSurfaceRuntimeFrom({
+    activeAgentSession, agentActivityHook, agentApprovalMode,
+    connectionSettings: aiConnectionSettingsRef, finalizeCreatedTerminalPane, latest, metrics,
+    paneActivityLog, persistence, pickWorkspace, profiles,
+    requestWorktreeLabel: worktreeLabelRequest.requestLabel, selection,
+    setComposerError, setLaunchError, setSettingsOpen, setWorktrees, shellLayout,
+    storeRef, terminal, terminalHostRef, worktrees, workspacePath, workspacePathRef,
   });
 
   const projectRailStatus = (project: OpenProject): ProjectRailStatus =>
