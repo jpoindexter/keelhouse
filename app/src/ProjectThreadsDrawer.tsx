@@ -97,6 +97,18 @@ function ProjectGroup({ project, props }: { project: OpenProject; props: Project
   );
 }
 
+function EmptyProjectEntry({ firstUse, onNewProject, onOpenProject }: {
+  firstUse: boolean; onNewProject: () => void; onOpenProject: () => void;
+}) {
+  return <section className="project-entry-empty" aria-label="Project entry">
+    <AppIcon name="workspace" />
+    <h3>{firstUse ? "Start with a project" : "No projects are open"}</h3>
+    <p>{firstUse ? "Open an existing folder or create a new local project." : "Choose a recent project above, or open another folder."}</p>
+    <button className="project-entry-empty__primary" type="button" onClick={onOpenProject}><AppIcon name="folderOpen" /><span>{PROJECT_ENTRY_LABELS.openProject}</span></button>
+    <button type="button" onClick={onNewProject}><AppIcon name="folderPlus" /><span>{PROJECT_ENTRY_LABELS.newProject}</span></button>
+  </section>;
+}
+
 export function ProjectThreadsDrawer(props: ProjectThreadsDrawerProps) {
   const activeName = props.activeProjectPath ? basename(props.activeProjectPath) : "Choose project";
   return (
@@ -108,7 +120,7 @@ export function ProjectThreadsDrawer(props: ProjectThreadsDrawerProps) {
         </div>
         <button className="project-new-task" type="button" aria-label={`${PROJECT_ENTRY_LABELS.newTask} (${props.newTaskShortcut})`} title={`${PROJECT_ENTRY_LABELS.newTask} (${props.newTaskShortcut})`} onClick={props.onNewTask}><AppIcon name="newChat" /><span>{PROJECT_ENTRY_LABELS.newTask}</span><kbd>{props.newTaskShortcut}</kbd></button>
       </div>
-      {props.projects.length === 0 ? <div className="rail-status">Open or create a project to start a chat</div> : (
+      {props.projects.length === 0 ? <EmptyProjectEntry firstUse={props.recentProjects.length === 0} onNewProject={props.onNewProject} onOpenProject={props.onOpenProject} /> : (
         <nav className="project-rail" aria-label="Open projects">
           <div className="project-rail__heading">Today</div>
           {props.projects.map((project) => <ProjectGroup key={project.path} project={project} props={props} />)}

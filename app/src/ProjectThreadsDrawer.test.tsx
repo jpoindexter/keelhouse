@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
+import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ProjectThreadsDrawer, type ProjectThreadsDrawerProps } from "./ProjectThreadsDrawer";
@@ -23,8 +25,18 @@ describe("ProjectThreadsDrawer", () => {
     expect(html).toContain("Active chat Current work, Idle");
   });
 
-  it("renders the empty workspace prompt", () => {
-    const html = renderToStaticMarkup(<ProjectThreadsDrawer {...props({ projects: [] })} />);
-    expect(html).toContain("Open or create a project to start a chat");
+  it("renders actionable first-use project entry", () => {
+    const input = props({ activeProjectPath: null, projects: [], recentProjects: [] });
+    const { getByRole, getByText } = render(<ProjectThreadsDrawer {...input} />);
+    expect(getByText("Start with a project")).toBeTruthy();
+    fireEvent.click(getByRole("button", { name: "Open Project…" }));
+    fireEvent.click(getByRole("button", { name: "New Project…" }));
+    expect(input.onOpenProject).toHaveBeenCalledOnce();
+    expect(input.onNewProject).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a cleared project list neutral", () => {
+    const { getByText } = render(<ProjectThreadsDrawer {...props({ activeProjectPath: null, projects: [], recentProjects: ["/recent"] })} />);
+    expect(getByText("No projects are open")).toBeTruthy();
   });
 });

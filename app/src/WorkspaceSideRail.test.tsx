@@ -57,7 +57,9 @@ describe("WorkspaceSideRail", () => {
 
   it("renders the active drawer body when expanded", () => {
     const html = renderToStaticMarkup(<WorkspaceSideRail {...props()} />);
-    expect(html).toContain("Open or create a project to start a chat");
+    expect(html).toContain("Start with a project");
+    expect(html).toContain("Open Project…");
+    expect(html).toContain("New Project…");
   });
 
   it("hides drawer bodies when collapsed", () => {

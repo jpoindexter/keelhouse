@@ -1515,6 +1515,7 @@
       "launch": "v2",
       "summary": "Replace the dead-end Threads message with intentional project entry. First use leads with Open Project and offers New Project; a cleared list stays neutral; loading and project-open failures are distinct. After a project opens, starter prompts remain scoped to that project and the persistent chrome stays available.",
       "done": "Integration tests distinguish first-use, cleared, loading, cancellation, and error states and route both CTAs through the shared actions. Keyboard and screen-reader labels pass; 1440/1024/900 captures show no blank or overlapping state; signed-app first launch reaches a usable project and task from each CTA.",
+      "progress": "2026-07-17: RED/GREEN slice replaces the dead-end Threads sentence with an accessible project-entry panel. True first use leads with Open Project and offers New Project; an empty list with project history uses neutral No projects are open copy. Both visible CTAs route through the existing shared project-entry actions, and focused drawer/host tests, production build, and the 300/200/50 ratchet pass. Explicit loading/open-failure presentation, responsive captures, and signed-app first-launch execution remain open.",
       "buildOrder": 90.187
     },
     {
