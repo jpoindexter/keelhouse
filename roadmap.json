@@ -1493,6 +1493,19 @@
       "buildOrder": 90.185
     },
     {
+      "id": "COMPOSER-PLUS-ANCHOR-BUG",
+      "title": "Bug: anchor composer plus menu to trigger",
+      "column": "now",
+      "tier": "sand",
+      "track": "ui",
+      "size": "S",
+      "launch": "v2",
+      "summary": "Fix the signed-app regression where clicking the composer plus button positions the Add/Task/Connections popover at the top-left of the window instead of adjacent to the composer trigger.",
+      "done": "The popover opens immediately above or beside the plus trigger, stays within every window edge, follows the composer after tray and dock resize, and preserves keyboard focus/return behavior. A regression test covers the real portal/positioning owner, and signed-app captures at wide and narrow sizes prove the menu no longer jumps to the viewport origin.",
+      "progress": "Reported from the signed v0.1.1 candidate on 2026-07-17 with screenshot evidence: the menu rendered near the window top-left while the composer and trigger remained near the bottom. Track as a known alpha issue; implementation has not started.",
+      "buildOrder": 90.1855
+    },
+    {
       "id": "COMPOSER-TARGET-MENUS",
       "title": "Project, worktree, and branch menus",
       "column": "done",

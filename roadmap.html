@@ -67,7 +67,7 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 </head>
 <body>
 <h1>Keelhouse</h1>
-<p class="meta">lean macOS agent cockpit for Jason's real workflow — real CLI agents and composer first, with resizable explorer/editor/browser trays, without IDE bloat &middot; 132 slices &middot; 6 shipped</p>
+<p class="meta">lean macOS agent cockpit for Jason's real workflow — real CLI agents and composer first, with resizable explorer/editor/browser trays, without IDE bloat &middot; 133 slices &middot; 6 shipped</p>
 <p class="loop">Open project folder -&gt; talk to one or more real Claude/Codex/Gemini CLI agents in the main cockpit -&gt; resize or move trays to inspect/edit files or preview web output -&gt; switch projects without separate heavy VS Code windows. Build order is dependency-first: finish chrome/trays, package the native app, measure daily-driver value and resource use, then add settings, source-host connections, AI hooks, structured activity, and speculative expansion.</p>
 <div class="legend"><span><i style="border-color:#164a44;background:#06140f"></i>Terminal + process</span><span><i style="border-color:#5a4315;background:#171104"></i>Projects + sessions</span><span><i style="border-color:#1e3a5c;background:#0a1320"></i>Files + editor</span><span><i style="border-color:#4c1d6f;background:#15091f"></i>Chrome + interaction</span><span><i style="border-color:#5f1f2d;background:#1d0b10"></i>Quality + shipping</span><span><i style="border-color:#2a323e;background:#10141b"></i>Research &amp; spikes</span><span style="color:#f87171">🔒 launch blocker</span></div>
 <div class="filters">
@@ -540,7 +540,10 @@ h2.s-later{color:#c084fc;border-left-color:#c084fc}
 <details><summary>Done criteria</summary><p class="done">docs/local-state.md lists every on-disk artifact; Settings exposes reset-all with confirmation; uninstall cleanup documented. Executed 2026-07-12: docs/local-state.md now inventories every on-disk artifact and the manual uninstall path; Settings App configuration has a confirmed Reset all local data action that clears the Tauri Store and calls the reset_local_state Rust command (removes .session-lock/health.log/.window-state.json, leaves nothing behind), tested (37 cargo).</p></details></div>
 </div>
 <div class="col" data-status="now"><h2 class="s-now">Now</h2>
-
+<div class="card" data-track="ui" data-id="COMPOSER-PLUS-ANCHOR-BUG" data-size="S" data-tier="sand" data-launch="v2">
+<div class="hd"><span class="sz">S</span><span class="ttl">COMPOSER-PLUS-ANCHOR-BUG &middot; Bug: anchor composer plus menu to trigger</span><span class="lens l-ui">Chrome + interaction</span></div>
+<div class="badges"><span class="me ver">v2</span></div><p class="sum">Fix the signed-app regression where clicking the composer plus button positions the Add/Task/Connections popover at the top-left of the window instead of adjacent to the composer trigger.</p>
+<details><summary>Progress</summary><p class="progress">Reported from the signed v0.1.1 candidate on 2026-07-17 with screenshot evidence: the menu rendered near the window top-left while the composer and trigger remained near the bottom. Track as a known alpha issue; implementation has not started.</p></details><details><summary>Done criteria</summary><p class="done">The popover opens immediately above or beside the plus trigger, stays within every window edge, follows the composer after tray and dock resize, and preserves keyboard focus/return behavior. A regression test covers the real portal/positioning owner, and signed-app captures at wide and narrow sizes prove the menu no longer jumps to the viewport origin.</p></details></div>
 </div>
 <div class="col" data-status="next"><h2 class="s-next">Next</h2>
 <div class="card" data-track="quality" data-id="CHROME-EYEBALL-SIGNOFF" data-size="S" data-tier="sand" data-launch="v1">
