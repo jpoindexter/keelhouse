@@ -261,7 +261,7 @@ assert(toolDockMenu.includes("Hide tools"), "Tool dock menu must expose a direct
 assert(toolDockMenu.includes('aria-label="Tools and dock position"'), "Tool dock controls must use one compact, labelled menu");
 assert(commandPaletteController.includes("const [open, setOpen] = useState(false)"), "App chrome must expose a command palette state");
 assert(appTsx.includes("shortcutKeys(\"chrome.command-palette\")"), "Command palette must show its shortcut label");
-assert(appTitlebar.includes('<div className="titlebar-identity"') && appTitlebar.includes('title="New chat"') && appTitlebar.includes('title="Search tasks or run a command"') && appTitlebar.includes('title="Reset interface"'), "Thread actions must share the native titlebar lane with the traffic lights");
+assert(appTitlebar.includes('<div className="titlebar-identity"') && appTitlebar.includes('title="New Task"') && appTitlebar.includes('title="Search tasks or run a command"') && appTitlebar.includes('title="Reset interface"'), "Thread actions must share the native titlebar lane with the traffic lights");
 assert(!appTsx.includes('className="drawer-collapse-button"'), "The Threads section header must not duplicate titlebar actions");
 assert(
   appTsx.includes("visibleCommandPaletteCommands(")

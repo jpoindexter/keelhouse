@@ -21,7 +21,7 @@ describe("nextToolsLayout", () => {
 describe("appTitlebarPropsFrom", () => {
   const createInput = () => ({
     activeSessionTitle: "Chat",
-    createSession: vi.fn(async () => {}),
+    newTask: vi.fn(async () => true),
     openCommandPalette: vi.fn(),
     openSettings: vi.fn(),
     openWorkspaceFolder: vi.fn(async () => {}),
@@ -49,19 +49,19 @@ describe("appTitlebarPropsFrom", () => {
     expect(props.primarySurfaceLabel).toBe("Codex");
   });
 
-  it("guards chat creation and workspace opening on an active workspace", () => {
+  it("routes New Task without a project while guarding project-only opening", () => {
     const input = { ...createInput(), workspacePath: null };
     const props = appTitlebarPropsFrom(input);
     props.onCreateChat();
     props.onOpenWorkspace();
-    expect(input.createSession).not.toHaveBeenCalled();
+    expect(input.newTask).toHaveBeenCalledOnce();
     expect(input.openWorkspaceFolder).not.toHaveBeenCalled();
 
     const active = createInput();
     const activeProps = appTitlebarPropsFrom(active);
     activeProps.onCreateChat();
     activeProps.onOpenWorkspace();
-    expect(active.createSession).toHaveBeenCalledWith("/repo");
+    expect(active.newTask).toHaveBeenCalledOnce();
     expect(active.openWorkspaceFolder).toHaveBeenCalledWith("/repo");
   });
 

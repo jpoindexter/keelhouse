@@ -22,9 +22,10 @@ describe("AppTitlebar", () => {
     expect(html).toContain("Codex");
   });
 
-  it("disables workspace actions without an open workspace", () => {
+  it("keeps New Task available while disabling project-only actions", () => {
     const html = renderToStaticMarkup(<AppTitlebar {...props({ hasWorkspace: false })} />);
-    expect(html).toContain('aria-label="New chat" disabled=""');
+    expect(html).toContain('aria-label="New Task"');
+    expect(html).not.toContain('aria-label="New Task" disabled=""');
     expect(html).toContain('aria-label="Open workspace externally" disabled=""');
   });
 });

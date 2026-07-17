@@ -15,7 +15,7 @@ export const nextToolsLayout = (
 
 type AppTitlebarInput = {
   activeSessionTitle: string;
-  createSession: (path: string) => Promise<unknown>;
+  newTask: () => Promise<unknown>;
   openCommandPalette: () => void;
   openSettings: () => void;
   openWorkspaceFolder: (path: string) => Promise<unknown>;
@@ -46,7 +46,7 @@ export const appTitlebarPropsFrom = (input: AppTitlebarInput): AppTitlebarProps 
   terminalOpen: input.terminalOpen,
   toolMode: input.toolMode,
   toolsOpen: input.renderedLayout !== "hidden",
-  onCreateChat: () => { if (input.workspacePath) void input.createSession(input.workspacePath); },
+  onCreateChat: () => void input.newTask(),
   onLayoutChange: input.setLayout,
   onOpenCommandPalette: input.openCommandPalette,
   onOpenSettings: input.openSettings,

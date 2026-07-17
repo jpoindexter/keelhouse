@@ -10,6 +10,7 @@ describe("project entry production contract", () => {
     expect(app).toContain('import { createProjectEntryActions } from "./projectEntryActions"');
     expect(app).toContain("const projectEntryActions = createProjectEntryActions({");
     expect(app).toContain("openWorkspace: projectEntryActions.openProject");
+    expect(app).toContain("newTask: projectEntryActions.newTask");
     expect(app).toContain("onOpenWorkspace: () => void projectEntryActions.openProject()");
     expect(app).toContain("switchProject: (project: OpenProject) => projectEntryActions.switchProject(project.path)");
   });

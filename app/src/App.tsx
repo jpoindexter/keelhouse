@@ -1241,7 +1241,7 @@ function App() {
       slots={{
         titlebar: <AppTitlebar {...appTitlebarPropsFrom({
         activeSessionTitle: surfaceLabels.activeSessionTitle,
-        createSession: projectSessionNavigationActions.createSession,
+        newTask: projectEntryActions.newTask,
         openCommandPalette: commandPalette.openDialog,
         openSettings: () => setSettingsOpen(true),
         openWorkspaceFolder: openPath,

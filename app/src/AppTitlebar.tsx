@@ -30,7 +30,7 @@ export type AppTitlebarProps = {
 const TitlebarIdentity = (props: Pick<AppTitlebarProps, "hasWorkspace" | "sideDrawerOpen" | "onCreateChat" | "onOpenCommandPalette" | "onResetInterface" | "onToggleSideDrawer">) => (
   <div className="titlebar-identity" data-tauri-drag-region>
     <button className={`titlebar-action titlebar-leading-action ${props.sideDrawerOpen ? "titlebar-action--active" : ""}`} type="button" title="Toggle Threads" aria-label="Toggle Threads" aria-pressed={props.sideDrawerOpen} onClick={props.onToggleSideDrawer}><AppIcon name="panelLeft" /></button>
-    <button className="titlebar-action" type="button" title="New chat" aria-label="New chat" disabled={!props.hasWorkspace} onClick={props.onCreateChat}><AppIcon name="newChat" /></button>
+    <button className="titlebar-action" type="button" title="New Task" aria-label="New Task" onClick={props.onCreateChat}><AppIcon name="newChat" /></button>
     <button className="titlebar-action" type="button" title="Search tasks or run a command" aria-label="Search tasks or run a command" onClick={props.onOpenCommandPalette}><AppIcon name="search" /></button>
     <button className="titlebar-action" type="button" title="Reset interface" aria-label="Reset interface" onClick={props.onResetInterface}><AppIcon name="reload" /></button>
   </div>
