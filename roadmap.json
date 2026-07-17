@@ -1450,6 +1450,7 @@
       "blocker": true,
       "summary": "New Project asks for a parent directory and valid name, creates the folder, optionally initializes Git through an explicit choice, opens it through the shared project lifecycle, persists it, and creates the first task. The flow is recoverable when folder creation, Git initialization, or project opening fails.",
       "done": "Rust path/name guards and real temporary-directory tests cover valid create, duplicate, traversal, invalid name, Git success/failure, and no-delete recovery. Frontend integration tests cover submit/cancel/busy/error/retry. A signed Keelhouse.app creates and opens a real project whose cwd, project row, first task, persistence, and optional .git directory are verified on disk.",
+      "progress": "2026-07-17: backend RED/GREEN slice adds separate create_local_project and initialize_project_git Tauri commands. Four real filesystem tests prove named-directory creation, traversal/path-separator and duplicate rejection, real Git initialization, and that a missing Git executable leaves the created folder intact. Frontend dialog, lifecycle integration, and signed-app execution remain open.",
       "buildOrder": 90.182
     },
     {

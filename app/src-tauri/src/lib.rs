@@ -20,6 +20,7 @@ mod opencode_adapter;
 mod opencode_chat_run;
 mod opencode_models;
 mod opencode_process;
+mod project_creation;
 mod workspace_checkpoints;
 
 use agent_hooks::{
@@ -51,6 +52,7 @@ use notify_debouncer_mini::{
     DebounceEventResult, Debouncer,
 };
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, PtySize};
+use project_creation::{create_local_project, initialize_project_git};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs;
@@ -3007,6 +3009,8 @@ pub fn run() {
             begin_session,
             end_session_clean,
             log_health_event,
+            create_local_project,
+            initialize_project_git,
             create_project_worktree,
             remove_project_worktree,
             source_control_status,
