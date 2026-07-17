@@ -18,14 +18,13 @@ import {
 import { activePaneDisplayLabel } from "./terminalPane";
 import { useAgentHookRuntime } from "./useAgentHookRuntime";
 import { useAppTerminalRuntime } from "./useAppTerminalRuntime";
-import { useAppEditorSurfaceRuntime } from "./useAppEditorSurfaceRuntime";
-import { appEditorMenusFrom } from "./appEditorMenuRuntime";
 import { appInteractionSurfaceRuntimeFrom } from "./appInteractionSurfaceRuntime";
 import { buildSettingsActions } from "./settingsActionsHost";
 import { useEditorWorkspaceRuntime } from "./useEditorWorkspaceRuntime";
 import { resetDurableChatStore } from "./chatStore";
 import { useAppFoundationRuntime } from "./useAppFoundationRuntime";
 import { useAppProjectRuntime } from "./useAppProjectRuntime";
+import { useAppEditorRuntime } from "./useAppEditorRuntime";
 import { AppWorkbenchView } from "./AppWorkbenchView";
 import "./App.css";
 import "./composerModelPicker.css";
@@ -46,7 +45,7 @@ function App() {
   });
   const {
     agentHookStatus, aiConnectionSettingsRef, canvasRef,
-    fileNodeContextMenuItemsRef, frame, imeInputRef, ipcSampleCounter, latest, launchError, metrics,
+    frame, imeInputRef, ipcSampleCounter, latest, launchError, metrics,
     projectCreationOpen, projectSwitcherOpen, railBodyRef, renderPerfRef,
     selection, selecting, setAgentHookStatus, setLaunchError, setProjectCreationOpen, setProjectSwitcherOpen,
     storeRef, terminalHostRef, treeRef, workspacePath, workspacePathRef,
@@ -82,22 +81,22 @@ function App() {
     switchSession: (root, sessionId) => projectSessionNavigationActions.switchSession(root, sessionId),
   });
   const {
-    chatConversationActions, chatIdForSession: composerHarnessSessionKey,
+    chatConversationActions,
     detectLocalDevServerFromSnapshot, logComposerHarnessEvent,
-    openChatSearchResult, pickWorkspace, projectCloseController,
-    projectEntryActions, projectSessionDeletionController, projectSessionMetadataActions,
-    projectSessionNavigationActions, requestCloseProject, requestOpenWorkspace, workspaceOpenActions,
+    openChatSearchResult, pickWorkspace, projectEntryActions,
+    projectSessionNavigationActions, requestOpenWorkspace, workspaceOpenActions,
   } = projectRuntime;
 
-  const {
-    chatRunControls, composerHistoryNavigation, composerSettingsActions, composerSurface,
-    activeAgentSessionHandle, renameTerminalPane, sendTerminalResize,
-    terminalSurface, utilityTrayControls,
-  } = appInteractionSurfaceRuntimeFrom({
+  const interactionRuntime = appInteractionSurfaceRuntimeFrom({
     foundation, getEditorSurface: () => editorSurface,
     getSaveEditorFile: () => saveEditorFile,
     getTerminalLabel: () => activeTerminalPaneLabel, project: projectRuntime,
   });
+  const {
+    chatRunControls, composerHistoryNavigation, composerSettingsActions, composerSurface,
+    activeAgentSessionHandle, renameTerminalPane, sendTerminalResize,
+    terminalSurface, utilityTrayControls,
+  } = interactionRuntime;
 
   const projectRailStatus = (project: OpenProject): ProjectRailStatus =>
     projectRailStatusFromConversations(composerWorkspace.chatConversations, project.path);
@@ -109,29 +108,14 @@ function App() {
 
   const visibleOpenProjects = visibleProjectsFrom(persistence.openProjects, workspacePath, terminal.activeProjectStatus);
 
-  const editorRuntime = useAppEditorSurfaceRuntime({
-    activeAgentSession, agentActivityHook, chrome, diffReview: diffReviewHook,
-    editorSession, editorWorkspace, gitStatus: gitStatusHook, persistence,
-    projectClose: projectCloseController, shellLayout, workspaceOpen: workspaceOpenActions,
-    workspacePath, workspacePathRef, workspaceTree,
-  });
   const {
     editorFileWorkflow, editorNavigation, editorSurface, handleEditorUpdate,
-    saveEditorFile, tabIsDirty, workspaceFileActions,
-  } = editorRuntime;
-
-  const {
     diffContextMenuItems, editorContextMenuItems, editorTabContextMenuItems,
     projectRailContextMenuItems, projectSessionContextMenuItems,
-    workspaceContextMenuActions, workspaceContextMenuItems,
-  } = appEditorMenusFrom({
-    activeChat, agentActivityHook, chrome, composerHarnessSessionKey, composerSurface,
-    composerWorkspace, deleteSession: projectSessionDeletionController.deleteProjectSession,
-    diffReview: diffReviewHook, editor: editorRuntime, editorSession, editorWorkspace,
-    fileNodeItemsRef: fileNodeContextMenuItemsRef, gitStatus: gitStatusHook, persistence,
-    projectEntry: projectEntryActions, projectSessionMetadata: projectSessionMetadataActions,
-    projectSessions: projectSessionNavigationActions,
-    requestCloseProject, setError: setLaunchError, workspacePath, workspacePathRef, workspaceTree,
+    saveEditorFile, tabIsDirty, workspaceContextMenuActions, workspaceContextMenuItems,
+    workspaceFileActions,
+  } = useAppEditorRuntime({
+    foundation, interaction: interactionRuntime, project: projectRuntime,
   });
 
   const saveActivePaneTranscript = createPaneTranscriptCapture({
