@@ -16,7 +16,6 @@ import { drawerTitleFor } from "./drawerModes";
 import { AppRuntimeDialogs } from "./AppRuntimeDialogs";
 import { appRuntimeDialogsPropsFrom } from "./appRuntimeDialogsHost";
 import { useConversationRuntime } from "./useConversationRuntime";
-import { createComposerSettingsActions } from "./composerSettingsActions";
 import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import { activeProjectSessionId } from "./workspaceState";
@@ -30,9 +29,6 @@ import { agentConversationPanelPropsFrom } from "./agentConversationPanelHost";
 import { useContextMenuHost } from "./useContextMenuHost";
 import { createTerminalPaneCommands, createWorktreePersistence } from "./terminalPaneCommands";
 import { createTerminalSurfaceActions, terminalSurfaceDepsFromHook } from "./terminalSurfaceController";
-import { createChatRunControls } from "./chatRunControls";
-import { createComposerSurface } from "./composerSurfaceController";
-import { createComposerHistoryNavigation } from "./composerHistoryNavigation";
 import { createUtilityTrayControls } from "./utilityTrayControls";
 import { createTerminalPaneRename } from "./terminalPaneRename";
 import { WorkbenchEditorSection } from "./WorkbenchEditorSection";
@@ -66,7 +62,7 @@ import {
 import {
   createActiveAgentSessionHandle,
 } from "./agentSessionHandle";
-import type { AgentApprovalMode, AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
+import type { AgentSessionHandle, AgentSessionHandleDescriptor } from "./agentSessionHandle";
 import {
   setActiveKeybindingOverrides,
   shortcutKeys,
@@ -94,16 +90,13 @@ import { useAppEditorSurfaceRuntime } from "./useAppEditorSurfaceRuntime";
 import { appEditorMenusFrom } from "./appEditorMenuRuntime";
 import { appWorkspaceProjectRuntimeFrom } from "./appWorkspaceProjectRuntime";
 import { appProjectSessionRuntimeFrom } from "./appProjectSessionRuntime";
+import { appComposerSurfaceRuntimeFrom } from "./appComposerSurfaceRuntime";
 import { buildSettingsActions } from "./settingsActionsHost";
 import { deriveActiveAgentSessionState } from "./activeAgentSessionState";
 import { deriveEditorWorkspaceState } from "./editorWorkspaceState";
 import { TranscriptsModal } from "./TranscriptsModal";
 import { useTerminalFind } from "./useTerminalFind";
-import {
-  applyChatRunEnvelope,
-  chatProviderLabel,
-} from "./chatConversation";
-import type { ChatProvider } from "./chatConversation";
+import { applyChatRunEnvelope } from "./chatConversation";
 import { createChatConversationActions } from "./chatConversationActions";
 import { useChatRunEvents } from "./useChatRunEvents";
 import { useEditorWorkspaceRuntime } from "./useEditorWorkspaceRuntime";
@@ -118,7 +111,6 @@ import { mergeChatDiscoveryResults, type ChatSearchViewResult } from "./chatDisc
 import type { FileTreeNode } from "./fileTreeTypes";
 import { StatusBar } from "./StatusBar";
 import type { ContextMenuItem } from "./ContextMenu";
-import { composerReasoningLabel } from "./ComposerReasoningPicker";
 import { ProjectCreationDialog } from "./ProjectCreationDialog";
 import { projectCreationCommands } from "./projectCreationCommands";
 import { WorktreeLabelDialog } from "./WorktreeLabelDialog";
@@ -315,86 +307,18 @@ function App() {
     storeRef, terminal, workspaceOpenActions, workspacePathRef,
   });
 
-  const composerSurface = createComposerSurface({
-    chatIdForSession: composerHarnessSessionKey,
-    clearTerminal: () => terminalSurface.clearActiveTerminal(),
-    gateAction: (action) => agentActivityHook.gateAppAction(action, activeAgentSessionHandle),
-    getActiveConversation: () => activeChat.activeChatConversation,
-    getActiveProvider: () => activeChat.activeComposerProvider,
-    getActiveSessionId: () => activeChat.activeSessionId,
-    getActiveSessions: () => persistence.activeSessionByProjectRef.current,
-    getChatId: () => activeChat.activeComposerHarnessKey,
-    getComposerDraft: () => composerLocal.draft,
-    getComposerHistory: () => composerLocal.history,
-    getComposerSending: () => composerSending,
-    getConversations: () => composerWorkspace.chatConversationsRef.current,
-    getHarness: () => activeChat.activeComposerHarness,
-    getHarnessRecords: () => composerWorkspace.composerHarnessBySessionRef.current,
-    getSelectedFilePath: () => editorSession.selectedFile?.path ?? null,
-    getSessions: () => persistence.projectSessionsRef.current,
-    getSettings: () => aiConnectionSettingsRef.current,
-    getTerminalLabel: () => activeTerminalPaneLabel,
-    getWorkspacePath: () => workspacePathRef.current,
-    now: Date.now,
-    openSearch: () => editorSurface.openEditorSearch(),
-    orchestrationGateAction: (action) => agentActivityHook.gateAppAction(action),
-    persistHarnessRecords: (records) => composerWorkspace.persistComposerHarnessRecords(records),
-    persistSessions: (sessions, activeSessions) => persistence.persistProjectSessions(sessions, activeSessions),
-    pickWorkspace: () => pickWorkspace(),
-    recordActivity: (event) => agentActivityHook.recordAgentActivity(activeAgentSessionHandle, event),
-    removeWorktree: (input) => invoke("remove_project_worktree", input),
-    replaceConversations: composerWorkspace.setChatConversations,
-    resolveProfileLabel: (id) => profiles.resolveProfile(id).label,
-    saveFile: () => saveEditorFile(),
-    setActionNotice: chrome.setActionNotice,
-    setComposerError,
-    setComposerHistoryIndex: composerLocal.setHistoryIndex,
-    setComposerLocalState: composerLocal.setLocalState,
-    setComposerNotice,
-    setComposerSending,
-    setOrchestrationError,
-    setOrchestrationLaunching,
-    setOrchestrationOpen,
-    stopRun: (runId) => invoke("stop_chat_run", { runId }),
-    updateConversation: chatConversationActions.updateConversation,
-    updateHarness: (update) => composerLocal.updateHarness(update),
-    updateSessionMetadata: (projectPath, sessionId, orchestration) =>
-      projectSessionMetadataActions.updateSessionMetadata(projectPath, sessionId, { orchestration }),
-  });
-
-  const chatRunControls = createChatRunControls({
-    getActiveRunId: () => activeChat.activeChatConversation.activeRunId,
-    respondApproval: ({ decision, requestId, runId }) =>
-      invoke("respond_chat_approval", { runId, requestId, decision }),
-    setError: setComposerError,
-    stopRun: (runId) => invoke("stop_chat_run", { runId }),
-  });
-
-  const composerHistoryNavigation = createComposerHistoryNavigation({
-    getChatId: () => activeChat.activeComposerHarnessKey,
-    getHistory: () => composerLocal.history,
-    getHistoryIndex: () => composerLocal.historyIndex,
-    setHistoryIndex: composerLocal.setHistoryIndex,
-    setLocalState: composerLocal.setLocalState,
-  });
-
-
-
-  const composerSettingsActions = createComposerSettingsActions({
-    getRuntimeState: () => ({
-      activeRunId: activeChat.activeChatConversation.activeRunId,
-      chatId: activeChat.activeComposerHarnessKey,
-      provider: activeChat.activeComposerProvider,
-    }),
-    labelProvider: chatProviderLabel,
-    labelReasoning: composerReasoningLabel,
-    logEvent: logComposerHarnessEvent,
-    now: Date.now,
-    updateConversation: chatConversationActions.updateConversation,
-    updateHarness: composerLocal.updateHarness,
-    updateScopedSetting: (key, value) => key === "approvalMode"
-      ? composerWorkspace.updateScopedSetting("chat", "approvalMode", value as AgentApprovalMode)
-      : composerWorkspace.updateScopedSetting("chat", "agentProfileId", value as ChatProvider),
+  const {
+    chatRunControls, composerHistoryNavigation, composerSettingsActions, composerSurface,
+  } = appComposerSurfaceRuntimeFrom({
+    activeChat, agentActivityHook, chatConversationActions,
+    chatIdForSession: composerHarnessSessionKey, composerLocal, composerSending, composerWorkspace,
+    editorSession, getActiveHandle: () => activeAgentSessionHandle,
+    getEditorSurface: () => editorSurface, getSaveEditorFile: () => saveEditorFile,
+    getTerminalLabel: () => activeTerminalPaneLabel, getTerminalSurface: () => terminalSurface,
+    logComposerHarnessEvent, persistence, pickWorkspace, profiles,
+    projectSessionMetadata: projectSessionMetadataActions, settingsRef: aiConnectionSettingsRef,
+    setActionNotice: chrome.setActionNotice, setComposerError, setComposerNotice, setComposerSending,
+    setOrchestrationError, setOrchestrationLaunching, setOrchestrationOpen, workspacePathRef,
   });
 
   const terminalSurface = createTerminalSurfaceActions<Snapshot, SelectionRange>(terminalSurfaceDepsFromHook(terminal, {
