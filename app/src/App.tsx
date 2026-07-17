@@ -169,6 +169,8 @@ import { composerReasoningLabel } from "./ComposerReasoningPicker";
 import { createProjectCloseController, projectCloseFromHook } from "./projectCloseController";
 import { createProjectSessionNavigationActions } from "./projectSessionNavigationActions";
 import { createProjectEntryActions } from "./projectEntryActions";
+import { ProjectCreationDialog } from "./ProjectCreationDialog";
+import { projectCreationCommands } from "./projectCreationCommands";
 import { createProjectSessionDeletionController, projectSessionDeletionFromHook } from "./projectSessionDeletionController";
 import {
   createTerminalRuntimeEventHandlers,
@@ -210,6 +212,7 @@ function App() {
   const selection = useRef<SelectionRange | null>(null);
   const selecting = useRef(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
+  const [projectCreationOpen, setProjectCreationOpen] = useState(false);
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
   const {
     composerWorkspace, editorSession, persistence, profiles, terminal, workspaceTree,
@@ -526,6 +529,7 @@ function App() {
     requestOpenWorkspace: (path) => requestOpenWorkspace(path),
   });
   const projectEntryActions = createProjectEntryActions({
+    beginCreateProject: async () => { setProjectCreationOpen(true); return true; },
     createTask: projectSessionNavigationActions.createSession,
     getActiveProject: () => workspacePathRef.current,
     openProjectPicker: pickWorkspace,
@@ -1011,6 +1015,7 @@ function App() {
     onCloseEditorTab: () => { if (editorSession.selectedFile) void editorNavigation.closeTab(editorSession.selectedFile); },
     onExportPerformance: () => void exportRenderPerfSnapshot(),
     onFindEditor: editorSurface.openEditorSearch,
+    onNewProject: () => void projectEntryActions.newProject(),
     onOpenDetectedBrowser: () => void browser.openDetectedServer(),
     onOpenSettings: () => setSettingsOpen(true),
     onOpenTranscripts: () => paneTranscripts.setTranscriptsOpen(true),
@@ -1322,6 +1327,17 @@ function App() {
         { openTranscriptId: paneTranscripts.openTranscriptId, paneTranscripts: paneTranscripts.paneTranscripts, setOpenTranscriptId: paneTranscripts.setOpenTranscriptId, setTranscriptsOpen: paneTranscripts.setTranscriptsOpen, transcriptsOpen: paneTranscripts.transcriptsOpen },
         { projectId: workspacePath, projectSessionId: activeChat.activeSessionId },
       )} />
+      <ProjectCreationDialog
+        open={projectCreationOpen}
+        onClose={() => setProjectCreationOpen(false)}
+        onCreateProject={projectCreationCommands.create}
+        onInitializeGit={projectCreationCommands.initializeGit}
+        onOpenProject={projectSessionNavigationActions.createSession}
+        onPickParent={async () => {
+          const parent = await open({ directory: true });
+          return typeof parent === "string" ? parent : null;
+        }}
+      />
       <AppRuntimeDialogs {...appRuntimeDialogsPropsFrom({
         activeChat, chrome, composerSurface, composerWorkspace, launchError, orchestrationError,
         orchestrationLaunching, orchestrationOpen, persistence, pickWorkspace, profiles,

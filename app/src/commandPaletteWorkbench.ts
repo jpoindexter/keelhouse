@@ -14,6 +14,7 @@ type WorkbenchCommandInput = {
   onCloseEditorTab: () => void;
   onExportPerformance: () => void;
   onFindEditor: () => void;
+  onNewProject: () => void;
   onOpenDetectedBrowser: () => void;
   onOpenSettings: () => void;
   onOpenTranscripts: () => void;
@@ -28,6 +29,13 @@ type WorkbenchCommandInput = {
 };
 
 export const buildWorkspaceOpenCommands = (input: WorkbenchCommandInput): SearchDialogCommand[] => [{
+  id: "workspace.new-project",
+  label: PROJECT_ENTRY_LABELS.newProject,
+  detail: "Create a local project folder",
+  icon: "folderPlus",
+  keywords: ["project", "workspace", "create", "git"],
+  run: input.onNewProject,
+}, {
   id: "workspace.open",
   label: PROJECT_ENTRY_LABELS.openProject,
   detail: "Choose an existing project folder",

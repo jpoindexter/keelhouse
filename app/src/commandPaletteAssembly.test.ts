@@ -38,7 +38,7 @@ const createInput = () => ({
     detectedBrowserUrl: null as string | null, editorDirty: false,
     editorLoading: false, editorSaving: false,
     onAttachCurrentFile: vi.fn(), onAttachPreview: vi.fn(), onCloseEditorTab: vi.fn(),
-    onExportPerformance: vi.fn(), onFindEditor: vi.fn(), onOpenDetectedBrowser: vi.fn(),
+    onExportPerformance: vi.fn(), onFindEditor: vi.fn(), onNewProject: vi.fn(), onOpenDetectedBrowser: vi.fn(),
     onOpenSettings: vi.fn(), onOpenTranscripts: vi.fn(), onOpenWorkspace: vi.fn(),
     onQuickOpen: vi.fn(), onReloadBrowser: vi.fn(), onResetLayout: vi.fn(),
     onSaveEditor: vi.fn(), selectedFile: null, shortcut: vi.fn(() => ""),
