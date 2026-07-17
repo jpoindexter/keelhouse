@@ -33,6 +33,23 @@
   white-space: nowrap;
 }
 
+.composer-context-metadata button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 2px 0;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+
+.composer-context-metadata button:hover,
+.composer-context-metadata button:focus-visible {
+  color: var(--color-text);
+  text-decoration-color: currentColor;
+}
+
 .composer-context-metadata > div:not(:first-child)::before {
   content: "·";
   margin-right: 10px;

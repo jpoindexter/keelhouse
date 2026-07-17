@@ -36,6 +36,7 @@ const createOptions = () =>
     gitStatusHook: {
       status: { branch: "main", staged: 1, unstaged: 2, untracked: 1, files: [{}, {}, {}] },
     },
+    projectEntryActions: { chooseProject: vi.fn() },
     setComposerNotice: vi.fn(),
     openSettings: vi.fn(),
     setSettingsOpen: vi.fn(),
@@ -45,7 +46,8 @@ const createOptions = () =>
 
 describe("agentConversationPanelPropsFrom", () => {
   it("assembles chat, composer, and surface-mode props", () => {
-    const props = agentConversationPanelPropsFrom(createOptions());
+    const options = createOptions();
+    const props = agentConversationPanelPropsFrom(options);
 
     expect(props.surfaceMode).toBe("chat");
     expect(props.chat.conversation.activeRunId).toBeNull();
@@ -58,6 +60,7 @@ describe("agentConversationPanelPropsFrom", () => {
       provider: "codex",
       repositoryPath: "/repo",
       usage: undefined,
+      onProjectSelect: options.projectEntryActions.chooseProject,
     });
   });
 

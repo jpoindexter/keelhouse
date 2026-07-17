@@ -6,6 +6,7 @@ export type ComposerContextMetadataProps = {
   provider: ChatProvider | null;
   repositoryPath: string | null;
   usage: ChatUsage | undefined;
+  onProjectSelect: () => void;
 };
 
 const repositoryName = (path: string | null) => {
@@ -30,7 +31,7 @@ const contextLabel = (usage: ChatUsage | undefined) => {
 export function ComposerContextMetadata(props: ComposerContextMetadataProps) {
   return (
     <dl className="composer-context-metadata" aria-label="Composer context metadata">
-      <div title={props.repositoryPath ?? undefined}><dt>Repository</dt><dd>{repositoryName(props.repositoryPath)}</dd></div>
+      <div title={props.repositoryPath ?? undefined}><dt>Project</dt><dd><button type="button" aria-label={`Switch project, ${repositoryName(props.repositoryPath)}`} onClick={props.onProjectSelect}>{repositoryName(props.repositoryPath)}</button></dd></div>
       <div><dt>Branch</dt><dd>{props.branch ?? "No branch"}</dd></div>
       <div><dt>Changes</dt><dd>{props.changedFiles === 1 ? "1 change" : `${props.changedFiles} changes`}</dd></div>
       <div><dt>Provider</dt><dd>{providerLabel(props.provider)}</dd></div>

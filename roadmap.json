@@ -1502,6 +1502,7 @@
       "launch": "v2",
       "summary": "Turn the composer context metadata into real controls: Project opens the shared project switcher; Local/worktree selects existing worktrees or creates one through the real worktree path; Branch searches local branches and creates/checks out branches through guarded Git commands. Provider usage or remote execution appears only when an adapter reports truthful capability.",
       "done": "Tests cover menu keyboard behavior, current-state checkmarks, worktree scoping, branch search/create/checkout, dirty-tree refusal, errors, and capability-gated provider rows. Real-repository Rust tests and signed-app smoke verify project switch, local/worktree launch, new branch checkout, cwd/branch metadata refresh, and no fabricated cloud/usage state.",
+      "progress": "2026-07-17: First RED/GREEN sub-slice turns the composer Project metadata into an accessible control that opens the same shared searchable project chooser used by Threads and project entry. Callback routing, accessible naming, focused behavior, production build, and the 300/200/50 ratchet pass. Local/worktree and guarded branch menus plus native verification remain open.",
       "buildOrder": 90.186
     },
     {

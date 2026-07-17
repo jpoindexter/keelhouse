@@ -22,6 +22,7 @@ const props = (overrides: Partial<AgentConversationPanelProps> = {}): AgentConve
     draft: "", error: null, goal: "", hasHarness: true, hasHistory: false,
     historyCursorActive: false, mentionResults: [], metadata: {
       branch: "main", changedFiles: 0, provider: "codex", repositoryPath: "/repo", usage: undefined,
+      onProjectSelect: vi.fn(),
     }, model: "", notice: null,
     provider: "codex", reasoningEffort: "medium", sending: false,
     onApprovalChange: vi.fn(), onAttachMention: vi.fn(), onClearGoal: vi.fn(),

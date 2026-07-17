@@ -26,10 +26,12 @@ describe("createProjectEntryActions", () => {
 
     await actions.newProject();
     await actions.openProject();
+    await actions.chooseProject();
     await actions.switchProject("/other");
 
     expect(dependencies.beginCreateProject).toHaveBeenCalledOnce();
     expect(dependencies.openProjectPicker).toHaveBeenCalledOnce();
+    expect(dependencies.openProjectEntry).toHaveBeenCalledOnce();
     expect(dependencies.switchProjectPath).toHaveBeenCalledWith("/other");
   });
 

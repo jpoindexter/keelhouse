@@ -48,6 +48,7 @@ type AgentConversationPanelInput = {
   editorSurface: { reviewRunCardFile: (path: string) => Promise<unknown> };
   focusedChatMessageId: string | null;
   gitStatusHook: { status: { branch: string | null; files: unknown[] } | null };
+  projectEntryActions: { chooseProject: () => Promise<unknown> };
   setComposerNotice: (notice: string | null) => void;
   openSettings: (category?: SettingsCategoryId) => void;
   shellLayout: ReturnType<typeof useShellLayout>;
@@ -87,6 +88,7 @@ const composerStateFrom = (input: AgentConversationPanelInput) => ({
     provider: input.activeChat.activeComposerProvider,
     repositoryPath: input.workspacePath,
     usage: input.activeChat.activeChatConversation.usage,
+    onProjectSelect: input.projectEntryActions.chooseProject,
   },
 });
 

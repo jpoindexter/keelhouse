@@ -32,6 +32,7 @@ export const createProjectEntryActions = (dependencies: ProjectEntryDependencies
     }
   };
   return {
+    chooseProject: () => (dependencies.openProjectEntry ?? dependencies.openProjectPicker)(),
     newProject: () => dependencies.beginCreateProject?.() ?? Promise.resolve(false),
     newTask,
     openProject: () => dependencies.openProjectPicker(),
