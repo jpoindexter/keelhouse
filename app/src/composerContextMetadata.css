@@ -33,7 +33,7 @@
   white-space: nowrap;
 }
 
-.composer-context-metadata button {
+.composer-context-metadata > div > dd > button {
   border: 0;
   background: transparent;
   color: inherit;
@@ -44,8 +44,8 @@
   text-underline-offset: 3px;
 }
 
-.composer-context-metadata button:hover,
-.composer-context-metadata button:focus-visible {
+.composer-context-metadata > div > dd > button:hover,
+.composer-context-metadata > div > dd > button:focus-visible {
   color: var(--color-text);
   text-decoration-color: currentColor;
 }

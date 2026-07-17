@@ -11,13 +11,16 @@ import type { useComposerRuntime } from "./useComposerRuntime";
 import type { useConversationRuntime } from "./useConversationRuntime";
 import type { useShellLayout } from "./useShellLayout";
 import type { SettingsCategoryId } from "./settingsModalData";
+import type { LaunchProfile } from "./launchProfiles";
+import type { ManagedTerminalPane } from "./managedTerminalPane";
+import type { WorktreeRecord } from "./worktrees";
 
 type ConversationRuntime = ReturnType<typeof useConversationRuntime>;
 type ComposerRuntime = ReturnType<typeof useComposerRuntime>;
 
 
 type AgentConversationPanelInput = {
-  activeAgentSession: { selectedAgentActivityLog: ChatThreadSurfaceProps["events"] };
+  activeAgentSession: { activeTerminalPane: { id: number } | null; selectedAgentActivityLog: ChatThreadSurfaceProps["events"] };
   activeChat: ConversationRuntime["activeChat"];
   aiConnectionSettings: { providerModels: AgentComposerSurfaceProps["configuredModels"] };
   appMenuAssembly: { composerAddMenuItems: () => ContextMenuItem[]; composerContextMenuItems: () => ContextMenuItem[] };
@@ -49,10 +52,36 @@ type AgentConversationPanelInput = {
   focusedChatMessageId: string | null;
   gitStatusHook: { status: { branch: string | null; files: unknown[] } | null };
   projectEntryActions: { chooseProject: () => Promise<unknown> };
+  profiles: { terminalProfile: LaunchProfile };
   setComposerNotice: (notice: string | null) => void;
   openSettings: (category?: SettingsCategoryId) => void;
   shellLayout: ReturnType<typeof useShellLayout>;
+  terminal: { panesForSession: (root: string, sessionId: string) => ManagedTerminalPane[] };
+  terminalSurface: {
+    createTerminalPane: (profile: LaunchProfile) => Promise<unknown>;
+    createWorktreePane: (profile: LaunchProfile) => Promise<unknown>;
+    focusTerminalPane: (paneId: number) => Promise<unknown>;
+  };
+  worktrees: WorktreeRecord[];
   workspacePath: string | null;
+};
+
+const worktreeTargetFrom = (input: AgentConversationPanelInput) => {
+  const scoped = input.worktrees.filter((item) => item.projectRoot === input.workspacePath);
+  const focus = (paneId: number) => { void input.terminalSurface.focusTerminalPane(paneId); };
+  return {
+    activePaneId: input.activeAgentSession.activeTerminalPane?.id ?? null,
+    worktrees: scoped,
+    onSelect: (paneId: number) => { if (scoped.some((item) => item.paneId === String(paneId))) focus(paneId); },
+    onNew: () => { void input.terminalSurface.createWorktreePane(input.profiles.terminalProfile); },
+    onLocal: () => {
+      const root = input.workspacePath; const sessionId = input.activeChat.activeSessionId;
+      if (!root || !sessionId) return;
+      const worktreeIds = new Set(scoped.map((item) => item.paneId));
+      const local = input.terminal.panesForSession(root, sessionId).find((pane) => !worktreeIds.has(String(pane.id)));
+      if (local) focus(local.id); else void input.terminalSurface.createTerminalPane(input.profiles.terminalProfile);
+    },
+  };
 };
 
 const chatThreadPropsFrom = (input: AgentConversationPanelInput): ChatThreadSurfaceProps => ({
@@ -89,6 +118,7 @@ const composerStateFrom = (input: AgentConversationPanelInput) => ({
     repositoryPath: input.workspacePath,
     usage: input.activeChat.activeChatConversation.usage,
     onProjectSelect: input.projectEntryActions.chooseProject,
+    worktreeTarget: input.workspacePath ? worktreeTargetFrom(input) : undefined,
   },
 });
 
