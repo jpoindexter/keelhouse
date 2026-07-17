@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { confirm as confirmDialog, open } from "@tauri-apps/plugin-dialog";
@@ -25,10 +25,6 @@ import { selectionToText } from "./selection";
 import type { SelectionRange } from "./selection";
 import { activeProjectSessionId } from "./workspaceState";
 import type { OpenProject, ProjectRailStatus, ProjectSession } from "./workspaceState";
-import {
-  findFileTreeNode,
-  reconcileActiveFileNode,
-} from "./editorState";
 import {
   bootstrapRefsFromHooks, bootstrapSettersFromHooks, createWorkspaceBootstrapController,
 } from "./workspaceBootstrapController";
@@ -140,7 +136,7 @@ import {
 import type { ChatProvider } from "./chatConversation";
 import { createChatConversationActions } from "./chatConversationActions";
 import { useChatRunEvents } from "./useChatRunEvents";
-import { useWorkspaceTreeWatcher } from "./useWorkspaceTreeWatcher";
+import { useEditorWorkspaceRuntime } from "./useEditorWorkspaceRuntime";
 import {
   deleteDurableChatConversation,
   deleteDurableProjectChats,
@@ -277,19 +273,6 @@ function App() {
   const terminalFind = useTerminalFind(activeAgentSession.activeTerminalPane != null);
   useSyncRef(activeAgentSessionDescriptorRef, activeAgentSession.activeAgentSessionDescriptor);
   const activeTerminalProfile = activeAgentSession.activeTerminalPane?.profile ?? profiles.terminalProfile;
-
-
-  useEffect(() => {
-    if (!editorSession.selectedFile) return;
-    treeRef.current?.scrollTo(editorSession.selectedFile.id, "smart");
-  }, [editorSession.selectedFile, editorWorkspace.visibleFileTree]);
-
-  useEffect(() => {
-    if (!editorSession.selectedFile || workspaceTree.tree.length === 0) return;
-    const syncedFile = reconcileActiveFileNode(workspaceTree.tree, editorSession.selectedFile);
-    if (syncedFile !== editorSession.selectedFile) editorSession.setSelectedFile(syncedFile);
-  }, [workspaceTree.tree, editorSession.selectedFile]);
-
   const composerHarnessSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
 
   const chatConversationActions = createChatConversationActions({
@@ -938,28 +921,9 @@ function App() {
     setStatus: setAgentHookStatus, terminal, terminalSurface, workspacePath, workspacePathRef,
   });
 
-  useSyncRef(workspacePathRef, workspacePath);
-
-  useEffect(() => {
-    if (!workspacePath || workspaceTree.loading || workspaceTree.error || workspaceTree.tree.length === 0 || editorSession.selectedFile) return;
-    if (editorSession.restoredActiveFileWorkspaceRef.current === workspacePath) return;
-    editorSession.restoredActiveFileWorkspaceRef.current = workspacePath;
-    const savedActiveFile = editorSession.activeFilesByWorkspaceRef.current[workspacePath];
-    if (!savedActiveFile) return;
-    const node = findFileTreeNode(workspaceTree.tree, savedActiveFile);
-    if (node?.kind === "file") {
-      void editorFileWorkflow.openDirect(node);
-      return;
-    }
-    void persistence.clearActiveFile(workspacePath);
-  }, [workspaceTree.tree, workspaceTree.error, workspaceTree.loading, editorSession.selectedFile, workspacePath]);
-
-
-  useWorkspaceTreeWatcher({
-    getActiveRoot: () => workspacePathRef.current,
-    onChange: workspaceTree.refresh,
-    onError: (error) => workspaceTree.setError(`Live file watcher unavailable: ${error}`),
-    workspacePath,
+  useEditorWorkspaceRuntime({
+    editorFileWorkflow, editorSession, editorWorkspace, persistence, treeRef,
+    workspacePath, workspacePathRef, workspaceTree,
   });
 
   // Reopen the last folder on startup, otherwise ask for a workspace.
