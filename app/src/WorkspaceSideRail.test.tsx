@@ -28,9 +28,9 @@ const props = (overrides: Partial<WorkspaceSideRailProps> = {}): WorkspaceSideRa
   onSelectMode: vi.fn(),
   projects: {
     activeProjectPath: null, activeSessionId: null, backgroundExits: [],
-    expandedProjects: {}, projects: [], sessionsByProject: {}, showArchived: false,
+    expandedProjects: {}, projects: [], recentProjects: [], sessionsByProject: {}, showArchived: false,
     projectStatus: () => "running" as const, sessionStatus: () => "running" as const,
-    onProjectContextMenu: vi.fn(), onSelectProject: vi.fn(), onSelectSession: vi.fn(),
+    onNewProject: vi.fn(), onOpenProject: vi.fn(), onProjectContextMenu: vi.fn(), onSelectProject: vi.fn(), onSelectSession: vi.fn(),
     onSessionContextMenu: vi.fn(), onToggleArchived: vi.fn(), onToggleExpanded: vi.fn(),
   },
   settings: {
@@ -57,13 +57,13 @@ describe("WorkspaceSideRail", () => {
 
   it("renders the active drawer body when expanded", () => {
     const html = renderToStaticMarkup(<WorkspaceSideRail {...props()} />);
-    expect(html).toContain("Open a folder to start a chat");
+    expect(html).toContain("Open or create a project to start a chat");
   });
 
   it("hides drawer bodies when collapsed", () => {
     const html = renderToStaticMarkup(<WorkspaceSideRail {...props({ collapsed: true })} />);
     expect(html).toContain("file-rail--collapsed");
-    expect(html).not.toContain("Open a folder to start a chat");
+    expect(html).not.toContain("Open or create a project to start a chat");
   });
 
   it("titles the toolbar with the active drawer name outside projects mode", () => {

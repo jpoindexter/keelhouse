@@ -1463,6 +1463,7 @@
       "launch": "v2",
       "summary": "Add a Codex-style searchable project menu that combines open and recent projects, marks the current project, deduplicates canonical paths, and ends with New Project and Open Project actions. It is the shared picker for Threads, the composer project control, and project-less New Task.",
       "done": "Integration tests cover search, dedupe, current checkmark, missing-path pruning, keyboard navigation, Escape/focus return, selection, and both footer actions. Responsive captures at 1440/1024/900 show contained geometry with no clipped rows; signed-app smoke switches projects and opens both creation paths.",
+      "progress": "2026-07-17: RED/GREEN slice adds a reusable searchable ProjectSwitcher, pure open/recent dedupe model, current/open indicators, arrow/Enter/Escape behavior with focus return, and shared New Project… / Open Project… footer actions. Threads now has a persistent current-project trigger and keeps the entry available in its empty state. Five focused switcher tests plus rail/host tests pass; existing missing-workspace lifecycle owns automatic stale-path pruning. Composer reuse, responsive captures, and signed-app switching remain open.",
       "buildOrder": 90.183
     },
     {

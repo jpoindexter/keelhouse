@@ -36,6 +36,7 @@ type WorkspaceSideRailInput = {
   persistence: WorkspaceDomain["persistence"];
   pickWorkspace: () => Promise<unknown>;
   profiles: WorkspaceDomain["profiles"];
+  projectEntryActions: { newProject: () => Promise<unknown>; openProject: () => Promise<unknown> };
   projectRailContextMenuItems: (project: OpenProject) => ContextMenuItem[];
   projectRailStatus: WorkspaceSideRailProps["projects"]["projectStatus"];
   projectSessionContextMenuItems: (path: string, session: ProjectSession) => ContextMenuItem[];
@@ -62,8 +63,11 @@ const railProjectsFrom = (input: WorkspaceSideRailInput): WorkspaceSideRailProps
   return {
     activeProjectPath: input.workspacePath, activeSessionId: input.activeChat.activeSessionId, backgroundExits: input.backgroundExits,
     expandedProjects: input.persistence.expandedSessionProjects, projects: input.visibleOpenProjects,
+    recentProjects: input.persistence.recentProjects,
     sessionsByProject: input.persistence.projectSessions, showArchived: input.persistence.showArchivedSessions,
     projectStatus: input.projectRailStatus, sessionStatus: input.projectSessionStatus,
+    onNewProject: () => { void input.projectEntryActions.newProject(); },
+    onOpenProject: () => { void input.projectEntryActions.openProject(); },
     onProjectContextMenu: (event, project) => input.contextMenuHost.openContextMenu(event, input.projectRailContextMenuItems(project)),
     onSelectProject: (path) => { void input.requestOpenWorkspace(path); closeNarrowDrawer(); },
     onSelectSession: (path, sessionId) => { void input.projectSessionNavigationActions.switchSession(path, sessionId); closeNarrowDrawer(); },

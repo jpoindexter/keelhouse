@@ -1268,7 +1268,7 @@ function App() {
         rail: <WorkspaceSideRail {...workspaceSideRailPropsFrom({
           activeChat, backgroundExits, browser, composerSettingsActions, contextMenuHost,
           diffReviewHook, drawerActiveTitle, editorFileWorkflow, editorSession, editorWorkspace,
-          gitStatusHook, openUrl, persistence, pickWorkspace, profiles, projectRailContextMenuItems,
+          gitStatusHook, openUrl, persistence, pickWorkspace, profiles, projectEntryActions, projectRailContextMenuItems,
           projectRailStatus, projectSessionContextMenuItems, projectSessionNavigationActions,
           projectSessionStatus, railBodyRef, railHeight, requestOpenWorkspace, setSettingsOpen,
           shellLayout, treeRef, utilityTrayControls, visibleOpenProjects, workspaceContextMenuItems,

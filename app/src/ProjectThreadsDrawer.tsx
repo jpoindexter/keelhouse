@@ -1,8 +1,9 @@
-import type { MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 
 import { backgroundExitCountForProject, type BackgroundExit } from "./backgroundExits";
 import { chatProviderLabel } from "./chatConversationMutations";
 import { AppIcon, type AppIconName } from "./icons";
+import { ProjectSwitcher } from "./ProjectSwitcher";
 import { activeSessionsForRail, archivedSessionCount, sessionRecencyLabel } from "./workspaceState";
 import type { OpenProject, ProjectRailStatus, ProjectSession, ProjectSessionsByProject } from "./workspaceState";
 
@@ -12,11 +13,14 @@ export type ProjectThreadsDrawerProps = {
   backgroundExits: BackgroundExit[];
   expandedProjects: Record<string, boolean>;
   projects: OpenProject[];
+  recentProjects: string[];
   sessionsByProject: ProjectSessionsByProject;
   showArchived: boolean;
   projectStatus: (project: OpenProject) => ProjectRailStatus;
   sessionStatus: (projectPath: string, session: ProjectSession) => ProjectRailStatus;
   onProjectContextMenu: (event: MouseEvent<HTMLButtonElement>, project: OpenProject) => void;
+  onNewProject: () => void;
+  onOpenProject: () => void;
   onSelectProject: (path: string) => void;
   onSelectSession: (path: string, sessionId: string) => void;
   onSessionContextMenu: (event: MouseEvent<HTMLButtonElement>, path: string, session: ProjectSession) => void;
@@ -89,11 +93,20 @@ function ProjectGroup({ project, props }: { project: OpenProject; props: Project
 }
 
 export function ProjectThreadsDrawer(props: ProjectThreadsDrawerProps) {
-  if (props.projects.length === 0) return <div className="rail-status">Open a folder to start a chat</div>;
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const activeName = props.activeProjectPath ? basename(props.activeProjectPath) : "Choose project";
   return (
-    <nav className="project-rail" aria-label="Open projects">
-      <div className="project-rail__heading">Today</div>
-      {props.projects.map((project) => <ProjectGroup key={project.path} project={project} props={props} />)}
-    </nav>
+    <div className="project-rail-shell">
+      <div className="project-picker">
+        <button className="project-picker__trigger" type="button" aria-label="Switch project" aria-expanded={switcherOpen} onClick={() => setSwitcherOpen((open) => !open)}><AppIcon name="workspace" /><span>{activeName}</span><AppIcon name="chevronDown" /></button>
+        <ProjectSwitcher activeProjectPath={props.activeProjectPath} open={switcherOpen} openProjects={props.projects} recentProjects={props.recentProjects} onClose={() => setSwitcherOpen(false)} onNewProject={props.onNewProject} onOpenProject={props.onOpenProject} onSelectProject={props.onSelectProject} />
+      </div>
+      {props.projects.length === 0 ? <div className="rail-status">Open or create a project to start a chat</div> : (
+        <nav className="project-rail" aria-label="Open projects">
+          <div className="project-rail__heading">Today</div>
+          {props.projects.map((project) => <ProjectGroup key={project.path} project={project} props={props} />)}
+        </nav>
+      )}
+    </div>
   );
 }
