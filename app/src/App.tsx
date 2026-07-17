@@ -32,8 +32,6 @@ import { agentConversationPanelPropsFrom } from "./agentConversationPanelHost";
 import { useContextMenuHost } from "./useContextMenuHost";
 import { createTerminalPaneCommands, createWorktreePersistence } from "./terminalPaneCommands";
 import { createTerminalSurfaceActions, terminalSurfaceDepsFromHook } from "./terminalSurfaceController";
-import {
-  workspaceOpenRecordsFromHooks, createWorkspaceOpenSurface, workspaceOpenTargetFromHook } from "./workspaceOpenSurface";
 import { createChatRunControls } from "./chatRunControls";
 import { createComposerSurface } from "./composerSurfaceController";
 import { createComposerHistoryNavigation } from "./composerHistoryNavigation";
@@ -55,7 +53,6 @@ import { useComposerRuntime } from "./useComposerRuntime";
 import { visibleProjectsFrom } from "./projectRailView";
 import { createTerminalPaneFinalize } from "./terminalPaneFinalize";
 import { createChatSearchNavigation } from "./chatSearchNavigation";
-import { createSessionSnapshotCapture, createSessionSnapshotRestore } from "./sessionSnapshotCapture";
 import { createComposerHarnessEventLog } from "./composerHarnessEvents";
 import { createWorkspacePicker } from "./workspacePicker";
 import { createPaneActivityLog } from "./paneActivityLog";
@@ -101,7 +98,7 @@ import { useAgentHookRuntime } from "./useAgentHookRuntime";
 import { useAppTerminalRuntime } from "./useAppTerminalRuntime";
 import { useAppEditorSurfaceRuntime } from "./useAppEditorSurfaceRuntime";
 import { appEditorMenusFrom } from "./appEditorMenuRuntime";
-import { clearBackgroundExitsForProject } from "./backgroundExits";
+import { appWorkspaceProjectRuntimeFrom } from "./appWorkspaceProjectRuntime";
 import { buildSettingsActions } from "./settingsActionsHost";
 import { deriveActiveAgentSessionState } from "./activeAgentSessionState";
 import { deriveEditorWorkspaceState } from "./editorWorkspaceState";
@@ -117,7 +114,6 @@ import { useChatRunEvents } from "./useChatRunEvents";
 import { useEditorWorkspaceRuntime } from "./useEditorWorkspaceRuntime";
 import {
   deleteDurableChatConversation,
-  deleteDurableProjectChats,
   resetDurableChatStore,
   saveDurableChatConversation,
 } from "./chatStore";
@@ -129,7 +125,6 @@ import type { FileTreeNode } from "./fileTreeTypes";
 import { StatusBar } from "./StatusBar";
 import type { ContextMenuItem } from "./ContextMenu";
 import { composerReasoningLabel } from "./ComposerReasoningPicker";
-import { createProjectCloseController, projectCloseFromHook } from "./projectCloseController";
 import { createProjectSessionNavigationActions } from "./projectSessionNavigationActions";
 import { createProjectEntryActions } from "./projectEntryActions";
 import { ProjectCreationDialog } from "./ProjectCreationDialog";
@@ -302,94 +297,18 @@ function App() {
     setDetectedServer: browser.setDetectedServer,
   });
 
-  const captureCurrentSessionSnapshot = createSessionSnapshotCapture({
-    capture: editorSession.captureSessionSnapshot,
-    getRoot: () => workspacePathRef.current,
-    makeKey: persistence.sessionKey,
-    persistPaneLayout: persistence.persistPaneLayout,
-    persistSnapshots: persistence.persistSessionSnapshots,
-    resolveSessionId: (root) =>
-      activeProjectSessionId(persistence.activeSessionByProjectRef.current, persistence.projectSessionsRef.current, root),
+  const {
+    captureCurrentSessionSnapshot, projectCloseController, requestCloseProject,
+    requestOpenWorkspace, workspaceOpenActions,
+  } = appWorkspaceProjectRuntimeFrom({
+    browser, chrome, composerLocal, composerWorkspace, connectionSettings: aiConnectionSettingsRef,
+    editorSession, editorWorkspace, latest,
+    openEditorFile: (file) => editorFileWorkflow.openDirect(file), persistence, profiles,
+    projectEntryOpen, requestEditorNavigation: (navigation) => editorNavigation.requestNavigation(navigation),
+    scheduleResize: () => setTimeout(sendTerminalResize, 0), setBackgroundExits,
+    setLaunchError, setWorkspacePath, shellLayout, storeRef, terminal,
+    workspacePathRef, workspaceTree,
   });
-
-  const restoreSessionEditorSnapshot = createSessionSnapshotRestore({
-    makeKey: persistence.sessionKey,
-    openFile: (...args: Parameters<typeof editorFileWorkflow.openDirect>) => editorFileWorkflow.openDirect(...args),
-    restore: editorSession.restoreSessionSnapshot,
-  });
-
-  const workspaceOpenActions = createWorkspaceOpenSurface({
-    actions: {
-      captureCurrentSession: captureCurrentSessionSnapshot,
-      clearBackgroundExits: (path) => {
-        setBackgroundExits((exits) => clearBackgroundExitsForProject(exits, path));
-      },
-      dirtyTabPaths: editorWorkspace.dirtyTabPaths, editorDirty: editorWorkspace.editorDirty, editorTabs: editorSession.editorTabs,
-      flushComposer: composerLocal.flush,
-      getDefaultProfile: () => profiles.launchProfileRef.current,
-      getPreviousActivePaneId: () => terminal.activePaneIdRef.current,
-      getPreviousPanes: () => terminal.panesRef.current,
-      getPreviousRoot: () => workspacePathRef.current,
-      getSelectedFilePath: () => editorSession.selectedFileRef.current?.path ?? null,
-      getStore: () => storeRef.current,
-      openEditorFile: (file) => editorFileWorkflow.openDirect(file),
-      setFocusedPane: terminal.setFocusedPane,
-    },
-    connectionSettings: aiConnectionSettingsRef,
-    lifecycle: {
-      clearCurrentWorkspace: (path) => {
-        if (workspacePathRef.current !== path) return;
-        terminal.setManagedPanes([]); terminal.setFocusedPane(null); setWorkspacePath(null);
-        workspaceTree.setTree([]); editorSession.resetEditor();
-      },
-      deleteProjectChats: deleteDurableProjectChats,
-      now: Date.now, persistPaneLayout: persistence.persistPaneLayout,
-      projectStatus: terminal.projectStatusForRoot,
-      records: workspaceOpenRecordsFromHooks({
-        browser, composer: composerWorkspace, editorSession, persistence, terminal,
-      }),
-      restoreBrowser: browser.restoreScopedUrl, restoreEditor: restoreSessionEditorSnapshot,
-      sessionStatus: terminal.statusForPanes, setFocusedPane: terminal.setFocusedPane,
-      setLaunchError: (message) => { setLaunchError(message); projectEntryOpen.reportError(message); }, setManagedPanes: terminal.setManagedPanes,
-    },
-    target: workspaceOpenTargetFromHook(terminal, {
-      activeSessions: persistence.activeSessionByProjectRef,
-      getSurfaceMode: () => shellLayout.agentSurfaceMode, latest, now: Date.now,
-      resetEditor: editorSession.resetEditor,
-      resolveProfile: profiles.resolveProfile,
-      restoredActiveFileWorkspace: editorSession.restoredActiveFileWorkspaceRef,
-      savedLabelForSlot: persistence.savedPaneLabel,
-      scheduleResize: () => setTimeout(sendTerminalResize, 0), sessions: persistence.projectSessionsRef,
-      setLaunchError: (message) => { setLaunchError(message); projectEntryOpen.reportError(message); },
-      setWorkspacePath, workspacePath: workspacePathRef,
-    }),
-  });
-
-  const requestOpenWorkspace = (path: string) => projectEntryOpen.track(path, () =>
-    workspaceOpenActions.requestOpenWorkspace(path, () => editorNavigation.requestNavigation({ kind: "workspace", path })),
-  );
-
-  const projectCloseController = createProjectCloseController(projectCloseFromHook(terminal, {
-    clearActiveWorkspace: () => {
-      setWorkspacePath(null); terminal.setManagedPanes([]); terminal.setFocusedPane(null);
-      latest.current = null; workspaceTree.setTree([]); editorSession.resetEditor();
-    },
-    closePane: (paneId) => invoke("close_pane", { paneId }),
-    confirmClose: (message) => confirmDialog(message), conversations: composerWorkspace.chatConversationsRef,
-    deleteStoredFolder: async () => { await storeRef.current?.delete("folder"); },
-    dirtyTabCount: editorWorkspace.dirtyTabPaths.length,
-    hasSelectedFile: () => editorSession.selectedFileRef.current != null,
-    openProjects: persistence.openProjectsRef, openWorkspace: workspaceOpenActions.openWorkspaceDirect,
-    persistOpenProjects: persistence.persistOpenProjects,
-    saveStore: async () => { await storeRef.current?.save(); },
-    setActionNotice: chrome.setActionNotice, setLaunchError,
-    stopChatRun: (runId) => invoke("stop_chat_run", { runId }),
-    stopWorkspaceWatcher: () => invoke("stop_workspace_watcher"),
-    workspacePath: workspacePathRef,
-  }));
-  const requestCloseProject = (project: OpenProject) => projectCloseController.requestCloseProject(
-    project, () => editorNavigation.requestNavigation({ kind: "close-project", projectPath: project.path }),
-  );
 
   const projectSessionNavigationActions = createProjectSessionNavigationActions({
     captureCurrentSession: captureCurrentSessionSnapshot,
