@@ -51,7 +51,7 @@ const createDeps = () => ({
   paste: vi.fn(async () => {}),
   persistWorktreeRecord: vi.fn(),
   persistWorktreeRemoval: vi.fn(),
-  promptWorktreeLabel: () => "task" as string | null,
+  promptWorktreeLabel: async () => "task" as string | null,
   readClipboard: vi.fn(async () => "clip" as string | null),
   recordActivity: vi.fn(),
   recordCreated: vi.fn(),

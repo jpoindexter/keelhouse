@@ -171,6 +171,8 @@ import { createProjectSessionNavigationActions } from "./projectSessionNavigatio
 import { createProjectEntryActions } from "./projectEntryActions";
 import { ProjectCreationDialog } from "./ProjectCreationDialog";
 import { projectCreationCommands } from "./projectCreationCommands";
+import { WorktreeLabelDialog } from "./WorktreeLabelDialog";
+import { useWorktreeLabelRequest } from "./useWorktreeLabelRequest";
 import { createProjectSessionDeletionController, projectSessionDeletionFromHook } from "./projectSessionDeletionController";
 import {
   createTerminalRuntimeEventHandlers,
@@ -214,6 +216,7 @@ function App() {
   const [launchError, setLaunchError] = useState<string | null>(null);
   const [projectCreationOpen, setProjectCreationOpen] = useState(false);
   const [projectSwitcherOpen, setProjectSwitcherOpen] = useState(false);
+  const worktreeLabelRequest = useWorktreeLabelRequest();
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
   const {
     composerWorkspace, editorSession, persistence, profiles, terminal, workspaceTree,
@@ -649,7 +652,7 @@ function App() {
     getWorkspacePathOrState: () => workspacePathRef.current ?? workspacePath,
     getWorktrees: () => worktrees,
     latest, now: Date.now,
-    promptWorktreeLabel: () => window.prompt("Worktree label (used for the branch name)"),
+    promptWorktreeLabel: worktreeLabelRequest.requestLabel,
     readClipboard: readText,
     recordActivity: agentActivityHook.recordAgentActivity,
     recordCreated: paneActivityLog.recordCreated,
@@ -1348,6 +1351,7 @@ function App() {
           return typeof parent === "string" ? parent : null;
         }}
       />
+      <WorktreeLabelDialog {...worktreeLabelRequest.dialog} />
       <AppRuntimeDialogs {...appRuntimeDialogsPropsFrom({
         activeChat, chrome, composerSurface, composerWorkspace, launchError, orchestrationError,
         orchestrationLaunching, orchestrationOpen, persistence, pickWorkspace, profiles,

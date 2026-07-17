@@ -25,7 +25,7 @@ const createWorkflow = (decision: "approved" | "denied" = "approved") => {
     persistRecord: vi.fn(() => { calls.push("persist"); }),
     profile,
     projectRoot: "/repo",
-    promptLabel: vi.fn(() => "  Dev  "),
+    promptLabel: vi.fn(async () => "  Dev  "),
     recordCreated: vi.fn(() => { calls.push("record"); }),
     setChanging: vi.fn((changing: boolean) => { calls.push(`changing:${changing}`); }),
     setError: vi.fn((error: string) => { calls.push(`error:${error}`); }),
@@ -68,7 +68,7 @@ describe("executeTerminalWorktreePaneCreate", () => {
 
   it("does not request approval for an empty worktree label", async () => {
     const { workflow } = createWorkflow();
-    workflow.promptLabel.mockReturnValueOnce("   ");
+    workflow.promptLabel.mockResolvedValueOnce("   ");
 
     const created = await executeTerminalWorktreePaneCreate(workflow);
 

@@ -18,7 +18,7 @@ type TerminalWorktreePaneCreateWorkflow = {
   persistRecord: (record: WorktreeRecord) => void;
   profile: LaunchProfile;
   projectRoot: string;
-  promptLabel: () => string | null;
+  promptLabel: () => Promise<string | null>;
   recordCreated: (pane: ManagedTerminalPane, branch: string) => void;
   setChanging: (changing: boolean) => void;
   setError: (error: string) => void;
@@ -60,7 +60,7 @@ const failCreate = async (workflow: TerminalWorktreePaneCreateWorkflow, error: u
 export const executeTerminalWorktreePaneCreate = async (
   workflow: TerminalWorktreePaneCreateWorkflow,
 ) => {
-  const label = workflow.promptLabel()?.trim();
+  const label = (await workflow.promptLabel())?.trim();
   if (!label) return false;
   const decision = await workflow.gateAction(createAppAction({
     kind: "create-worktree",

@@ -1,3 +1,8 @@
+.agent-composer {
+  container-name: agent-composer;
+  container-type: inline-size;
+}
+
 .composer-context-metadata {
   display: flex;
   width: var(--run-column-width);
@@ -60,9 +65,28 @@
   flex: 1 1 auto;
 }
 
-@media (max-width: 900px) {
-  .composer-context-metadata > div:nth-child(3),
-  .composer-context-metadata > div:nth-child(5) {
+@container agent-composer (max-width: 560px) {
+  .composer-context-metadata {
+    gap: 8px;
+  }
+
+  .composer-context-metadata > div:nth-child(n + 4) {
     display: none;
+  }
+
+  .composer-context-metadata > div:nth-child(2),
+  .composer-context-metadata > div:nth-child(3) {
+    flex: 0 1 112px;
+  }
+
+  .composer-context-metadata > div:not(:first-child)::before {
+    margin-right: 4px;
+  }
+
+  .composer-context-metadata > div > dd > button {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

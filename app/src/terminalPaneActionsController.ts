@@ -44,7 +44,7 @@ type TerminalPaneActionsControllerOptions<TSnapshot, TSelection> = {
   now: () => number;
   persistWorktreeRecord: (record: WorktreeRecord) => void;
   persistWorktreeRemoval: (paneId: string) => void;
-  promptWorktreeLabel: () => string | null;
+  promptWorktreeLabel: () => Promise<string | null>;
   recordCreated: (pane: ManagedTerminalPane, root: string, sessionId: string) => void;
   recordCreatedWorktree: (
     pane: ManagedTerminalPane, root: string, sessionId: string, branch: string,

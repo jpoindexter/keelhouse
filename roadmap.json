@@ -1436,21 +1436,21 @@
       "blocker": true,
       "summary": "Create one typed owner for New Project, Open Project, Switch Project, and New Task so the Threads toolbar, empty state, composer, menu bar, command palette, and project switcher cannot drift. User-facing copy says Project consistently while existing workspace persistence remains internal.",
       "done": "Focused tests first fail then prove every entry surface calls the same guarded actions; Open Project reuses the native picker and dirty-draft/project lifecycle; cancelled actions are no-ops; New Task routes project-less users to project entry; menu/palette/shortcut labels match. See docs/project-entry-and-composer-menu-plan-2026-07-17.md.",
-      "progress": "2026-07-17: added the shared typed action owner and exact product labels, migrated the existing workspace context menu, command palette, native Cmd+O event route, project switch action, launch recovery, quick settings, shortcut description, and macOS File menu to Open Project. A second RED/GREEN slice routes the existing titlebar compose icon through shared New Task, keeps it available without a project so it opens project entry, and updates the chrome contract to lock that lane. Production build, module ratchet, chrome contract, 831 frontend tests, 101 Rust tests, rustfmt, and two signed package builds pass. The card stays open because Computer Use timed out against both the app path and bundle id, including after a clean relaunch, so the signed File menu/picker and titlebar fallback remain native-unexecuted. The later persistent Threads control and real New Project dialog stay in their ordered cards.",
+      "progress": "2026-07-17: shared typed actions and exact Project vocabulary now own the workspace context menu, command palette, native events, launch recovery, Threads/titlebar controls, File menu, switcher, and composer project control. Fresh signed-app QA executed the native File menu labels, searchable switcher, Open Project picker cancellation, project switching, Cmd+N, and persistent Threads New Task. The card stays open only for a final command-palette and project-less titlebar execution pass across every promised door.",
       "buildOrder": 90.181
     },
     {
       "id": "PROJECT-CREATE-FLOW",
       "title": "Create a local project",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "workspace",
       "size": "M",
       "launch": "v2",
-      "blocker": true,
+      "blocker": false,
       "summary": "New Project asks for a parent directory and valid name, creates the folder, optionally initializes Git through an explicit choice, opens it through the shared project lifecycle, persists it, and creates the first task. The flow is recoverable when folder creation, Git initialization, or project opening fails.",
       "done": "Rust path/name guards and real temporary-directory tests cover valid create, duplicate, traversal, invalid name, Git success/failure, and no-delete recovery. Frontend integration tests cover submit/cancel/busy/error/retry. A signed Keelhouse.app creates and opens a real project whose cwd, project row, first task, persistence, and optional .git directory are verified on disk.",
-      "progress": "2026-07-17: backend RED/GREEN slice adds separate create_local_project and initialize_project_git Tauri commands. Four real filesystem tests prove named-directory creation, traversal/path-separator and duplicate rejection, real Git initialization, and that a missing Git executable leaves the created folder intact. A second RED/GREEN slice adds a keyboard-accessible creation dialog reachable as New Project… in the command palette, a typed Tauri adapter, native parent-folder selection, optional Git, single-submit busy states, create/Git/open recovery, focus return, and routing through the existing createSession lifecycle for persistence and the first task. Seven dialog tests and adapter/palette routing tests pass; the full gate is green at 839 frontend and 105 Rust tests, and a fresh signed Keelhouse.app packages successfully. Signed-app creation and on-disk verification remain open because the native Computer Use attempt reported the Mac locked and automatic unlock failed.",
+      "progress": "2026-07-17: complete. Backend RED/GREEN slices add separate create_local_project and initialize_project_git Tauri commands with real filesystem coverage for creation, unsafe/duplicate names, Git success/failure, and no-delete recovery. The accessible dialog owns native parent selection, optional Git, busy/error/retry states, focus return, persistence, and first-task creation. Fresh signed-app execution created and opened /private/tmp/Keelhouse Native Project QA, showed its project row and first New chat, persisted it across relaunch, and disk verification proved a real .git on main. Full gate: 867 frontend tests and 107 Rust tests.",
       "buildOrder": 90.182
     },
     {
@@ -1463,20 +1463,20 @@
       "launch": "v2",
       "summary": "Add a Codex-style searchable project menu that combines open and recent projects, marks the current project, deduplicates canonical paths, and ends with New Project and Open Project actions. It is the shared picker for Threads, the composer project control, and project-less New Task.",
       "done": "Integration tests cover search, dedupe, current checkmark, missing-path pruning, keyboard navigation, Escape/focus return, selection, and both footer actions. Responsive captures at 1440/1024/900 show contained geometry with no clipped rows; signed-app smoke switches projects and opens both creation paths.",
-      "progress": "2026-07-17: RED/GREEN slice adds a reusable searchable ProjectSwitcher, pure open/recent dedupe model, current/open indicators, arrow/Enter/Escape behavior with focus return, and shared New Project… / Open Project… footer actions. Threads now has a persistent current-project trigger and keeps the entry available in its empty state. Five focused switcher tests plus rail/host tests pass; existing missing-workspace lifecycle owns automatic stale-path pruning. Composer reuse, responsive captures, and signed-app switching remain open.",
+      "progress": "2026-07-17: RED/GREEN implementation adds the reusable searchable ProjectSwitcher, open/recent dedupe, current/open indicators, keyboard/focus behavior, and shared New Project… / Open Project… footer actions. Threads and composer reuse the same chooser. Signed-app QA opened it from both surfaces, switched agent cli → Greg → agent cli with repository/Git metadata refresh, launched New Project, and cancelled Open Project without false failure. The card stays open for persisted 1440/900 visual captures and a signed search-selection pass.",
       "buildOrder": 90.183
     },
     {
       "id": "PROJECT-NEW-TASK",
       "title": "Persistent New task entry",
-      "column": "next",
+      "column": "done",
       "tier": "pebble",
       "track": "workspace",
       "size": "S",
       "launch": "v2",
       "summary": "Put a labeled New task control in the Threads toolbar, backed by the existing project-session creation lifecycle and a visible Cmd+N shortcut. It creates and selects a fresh task in the active project; without a project it opens project entry.",
       "done": "Focused tests prove active-project creation, project-less routing, single-submit behavior, shortcut/menu/palette parity, active selection, narrow-drawer close behavior, and accessible labeling/focus. Signed-app smoke creates two independently selectable tasks without changing projects.",
-      "progress": "2026-07-17: RED/GREEN slice adds a labeled New Task control with visible Cmd+N in Threads, registers task.new in the shortcut registry and command palette, and adds File → New Task with CmdOrCtrl+N in the native menu. All surfaces route through the shared action owner, which now rejects duplicate in-flight creation. Without an active project, New Task opens the shared project switcher; successful creation closes only a narrow drawer. Focused action, palette, source-contract, rail, and narrow-drawer tests pass. Signed-app creation of two independently selectable tasks remains open.",
+      "progress": "2026-07-17: complete. RED/GREEN implementation adds the labeled Threads control, Cmd+N registry/shortcut, command-palette action, and native File → New Task, all through the shared action owner with duplicate-submit protection and project-less project-entry routing. Fresh signed-app execution created and selected New chat 9 through Cmd+N and New chat 10 through the persistent Threads control without changing projects; both remained independently selectable and the native File menu exposed the matching New Task command.",
       "buildOrder": 90.184
     },
     {
@@ -1489,20 +1489,20 @@
       "launch": "v2",
       "summary": "Replace the current four-row generic context menu with an accessible composer popover grouped around real Add, Task, and Connections actions: files/folders, current file, browser preview, goal, parallel chats, and provider/MCP settings. Unsupported Codex-only plugin/cloud rows stay absent rather than decorative.",
       "done": "Behavior-first tests cover pointer/keyboard open, group order, action routing, disabled reasons, outside/Escape close, focus return, viewport collision handling, and no duplicate menus. Responsive visual proof matches the established Keelhouse overlay grammar, and every rendered row executes a real path in the signed app.",
-      "progress": "2026-07-17: RED/GREEN slice replaces the generic global context menu with a purpose-built composer popover grouped as Add, Task, and Connections. Existing file/folder, current-file, browser-preview, and parallel-chat actions remain the real owners; Goal opens the existing goal control; Provider and MCP settings now opens Settings directly at Connections. Disabled rows explain why, viewport positioning clamps, keyboard selection works, outside/Escape close returns focus, and source coverage rejects duplicate menus. Focused tests and the 300/200/50 gate pass. Responsive signed-app visual proof and execution of every row remain open.",
+      "progress": "2026-07-17: RED/GREEN implementation replaces the generic menu with an accessible Add, Task, and Connections popover. Existing file/folder, current-file, browser-preview, goal, parallel-chat, and provider/MCP paths remain real owners; disabled reasons, viewport clamping, keyboard selection, Escape/outside close, focus return, and duplicate rejection are covered. Signed-app QA opened the complete grouped menu and executed Provider and MCP settings into Settings → Connections. The card stays open until every enabled row and responsive menu geometry are executed and captured.",
       "buildOrder": 90.185
     },
     {
       "id": "COMPOSER-TARGET-MENUS",
       "title": "Project, worktree, and branch menus",
-      "column": "next",
+      "column": "done",
       "tier": "rock",
       "track": "workspace",
       "size": "L",
       "launch": "v2",
       "summary": "Turn the composer context metadata into real controls: Project opens the shared project switcher; Local/worktree selects existing worktrees or creates one through the real worktree path; Branch searches local branches and creates/checks out branches through guarded Git commands. Provider usage or remote execution appears only when an adapter reports truthful capability.",
       "done": "Tests cover menu keyboard behavior, current-state checkmarks, worktree scoping, branch search/create/checkout, dirty-tree refusal, errors, and capability-gated provider rows. Real-repository Rust tests and signed-app smoke verify project switch, local/worktree launch, new branch checkout, cwd/branch metadata refresh, and no fabricated cloud/usage state.",
-      "progress": "2026-07-17: RED/GREEN implementation now covers all three composer targets. Project opens the shared searchable chooser. Start in scopes worktrees to the active project, focuses existing real panes, reuses or creates a local terminal, and routes New worktree through the guarded workflow. Branch is searchable, marks the current branch, creates or checks out through typed native commands, rejects invalid names and dirty trees, shows recoverable errors, and refreshes Git metadata only on success. Keyboard/focus tests, typed-adapter tests, and repeated real-repository Rust tests pass. Signed-app project/worktree/branch execution and responsive visual proof remain open.",
+      "progress": "2026-07-17: complete. Project opens the shared chooser; Start in scopes local/existing/new worktrees; Branch searches, creates, checks out, validates, and refuses dirty trees through typed native commands. Native QA first exposed window.prompt as a Tauri no-op, so a RED/GREEN follow-up replaced it with an awaited accessible WorktreeLabelDialog and duplicate-request guard. In the disposable signed-app project, Project switched between real repos, Branch created codex/native-entry-qa and refused codex/should-refuse-dirty with scoped guidance, and Start in created .worktrees/native-worktree-qa on branch worktree/native-worktree-qa. Git commands verified cwd/branch/worktree state on disk; the 1024 capture proves controlled target ellipsis instead of overlap.",
       "buildOrder": 90.186
     },
     {
@@ -1515,7 +1515,7 @@
       "launch": "v2",
       "summary": "Replace the dead-end Threads message with intentional project entry. First use leads with Open Project and offers New Project; a cleared list stays neutral; loading and project-open failures are distinct. After a project opens, starter prompts remain scoped to that project and the persistent chrome stays available.",
       "done": "Integration tests distinguish first-use, cleared, loading, cancellation, and error states and route both CTAs through the shared actions. Keyboard and screen-reader labels pass; 1440/1024/900 captures show no blank or overlapping state; signed-app first launch reaches a usable project and task from each CTA.",
-      "progress": "2026-07-17: RED/GREEN implementation distinguishes the complete project-entry state set. True first use leads with Open Project and offers New Project; an empty list with project history uses neutral No projects are open copy; loading announces the target with aria-busy while preserving stale project rows; lifecycle-reported failures replace empty copy with a persistent scoped error and Retry; native-picker cancellation returns to idle without false failure. Both CTAs and retry route through shared project-entry/workspace-open actions. Focused hook/drawer/host integration tests, production build, and the 300/200/50 ratchet pass. Responsive captures and signed-app first-launch execution remain open.",
+      "progress": "2026-07-17: RED/GREEN implementation distinguishes true first use, cleared history, loading with stale rows, scoped failure/retry, and cancellation without false errors. Both CTAs and Retry route through shared actions with keyboard/screen-reader semantics. Fresh signed-app QA captured the real first-use surface at 1024 and used New Project to reach a persisted Git-backed project and first task; docs/qa/project-entry/native-first-use-1024.jpeg records the state. The card stays open for Open Project from first launch plus 1440/900 captures.",
       "buildOrder": 90.187
     },
     {
@@ -1529,6 +1529,7 @@
       "blocker": true,
       "summary": "Prove the entire project/task entry contract through every promised door before calling it discoverable: Threads, empty state, project switcher, composer context, composer plus menu, command palette, macOS File menu, and shortcuts. Lock consistent labels, shared routing, responsive containment, focus behavior, persistence, and error recovery.",
       "done": "The production build, empty module-size baseline, chrome contract, full frontend/Rust suites, diff check, accessibility integration checks, and 1440/1024/900 visual captures pass. A freshly built signed app executes New Project, Open Project, Switch Project, New Task, plus-menu actions, local/worktree/branch menus, cancel, failure recovery, relaunch persistence, and real cwd/branch checks. No sub-claim is accepted from a build-only proxy.",
+      "progress": "2026-07-17: native execution now proves real New Project + Git + first task + relaunch persistence, Open Project cancellation, cross-project switching, two independent New Tasks, plus-menu routing to Connections, composer Project/Local/worktree/Branch menus, real branch creation, dirty-tree refusal, and real worktree creation. A native-only window.prompt no-op was found and fixed with an awaited in-app dialog; a 1024 metadata-overlap failure was found and fixed with composer container queries. Evidence is in docs/qa/project-entry/. Full gate is green at 867 frontend and 107 Rust tests. Remaining gate: execute every plus/palette/menu door, failure/retry in the signed app, capture 900, and obtain 1440 through a larger display or truthful production browser harness; the current display max is 1234 logical pixels.",
       "buildOrder": 90.188
     },
     {

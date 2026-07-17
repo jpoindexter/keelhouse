@@ -40,7 +40,7 @@ const createOptions = () => ({
   now: vi.fn(() => 10),
   persistWorktreeRecord: vi.fn(),
   persistWorktreeRemoval: vi.fn(),
-  promptWorktreeLabel: vi.fn(() => "task" as string | null),
+  promptWorktreeLabel: vi.fn(async () => "task" as string | null),
   recordCreated: vi.fn(),
   recordCreatedWorktree: vi.fn(),
   removeWorktree: vi.fn(async () => {}),
