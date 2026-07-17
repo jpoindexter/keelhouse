@@ -15,6 +15,7 @@ export type CommandPaletteCommand = {
 };
 
 const normalize = (value: string) => value.trim().toLowerCase();
+const normalizeLabel = (value: string) => normalize(value).replace(/(?:…|\.\.\.)$/, "");
 
 export const commandPaletteSearchText = (command: CommandPaletteCommand) =>
   normalize([
@@ -31,11 +32,15 @@ export const filterCommandPaletteCommands = <T extends CommandPaletteCommand>(
   query: string,
   sources: CommandPaletteSourceSettings = DEFAULT_COMMAND_PALETTE_SOURCES,
 ): T[] => {
-  const terms = normalize(query).split(/\s+/).filter(Boolean);
+  const normalizedQuery = normalize(query);
+  const terms = normalizedQuery.split(/\s+/).filter(Boolean);
   return commands.filter((command) => {
     if (!sources[command.source ?? "commands"]) return false;
     if (terms.length === 0) return true;
     const haystack = commandPaletteSearchText(command);
     return terms.every((term) => haystack.includes(term));
-  });
+  }).sort((left, right) => (
+    Number(normalizeLabel(right.label) === normalizedQuery)
+    - Number(normalizeLabel(left.label) === normalizedQuery)
+  ));
 };

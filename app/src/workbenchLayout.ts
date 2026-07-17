@@ -23,7 +23,7 @@ export const effectiveWorkbenchLayout = (
   narrowPanelOpen = false,
 ) => {
   if (layout === "left" || layout === "right") {
-    return viewportWidth <= 1120 && !narrowPanelOpen ? "hidden" : layout;
+    return viewportWidth <= 1360 && !narrowPanelOpen ? "hidden" : layout;
   }
   return layout;
 };

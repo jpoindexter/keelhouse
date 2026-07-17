@@ -3,9 +3,70 @@
   height: 24px;
 }
 
-@media (max-width: 1180px) and (min-width: 1121px) {
-  .workbench.workbench--drawer-right {
-    grid-template-columns: minmax(420px, 1fr) 6px 360px;
+/* Drawer + readable chat + the default dock need about 1360px. Below that,
+   side tools float over chat on demand instead of permanently squeezing it. */
+@media (max-width: 1360px) {
+  .workbench.workbench--drawer-right,
+  .workbench.workbench--drawer-left {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 6px var(--utility-tray-height, 42px);
+    grid-template-areas:
+      "terminal"
+      "utilitysplit"
+      "utility";
+  }
+
+  .workbench--drawer-right .tool-tray-tabs,
+  .workbench--drawer-left .tool-tray-tabs {
+    position: absolute;
+    top: 0;
+    z-index: 21;
+    width: min(360px, 100%);
+    background: #171820;
+  }
+
+  .workbench--drawer-right .files-dock,
+  .workbench--drawer-right .editor-area,
+  .workbench--drawer-right .browser-preview,
+  .workbench--drawer-right .git-dock,
+  .workbench--drawer-right .workspace-context-dock,
+  .workbench--drawer-left .files-dock,
+  .workbench--drawer-left .editor-area,
+  .workbench--drawer-left .browser-preview,
+  .workbench--drawer-left .git-dock,
+  .workbench--drawer-left .workspace-context-dock {
+    position: absolute;
+    top: 38px;
+    bottom: calc(var(--utility-tray-height, 42px) + 6px);
+    z-index: 20;
+    width: min(360px, 100%);
+  }
+
+  .workbench--drawer-right .tool-tray-tabs,
+  .workbench--drawer-right .files-dock,
+  .workbench--drawer-right .editor-area,
+  .workbench--drawer-right .browser-preview,
+  .workbench--drawer-right .git-dock,
+  .workbench--drawer-right .workspace-context-dock {
+    right: 0;
+    border-left: 1px solid var(--color-border);
+    box-shadow: -18px 0 38px rgba(0, 0, 0, 0.28);
+  }
+
+  .workbench--drawer-left .tool-tray-tabs,
+  .workbench--drawer-left .files-dock,
+  .workbench--drawer-left .editor-area,
+  .workbench--drawer-left .browser-preview,
+  .workbench--drawer-left .git-dock,
+  .workbench--drawer-left .workspace-context-dock {
+    left: 0;
+    border-right: 1px solid var(--color-border);
+    box-shadow: 18px 0 38px rgba(0, 0, 0, 0.28);
+  }
+
+  .workbench--drawer-right .workbench-resizer--tray,
+  .workbench--drawer-left .workbench-resizer--tray {
+    display: none;
   }
 }
 

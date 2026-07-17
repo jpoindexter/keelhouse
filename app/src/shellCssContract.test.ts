@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { readCssSource } from "./readCssSource";
 
 const css = readCssSource(new URL("./App.css", import.meta.url));
+const responsive = readFileSync(new URL("./responsive-shell.css", import.meta.url), "utf8");
 const transitions = readFileSync(new URL("./workbenchTransitions.css", import.meta.url), "utf8");
 
 describe("responsive shell CSS contract", () => {
@@ -50,6 +51,13 @@ describe("responsive shell CSS contract", () => {
     expect(contextCss).toMatch(/@media \(max-width:\s*1120px\)[^{]*\{[\s\S]*\.workbench\.workbench--tools-context\.workbench--drawer-right[\s\S]*grid-template-areas:[^}]*"terminal"[^}]*"utility";/s);
     expect(contextCss).toMatch(/@media \(max-width:\s*1120px\)[\s\S]*\.workbench--tools-context \.workspace-context-dock\s*\{[^}]*position:\s*absolute;[^}]*right:\s*0;[^}]*width:\s*min\(360px,\s*100%\);/s);
     expect(contextCss).toMatch(/\.workbench--tools-context\.workbench--drawer-right \.terminal-panel[^}]*display:\s*flex;/s);
+  });
+
+  it("overlays every side-docked tool before it can squeeze chat", () => {
+    expect(responsive).toMatch(/@media \(max-width:\s*1360px\)[\s\S]*\.workbench\.workbench--drawer-right,[\s\S]*\.workbench\.workbench--drawer-left\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);[^}]*grid-template-areas:[^}]*"terminal"[^}]*"utility";/s);
+    expect(responsive).toMatch(/@media \(max-width:\s*1360px\)[\s\S]*\.workbench--drawer-right \.tool-tray-tabs,[\s\S]*\.workbench--drawer-left \.tool-tray-tabs\s*\{[^}]*position:\s*absolute;[^}]*width:\s*min\(360px,\s*100%\);/s);
+    expect(responsive).toMatch(/@media \(max-width:\s*1360px\)[\s\S]*\.workbench--drawer-right \.files-dock,[\s\S]*\.workbench--drawer-left \.workspace-context-dock\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*calc\(var\(--utility-tray-height,\s*42px\) \+ 6px\);/s);
+    expect(responsive).not.toMatch(/@media \(max-width:\s*1180px\)[\s\S]*grid-template-columns:\s*minmax\(420px,\s*1fr\) 6px 360px;/s);
   });
 
   it("floats the open Threads drawer above the 900px conversation", () => {

@@ -19,6 +19,19 @@ describe("command palette filtering", () => {
     expect(filterCommandPaletteCommands(commands, "git source")[0]?.id).toBe("drawer.git");
   });
 
+  it("ranks an exact label match ahead of incidental detail matches", () => {
+    const projectCommands: CommandPaletteCommand[] = [
+      { id: "task.new", label: "New Task", detail: "Create a task in the active project" },
+      { id: "workspace.new-project", label: "New Project…", detail: "Create and open a local project" },
+      { id: "workspace.open", label: "Open Project…", detail: "Choose a project folder" },
+    ];
+
+    expect(filterCommandPaletteCommands(projectCommands, "New Project").map((command) => command.id)).toEqual([
+      "workspace.new-project",
+      "task.new",
+    ]);
+  });
+
   it("excludes disabled sources before text filtering", () => {
     const mixed: CommandPaletteCommand[] = [
       ...commands,

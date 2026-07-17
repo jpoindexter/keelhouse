@@ -22,14 +22,16 @@ describe("workbench layout contract", () => {
     expect(effectiveWorkbenchLayout("right", 1024)).toBe("hidden");
     expect(effectiveWorkbenchLayout("left", 1024)).toBe("hidden");
     expect(effectiveWorkbenchLayout("right", 1120)).toBe("hidden");
-    expect(effectiveWorkbenchLayout("right", 1180)).toBe("right");
+    expect(effectiveWorkbenchLayout("right", 1180)).toBe("hidden");
+    expect(effectiveWorkbenchLayout("right", 1360)).toBe("hidden");
+    expect(effectiveWorkbenchLayout("right", 1361)).toBe("right");
     expect(effectiveWorkbenchLayout("right", 1440)).toBe("right");
     expect(effectiveWorkbenchLayout("hidden", 800)).toBe("hidden");
   });
 
   it("allows an explicit icon click to reopen a panel at narrow widths", () => {
     expect(effectiveWorkbenchLayout("right", 1024, true)).toBe("right");
-    expect(effectiveWorkbenchLayout("left", 900, true)).toBe("left");
+    expect(effectiveWorkbenchLayout("left", 1232, true)).toBe("left");
   });
 
   it("keeps a readable agent surface at the supported minimum window width", () => {
