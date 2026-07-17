@@ -20,15 +20,13 @@ import { useAgentHookRuntime } from "./useAgentHookRuntime";
 import { useAppTerminalRuntime } from "./useAppTerminalRuntime";
 import { useAppEditorSurfaceRuntime } from "./useAppEditorSurfaceRuntime";
 import { appEditorMenusFrom } from "./appEditorMenuRuntime";
-import { appWorkspaceProjectRuntimeFrom } from "./appWorkspaceProjectRuntime";
-import { appProjectSessionRuntimeFrom } from "./appProjectSessionRuntime";
 import { appComposerSurfaceRuntimeFrom } from "./appComposerSurfaceRuntime";
 import { appTerminalSurfaceRuntimeFrom } from "./appTerminalSurfaceRuntime";
-import { useAppConversationBridge } from "./useAppConversationBridge";
 import { buildSettingsActions } from "./settingsActionsHost";
 import { useEditorWorkspaceRuntime } from "./useEditorWorkspaceRuntime";
 import { resetDurableChatStore } from "./chatStore";
 import { useAppFoundationRuntime } from "./useAppFoundationRuntime";
+import { useAppProjectRuntime } from "./useAppProjectRuntime";
 import { AppWorkbenchView } from "./AppWorkbenchView";
 import "./App.css";
 import "./composerModelPicker.css";
@@ -52,7 +50,7 @@ function App() {
     fileNodeContextMenuItemsRef, frame, imeInputRef, ipcSampleCounter, latest, launchError, metrics,
     projectCreationOpen, projectSwitcherOpen, railBodyRef, renderPerfRef,
     selection, selecting, setAgentHookStatus, setLaunchError, setProjectCreationOpen, setProjectSwitcherOpen,
-    setWorkspacePath, storeRef, terminalHostRef, treeRef, workspacePath, workspacePathRef,
+    storeRef, terminalHostRef, treeRef, workspacePath, workspacePathRef,
     worktreeLabelRequest,
   } = foundation.root;
   const {
@@ -65,7 +63,7 @@ function App() {
     gitStatusHook, keybindingOverrides, mcpOAuth, orchestrationError, orchestrationLaunching,
     openSettings, orchestrationOpen, paneTranscripts, projectEntryOpen, railHeight, setAiConnectionSettings, setBackgroundExits,
     setCommandPaletteSources, setComposerError, setComposerNotice, setComposerSending,
-    setDrawerSearchQuery, setFocusedChatMessageId, setKeybindingOverrides, setOrchestrationError,
+    setDrawerSearchQuery, setKeybindingOverrides, setOrchestrationError,
     setOrchestrationLaunching, setOrchestrationOpen, setSettingsOpen, setWorktrees,
     settingsInitialCategory, settingsOpen, settingsRuntime, shellLayout, worktrees,
   } = foundation.shell;
@@ -77,43 +75,18 @@ function App() {
     composerMentionQuery, composerMentionResults,
   } = foundation.composer;
   const { activeAgentSession, activeTerminalProfile, terminalFind } = foundation;
-  const composerHarnessSessionKey = (root: string, sessionId: string) => `${root}\n${sessionId}`;
-
   const {
-    chatConversationActions, detectLocalDevServerFromSnapshot, logComposerHarnessEvent,
-  } = useAppConversationBridge({
-    activeAgentSession, activeChat, agentActivityHook, browser,
-    chatIdForSession: composerHarnessSessionKey, chatSearch, chrome, composerWorkspace, persistence,
-    setLaunchError,
-    switchSession: (root, sessionId) => projectSessionNavigationActions.switchSession(root, sessionId),
-    terminal, workspacePathRef,
-  });
-
-  const {
-    captureCurrentSessionSnapshot, projectCloseController, requestCloseProject,
-    requestOpenWorkspace, workspaceOpenActions,
-  } = appWorkspaceProjectRuntimeFrom({
-    browser, chrome, composerLocal, composerWorkspace, connectionSettings: aiConnectionSettingsRef,
-    editorSession, editorWorkspace, latest,
-    openEditorFile: (file) => editorFileWorkflow.openDirect(file), persistence, profiles,
-    projectEntryOpen, requestEditorNavigation: (navigation) => editorNavigation.requestNavigation(navigation),
-    scheduleResize: () => setTimeout(sendTerminalResize, 0), setBackgroundExits,
-    setLaunchError, setWorkspacePath, shellLayout, storeRef, terminal,
-    workspacePathRef, workspaceTree,
-  });
-
-  const {
-    finalizeCreatedTerminalPane, openChatSearchResult, paneActivityLog, pickWorkspace,
+    chatConversationActions, chatIdForSession: composerHarnessSessionKey,
+    detectLocalDevServerFromSnapshot, finalizeCreatedTerminalPane, logComposerHarnessEvent,
+    openChatSearchResult, paneActivityLog, pickWorkspace, projectCloseController,
     projectEntryActions, projectSessionDeletionController, projectSessionMetadataActions,
-    projectSessionNavigationActions,
-  } = appProjectSessionRuntimeFrom({
-    activeChat, agentActivityHook, agentApprovalMode, browser, captureCurrentSession: captureCurrentSessionSnapshot,
-    chatSearch, chrome, composerLocal, composerWorkspace,
-    createTerminalPane: (profile) => terminalSurface.createTerminalPane(profile),
-    persistence, profiles, requestOpenWorkspace,
-    scheduleResize: () => setTimeout(sendTerminalResize, 0), setFocusedChatMessageId,
-    setLaunchError, setProjectCreationOpen, setProjectSwitcherOpen, shellLayout,
-    storeRef, terminal, workspaceOpenActions, workspacePathRef,
+    projectSessionNavigationActions, requestCloseProject, requestOpenWorkspace, workspaceOpenActions,
+  } = useAppProjectRuntime({
+    createTerminalPane: (profile) => terminalSurface.createTerminalPane(profile), foundation,
+    openEditorFile: (file) => editorFileWorkflow.openDirect(file),
+    requestEditorNavigation: (navigation) => editorNavigation.requestNavigation(navigation),
+    scheduleResize: () => setTimeout(sendTerminalResize, 0),
+    switchSession: (root, sessionId) => projectSessionNavigationActions.switchSession(root, sessionId),
   });
 
   const {
